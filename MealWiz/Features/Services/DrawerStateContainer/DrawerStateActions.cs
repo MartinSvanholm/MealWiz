@@ -1,4 +1,6 @@
-﻿namespace Features.Services.DrawerStateContainer;
+﻿using MealWizFeatures.Services.DrawerStateContainer;
+
+namespace Features.Services.DrawerStateContainer;
 
 public partial class DrawerStateContainer : IDrawerStateContainer
 {

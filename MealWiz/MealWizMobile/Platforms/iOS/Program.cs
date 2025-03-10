@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace MealWizMobile
+namespace MealWizMobile.Platforms.iOS
 {
     public class Program
     {

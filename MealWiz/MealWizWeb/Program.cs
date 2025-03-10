@@ -1,5 +1,8 @@
 using Features.Services.DrawerStateContainer;
+using MealWizFeatures.Services.Authentication;
+using MealWizFeatures.Services.DrawerStateContainer;
 using MealWizWeb.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
 
 internal class Program
@@ -13,7 +16,11 @@ internal class Program
             .AddInteractiveServerComponents();
 
         builder.Services.AddMudServices();
-        builder.Services.AddSingleton<IDrawerStateContainer, DrawerStateContainer>();
+        builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
+
+        builder.Services.AddSingleton<AuthenticationStateProvider, CustomAuthStateProvider>();
+
+        builder.Services.AddAuthorizationCore();
 
         string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
         var solutionDirectory = TryGetSolutionDirectory();
@@ -37,8 +44,9 @@ internal class Program
 
         app.MapStaticAssets();
         app.MapRazorComponents<App>()
-            .AddInteractiveServerRenderMode();
-        app.UseStatusCodePagesWithRedirects("/your_error_page");
+            .AddInteractiveServerRenderMode()
+            .AddAdditionalAssemblies(typeof(MealWizFeatures._Imports).Assembly)
+            .AllowAnonymous();
 
         app.Run();
     }

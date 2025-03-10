@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace MealWizMobile
+namespace MealWizMobile.Platforms.iOS
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

@@ -67,7 +67,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Features\Features.csproj" />
+      <ProjectReference Include="..\Features\MealWizFeatures.csproj" />
     </ItemGroup>
 
 </Project>

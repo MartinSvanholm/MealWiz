@@ -10,13 +10,13 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{DD9C13D5-2B0D-449A-9160-BE3846D1B501}"
 	ProjectSection(SolutionItems) = preProject
 		appsettings.Development.json = appsettings.Development.json
-		appsettings.Staging.json = appsettings.Staging.json
 		appsettings.Production.json = appsettings.Production.json
+		appsettings.Staging.json = appsettings.Staging.json
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizWeb", "MealWizWeb\MealWizWeb.csproj", "{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Features", "Features\Features.csproj", "{02F855A2-3178-4A17-8865-9931BA19BCCF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizFeatures", "Features\MealWizFeatures.csproj", "{02F855A2-3178-4A17-8865-9931BA19BCCF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

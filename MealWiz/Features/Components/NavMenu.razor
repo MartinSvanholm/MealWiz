@@ -1,7 +1,7 @@
 ﻿@inject NavigationManager navigationManager
 
 <div class="d-flex">
-    <CustomNavLink IsActive="@(location == "" ? true : false)" Href="/" Icon="@Icons.Material.Filled.Dashboard">Meals</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "meals" ? true : false)" Href="/meals" Icon="@Icons.Material.Filled.Dashboard">Meals</CustomNavLink>
 
     <CustomNavLink IsActive="@(location == "mealplan" ? true : false)" Href="/mealplan" Icon="@Icons.Material.Filled.Dns">Meal plan</CustomNavLink>
 

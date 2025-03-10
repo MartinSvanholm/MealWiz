@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 
-namespace Features.Services.DrawerStateContainer
+namespace MealWizFeatures.Services.DrawerStateContainer
 {
     public interface IDrawerStateContainer
     {
