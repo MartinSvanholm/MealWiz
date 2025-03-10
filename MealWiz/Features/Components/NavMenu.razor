@@ -1,14 +1,16 @@
 ﻿@inject NavigationManager navigationManager
 
-<div class="d-flex">
-    <CustomNavLink IsActive="@(location == "meals" ? true : false)" Href="/meals" Icon="@Icons.Material.Filled.Dashboard">Meals</CustomNavLink>
+<MudStack Row Justify="Justify.SpaceAround" Style="width: 100%" AlignItems="AlignItems.Center" Spacing="0">
+    <CustomNavLink IsActive="@(location == "meals" ? true : false)" Href="/meals" Icon="@Icons.Material.Filled.Restaurant">Meals</CustomNavLink>
 
-    <CustomNavLink IsActive="@(location == "mealplan" ? true : false)" Href="/mealplan" Icon="@Icons.Material.Filled.Dns">Meal plan</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "mealplan" ? true : false)" Href="/mealplan" Icon="@Icons.Material.Filled.FoodBank">Meal plan</CustomNavLink>
 
-    <CustomNavLink IsActive="@(location == "grocerylist" ? true : false)" Href="/grocerylist" Icon="@Icons.Material.Filled.Settings">Grocery list</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "grocerylist" ? true : false)" Href="/grocerylist" Icon="@Icons.Material.Filled.Checklist">Grocery list</CustomNavLink>
 
-    <CustomNavLink IsActive="@(location == "help" ? true : false)" Href="/help" Icon="@Icons.Material.Filled.Help">Help</CustomNavLink>
-</div>
+    <CustomNavLink IsActive="@(location == "freezer" ? true : false)" Href="/freezer" Icon="@Icons.Material.Filled.Kitchen">Freezer</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "settings" ? true : false)" Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</CustomNavLink>
+</MudStack>
 
 @code {
     private MudTheme Theme = new MudTheme();

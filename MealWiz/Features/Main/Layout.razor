@@ -1,11 +1,11 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider />
+<MudThemeProvider Theme="MealWizTheme" IsDarkMode />
 <MudPopoverProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Bottom Gutters="false" Elevation="6" Fixed Color="@Color.Transparent">
+    <MudAppBar Bottom Gutters="false" Elevation="20" Fixed Color="@Color.Transparent">
         <NavMenu />
     </MudAppBar>
     <DrawerBase />
@@ -17,4 +17,16 @@
 
 
 @code {
+    MudTheme MealWizTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#D9944F"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#D9944F",
+            TextPrimary = "#e4e4e7"
+        }
+    };
 }

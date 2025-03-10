@@ -1,6 +1,6 @@
 ﻿@inject NavigationManager navigationManager
 
-<MudStack Class="@(IsActive ? "active" : "")" AlignItems="AlignItems.Center" Row=false @onclick="Navigate" Spacing="0" Justify="Justify.Center" style="cursor: pointer; width: 25vw;">
+<MudStack Class="@(IsActive ? "active" : "")" AlignItems="AlignItems.Center" Row=false @onclick="Navigate" Spacing="0" Justify="Justify.Center" style="cursor: pointer;">
     @if (Icon != null)
     {
         <MudIcon Icon="@Icon" Color="@(IsActive ? Color.Primary : Color.Default)" />
