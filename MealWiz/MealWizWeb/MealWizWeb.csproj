@@ -10,4 +10,8 @@
     <ProjectReference Include="..\Features\Features.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Pages\" />
+  </ItemGroup>
+
 </Project>
