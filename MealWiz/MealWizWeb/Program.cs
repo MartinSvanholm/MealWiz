@@ -1,4 +1,6 @@
+using Features.Services.DrawerStateContainer;
 using MealWizWeb.Components;
+using MudBlazor.Services;
 
 internal class Program
 {
@@ -9,6 +11,9 @@ internal class Program
         // Add services to the container.
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
+
+        builder.Services.AddMudServices();
+        builder.Services.AddSingleton<IDrawerStateContainer, DrawerStateContainer>();
 
         string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
         var solutionDirectory = TryGetSolutionDirectory();
@@ -33,6 +38,7 @@ internal class Program
         app.MapStaticAssets();
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode();
+        app.UseStatusCodePagesWithRedirects("/your_error_page");
 
         app.Run();
     }

@@ -1,11 +1,11 @@
 ﻿@inject NavigationManager navigationManager
 
 <div class="d-flex">
-    <CustomNavLink IsActive="@(location == "" ? true : false)" Href="/" Icon="@Icons.Material.Filled.Dashboard">Dashboard</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "" ? true : false)" Href="/" Icon="@Icons.Material.Filled.Dashboard">Meals</CustomNavLink>
 
-    <CustomNavLink IsActive="@(location == "servers" ? true : false)" Href="/servers" Icon="@Icons.Material.Filled.Dns">Servers</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "mealplan" ? true : false)" Href="/mealplan" Icon="@Icons.Material.Filled.Dns">Meal plan</CustomNavLink>
 
-    <CustomNavLink IsActive="@(location == "settings" ? true : false)" Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</CustomNavLink>
+    <CustomNavLink IsActive="@(location == "grocerylist" ? true : false)" Href="/grocerylist" Icon="@Icons.Material.Filled.Settings">Grocery list</CustomNavLink>
 
     <CustomNavLink IsActive="@(location == "help" ? true : false)" Href="/help" Icon="@Icons.Material.Filled.Help">Help</CustomNavLink>
 </div>
