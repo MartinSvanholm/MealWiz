@@ -1,10 +1,48 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.12.35707.178 d17.12
+VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{761800EE-EB60-4907-BCEA-F250780E6019}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizMobile", "MealWizMobile\MealWizMobile.csproj", "{99D68732-EFEB-4A37-BCE2-097BAAB57CFB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{DD9C13D5-2B0D-449A-9160-BE3846D1B501}"
+	ProjectSection(SolutionItems) = preProject
+		appsettings.Development.json = appsettings.Development.json
+		appsettings.Staging.json = appsettings.Staging.json
+		appsettings.Production.json = appsettings.Production.json
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizWeb", "MealWizWeb\MealWizWeb.csproj", "{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Features", "Features\Features.csproj", "{02F855A2-3178-4A17-8865-9931BA19BCCF}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{02F855A2-3178-4A17-8865-9931BA19BCCF} = {761800EE-EB60-4907-BCEA-F250780E6019}
 	EndGlobalSection
 EndGlobal
