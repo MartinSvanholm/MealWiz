@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Features.Services.DrawerStateContainer;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
 
 namespace MealWizMobile
 {
@@ -21,9 +23,11 @@ namespace MealWizMobile
             builder.Configuration.AddJsonFile(Path.Combine(solutionDirectory.FullName, $"appsettings.{environment}.json"), optional: true, reloadOnChange: true);
 
             builder.Services.AddMauiBlazorWebView();
+            builder.Services.AddMudServices();
+            builder.Services.AddSingleton<IDrawerStateContainer, DrawerStateContainer>();
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
 

@@ -1,0 +1,27 @@
+﻿@inject NavigationManager navigationManager
+
+<div class="d-flex">
+    <CustomNavLink IsActive="@(location == "" ? true : false)" Href="/" Icon="@Icons.Material.Filled.Dashboard">Dashboard</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "servers" ? true : false)" Href="/servers" Icon="@Icons.Material.Filled.Dns">Servers</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "settings" ? true : false)" Href="/settings" Icon="@Icons.Material.Filled.Settings">Settings</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "help" ? true : false)" Href="/help" Icon="@Icons.Material.Filled.Help">Help</CustomNavLink>
+</div>
+
+@code {
+    private MudTheme Theme = new MudTheme();
+    private string location { get => navigationManager.Uri.Split(navigationManager.BaseUri)[1].Split("?")[0]; }
+
+    protected override void OnInitialized()
+    {
+        navigationManager.LocationChanged += LocationChanged;
+
+        base.OnInitialized();
+    }
+
+    private void LocationChanged(object sender, EventArgs e) {
+        StateHasChanged();
+    }
+}

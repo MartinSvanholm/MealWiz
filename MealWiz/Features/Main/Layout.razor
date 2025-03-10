@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Bottom Gutters="false" Elevation="6" Fixed Color="@Color.Transparent">
+        <NavMenu />
+    </MudAppBar>
+    <DrawerBase />
+    <MudMainContent Class="pa-0">
+        @Body
+    </MudMainContent>
+    
+</MudLayout>
+
+
+@code {
+}

@@ -1,0 +1,26 @@
+﻿using Microsoft.AspNetCore.Components;
+
+namespace Features.Services.DrawerStateContainer;
+
+public class DrawerStateParameters
+{
+    public DrawerStateParameters(DrawerStateParameters drawerStateParameters)
+    {
+        Content = drawerStateParameters.Content;
+        ContentParameters = drawerStateParameters.ContentParameters;
+        Header = drawerStateParameters.Header;
+        Title = drawerStateParameters.Title;
+        Width = drawerStateParameters.Width;
+    }
+
+    public DrawerStateParameters()
+    {
+
+    }
+
+    public Type Content { get; set; }
+    public Dictionary<string, object> ContentParameters { get; set; }
+    public RenderFragment Header { get; set; }
+    public string Title { get; set; }
+    public string Width { get; set; } = null;
+}
