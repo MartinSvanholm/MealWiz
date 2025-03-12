@@ -1,6 +1,16 @@
 ﻿@page "/login"
-<h3>LoginPage</h3>
+<div class="pa-5 d-flex flex-column">
+    <MudText Typo="Typo.h6">Login</MudText>
+    <TextField @bind-Value="Email" Class="mt-4" Label="Email" Required />
+    <TextField @bind-Value="Password" Class="mt-4" Label="Password" Required />
+    <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
+        <Button Variant="Variant.Text">Create account</Button>
+        <Button Variant="Variant.Text">Forgot password</Button>
+    </MudStack>
+    <Button Class="mt-6">Login</Button>
+</div>
 
 @code {
-
+    private string Email { get; set; } = default!;
+    private string Password { get; set; } = default!;
 }

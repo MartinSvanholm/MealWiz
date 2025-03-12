@@ -1,0 +1,27 @@
+﻿<MudTextField 
+Value="@Value" 
+ValueChanged="@ValueChanged"
+Label="@Label" 
+Variant="@Variant"
+Required="@Required"
+Class="@Class"/>
+
+@code {
+    [Parameter]
+    public string Value { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Label { get; set; } = default!;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Outlined;
+
+    [Parameter]
+    public bool Required { get; set; }
+
+    [Parameter]
+    public string Class { get; set; } = default!;
+}

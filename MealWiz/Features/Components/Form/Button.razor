@@ -1,0 +1,24 @@
+﻿<MudButton
+Color="@Color"
+Variant="@Variant"
+OnClick="@OnClick"
+Class="@Class">
+    @ChildContent
+</MudButton>
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter]
+    public Color Color { get; set; } = Color.Primary;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Filled;
+
+    [Parameter]
+    public string Class { get; set; } = default!;
+}
