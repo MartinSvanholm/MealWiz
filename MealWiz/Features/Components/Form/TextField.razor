@@ -4,7 +4,8 @@ ValueChanged="@ValueChanged"
 Label="@Label" 
 Variant="@Variant"
 Required="@Required"
-Class="@Class"/>
+Class="@Class"
+Immediate="@Immediate"/>
 
 @code {
     [Parameter]
@@ -24,4 +25,7 @@ Class="@Class"/>
 
     [Parameter]
     public string Class { get; set; } = default!;
+
+    [Parameter]
+    public bool Immediate { get; set; } = true;
 }
