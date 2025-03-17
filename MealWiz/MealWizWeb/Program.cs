@@ -1,10 +1,14 @@
 using Blazored.LocalStorage;
 using Features.Services.DrawerStateContainer;
+using MealWizFeatures.Helpers;
 using MealWizFeatures.Services.Authentication;
 using MealWizFeatures.Services.DrawerStateContainer;
 using MealWizWeb.Components;
 using MealWizWeb.Providers;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using MudBlazor.Services;
 using Supabase;
 
@@ -26,20 +30,24 @@ internal class Program
         builder.Services.AddMudServices();
         builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
         builder.Services.AddBlazoredLocalStorage();
+        builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWizFeatures.Main.Layout).Assembly));
+        ResultHelper.SetDefaultCatchHandler();
 
         string supabaseUrl = builder.Configuration["Supabase:url"];
         string supabaseKey = builder.Configuration["Supabase:key"];
         builder.Services.AddScoped(provider =>
         {
-            return new Supabase.Client(supabaseUrl, supabaseKey, new SupabaseOptions
+            return new Client(supabaseUrl, supabaseKey, new SupabaseOptions
             {
                 AutoRefreshToken = true,
                 AutoConnectRealtime = true,
-                SessionHandler = new CustomSupabaseSessionHandler(provider.GetRequiredService<ISyncLocalStorageService>())
+                SessionHandler = new CustomSupabaseSessionHandler(provider.GetRequiredService<IJSRuntime>())
             });
         });
 
-        builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+        builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>(
+            provider => new CustomAuthStateProvider(provider.GetRequiredService<Client>())
+        );
 
         builder.Services.AddAuthorizationCore();
 

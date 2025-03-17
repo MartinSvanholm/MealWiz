@@ -2,7 +2,8 @@
 Color="@Color"
 Variant="@Variant"
 OnClick="@OnClick"
-Class="@Class">
+Class="@Class"
+ButtonType="@ButtonType">
     @ChildContent
 </MudButton>
 
@@ -21,4 +22,7 @@ Class="@Class">
 
     [Parameter]
     public string Class { get; set; } = default!;
+
+    [Parameter]
+    public ButtonType ButtonType { get; set; } = ButtonType.Button;
 }

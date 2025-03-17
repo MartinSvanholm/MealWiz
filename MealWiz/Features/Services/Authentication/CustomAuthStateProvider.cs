@@ -1,14 +1,25 @@
 ﻿using Microsoft.AspNetCore.Components.Authorization;
+using Supabase;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace MealWizFeatures.Services.Authentication;
 
-public class CustomAuthStateProvider : AuthenticationStateProvider
+public class CustomAuthStateProvider(Client client) : AuthenticationStateProvider
 {
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        client.Auth.LoadSession();
+
         var identity = new ClaimsIdentity();
+
+        if (!string.IsNullOrEmpty(client.Auth.CurrentSession?.AccessToken) && !client.Auth.CurrentSession.Expired())
+        {
+            List<Claim> claims = [];
+            claims.AddRange(ParseClaimsFromJwt(client.Auth.CurrentSession.AccessToken));
+
+            identity = new ClaimsIdentity(claims, "jwt");
+        }
 
         var user = new ClaimsPrincipal(identity);
         var state = new AuthenticationState(user);

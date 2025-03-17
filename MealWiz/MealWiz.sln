@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizWeb", "MealWizWeb\Me
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizFeatures", "Features\MealWizFeatures.csproj", "{02F855A2-3178-4A17-8865-9931BA19BCCF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWizWebAssembly", "MealWizWebAssembly\MealWizWebAssembly.csproj", "{BFE9BC59-8007-4860-8EF0-15D7192F0F63}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,6 +38,10 @@ Global
 		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{02F855A2-3178-4A17-8865-9931BA19BCCF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFE9BC59-8007-4860-8EF0-15D7192F0F63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFE9BC59-8007-4860-8EF0-15D7192F0F63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFE9BC59-8007-4860-8EF0-15D7192F0F63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFE9BC59-8007-4860-8EF0-15D7192F0F63}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,5 +50,6 @@ Global
 		{99D68732-EFEB-4A37-BCE2-097BAAB57CFB} = {761800EE-EB60-4907-BCEA-F250780E6019}
 		{B17D549A-3074-4B58-A1C2-ABD5F295F7AF} = {761800EE-EB60-4907-BCEA-F250780E6019}
 		{02F855A2-3178-4A17-8865-9931BA19BCCF} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{BFE9BC59-8007-4860-8EF0-15D7192F0F63} = {761800EE-EB60-4907-BCEA-F250780E6019}
 	EndGlobalSection
 EndGlobal

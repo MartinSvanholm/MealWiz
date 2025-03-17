@@ -5,7 +5,9 @@ Label="@Label"
 Variant="@Variant"
 Required="@Required"
 Class="@Class"
-Immediate="@Immediate"/>
+Immediate="@Immediate"
+InputMode="@InputMode"
+InputType="@InputType"/>
 
 @code {
     [Parameter]
@@ -28,4 +30,10 @@ Immediate="@Immediate"/>
 
     [Parameter]
     public bool Immediate { get; set; } = true;
+    
+    [Parameter]
+    public InputMode InputMode { get; set; } = InputMode.text;
+
+    [Parameter]
+    public InputType InputType { get; set; } = InputType.Text;
 }
