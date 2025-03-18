@@ -1,6 +1,7 @@
 ﻿using MealWizFeatures.Models.Supabase;
 using Newtonsoft.Json;
 using Supabase.Gotrue.Exceptions;
+using System.Net;
 
 namespace MealWizFeatures.Helpers;
 
@@ -8,6 +9,15 @@ public static class SupabaseHelper
 {
     public static SupabaseExceptionResponse ConvertSupbaseException(this GotrueException gotrueException)
     {
+        if (gotrueException.Response == null)
+        {
+            return new SupabaseExceptionResponse
+            {
+                code = (int)HttpStatusCode.ServiceUnavailable,
+                msg = "No response from server"
+            };
+        }
+        
         return JsonConvert.DeserializeObject<SupabaseExceptionResponse>(gotrueException.Message);
     }
 }

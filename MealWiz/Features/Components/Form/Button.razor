@@ -3,8 +3,17 @@ Color="@Color"
 Variant="@Variant"
 OnClick="@OnClick"
 Class="@Class"
-ButtonType="@ButtonType">
-    @ChildContent
+ButtonType="@ButtonType"
+Disabled="IsDisabled || IsLoading"
+>
+    @if (IsLoading)
+    {
+        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+    } 
+    else 
+    {
+        @ChildContent
+    }
 </MudButton>
 
 @code {
@@ -25,4 +34,10 @@ ButtonType="@ButtonType">
 
     [Parameter]
     public ButtonType ButtonType { get; set; } = ButtonType.Button;
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter]
+    public bool IsDisabled { get; set; }
 }
