@@ -1,7 +1,19 @@
 ﻿@attribute [Authorize]
 @page "/meals"
 
-<MudButton Color="Color.Primary" Variant="Variant.Filled">Click me</MudButton>
+<MudPaper>
+    <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+        <MudText>Your meals</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add" />
+    </MudStack>
+</MudPaper>
+
+<MudStack Class="px-3 pt-3">
+    <MealsCard />
+    <MealsCard />
+    <MealsCard />
+</MudStack>
 
 @code {
 
