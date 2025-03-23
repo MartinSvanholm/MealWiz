@@ -86,3 +86,11 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+body {
+    overflow-y: hidden;
+}
+
+#app {
+    overflow-y: hidden;
+}

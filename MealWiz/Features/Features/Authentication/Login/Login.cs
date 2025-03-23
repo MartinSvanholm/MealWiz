@@ -17,7 +17,6 @@ public static class Login
         public async Task<Result<Session?>> Handle(Command request, CancellationToken cancellationToken)
         {
             var result = await Result.Try(() => _supabaseClient.Auth.SignInWithPassword(request.Email, request.Password));
-            await authenticationStateProvider.GetAuthenticationStateAsync();
 
             return result;
         }

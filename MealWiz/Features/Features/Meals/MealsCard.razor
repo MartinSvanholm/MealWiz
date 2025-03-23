@@ -2,10 +2,11 @@
 
 <BaseCard CardColor="Color.Primary">
     <HeaderContent>
-        <MudText Typo="Typo.h6">Pasta</MudText>
+        <MudText Typo="Typo.h6">@Meal.Name</MudText>
     </HeaderContent>
 </BaseCard>
 
 @code {
-
+    [Parameter]
+    public Meal Meal { get; set; }
 }

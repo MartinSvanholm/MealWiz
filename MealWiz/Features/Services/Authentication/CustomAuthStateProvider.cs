@@ -9,8 +9,6 @@ public class CustomAuthStateProvider(Client client) : AuthenticationStateProvide
 {
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        client.Auth.LoadSession();
-
         var identity = new ClaimsIdentity();
 
         if (!string.IsNullOrEmpty(client.Auth.CurrentSession?.AccessToken) && !client.Auth.CurrentSession.Expired())

@@ -1,22 +1,29 @@
-﻿@inherits LayoutComponentBase
+﻿@using Supabase
+@inherits LayoutComponentBase
+@inject Client _supabaseClient
 
 <MudThemeProvider Theme="MealWizTheme" IsDarkMode />
 <MudPopoverProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
-    <MudAppBar Bottom Gutters="false" Elevation="20" Fixed Color="@Color.Transparent">
-        <NavMenu />
-    </MudAppBar>
+<MudLayout Class="overflow-y-hidden">
     <DrawerBase />
     <MudMainContent Class="pa-0">
         @Body
     </MudMainContent>
-    
+    <MudAppBar Bottom Gutters="false" Elevation="20" Fixed Style="@($"background:{MealWizTheme.PaletteDark.Background}" )">
+        <NavMenu />
+    </MudAppBar>
 </MudLayout>
 
 
 @code {
+    protected override void OnInitialized()
+    {
+        _supabaseClient.Auth.LoadSession();
+        base.OnInitializedAsync();
+    }
+
     MudTheme MealWizTheme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
