@@ -18,10 +18,13 @@
 
 
 @code {
-    protected override void OnInitialized()
+    protected override void OnAfterRender(bool firstRender)
     {
-        _supabaseClient.Auth.LoadSession();
-        base.OnInitializedAsync();
+        if (firstRender) {
+            _supabaseClient.Auth.LoadSession();
+        }
+
+        base.OnAfterRender(firstRender);
     }
 
     MudTheme MealWizTheme = new MudTheme()
