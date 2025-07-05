@@ -7,7 +7,7 @@ namespace MealWizFeatures.Services.Authentication;
 
 public class CustomAuthStateProvider(Client client) : AuthenticationStateProvider
 {
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         var identity = new ClaimsIdentity();
 
@@ -24,7 +24,7 @@ public class CustomAuthStateProvider(Client client) : AuthenticationStateProvide
 
         NotifyAuthenticationStateChanged(Task.FromResult(state));
 
-        return state;
+        return Task.FromResult(state);
     }
 
     private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
