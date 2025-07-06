@@ -1,0 +1,27 @@
+﻿@inject NavigationManager navigationManager
+
+<MudStack Row Justify="Justify.SpaceAround" Style="width: 100%" AlignItems="AlignItems.Center" Spacing="0">
+    <CustomNavLink IsActive="@(location == "" ? true : false)" Href="/" Icon="@Icons.Material.Filled.FoodBank">Meal plan</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "grocerylist" ? true : false)" Href="/grocerylist" Icon="@Icons.Material.Filled.Checklist">Grocery list</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "meals" ? true : false)" Href="/meals" Icon="@Icons.Material.Filled.Restaurant">Meals</CustomNavLink>
+
+    <CustomNavLink IsActive="@(location == "freezer" ? true : false)" Href="/freezer" Icon="@Icons.Material.Filled.Kitchen">Freezer</CustomNavLink>
+</MudStack>
+
+@code {
+    private MudTheme Theme = new MudTheme();
+    private string location { get => navigationManager.Uri.Split(navigationManager.BaseUri)[1].Split("?")[0]; }
+
+    protected override void OnInitialized()
+    {
+        navigationManager.LocationChanged += LocationChanged;
+
+        base.OnInitialized();
+    }
+
+    private void LocationChanged(object sender, EventArgs e) {
+        StateHasChanged();
+    }
+}

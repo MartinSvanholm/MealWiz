@@ -1,0 +1,85 @@
+﻿<MudPaper @onclick="OnClick" Elevation="4" Class="@($"rounded-lg mud-theme-{CardColor.ToDescriptionString()} {cursorClass} {hoverClass} {selectedClass}")">
+    <MudCard Elevation="0" Class="rounded-bl-0 rounded-tl-0 rounded-br-lg rounded-tr-lg ml-2">
+        @if (hasHeaderContent)
+        {
+            <MudCardHeader Class="@(GetHeaderClass(string.Empty))">
+                <MudStack Row Justify="Justify.SpaceBetween" Style="width: 100%">
+                    @HeaderContent
+                    @if (HeaderActions != null)
+                    {
+                        <MudStack Row>
+                            @HeaderActions
+                        </MudStack>
+                    }
+
+                </MudStack>
+            </MudCardHeader>
+        }
+
+        @if (Content != null)
+        {
+            <MudCardContent Class="@(GetContentClass(string.Empty))" ChildContent="@Content" />
+        }
+    </MudCard>
+</MudPaper>
+
+@code {
+    [Parameter]
+    public Color CardColor { get; set; }
+
+    [Parameter]
+    public RenderFragment HeaderContent { get; set; }
+
+    [Parameter]
+    public RenderFragment HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment Content { get; set; }
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter]
+    public bool HideContent { get; set; }
+
+    [Parameter]
+    public bool IsSelected { get; set; }
+
+    [Parameter]
+    public bool Dense { get; set; }
+
+    private string selectedClass => IsSelected ? "selected" : string.Empty;
+
+    private string hoverClass => OnClick.HasDelegate ? "hover" : string.Empty;
+    private string cursorClass => OnClick.HasDelegate ? "cursor-pointer" : string.Empty;
+    private bool hasHeaderContent => HeaderActions != null || HeaderContent != null;
+
+    private string GetHeaderClass(string customClass)
+    {
+        string classString = string.Empty;
+
+        classString += Dense ? "pb-0 pt-2" : string.Empty;
+        classString += customClass;
+
+        return classString;
+    }
+
+    private string GetContentClass(string customClass)
+    {
+        string classString = string.Empty;
+
+        if (Dense)
+        {
+            if (hasHeaderContent)
+            {
+                classString += "pt-0 ";
+            }
+            else
+            {
+                classString += "pt-2 pb-3";
+            }
+        }
+
+        return classString;
+    }
+}
