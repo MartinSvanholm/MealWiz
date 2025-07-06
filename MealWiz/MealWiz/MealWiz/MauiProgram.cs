@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Services.DrawerStateContainer;
+﻿using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
@@ -38,6 +39,8 @@ namespace MealWiz
 
             builder.Services.AddMudServices();
             builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
+            builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
 
             string supabaseUrl = builder.Configuration["Supabase:url"];
             string supabaseKey = builder.Configuration["Supabase:key"];

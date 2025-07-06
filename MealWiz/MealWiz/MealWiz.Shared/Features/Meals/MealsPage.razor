@@ -1,0 +1,43 @@
+﻿@attribute [Authorize]
+@page "/meals"
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+@inject Client _client;
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper >
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudText>Your meals</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" />
+        </MudStack>
+    </MudPaper>
+
+    <MudStack Class="px-3 pt-3" Style="overflow-y: scroll;" >
+        @foreach (Meal meal in _mealsStateContainer.Meals)
+        {
+            <MealsCard Meal="meal" />
+        }
+
+        @foreach (Meal meal in _mealsStateContainer.Meals)
+        {
+            <MealsCard Meal="meal" />
+        }
+    </MudStack>
+</MudStack>
+
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        _mealsStateContainer.CurrentSnackbar = _snackbar;
+        await _mealsStateContainer.LoadMeals();
+
+        await base.OnInitializedAsync();
+    }
+
+    private void hihi() 
+    {
+        _client.Auth.SignOut();
+    }
+}
