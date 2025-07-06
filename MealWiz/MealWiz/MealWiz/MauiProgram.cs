@@ -1,5 +1,8 @@
-﻿using MealWiz.Shared.Features.Meals.State;
+﻿using MealWiz.Providers;
+using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MudBlazor.Services;
@@ -33,14 +36,14 @@ namespace MealWiz
             var config = new ConfigurationBuilder()
                 .AddJsonStream(stream)
                 .Build();
-
-
             builder.Configuration.AddConfiguration(config);
 
             builder.Services.AddMudServices();
             builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
             builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
+            builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
+            builder.Services.AddAuthorizationCore();
 
             string supabaseUrl = builder.Configuration["Supabase:url"];
             string supabaseKey = builder.Configuration["Supabase:key"];
@@ -49,8 +52,14 @@ namespace MealWiz
                 var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
                 {
                     AutoRefreshToken = true,
-                    AutoConnectRealtime = true
+                    AutoConnectRealtime = true,
+                    SessionHandler = new CustomSupabaseSessionProvider()
                 });
+
+                var task = Task.Run(client.InitializeAsync);
+                task.Wait();
+
+                client.Auth.LoadSession();
 
                 return client;
             });

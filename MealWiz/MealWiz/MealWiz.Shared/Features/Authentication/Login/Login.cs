@@ -18,6 +18,8 @@ public static class Login
         {
             var result = await Result.Try(() => _supabaseClient.Auth.SignInWithPassword(request.Email, request.Password));
 
+            authenticationStateProvider.GetAuthenticationStateAsync();
+
             return result;
         }
     }

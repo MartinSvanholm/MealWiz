@@ -1,5 +1,7 @@
+using Blazored.LocalStorage;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Web.Components;
+using MealWiz.Web.Providers;
 using MudBlazor.Services;
 using Supabase;
 
@@ -11,6 +13,18 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddMudServices();
 builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
+builder.Services.AddBlazoredLocalStorage();
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication("Auth")
+    .AddCookie("Auth", options =>
+    {
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
+        options.SlidingExpiration = true;
+        options.LoginPath = "/login";
+    });
+builder.Services.AddCascadingAuthenticationState();
 
 string supabaseUrl = builder.Configuration["Supabase:url"];
 string supabaseKey = builder.Configuration["Supabase:key"];
@@ -19,7 +33,8 @@ builder.Services.AddScoped(provider =>
     var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
     {
         AutoRefreshToken = true,
-        AutoConnectRealtime = true
+        AutoConnectRealtime = true,
+        SessionHandler = new CustomSupabaseSessionProvider(provider.GetRequiredService<ISyncLocalStorageService>())
     });
 
     return client;
@@ -49,5 +64,7 @@ app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(
         typeof(MealWiz.Shared._Imports).Assembly,
         typeof(MealWiz.Web.Client._Imports).Assembly);
+
+app.UseAuthorization();
 
 app.Run();
