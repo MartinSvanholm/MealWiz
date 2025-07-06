@@ -33,24 +33,9 @@ builder.Services.AddScoped(provider =>
 {
     var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
     {
-        AutoRefreshToken = false,
-        AutoConnectRealtime = true,
-        SessionHandler = new CustomSupabaseSessionProvider()
+        AutoRefreshToken = true,
+        AutoConnectRealtime = true
     });
-
-    client.Auth.AddStateChangedListener((client, authstate) =>
-    {
-        var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
-
-        if (authstate == Constants.AuthState.SignedIn
-            || authstate == Constants.AuthState.SignedOut
-            || authstate == Constants.AuthState.TokenRefreshed)
-        {
-            authStateProvider.GetAuthenticationStateAsync();
-        }
-    });
-
-    client.InitializeAsync();
 
     return client;
 });
