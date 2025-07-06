@@ -1,4 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MealWiz.Shared.Services.DrawerStateContainer;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using MudBlazor.Services;
+using Supabase;
+using System.Reflection;
 
 namespace MealWiz
 {
@@ -20,6 +25,32 @@ namespace MealWiz
             builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Logging.AddDebug();
 #endif
+            var a = Assembly.GetExecutingAssembly();
+            string appSettings = $"{a.GetName().Name}.Resources.appsettings.Development.json";
+            using var stream = a.GetManifestResourceStream(appSettings);
+
+            var config = new ConfigurationBuilder()
+                .AddJsonStream(stream)
+                .Build();
+
+
+            builder.Configuration.AddConfiguration(config);
+
+            builder.Services.AddMudServices();
+            builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
+
+            string supabaseUrl = builder.Configuration["Supabase:url"];
+            string supabaseKey = builder.Configuration["Supabase:key"];
+            builder.Services.AddScoped(provider =>
+            {
+                var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
+                {
+                    AutoRefreshToken = true,
+                    AutoConnectRealtime = true
+                });
+
+                return client;
+            });
 
             return builder.Build();
         }
