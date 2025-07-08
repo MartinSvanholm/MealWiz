@@ -56,8 +56,17 @@ namespace MealWiz
                     SessionHandler = new CustomSupabaseSessionProvider()
                 });
 
-                var task = Task.Run(client.InitializeAsync);
-                task.Wait();
+                client.Auth.AddStateChangedListener((client, authState) =>
+                {
+                    if (authState == Supabase.Gotrue.Constants.AuthState.SignedOut)
+                    {
+                        var authStateProvider = provider.GetRequiredService<AuthenticationStateProvider>();
+                        authStateProvider.GetAuthenticationStateAsync();
+                    }
+                });
+
+                var initTask = Task.Run(client.InitializeAsync);
+                initTask.Wait();
 
                 client.Auth.LoadSession();
 
