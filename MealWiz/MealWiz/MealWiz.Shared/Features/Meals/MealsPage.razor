@@ -18,11 +18,6 @@
         {
             <MealsCard Meal="meal" />
         }
-
-        @foreach (Meal meal in _mealsStateContainer.Meals)
-        {
-            <MealsCard Meal="meal" />
-        }
     </MudStack>
 </MudStack>
 
@@ -31,13 +26,10 @@
     protected override async Task OnInitializedAsync()
     {
         _mealsStateContainer.CurrentSnackbar = _snackbar;
+        _mealsStateContainer.OnStateChanged += StateHasChanged;
+
         await _mealsStateContainer.LoadMeals();
 
         await base.OnInitializedAsync();
-    }
-
-    private void hihi() 
-    {
-        _client.Auth.SignOut();
     }
 }

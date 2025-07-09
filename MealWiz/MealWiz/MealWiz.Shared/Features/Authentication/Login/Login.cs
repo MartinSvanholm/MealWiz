@@ -18,7 +18,7 @@ public static class Login
         {
             var result = await Result.Try(() => _supabaseClient.Auth.SignInWithPassword(request.Email, request.Password));
 
-            authenticationStateProvider.GetAuthenticationStateAsync();
+            await authenticationStateProvider.GetAuthenticationStateAsync();
 
             return result;
         }

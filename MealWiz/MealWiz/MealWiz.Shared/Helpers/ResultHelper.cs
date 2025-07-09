@@ -38,4 +38,19 @@ public static class ResultHelper
             snackbar.Add(result.Errors.First().Message, Severity.Error);
         }
     }
+
+    public static void Handle(this Result result, ISnackbar snackbar)
+    {
+        if (result.IsSuccess)
+        {
+            var success = result.Successes.FirstOrDefault();
+            if (success == null) return;
+
+            snackbar.Add(success.Message, Severity.Success);
+        }
+        else
+        {
+            snackbar.Add(result.Errors.First().Message, Severity.Error);
+        }
+    }
 }

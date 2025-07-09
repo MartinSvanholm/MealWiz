@@ -9,18 +9,19 @@ public interface IMealsStateContainer
     ISnackbar CurrentSnackbar { get; set; }
     List<Meal> Meals { get; set; }
 
-    event Action OnStateChange;
+    event Action OnStateChanged;
 
     void NotifyStateChanged();
     Task LoadMeals();
+    Task DeleteMeal(Meal meal);
 }
 
 public class MealsStateContainer(
     IMediator mediator) : IMealsStateContainer
 {
-    public void NotifyStateChanged() => OnStateChange?.Invoke();
+    public void NotifyStateChanged() => OnStateChanged?.Invoke();
 
-    public event Action OnStateChange;
+    public event Action OnStateChanged;
 
     public ISnackbar CurrentSnackbar { get; set; }
 
@@ -41,5 +42,17 @@ public class MealsStateContainer(
         result.Handle(CurrentSnackbar);
 
         Meals = result.Value;
+    }
+
+    public async Task DeleteMeal(Meal meal)
+    {
+        var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id)); // Example MealId
+        result.Handle(CurrentSnackbar);
+
+        if (result.IsSuccess)
+        {
+            Meals.RemoveAll(m => m.Id == meal.Id);
+            NotifyStateChanged();
+        }
     }
 }
