@@ -7,7 +7,7 @@ public class Meal
     public int Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
-    public Guid CreatedByt { get; set; }
+    public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<Ingredient> Ingredients { get; set; }
@@ -25,7 +25,7 @@ public class Meal
         Id = mealDb.Id;
         Name = mealDb.Name;
         Description = mealDb.Description;
-        CreatedByt = mealDb.CreatedByt;
+        CreatedBy = mealDb.CreatedBy;
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
 

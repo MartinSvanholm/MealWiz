@@ -16,5 +16,14 @@ public partial class DrawerStateContainer : IDrawerStateContainer
     public void CloseDrawer()
     {
         IsDrawerOpen = false;
+        IsConfirmDrawerOpen = false;
+    }
+
+    public void OpenConfirmDrawer(string tittle, string description)
+    {
+        StateParameters.Title = tittle;
+        StateParameters.description = description;
+
+        IsConfirmDrawerOpen = true;
     }
 }

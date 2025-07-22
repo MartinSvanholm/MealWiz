@@ -17,7 +17,7 @@ public class MealDb : BaseModel
     public string Description { get; set; }
 
     [Column("created_by")]
-    public Guid CreatedByt { get; set; }
+    public Guid CreatedBy { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

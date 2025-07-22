@@ -46,13 +46,20 @@ public class MealsStateContainer(
 
     public async Task DeleteMeal(Meal meal)
     {
-        var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id)); // Example MealId
-        result.Handle(CurrentSnackbar);
-
-        if (result.IsSuccess)
+        try
         {
-            Meals.RemoveAll(m => m.Id == meal.Id);
-            NotifyStateChanged();
+            var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id)); // Example MealId
+            result.Handle(CurrentSnackbar);
+
+            if (result.IsSuccess)
+            {
+                Meals.RemoveAll(m => m.Id == meal.Id);
+                NotifyStateChanged();
+            }
+        }
+        catch (Exception e)
+        {
+
         }
     }
 }

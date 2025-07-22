@@ -22,5 +22,6 @@ public class DrawerStateParameters
     public Dictionary<string, object> ContentParameters { get; set; }
     public RenderFragment Header { get; set; }
     public string Title { get; set; }
+    public string description { get; set; }
     public string Width { get; set; } = null;
 }

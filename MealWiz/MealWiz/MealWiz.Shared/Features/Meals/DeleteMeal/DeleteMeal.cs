@@ -13,7 +13,7 @@ public static class DeleteMeal
         {
             var result = await Result.Try(async Task () =>
             {
-                await supabaseClient.From<MealDb>()
+                 await supabaseClient.From<MealDb>()
                     .Where(m => m.Id == request.MealId)
                     .Delete();
 

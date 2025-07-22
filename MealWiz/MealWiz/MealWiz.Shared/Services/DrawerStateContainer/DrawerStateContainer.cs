@@ -23,10 +23,31 @@ public partial class DrawerStateContainer : IDrawerStateContainer
             NotifyStateChanged();
         }
     }
+    private bool _isConfirmDrawerOpen { get; set; }
+    public bool IsConfirmDrawerOpen
+    {
+        get { return _isConfirmDrawerOpen; }
+        set
+        {
+            _isConfirmDrawerOpen = value;
+
+            if (value == false)
+            {
+                StateParameters = new();
+                DrawerNavigationStack = new();
+            }
+
+            NotifyStateChanged();
+        }
+    }
 
     public event Action? OnDrawerChange;
 
+    public delegate Task ConfirmClickHandler();
+    public event ConfirmClickHandler? OnConfirmClick;
+
     public void NotifyStateChanged() => OnDrawerChange?.Invoke();
+    public void NotifyConfirmClicked() => OnConfirmClick?.Invoke();
 
     public void OpenDrawer(string title, Type content)
     {
