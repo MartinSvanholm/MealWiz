@@ -1,0 +1,51 @@
+﻿@page "/meals/edit"
+@inject IMealsStateContainer _mealsStateContainer
+@inject NavigationManager _navigationManager
+@inject IDrawerStateContainer _drawerStateContainer
+@implements IDisposable
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="OnBackClick" />
+            <MudText>Edit meal</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Save" />
+        </MudStack>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-scroll">
+
+        <MudStack Class="pa-4">
+            <MudTextField Class="flex-grow-0" Label="Name" @bind-Value="_mealsStateContainer.MealToEdit.Name" Variant="Variant.Outlined" />
+            <MudTextFieldExtended Class="flex-grow-0" Clearable Lines="4" Label="Recipe" @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
+
+            <CreateIngredientCard />
+
+            <MudStack>
+                @foreach (Ingredient ingredient in _mealsStateContainer.MealToEdit.Ingredients)
+                {
+                    <IngredientCard Ingredient="ingredient" />
+                }
+            </MudStack>
+
+        </MudStack>
+    </div>
+</MudStack>
+
+@code {
+    protected override void OnInitialized()
+    {
+        _mealsStateContainer.OnStateChanged += StateHasChanged;
+    }
+
+    private void OnBackClick()
+    {
+        _navigationManager.NavigateTo("/meals");
+    }
+
+    public void Dispose()
+    {
+        _drawerStateContainer.CloseDrawer();
+        _mealsStateContainer.OnStateChanged -= StateHasChanged;
+    }
+}

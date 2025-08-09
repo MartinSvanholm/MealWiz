@@ -1,7 +1,7 @@
 ﻿using FluentResults;
-using MealWiz.Shared.Models.Supabase;
 using MudBlazor;
 using Supabase.Gotrue.Exceptions;
+using Supabase.Postgrest.Exceptions;
 
 namespace MealWiz.Shared.Helpers;
 
@@ -15,8 +15,20 @@ public static class ResultHelper
             {
                 if (exception is GotrueException gotrueException)
                 {
-                    SupabaseExceptionResponse response = gotrueException.ConvertSupbaseException();
-                    return new Error(response.msg).CausedBy(gotrueException);
+                    string errorMessage = "No response from server";
+#if DEBUG    
+                    errorMessage = SupabaseHelper.GetSupabaseErrorMessage(gotrueException).Message;
+#endif
+                    return new Error(errorMessage).CausedBy(gotrueException);
+                }
+
+                if (exception is PostgrestException postgrestException)
+                {
+                    string errorMessage = "No response from server";
+#if DEBUG
+                    errorMessage = SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Message;
+#endif
+                    return new Error(errorMessage).CausedBy(postgrestException);
                 }
 
                 return new Error(exception.Message).CausedBy(exception);

@@ -11,6 +11,7 @@ public class DrawerStateParameters
         Header = drawerStateParameters.Header;
         Title = drawerStateParameters.Title;
         Width = drawerStateParameters.Width;
+        Height = drawerStateParameters.Height;
     }
 
     public DrawerStateParameters()
@@ -24,4 +25,5 @@ public class DrawerStateParameters
     public string Title { get; set; }
     public string description { get; set; }
     public string Width { get; set; } = null;
+    public string Height { get; set; } = "100%";
 }

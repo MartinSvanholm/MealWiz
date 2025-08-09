@@ -13,12 +13,16 @@
         </MudStack>
     </MudPaper>
 
-    <MudStack Class="px-3 pt-3" Style="overflow-y: scroll;" >
-        @foreach (Meal meal in _mealsStateContainer.Meals)
-        {
-            <MealsCard Meal="meal" />
-        }
-    </MudStack>
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MudStack Class="px-3 pt-3">
+            @foreach (Meal meal in _mealsStateContainer.Meals)
+            {
+                <MealsCard Meal="meal" />
+            }
+        </MudStack>
+    </div>
+
+
 </MudStack>
 
 

@@ -1,0 +1,18 @@
+﻿<MudTooltip ChildContent="@Childcontent" Text="@Text" Placement="@Placement" Arrow="@UseArrow">
+
+</MudTooltip>
+
+@code {
+    [Parameter]
+    public RenderFragment Childcontent { get; set; }
+
+    [Parameter]
+    public string Text { get; set; }
+
+    [Parameter]
+    public Placement Placement { get; set; } = Placement.Top;
+
+
+    [Parameter]
+    public bool UseArrow { get; set; } = false;
+}

@@ -13,8 +13,8 @@ public class MealDb : BaseModel
     [Column("name")]
     public string Name { get; set; }
 
-    [Column("description")]
-    public string Description { get; set; }
+    [Column("recipe")]
+    public string Recipe { get; set; }
 
     [Column("created_by")]
     public Guid CreatedBy { get; set; }

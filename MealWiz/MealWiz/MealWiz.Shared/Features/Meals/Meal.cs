@@ -6,7 +6,7 @@ public class Meal
 {
     public int Id { get; set; }
     public string Name { get; set; }
-    public string Description { get; set; }
+    public string Recipe { get; set; }
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -16,7 +16,7 @@ public class Meal
     {
         Id = 0;
         Name = string.Empty;
-        Description = string.Empty;
+        Recipe = string.Empty;
         Ingredients = [];
     }
 
@@ -24,19 +24,11 @@ public class Meal
     {
         Id = mealDb.Id;
         Name = mealDb.Name;
-        Description = mealDb.Description;
+        Recipe = mealDb.Recipe;
         CreatedBy = mealDb.CreatedBy;
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
 
-        if (Ingredients != null)
-        {
-            Ingredients = mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList();
-        }
-        else
-        {
-            Ingredients = [];
-        }
-
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : ([]);
     }
 }

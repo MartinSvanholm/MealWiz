@@ -1,6 +1,6 @@
 ﻿@inject IDrawerStateContainer _drawerStateContainer
 
-<MudDrawer Width="100%" Height="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
+<MudDrawer Width="100%" Height="@_drawerStateContainer.StateParameters.Height" Elevation="4" @bind-Open="_drawerStateContainer.IsDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
     <MudDrawerHeader Class="pl-2" Style="@($"background: var(--mud-palette-primary); color: white;")">
         @if (_drawerStateContainer.StateParameters.Header != null)
         {

@@ -19,11 +19,14 @@ public class IngredientDb : BaseModel
     public bool ShowOnGroceryList { get; set; }
 
     [Column("created_by")]
-    public Guid CreatedByt { get; set; }
+    public Guid CreatedBy { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    [Column("fk_meal")]
+    public int MealId { get; set; }
 }

@@ -8,6 +8,7 @@ public interface IMealsStateContainer
 {
     ISnackbar CurrentSnackbar { get; set; }
     List<Meal> Meals { get; set; }
+    Meal MealToEdit { get; set; }
 
     event Action OnStateChanged;
 
@@ -35,6 +36,8 @@ public class MealsStateContainer(
             NotifyStateChanged();
         }
     }
+
+    public Meal MealToEdit { get; set; } = new Meal();
 
     public async Task LoadMeals()
     {

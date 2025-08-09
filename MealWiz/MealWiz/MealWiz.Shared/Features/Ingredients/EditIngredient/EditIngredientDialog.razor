@@ -1,0 +1,40 @@
+﻿@inject IIngredientStateContainer _ingredientsStateContainer
+@inject IMediator _mediator
+@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+
+<MudStack Class="pa-2">
+    <MudTextField Label="Name" @bind-Value="_ingredientsStateContainer.IngredientToEdit.Name" Variant="Variant.Outlined" />
+    <MudTextField Label="Amount" @bind-Value="_ingredientsStateContainer.IngredientToEdit.Amount" Variant="Variant.Outlined" />
+    <MudLoadingButton OnClick="SaveIngredient" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Success" ButtonVariant="ButtonVariant.Button">Save</MudLoadingButton>
+</MudStack>
+
+@code {
+    private bool IsLoading { get; set; }
+
+    private async Task SaveIngredient()
+    {
+        IsLoading = true;
+
+        var result = await _mediator.Send(new SaveIngredient.SaveIngredient.Command(_ingredientsStateContainer.IngredientToEdit));
+        result.Handle(_snackbar);
+
+        if (result.IsSuccess) {
+            if (_ingredientsStateContainer.IngredientToEdit.Id == 0) {
+                _mealsStateContainer.MealToEdit.Ingredients.Add(result.Value);
+            } 
+            else {
+                _ingredientsStateContainer.IngredientToEdit = result.Value;
+            }
+
+            _snackbar.Add("Ingredient saved.", Severity.Success);
+        }
+
+        _mealsStateContainer.NotifyStateChanged();
+        _ingredientsStateContainer.IngredientToEdit = new Ingredient();
+        _drawerStateContainer.CloseDrawer();
+
+        IsLoading = false;
+    }
+}

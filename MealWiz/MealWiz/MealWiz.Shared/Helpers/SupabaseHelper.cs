@@ -7,7 +7,7 @@ namespace MealWiz.Shared.Helpers;
 
 public static class SupabaseHelper
 {
-    public static SupabaseExceptionResponse ConvertSupbaseException(this GotrueException gotrueException)
+    public static SupabaseExceptionResponse ConvertGoTrueException(this GotrueException gotrueException)
     {
         if (gotrueException.Response == null)
         {
@@ -19,5 +19,10 @@ public static class SupabaseHelper
         }
 
         return JsonConvert.DeserializeObject<SupabaseExceptionResponse>(gotrueException.Message);
+    }
+
+    public static SupabaseExceptionMessage GetSupabaseErrorMessage(Exception exception)
+    {
+        return JsonConvert.DeserializeObject<SupabaseExceptionMessage>(exception.Message);
     }
 }

@@ -16,7 +16,13 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
             if (value == false)
             {
-                StateParameters = new();
+                DrawerStateParameters newParameters = new()
+                {
+                    Width = StateParameters.Width,
+                    Height = StateParameters.Height
+                };
+                StateParameters = newParameters;
+
                 DrawerNavigationStack = new();
             }
 
@@ -33,7 +39,13 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
             if (value == false)
             {
-                StateParameters = new();
+                DrawerStateParameters newParameters = new()
+                {
+                    Width = StateParameters.Width,
+                    Height = StateParameters.Height
+                };
+                StateParameters = newParameters;
+
                 DrawerNavigationStack = new();
             }
 
@@ -63,6 +75,12 @@ public partial class DrawerStateContainer : IDrawerStateContainer
         IsDrawerOpen = true;
     }
 
+    public void OpenDrawer(DrawerStateParameters drawerStateParameters)
+    {
+        StateParameters = drawerStateParameters;
+        IsDrawerOpen = true;
+    }
+
     public void NavigateBack()
     {
         if (DrawerNavigationStack.Count > 1)
@@ -77,5 +95,30 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
             NotifyStateChanged();
         }
+    }
+
+    public void SwitchDrawerContent(Type content, string title = "", Dictionary<string, object> parameters = null)
+    {
+        StateParameters.Content = content;
+        StateParameters.Title = title;
+        StateParameters.ContentParameters = parameters ?? [];
+
+        DrawerNavigationStack.Push(new(StateParameters));
+
+        NotifyStateChanged();
+    }
+
+    public void CloseDrawer()
+    {
+        IsDrawerOpen = false;
+        IsConfirmDrawerOpen = false;
+    }
+
+    public void OpenConfirmDrawer(string tittle, string description)
+    {
+        StateParameters.Title = tittle;
+        StateParameters.description = description;
+
+        IsConfirmDrawerOpen = true;
     }
 }

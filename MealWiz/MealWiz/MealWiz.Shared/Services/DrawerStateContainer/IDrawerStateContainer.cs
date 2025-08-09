@@ -20,6 +20,7 @@ public interface IDrawerStateContainer
     void NotifyConfirmClicked();
     void OpenDrawer(RenderFragment header, Type content);
     void OpenDrawer(string title, Type content);
+    void OpenDrawer(DrawerStateParameters drawerStateParameters);
     void SwitchDrawerContent(Type content, string title = "", Dictionary<string, object> parameters = null);
     void OpenConfirmDrawer(string title, string description);
 }
