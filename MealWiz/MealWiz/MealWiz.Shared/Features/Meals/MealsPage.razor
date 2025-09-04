@@ -3,11 +3,12 @@
 @inject IMealsStateContainer _mealsStateContainer
 @inject ISnackbar _snackbar
 @inject Client _client;
+@inject NavigationManager _navigationManager
 
 <MudStack Spacing="0" Style="height: calc(100vh - 56px)">
     <MudPaper >
         <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-            <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudIconButton OnClick="OnAccountClicked" Icon="@Icons.Material.Filled.AccountCircle" />
             <MudText>Your meals</MudText>
             <MudIconButton Icon="@Icons.Material.Filled.Add" />
         </MudStack>
@@ -35,5 +36,10 @@
         await _mealsStateContainer.LoadMeals();
 
         await base.OnInitializedAsync();
+    }
+
+    private void OnAccountClicked()
+    {
+        _navigationManager.NavigateTo("/account");
     }
 }
