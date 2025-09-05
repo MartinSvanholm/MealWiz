@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.Ingredients.GetIngredientsById;
+using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
@@ -50,19 +51,12 @@ public class MealsStateContainer(
 
     public async Task ReloadIngredientsForMealToEdit()
     {
-        try
-        {
-            var result = await mediator.Send(new GetIngredientsByMealId.Query(MealToEdit.Id));
+        var result = await mediator.Send(new GetIngredientsByMealId.Query(MealToEdit.Id));
 
-            result.Handle(CurrentSnackbar);
-            if (result.IsFailed) return;
+        result.Handle(CurrentSnackbar);
+        if (result.IsFailed) return;
 
-            MealToEdit.Ingredients = result.Value;
-            NotifyStateChanged();
-        }
-        catch (Exception)
-        {
-            CurrentSnackbar.Add("An error orcured, please try again.", Severity.Error);
-        }
+        MealToEdit.Ingredients = result.Value;
+        NotifyStateChanged();
     }
 }

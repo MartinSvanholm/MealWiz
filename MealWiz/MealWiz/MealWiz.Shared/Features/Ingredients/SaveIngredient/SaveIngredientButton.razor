@@ -15,15 +15,23 @@
     {
         IsLoading = true;
 
-        var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
+        try
+        {
+            var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
 
-        result.Handle(_snackbar);
-        if (result.IsFailed) return;
+            result.Handle(_snackbar);
+            if (result.IsFailed) return;
 
-        await _mealsStateContainer.ReloadIngredientsForMealToEdit();
+            await _mealsStateContainer.ReloadIngredientsForMealToEdit();
 
-        _drawerStateContainer.CloseDrawer();
-        _snackbar.Add("Ingredient saved.", Severity.Success);
+            _drawerStateContainer.CloseDrawer();
+            _snackbar.Add("Ingredient saved.", Severity.Success);
+        }
+        catch (Exception)
+        {
+            _snackbar.Add("An error has occurred, please try again.", Severity.Error);
+        }
+        
         IsLoading = false;
     }
 }

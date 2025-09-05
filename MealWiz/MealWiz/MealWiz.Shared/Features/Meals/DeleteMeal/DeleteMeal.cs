@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using MealWiz.Shared.Features.Meals.Models;
 using MediatR;
 using Supabase;
 

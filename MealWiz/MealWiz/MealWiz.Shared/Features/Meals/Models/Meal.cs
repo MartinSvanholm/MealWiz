@@ -1,6 +1,6 @@
 ﻿using MealWiz.Shared.Features.Ingredients.Models;
 
-namespace MealWiz.Shared.Features.Meals;
+namespace MealWiz.Shared.Features.Meals.Models;
 
 public class Meal
 {

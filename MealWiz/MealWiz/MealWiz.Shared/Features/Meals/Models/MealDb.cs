@@ -2,7 +2,7 @@
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
-namespace MealWiz.Shared.Features.Meals;
+namespace MealWiz.Shared.Features.Meals.Models;
 
 [Table("meals")]
 public class MealDb : BaseModel

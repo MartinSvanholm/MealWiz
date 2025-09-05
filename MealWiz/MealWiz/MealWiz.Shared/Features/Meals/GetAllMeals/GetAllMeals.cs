@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using MealWiz.Shared.Features.Meals.Models;
 using MediatR;
 using Supabase;
 
@@ -13,7 +14,7 @@ public static class GetAllMeals
         public async Task<Result<List<Meal>>> Handle(Query request, CancellationToken cancellationToken)
         {
             var result = await _supabaseClient.Postgrest.Table<MealDb>().Get();
-            var meals = result.Models.Select(db => new Meal(db)).ToList();
+            var meals = result.Models.ConvertAll(db => new Meal(db));
 
             return Result.Ok(meals);
         }
