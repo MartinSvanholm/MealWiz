@@ -1,0 +1,15 @@
+﻿@inject IMediator _mediator
+@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+
+<MudStack Class="pa-2">
+    <MudTextField Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
+    <MudTextField Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined" />
+    <SaveIngredientButton Ingredient="Ingredient" />
+</MudStack>
+
+@code {
+    [Parameter]
+    public Ingredient Ingredient { get; set; }
+}

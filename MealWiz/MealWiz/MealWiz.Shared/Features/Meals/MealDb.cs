@@ -1,4 +1,4 @@
-﻿using MealWiz.Shared.Features.Ingredients;
+﻿using MealWiz.Shared.Features.Ingredients.Models;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 

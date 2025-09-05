@@ -1,5 +1,4 @@
 ﻿@inject ISender _mediator
-@inject IIngredientStateContainer _ingredientsStateContainer
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
@@ -7,13 +6,16 @@
 <MudLoadingButton OnClick="SaveIngredient" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Success" ButtonVariant="ButtonVariant.Button">Save</MudLoadingButton>
 
 @code {
+    [Parameter]
+    public Ingredient Ingredient { get; set; }
+
     private bool IsLoading { get; set; }
 
     private async Task SaveIngredient()
     {
         IsLoading = true;
 
-        var result = await _mediator.Send(new SaveIngredient.Command(_ingredientsStateContainer.IngredientToEdit));
+        var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
 
         result.Handle(_snackbar);
         if (result.IsFailed) return;

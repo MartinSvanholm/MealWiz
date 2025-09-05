@@ -1,7 +1,7 @@
 ﻿using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
-namespace MealWiz.Shared.Features.Ingredients;
+namespace MealWiz.Shared.Features.Ingredients.Models;
 
 [Table("ingredients")]
 public class IngredientDb : BaseModel

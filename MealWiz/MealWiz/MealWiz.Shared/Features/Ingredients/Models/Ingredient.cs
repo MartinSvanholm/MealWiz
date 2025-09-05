@@ -1,4 +1,4 @@
-﻿namespace MealWiz.Shared.Features.Ingredients;
+﻿namespace MealWiz.Shared.Features.Ingredients.Models;
 
 public class Ingredient
 {

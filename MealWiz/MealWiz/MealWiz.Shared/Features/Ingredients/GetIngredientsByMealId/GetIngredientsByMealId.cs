@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using MealWiz.Shared.Features.Ingredients.Models;
 using MediatR;
 using Supabase;
 using Supabase.Postgrest;

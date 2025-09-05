@@ -1,5 +1,4 @@
-﻿@inject IIngredientStateContainer _ingredientStateContainer
-@inject Client _supabaseClient
+﻿@inject Client _supabaseClient
 @inject IDrawerStateContainer _drawerStateContainer
 
 <BaseCard Dense CardColor="Color.Primary" OnClick="CreateIngredient">
@@ -17,14 +16,16 @@
 @code {
     private void CreateIngredient()
     {
-        _ingredientStateContainer.IngredientToEdit = new();
-
         DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+        {
+            Content = typeof(IngredientDrawer),
+            Title = "Create Ingredient",
+            Height = "38%",
+            ContentParameters = new Dictionary<string, object>
             {
-                Content = typeof(EditIngredientDialog),
-                Title = "Create Ingredient",
-                Height = "38%"
-            };
+                { nameof(IngredientDrawer.Ingredient), new Ingredient() }
+            }
+        };
 
         _drawerStateContainer.OpenDrawer(drawerStateParameters);
     }

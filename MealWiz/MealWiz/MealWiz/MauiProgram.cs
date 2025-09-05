@@ -1,5 +1,4 @@
 ﻿using MealWiz.Providers;
-using MealWiz.Shared.Features.Ingredients;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
@@ -43,7 +42,6 @@ namespace MealWiz
             builder.Services.AddMudServices();
             builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
             builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
-            builder.Services.AddScoped<IIngredientStateContainer, IngredientStateContainer>();
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
