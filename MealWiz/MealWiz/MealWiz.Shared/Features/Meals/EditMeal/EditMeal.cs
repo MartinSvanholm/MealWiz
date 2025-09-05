@@ -19,27 +19,17 @@ public static class EditMeal
                 mealDb.CreatedAt = DateTime.UtcNow;
                 mealDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
 
-                var supabaseResult = await Result.Try(async Task () => 
-                {
-                    await supabaseClient.From<MealDb>().Insert(mealDb);
-
-                    Result.Ok();
-                });
-
-                return supabaseResult;
+                return await Result.Try(async Task () => await supabaseClient
+                    .From<MealDb>()
+                    .Insert(mealDb));
             }
             else
             {
                 mealDb.UpdatedAt = DateTime.UtcNow;
 
-                var supabaseResult = await Result.Try(async Task () =>
-                {
-                    await supabaseClient.From<MealDb>().Update(mealDb);
-
-                    Result.Ok();
-                });
-
-                return supabaseResult;
+                return await Result.Try(async Task () => await supabaseClient
+                    .From<MealDb>()
+                    .Update(mealDb));
             }
         }
     }

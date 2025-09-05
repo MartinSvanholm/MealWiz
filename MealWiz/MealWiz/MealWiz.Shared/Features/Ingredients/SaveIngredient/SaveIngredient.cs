@@ -7,11 +7,11 @@ namespace MealWiz.Shared.Features.Ingredients.SaveIngredient;
 
 public static class SaveIngredient
 {
-    public record Command(Ingredient Ingredient) : IRequest<Result<Ingredient>>;
+    public record Command(Ingredient Ingredient) : IRequest<Result>;
 
-    public class Handler(Client supabaseClient, IMealsStateContainer mealsStateContainer) : IRequestHandler<Command, Result<Ingredient>>
+    public class Handler(Client supabaseClient, IMealsStateContainer mealsStateContainer) : IRequestHandler<Command, Result>
     {
-        public async Task<Result<Ingredient>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
             var ingredientDb = request.Ingredient.MapToIngredientDb();
 
@@ -21,15 +21,17 @@ public static class SaveIngredient
                 ingredientDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
                 ingredientDb.MealId = mealsStateContainer.MealToEdit.Id;
 
-                var supabaseResult = await Result.Try(() => supabaseClient.From<IngredientDb>().Insert(ingredientDb));
-                return supabaseResult.Map(result => new Ingredient(supabaseResult.Value.Model));
+                return await Result.Try(async Task () => await supabaseClient
+                    .From<IngredientDb>()
+                    .Insert(ingredientDb));
             }
             else
             {
                 ingredientDb.UpdatedAt = DateTime.UtcNow;
 
-                var supabaseResult = await Result.Try(() => supabaseClient.From<IngredientDb>().Update(ingredientDb));
-                return supabaseResult.Map(result => new Ingredient(supabaseResult.Value.Model));
+                return await Result.Try(async Task () => await supabaseClient
+                    .From<IngredientDb>()
+                    .Update(ingredientDb));
             }
         }
     }

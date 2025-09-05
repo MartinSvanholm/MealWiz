@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using MealWiz.Shared.Features.Ingredients.GetIngredientsById;
 using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
@@ -17,14 +18,14 @@ public interface IMealsStateContainer
     Task LoadMeals();
     Task DeleteMeal(Meal meal);
     Task<Result<Meal>> SaveMeal(Meal meal);
+    Task ReloadIngredientsForMealToEdit();
 }
 
 public class MealsStateContainer(
     IMediator mediator) : IMealsStateContainer
 {
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-
     public event Action OnStateChanged;
+    public void NotifyStateChanged() => OnStateChanged?.Invoke();
 
     public ISnackbar CurrentSnackbar { get; set; }
 
@@ -80,6 +81,24 @@ public class MealsStateContainer(
         catch (Exception e)
         {
             return Result.Fail(e.Message);
+        }
+    }
+
+    public async Task ReloadIngredientsForMealToEdit()
+    {
+        try
+        {
+            var result = await mediator.Send(new GetIngredientsByMealId.Query(MealToEdit.Id));
+
+            result.Handle(CurrentSnackbar);
+            if (result.IsFailed) return;
+
+            MealToEdit.Ingredients = result.Value;
+            NotifyStateChanged();
+        }
+        catch (Exception)
+        {
+            CurrentSnackbar.Add("An error orcured, please try again.", Severity.Error);
         }
     }
 }

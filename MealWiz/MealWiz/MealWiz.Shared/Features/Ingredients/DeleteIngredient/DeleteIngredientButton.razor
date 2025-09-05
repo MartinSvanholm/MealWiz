@@ -36,15 +36,9 @@ Class="pa-1" />
             result.Handle(_snackbar);
             if (result.IsFailed) return;
 
-            var ingredientsResult = await _mediator.Send(new GetIngredientsById.GetIngredientsByMealId.Query(Ingredient.MealId));
+            await _mealsStateContainer.ReloadIngredientsForMealToEdit();
 
-            ingredientsResult.Handle(_snackbar);
-            if (ingredientsResult.IsFailed) return;
-
-            _mealsStateContainer.MealToEdit.Ingredients = ingredientsResult.Value;
-            _mealsStateContainer.NotifyStateChanged();
             _snackbar.Add("Ingredient deleted.", Severity.Success);
-
             _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
             _drawerStateContainer.CloseDrawer();
         }
