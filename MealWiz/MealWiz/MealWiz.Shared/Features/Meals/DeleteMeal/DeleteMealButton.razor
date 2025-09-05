@@ -1,0 +1,47 @@
+﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISender _mediator
+@inject ISnackbar _snackbar
+@implements IDisposable
+
+<MudLoadingButton 
+OnClick="OnDeleteClick" 
+ButtonVariant="@ButtonVariant.IconButton" 
+Icon="@Icons.Material.Filled.Delete" 
+Size="Size.Medium" 
+Class="pa-1" />
+
+@code {
+    [Parameter]
+    public Meal Meal { get; set; }
+
+    public void Dispose()
+    {
+        _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
+    }
+
+    private void OnDeleteClick()
+    {
+        _drawerStateContainer.OnConfirmClick += OnConfirmDelete;
+        _drawerStateContainer.OpenConfirmDrawer("Delete Meal?", "Are you sure you want to delete this meal?");
+    }
+
+    private async Task OnConfirmDelete()
+    {
+        try
+        {
+            var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
+            result.Handle(_snackbar);
+
+            await _mealsStateContainer.LoadMeals();
+
+            _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
+            _drawerStateContainer.CloseDrawer();
+            _snackbar.Add("Meal deleted", Severity.Success);
+        }
+        catch (Exception)
+        {
+            _snackbar.Add("An error has orcured, please try again.");
+        }
+    }
+}

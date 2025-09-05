@@ -16,7 +16,6 @@ public interface IMealsStateContainer
 
     void NotifyStateChanged();
     Task LoadMeals();
-    Task DeleteMeal(Meal meal);
     Task<Result<Meal>> SaveMeal(Meal meal);
     Task ReloadIngredientsForMealToEdit();
 }
@@ -48,25 +47,6 @@ public class MealsStateContainer(
         result.Handle(CurrentSnackbar);
 
         Meals = result.Value;
-    }
-
-    public async Task DeleteMeal(Meal meal)
-    {
-        try
-        {
-            var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id));
-            result.Handle(CurrentSnackbar);
-
-            if (result.IsSuccess)
-            {
-                Meals.RemoveAll(m => m.Id == meal.Id);
-                NotifyStateChanged();
-            }
-        }
-        catch (Exception e)
-        {
-
-        }
     }
 
     public async Task<Result<Meal>> SaveMeal(Meal meal)
