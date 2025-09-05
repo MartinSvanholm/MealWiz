@@ -6,11 +6,11 @@
 @inject NavigationManager _navigationManager
 
 <MudStack Spacing="0" Style="height: calc(100vh - 56px)">
-    <MudPaper >
+    <MudPaper>
         <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
             <MudIconButton OnClick="OnAccountClicked" Icon="@Icons.Material.Filled.AccountCircle" />
             <MudText>Your meals</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Add" />
+            <MudIconButton OnClick="OnAddClick" Icon="@Icons.Material.Filled.Add" />
         </MudStack>
     </MudPaper>
 
@@ -41,5 +41,11 @@
     private void OnAccountClicked()
     {
         _navigationManager.NavigateTo("/account");
+    }
+
+    private void OnAddClick()
+    {
+        _mealsStateContainer.MealToEdit = new();
+        _navigationManager.NavigateTo("/meals/edit");
     }
 }

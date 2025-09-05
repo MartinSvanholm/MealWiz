@@ -29,6 +29,20 @@ public class Meal
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
 
-        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : ([]);
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
+    }
+
+    public MealDb MapToMealDb()
+    {
+        return new MealDb
+        {
+            Id = Id,
+            Name = Name,
+            Recipe = Recipe,
+            CreatedBy = CreatedBy,
+            CreatedAt = CreatedAt,
+            UpdatedAt = UpdatedAt,
+            Ingredients = Ingredients.ConvertAll(ingredient => ingredient.MapToIngredientDb())
+        };
     }
 }

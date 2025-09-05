@@ -9,7 +9,7 @@
         <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
             <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="OnBackClick" />
             <MudText>Edit meal</MudText>
-            <MudIconButton Icon="@Icons.Material.Filled.Save" />
+            <MudLoadingButton @bind-Loading="IsSaving" ButtonVariant="@ButtonVariant.IconButton" Icon="@Icons.Material.Filled.Save" OnClick="OnSaveClicked" />
         </MudStack>
     </MudPaper>
 
@@ -33,6 +33,8 @@
 </MudStack>
 
 @code {
+    private bool IsSaving { get; set; }
+
     protected override void OnInitialized()
     {
         _mealsStateContainer.OnStateChanged += StateHasChanged;
@@ -47,5 +49,19 @@
     {
         _drawerStateContainer.CloseDrawer();
         _mealsStateContainer.OnStateChanged -= StateHasChanged;
+    }
+
+    public async Task OnSaveClicked() 
+    {
+        IsSaving = true;
+
+        var result = await _mealsStateContainer.SaveMeal(_mealsStateContainer.MealToEdit);
+
+        IsSaving = false;
+
+        if (result.IsSuccess)
+        {
+            _navigationManager.NavigateTo("/meals");
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Helpers;
+﻿using FluentResults;
+using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
 
@@ -15,6 +16,7 @@ public interface IMealsStateContainer
     void NotifyStateChanged();
     Task LoadMeals();
     Task DeleteMeal(Meal meal);
+    Task<Result<Meal>> SaveMeal(Meal meal);
 }
 
 public class MealsStateContainer(
@@ -51,7 +53,7 @@ public class MealsStateContainer(
     {
         try
         {
-            var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id)); // Example MealId
+            var result = await mediator.Send(new DeleteMeal.DeleteMeal.Command(meal.Id));
             result.Handle(CurrentSnackbar);
 
             if (result.IsSuccess)
@@ -63,6 +65,21 @@ public class MealsStateContainer(
         catch (Exception e)
         {
 
+        }
+    }
+
+    public async Task<Result<Meal>> SaveMeal(Meal meal)
+    {
+        try
+        {
+            var result = await mediator.Send(new EditMeal.EditMeal.Command(meal));
+            result.Handle(CurrentSnackbar);
+
+            return result;
+        }
+        catch (Exception e)
+        {
+            return Result.Fail(e.Message);
         }
     }
 }

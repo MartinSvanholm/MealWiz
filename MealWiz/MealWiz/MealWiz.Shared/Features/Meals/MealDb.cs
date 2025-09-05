@@ -24,5 +24,7 @@ public class MealDb : BaseModel
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    [Reference(typeof(IngredientDb))]
     public List<IngredientDb> Ingredients { get; set; }
 }

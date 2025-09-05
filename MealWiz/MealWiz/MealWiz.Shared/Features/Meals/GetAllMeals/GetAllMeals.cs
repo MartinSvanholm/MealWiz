@@ -12,7 +12,7 @@ public static class GetAllMeals
     {
         public async Task<Result<List<Meal>>> Handle(Query request, CancellationToken cancellationToken)
         {
-            var result = await _supabaseClient.From<MealDb>().Select("*, ingredients(*)").Get();
+            var result = await _supabaseClient.From<MealDb>().Select("*").Get();
             var meals = result.Models.Select(db => new Meal(db)).ToList();
 
             return Result.Ok(meals);
