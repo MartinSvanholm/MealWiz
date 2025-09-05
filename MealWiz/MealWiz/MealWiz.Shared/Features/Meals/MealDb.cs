@@ -25,6 +25,6 @@ public class MealDb : BaseModel
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    [Reference(typeof(IngredientDb))]
+    [Reference(typeof(IngredientDb), ReferenceAttribute.JoinType.Left)]
     public List<IngredientDb> Ingredients { get; set; }
 }
