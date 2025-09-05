@@ -2,9 +2,9 @@
 using MediatR;
 using Supabase;
 
-namespace MealWiz.Shared.Features.Meals.EditMeal;
+namespace MealWiz.Shared.Features.Meals.SaveMeal;
 
-public static class EditMeal
+public static class SaveMeal
 {
     public record Command(Meal Meal) : IRequest<Result>;
 

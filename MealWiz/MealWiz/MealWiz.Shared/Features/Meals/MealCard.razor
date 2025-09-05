@@ -2,7 +2,7 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject NavigationManager _navigationManager
 
-<BaseCard CardColor="Color.Primary" OnClick="OnEditClick">
+<BaseCard CardColor="Color.Primary" OnClick="EditMeal">
     <HeaderContent>
         <MudText Typo="Typo.h6">@Meal.Name</MudText>
         <DeleteMealButton Meal="Meal" />
@@ -13,7 +13,7 @@
     [Parameter]
     public Meal Meal { get; set; }
 
-    private void OnEditClick()
+    private void EditMeal()
     {
         _mealsStateContainer.MealToEdit = Meal;
         _navigationManager.NavigateTo("/meals/edit");
