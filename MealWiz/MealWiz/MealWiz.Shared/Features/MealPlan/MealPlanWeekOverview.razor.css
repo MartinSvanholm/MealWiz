@@ -1,0 +1,22 @@
+﻿.day-container {
+    cursor: pointer;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    text-align: center;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+}
+
+.day:hover {
+    opacity: 0.4;
+}
+
+.current-day {
+    background-color: gray
+}
+
+.selected-day {
+    background-color: #5678B8;
+}
