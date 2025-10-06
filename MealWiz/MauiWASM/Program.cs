@@ -30,11 +30,12 @@ builder.Services.AddScoped(provider =>
     var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
     {
         AutoRefreshToken = true,
-        AutoConnectRealtime = true
-        //SessionHandler = new CustomSupabaseSessionProvider(provider.GetRequiredService<ISyncLocalStorageService>())
+        AutoConnectRealtime = true,
+        SessionHandler = new CustomSupabaseSessionProvider(provider.GetRequiredService<ISyncLocalStorageService>())
     });
 
     client.InitializeAsync();
+    client.Auth.LoadSession();
 
     return client;
 });

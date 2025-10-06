@@ -1,7 +1,4 @@
-﻿@using MealWiz.Shared.Layout
-@using Microsoft.AspNetCore.Components.Authorization
-
-<CascadingAuthenticationState>
+﻿<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(MealWiz.Shared._Imports).Assembly}">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MealWiz.Shared.Layout.MainLayout)">

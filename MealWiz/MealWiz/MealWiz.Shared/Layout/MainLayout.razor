@@ -18,15 +18,6 @@
 
 
 @code {
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (firstRender) {
-            _supabaseClient.Auth.LoadSession();
-        }
-
-        base.OnAfterRender(firstRender);
-    }
-
     MudTheme MealWizTheme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
