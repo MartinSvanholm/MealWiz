@@ -1,0 +1,35 @@
+﻿<MudStack Row Justify="Justify.SpaceEvenly">
+    @for (int i = 0; i < 7; i++)
+    {
+        var localIteration = i;
+        var date = GetDateForDay(i);
+
+        <MudStack Spacing="1" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.body2">@date.DayOfWeek.ToString().Substring(0, 3).ToUpper()</MudText>
+            <div @onclick="() => SelectedDate = date" class="@GetDayContainerClass(date)">
+                <p class="day">@date.Day</p>
+            </div>
+        </MudStack>
+    }
+</MudStack>
+
+@code {
+    private DateTime SelectedDate { get; set; } = DateTime.Now;
+
+    private DateTime GetDateForDay(int dayOffset)
+    {
+        var startDateOfWeek = DateTime.Now.AddDays(-(DateTime.Now.DayOfWeek - DayOfWeek.Monday));
+        var date = startDateOfWeek.AddDays(dayOffset);
+        return date;
+    }
+
+    private string GetDayContainerClass(DateTime date)
+    {
+        string classString = "day-container";
+
+        classString += date.Date == SelectedDate.Date ? " selected-day" : string.Empty;
+        classString += date.Date == DateTime.Now.Date ? " current-day" : string.Empty;
+
+        return classString;
+    }
+}

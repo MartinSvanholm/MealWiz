@@ -1,0 +1,33 @@
+﻿@inherits LayoutComponentBase
+@inject Client _supabaseClient
+
+<MudThemeProvider Theme="MealWizTheme" IsDarkMode />
+<MudPopoverProvider />
+<MudSnackbarProvider />
+
+<MudLayout Class="overflow-y-hidden">
+    <DrawerBase />
+    <ConfirmDrawer />
+    <MudMainContent Class="pa-0">
+        @Body
+    </MudMainContent>
+    <MudAppBar Bottom Gutters="false" Elevation="20" Fixed Style="@($"background:{MealWizTheme.PaletteDark.Background}" )">
+        <NavMenu />
+    </MudAppBar>
+</MudLayout>
+
+
+@code {
+    MudTheme MealWizTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#5678B8"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#5678B8",
+            TextPrimary = "#e4e4e7"
+        }
+    };
+}

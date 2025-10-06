@@ -1,0 +1,27 @@
+﻿@page "/"
+@attribute [Authorize]
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudText>Meal plan</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" />
+        </MudStack>
+
+        <MudDivider Class="mb-4 mt-2" DividerType="DividerType.Middle" />
+
+        <MudStack Class="mb-3">
+            <MealPlanWeekOverview />
+        </MudStack>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MealDisplayComponent />
+    </div>
+
+</MudStack>
+
+@code {
+
+}

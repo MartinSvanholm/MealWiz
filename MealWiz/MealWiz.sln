@@ -1,0 +1,63 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{761800EE-EB60-4907-BCEA-F250780E6019}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{DD9C13D5-2B0D-449A-9160-BE3846D1B501}"
+	ProjectSection(SolutionItems) = preProject
+		appsettings.Development.json = appsettings.Development.json
+		appsettings.Production.json = appsettings.Production.json
+		appsettings.Staging.json = appsettings.Staging.json
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWiz", "MealWiz\MealWiz\MealWiz.csproj", "{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWiz.Shared", "MealWiz\MealWiz.Shared\MealWiz.Shared.csproj", "{5B3934E4-FF4D-4A8C-968D-491E7165A84C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWiz.Web", "MealWiz\MealWiz.Web\MealWiz.Web.csproj", "{A721A6E8-E695-499E-A61C-37A3CD7F7E84}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MealWiz.Web.Client", "MealWiz\MealWiz.Web.Client\MealWiz.Web.Client.csproj", "{66B8B7F7-D3B8-471C-B000-E918A3065AEA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MauiWASM", "MauiWASM\MauiWASM.csproj", "{B9EA3BCC-505C-4A25-A306-091D51565ECD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B3934E4-FF4D-4A8C-968D-491E7165A84C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B3934E4-FF4D-4A8C-968D-491E7165A84C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B3934E4-FF4D-4A8C-968D-491E7165A84C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B3934E4-FF4D-4A8C-968D-491E7165A84C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A721A6E8-E695-499E-A61C-37A3CD7F7E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A721A6E8-E695-499E-A61C-37A3CD7F7E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A721A6E8-E695-499E-A61C-37A3CD7F7E84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A721A6E8-E695-499E-A61C-37A3CD7F7E84}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66B8B7F7-D3B8-471C-B000-E918A3065AEA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66B8B7F7-D3B8-471C-B000-E918A3065AEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66B8B7F7-D3B8-471C-B000-E918A3065AEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66B8B7F7-D3B8-471C-B000-E918A3065AEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9EA3BCC-505C-4A25-A306-091D51565ECD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9EA3BCC-505C-4A25-A306-091D51565ECD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9EA3BCC-505C-4A25-A306-091D51565ECD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9EA3BCC-505C-4A25-A306-091D51565ECD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F43204C8-0F19-4E2C-9578-62B7FE4A1C28} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{5B3934E4-FF4D-4A8C-968D-491E7165A84C} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{A721A6E8-E695-499E-A61C-37A3CD7F7E84} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{66B8B7F7-D3B8-471C-B000-E918A3065AEA} = {761800EE-EB60-4907-BCEA-F250780E6019}
+		{B9EA3BCC-505C-4A25-A306-091D51565ECD} = {761800EE-EB60-4907-BCEA-F250780E6019}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,38 @@
+﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+@inject IMediator _mediator
+@inject ISnackbar _snackbar
+
+<BaseCard Dense CardColor="Color.Primary" OnClick="EditIngredient">
+    <HeaderContent>
+        <MudText  Typo="Typo.h6">@Ingredient.Name</MudText>
+        <DeleteIngredientButton Ingredient="Ingredient" />
+    </HeaderContent>
+    <Content>
+        <div class="d-flex mt-2">
+            <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.Scale" />
+            <MudText Class="mx-2">@Ingredient.Amount</MudText>
+        </div>
+    </Content>
+</BaseCard>
+
+@code {
+    [Parameter]
+    public Ingredient Ingredient { get; set; }
+
+    public void EditIngredient()
+    {
+        DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+            {
+                Content = typeof(IngredientDrawer),
+                Title = "Edit Ingredient",
+                Height = "38%",
+                ContentParameters = new Dictionary<string, object>
+                {
+                    { nameof(IngredientDrawer.Ingredient), Ingredient }
+                }
+            };
+
+        _drawerStateContainer.OpenDrawer(drawerStateParameters);
+    }
+}

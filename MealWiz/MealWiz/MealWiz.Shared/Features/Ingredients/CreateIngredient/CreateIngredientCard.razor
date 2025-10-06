@@ -1,0 +1,32 @@
+﻿@inject Client _supabaseClient
+@inject IDrawerStateContainer _drawerStateContainer
+
+<BaseCard Dense CardColor="Color.Primary" OnClick="CreateIngredient">
+    <HeaderContent>
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="70%" Class="rounded-lg mt-1" Height="20px" />
+        <MudLoadingButton OnClick="CreateIngredient" ButtonVariant="@ButtonVariant.IconButton" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" Class="pa-1" />
+    </HeaderContent>
+    <Content>
+        <div class="d-flex mt-0">
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Width="40%" Height="10px" Class="rounded-lg" />
+        </div>
+    </Content>
+</BaseCard>
+
+@code {
+    private void CreateIngredient()
+    {
+        DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+        {
+            Content = typeof(IngredientDrawer),
+            Title = "Create Ingredient",
+            Height = "38%",
+            ContentParameters = new Dictionary<string, object>
+            {
+                { nameof(IngredientDrawer.Ingredient), new Ingredient() }
+            }
+        };
+
+        _drawerStateContainer.OpenDrawer(drawerStateParameters);
+    }
+}

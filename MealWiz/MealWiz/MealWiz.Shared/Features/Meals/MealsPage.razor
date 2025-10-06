@@ -1,0 +1,51 @@
+﻿@attribute [Authorize]
+@page "/meals"
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+@inject Client _client;
+@inject NavigationManager _navigationManager
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton OnClick="OnAccountClicked" Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudText>Your meals</MudText>
+            <MudIconButton OnClick="OnAddClick" Icon="@Icons.Material.Filled.Add" />
+        </MudStack>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MudStack Class="px-3 pt-3">
+            @foreach (Meal meal in _mealsStateContainer.Meals)
+            {
+                <MealCard Meal="meal" />
+            }
+        </MudStack>
+    </div>
+
+
+</MudStack>
+
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        _mealsStateContainer.CurrentSnackbar = _snackbar;
+        _mealsStateContainer.OnStateChanged += StateHasChanged;
+
+        await _mealsStateContainer.LoadMeals();
+
+        await base.OnInitializedAsync();
+    }
+
+    private void OnAccountClicked()
+    {
+        _navigationManager.NavigateTo("/account");
+    }
+
+    private void OnAddClick()
+    {
+        _mealsStateContainer.MealToEdit = new();
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+}

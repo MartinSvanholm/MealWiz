@@ -1,0 +1,21 @@
+﻿@inject IMealsStateContainer _mealsStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject NavigationManager _navigationManager
+
+<BaseCard CardColor="Color.Primary" OnClick="EditMeal">
+    <HeaderContent>
+        <MudText Typo="Typo.h6">@Meal.Name</MudText>
+        <DeleteMealButton Meal="Meal" />
+    </HeaderContent>
+</BaseCard>
+
+@code {
+    [Parameter]
+    public Meal Meal { get; set; }
+
+    private void EditMeal()
+    {
+        _mealsStateContainer.MealToEdit = Meal;
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+}

@@ -1,0 +1,35 @@
+﻿@inject IMealsStateContainer _mealsStateContainer
+@inject NavigationManager _navigationManager
+@inject ISnackbar _snackbar
+@inject ISender _mediator
+
+<MudLoadingButton 
+@bind-Loading="IsSaving" 
+ButtonVariant="@ButtonVariant.IconButton" 
+Icon="@Icons.Material.Filled.Save"
+OnClick="SaveMeal" />
+
+@code {
+    private bool IsSaving { get; set; }
+
+    public async Task SaveMeal()
+    {
+        try
+        {
+            IsSaving = true;
+
+            var result = await _mediator.Send(new SaveMeal.Command(_mealsStateContainer.MealToEdit));
+
+            result.Handle(_snackbar);
+            if (result.IsFailed) return;
+
+            IsSaving = false;
+            _snackbar.Add("Meal saved", Severity.Success);
+            _navigationManager.NavigateTo("/meals");
+        }
+        catch (Exception)
+        {
+            _snackbar.Add("An error has occurred, please try again.", Severity.Error);
+        }
+    }
+}

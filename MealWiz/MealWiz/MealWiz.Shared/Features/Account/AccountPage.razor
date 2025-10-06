@@ -1,0 +1,21 @@
+﻿@attribute [Authorize]
+@page "/account"
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" />
+            <MudText>Account</MudText>
+            <LogoutButton />
+        </MudStack>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        Your account
+    </div>
+
+</MudStack>
+
+@code {
+    
+}
