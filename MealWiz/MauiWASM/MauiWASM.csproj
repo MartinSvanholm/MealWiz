@@ -16,4 +16,16 @@
     <ProjectReference Include="..\MealWiz\MealWiz.Shared\MealWiz.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\appsettings.Development.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\appsettings.Production.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\appsettings.Staging.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
