@@ -22,7 +22,7 @@
     <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
         @if (_mealPlanStateContainer.MealPlan.Id > 0) 
         {
-            <MealDisplayComponent Meal="GetMealFromSelectedDate()" />
+            <MealDisplayComponent />
         } 
         else if (IsLoading)
         {
@@ -52,17 +52,5 @@
     public void Dispose()
     {
         _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
-    }
-
-    private Meal GetMealFromSelectedDate() 
-    {
-        _mealPlanStateContainer.MealPlan.MealOnDate.TryGetValue(DateTime.Today, out Meal? meal);
-
-        if (meal == null) 
-        {
-            meal = new Meal();
-        }
-
-        return meal;
     }
 }

@@ -1,4 +1,5 @@
 ﻿using MealWiz.Shared.Features.MealPlans.Models;
+using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
@@ -9,11 +10,13 @@ public interface IMealPlanStateContainer
 {
     ISnackbar CurrentSnackbar { get; set; }
     MealPlan MealPlan { get; set; }
+    DateTime SelectedDate { get; set; }
 
     event Action OnStateChanged;
 
-    Task LoadMealPlan();
     void NotifyStateChanged();
+    Task LoadMealPlan();
+    Meal GetMealFromSelectedDate();
 }
 
 public class MealPlanStateContainer(
@@ -34,11 +37,34 @@ public class MealPlanStateContainer(
     }
     private MealPlan mealPlan { get; set; } = new();
 
+    public DateTime SelectedDate
+    {
+        get => selectedDate;
+        set
+        {
+            selectedDate = value;
+            NotifyStateChanged();
+        }
+    }
+    private DateTime selectedDate { get; set; } = DateTime.Now;
+
     public async Task LoadMealPlan()
     {
         var result = await mediator.Send(new GetMealPlanByDate.GetMealPlanByDate.Query(DateTime.Now));
         result.Handle(CurrentSnackbar);
 
         MealPlan = result.Value;
+    }
+
+    public Meal GetMealFromSelectedDate()
+    {
+        MealPlan.MealOnDate.TryGetValue(SelectedDate.Date, out Meal? meal);
+
+        if (meal == null)
+        {
+            meal = new Meal();
+        }
+
+        return meal;
     }
 }

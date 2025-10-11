@@ -1,5 +1,7 @@
 ﻿@using System.Text.RegularExpressions
 @using System.Web
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@implements IDisposable
 
 <MudStack Class="pa-5">
     <div class="d-flex justify-center">
@@ -27,8 +29,19 @@
 </MudStack>
 
 @code {
-    [Parameter]
-    public Meal Meal { get; set; } = new();
+    protected override void OnInitialized()
+    {
+        _mealPlanStateContainer.OnStateChanged += StateHasChanged;
+
+        base.OnInitialized();
+    }
+
+    public void Dispose()
+    {
+        _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
+    }
+
+    public Meal Meal => _mealPlanStateContainer.GetMealFromSelectedDate();
 
     private List<string> GetRecipeSteps() {
         return Meal.Recipe.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries).ToList();
