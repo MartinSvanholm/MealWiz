@@ -1,7 +1,9 @@
 using Blazored.LocalStorage;
 using MauiWASM;
 using MauiWASM.Provider;
+using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -18,6 +20,7 @@ builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddMudServices();
 builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
 builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
+builder.Services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddAuthorizationCore();
@@ -39,5 +42,7 @@ builder.Services.AddScoped(provider =>
 
     return client;
 });
+
+ResultHelper.SetDefaultCatchHandler();
 
 await builder.Build().RunAsync();

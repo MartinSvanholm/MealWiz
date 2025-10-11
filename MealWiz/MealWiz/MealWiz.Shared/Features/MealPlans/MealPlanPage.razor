@@ -1,0 +1,68 @@
+﻿@page "/"
+@attribute [Authorize]
+@implements IDisposable
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject ISnackbar _snackbar
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+            <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            <MudText>Meal plan</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" />
+        </MudStack>
+
+        <MudDivider Class="mb-4 mt-2" DividerType="DividerType.Middle" />
+
+        <MudStack Class="mb-3">
+            <MealPlanWeekOverview />
+        </MudStack>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        @if (_mealPlanStateContainer.MealPlan.Id > 0) 
+        {
+            <MealDisplayComponent Meal="GetMealFromSelectedDate()" />
+        } 
+        else if (IsLoading)
+        {
+            <MudProgressLinear Indeterminate Color="@Color.Primary" />
+        }
+    </div>
+
+</MudStack>
+
+@code {
+    private bool IsLoading { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        IsLoading = true;
+
+        _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+        _mealPlanStateContainer.OnStateChanged += StateHasChanged;
+
+        await _mealPlanStateContainer.LoadMealPlan();
+
+        IsLoading = false;
+
+        await base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
+    }
+
+    private Meal GetMealFromSelectedDate() 
+    {
+        _mealPlanStateContainer.MealPlan.MealOnDate.TryGetValue(DateTime.Today, out Meal? meal);
+
+        if (meal == null) 
+        {
+            meal = new Meal();
+        }
+
+        return meal;
+    }
+}

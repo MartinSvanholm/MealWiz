@@ -27,27 +27,8 @@
 </MudStack>
 
 @code {
-    private Meal Meal { get; set; } = new();
-
-    protected override void OnInitialized()
-    {
-        Meal.Name = "Classic Cheeseburger";
-        Meal.Recipe = "1. Preheat your grill or skillet to medium-high heat.\n2. Season the beef patty with salt and pepper on both sides.\n3. Cook the patty for about 4-5 minutes on each side, or until it reaches your desired level of doneness.\n4. During the last minute of cooking, place a slice of cheese on top of the patty and cover to melt.\n5. Toast the bun lightly on the grill or in a toaster.\n6. Assemble the burger by placing the patty on the bottom bun, followed by lettuce, tomato slices, onion rings, pickles, ketchup, and mustard.\n7. Top with the other half of the bun and serve immediately.";
-
-        Meal.Ingredients = new List<Ingredient>
-        {
-            new Ingredient { Name = "Bun", Amount = "1" },
-            new Ingredient { Name = "Patty", Amount = "1" },
-            new Ingredient { Name = "Lettuce", Amount = "2 leaves" },
-            new Ingredient { Name = "Tomato", Amount = "2 slices" },
-            new Ingredient { Name = "Cheese", Amount = "1 slice" },
-            new Ingredient { Name = "Onion", Amount = "3 rings" },
-            new Ingredient { Name = "Pickles", Amount = "4 slices" },
-            new Ingredient { Name = "Ketchup", Amount = "1 tbsp" },
-            new Ingredient { Name = "Mustard", Amount = "1 tsp" }
-        };
-        base.OnInitialized();
-    }
+    [Parameter]
+    public Meal Meal { get; set; } = new();
 
     private List<string> GetRecipeSteps() {
         return Meal.Recipe.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries).ToList();
