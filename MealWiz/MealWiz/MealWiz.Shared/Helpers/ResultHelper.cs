@@ -36,12 +36,12 @@ public static class ResultHelper
         });
     }
 
-    public static void Handle<T>(this Result<T> result, ISnackbar snackbar)
+    public static Result<T> Handle<T>(this Result<T> result, ISnackbar snackbar)
     {
         if (result.IsSuccess)
         {
             var success = result.Successes.FirstOrDefault();
-            if (success == null) return;
+            if (success == null) return result;
 
             snackbar.Add(success.Message, Severity.Success);
         }
@@ -49,14 +49,16 @@ public static class ResultHelper
         {
             snackbar.Add(result.Errors.First().Message, Severity.Error);
         }
+
+        return result;
     }
 
-    public static void Handle(this Result result, ISnackbar snackbar)
+    public static Result Handle(this Result result, ISnackbar snackbar)
     {
         if (result.IsSuccess)
         {
             var success = result.Successes.FirstOrDefault();
-            if (success == null) return;
+            if (success == null) return result;
 
             snackbar.Add(success.Message, Severity.Success);
         }
@@ -64,5 +66,7 @@ public static class ResultHelper
         {
             snackbar.Add(result.Errors.First().Message, Severity.Error);
         }
+
+        return result;
     }
 }

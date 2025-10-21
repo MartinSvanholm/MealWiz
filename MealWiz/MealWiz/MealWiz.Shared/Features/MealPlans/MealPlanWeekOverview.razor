@@ -18,7 +18,9 @@
 @code {
     private DateTime GetDateForDay(int dayOffset)
     {
-        var startDateOfWeek = DateTime.Now.AddDays(-(DateTime.Now.DayOfWeek - DayOfWeek.Monday));
+        int dayOfWeek = DateTime.Now.DayOfWeek == 0 ? 7 : (int)DateTime.Now.DayOfWeek;
+
+        var startDateOfWeek = DateTime.Now.AddDays(-(dayOfWeek - (int)DayOfWeek.Monday));
         var date = startDateOfWeek.AddDays(dayOffset);
         return date;
     }

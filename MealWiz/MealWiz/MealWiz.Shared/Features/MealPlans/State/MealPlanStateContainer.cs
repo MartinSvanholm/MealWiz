@@ -60,11 +60,6 @@ public class MealPlanStateContainer(
     {
         MealPlan.MealOnDate.TryGetValue(SelectedDate.Date, out Meal? meal);
 
-        if (meal == null)
-        {
-            meal = new Meal();
-        }
-
         return meal;
     }
 }

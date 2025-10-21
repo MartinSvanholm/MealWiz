@@ -1,4 +1,5 @@
 ﻿using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Features.MealPlans.Models;
 
 namespace MealWiz.Shared.Features.Meals.Models;
 
@@ -11,6 +12,8 @@ public class Meal
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<Ingredient> Ingredients { get; set; }
+    public MealPlan? MealPlan { get; set; }
+    public DateTime? MealDate { get; set; }
 
     public Meal()
     {
