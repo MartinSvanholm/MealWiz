@@ -9,7 +9,7 @@ namespace MealWiz.Shared.Features.MealPlans.State;
 public interface IMealPlanStateContainer
 {
     ISnackbar CurrentSnackbar { get; set; }
-    MealPlan MealPlan { get; set; }
+    MealPlan? MealPlan { get; set; }
     DateTime SelectedDate { get; set; }
 
     event Action OnStateChanged;
@@ -26,7 +26,7 @@ public class MealPlanStateContainer(
     public void NotifyStateChanged() => OnStateChanged?.Invoke();
     public ISnackbar CurrentSnackbar { get; set; }
 
-    public MealPlan MealPlan
+    public MealPlan? MealPlan
     {
         get => mealPlan;
         set
@@ -35,7 +35,7 @@ public class MealPlanStateContainer(
             NotifyStateChanged();
         }
     }
-    private MealPlan mealPlan { get; set; } = new();
+    private MealPlan? mealPlan { get; set; }
 
     public DateTime SelectedDate
     {

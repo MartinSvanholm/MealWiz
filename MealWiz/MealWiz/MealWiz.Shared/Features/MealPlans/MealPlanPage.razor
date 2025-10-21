@@ -12,21 +12,27 @@
             <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" />
         </MudStack>
 
-        <MudDivider Class="mb-4 mt-2" DividerType="DividerType.Middle" />
 
-        <MudStack Class="mb-3">
-            <MealPlanWeekOverview />
-        </MudStack>
+        @if (_mealPlanStateContainer.MealPlan != null) {
+            <MudDivider Class="mb-4 mt-2" DividerType="DividerType.Middle" />
+            <MudStack Class="mb-3">
+                <MealPlanWeekOverview />
+            </MudStack>
+        }
     </MudPaper>
 
     <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
-        @if (_mealPlanStateContainer.MealPlan.Id > 0) 
-        {
-            <MealDisplayComponent />
-        } 
-        else if (IsLoading)
+        @if (IsLoading) 
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" />
+        }  
+        else if (_mealPlanStateContainer.MealPlan == null)
+        {
+            <CreateMealPlanButton />
+        }
+        else if (_mealPlanStateContainer.MealPlan.Id > 0)
+        {
+            <MealDisplayComponent />
         }
     </div>
 

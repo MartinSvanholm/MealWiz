@@ -10,10 +10,10 @@ public class MealPlanDb : BaseModel
     public int Id { get; set; }
 
     [Column("start_date")]
-    public DateTime StartDate { get; set; }
+    public string StartDate { get; set; }
 
     [Column("end_date")]
-    public DateTime EndDate { get; set; }
+    public string EndDate { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

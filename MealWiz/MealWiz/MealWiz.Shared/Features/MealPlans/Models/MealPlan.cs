@@ -1,9 +1,5 @@
 ﻿using MealWiz.Shared.Features.Meals.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MealWiz.Shared.Helpers;
 
 namespace MealWiz.Shared.Features.MealPlans.Models;
 
@@ -19,17 +15,34 @@ public class MealPlan
 
     public MealPlan()
     {
+        StartDate = DateTime.Now.StartOfWeek().Date;
+        EndDate = DateTime.Now.EndOfWeek().Date;
         MealOnDate = [];
     }
 
     public MealPlan(MealPlanDb mealPlanDb)
     {
         Id = mealPlanDb.Id;
-        StartDate = mealPlanDb.StartDate;
-        EndDate = mealPlanDb.EndDate;
+        StartDate = DateTime.Parse(mealPlanDb.StartDate);
+        EndDate = DateTime.Parse(mealPlanDb.EndDate);
         CreatedAt = mealPlanDb.CreatedAt;
         CreatedBy = mealPlanDb.CreatedBy;
         UpdatedAt = mealPlanDb.UpdatedAt;
-        MealOnDate = mealPlanDb.MealPlanMeals.ToDictionary(x => x.MealDate, x => new Meal(x.Meal));
+        MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Any() ? 
+            mealPlanDb.MealPlanMeals.ToDictionary(x => x.MealDate, x => new Meal(x.Meal))
+            : [];
+    }
+
+    public MealPlanDb MapToMealPlanDb()
+    {
+        return new MealPlanDb()
+        {
+            Id = Id,
+            StartDate = StartDate.ToString("MM/dd/yyyy"),
+            EndDate = EndDate.ToString("MM/dd/yyyy"),
+            CreatedAt = CreatedAt,
+            CreatedBy = CreatedBy,
+            UpdatedAt = UpdatedAt
+        };
     }
 }
