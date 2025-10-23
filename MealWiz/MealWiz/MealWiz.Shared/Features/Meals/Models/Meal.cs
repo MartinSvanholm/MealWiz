@@ -35,6 +35,20 @@ public class Meal
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
     }
 
+    public Meal(MealDb mealDb, MealPlan mealPlan, DateTime mealDate)
+    {
+        Id = mealDb.Id;
+        Name = mealDb.Name;
+        Recipe = mealDb.Recipe;
+        CreatedBy = mealDb.CreatedBy;
+        CreatedAt = mealDb.CreatedAt;
+        UpdatedAt = mealDb.UpdatedAt;
+        MealPlan = mealPlan;
+        MealDate = mealDate;
+
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
+    }
+
     public MealDb MapToMealDb()
     {
         return new MealDb

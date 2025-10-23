@@ -29,7 +29,7 @@ public class MealPlan
         CreatedBy = mealPlanDb.CreatedBy;
         UpdatedAt = mealPlanDb.UpdatedAt;
         MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Any() ? 
-            mealPlanDb.MealPlanMeals.ToDictionary(x => x.MealDate, x => new Meal(x.Meal))
+            mealPlanDb.MealPlanMeals.ToDictionary(x => x.MealDate, x => new Meal(x.Meal, this, x.MealDate))
             : [];
     }
 

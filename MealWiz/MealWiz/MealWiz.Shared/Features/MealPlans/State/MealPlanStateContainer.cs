@@ -11,12 +11,13 @@ public interface IMealPlanStateContainer
     ISnackbar CurrentSnackbar { get; set; }
     MealPlan? MealPlan { get; set; }
     DateTime SelectedDate { get; set; }
+    bool SelectedDateHasMeal { get; }
 
     event Action OnStateChanged;
 
     void NotifyStateChanged();
     Task LoadMealPlan();
-    Meal GetMealFromSelectedDate();
+    Meal? GetMealFromSelectedDate();
 }
 
 public class MealPlanStateContainer(
@@ -56,10 +57,13 @@ public class MealPlanStateContainer(
         MealPlan = result.Value;
     }
 
-    public Meal GetMealFromSelectedDate()
+    public Meal? GetMealFromSelectedDate()
     {
-        MealPlan.MealOnDate.TryGetValue(SelectedDate.Date, out Meal? meal);
+        Meal? meal = null;
+        MealPlan?.MealOnDate.TryGetValue(SelectedDate.Date, out meal);
 
         return meal;
     }
+
+    public bool SelectedDateHasMeal => GetMealFromSelectedDate() != null;
 }
