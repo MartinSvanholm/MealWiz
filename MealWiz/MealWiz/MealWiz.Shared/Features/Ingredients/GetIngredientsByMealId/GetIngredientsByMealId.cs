@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MealWiz.Shared.Features.Ingredients.GetIngredientsById;
+namespace MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
 
 public static class GetIngredientsByMealId
 {

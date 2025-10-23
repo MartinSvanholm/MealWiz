@@ -1,5 +1,5 @@
 ﻿using FluentResults;
-using MealWiz.Shared.Features.Ingredients.GetIngredientsById;
+using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;

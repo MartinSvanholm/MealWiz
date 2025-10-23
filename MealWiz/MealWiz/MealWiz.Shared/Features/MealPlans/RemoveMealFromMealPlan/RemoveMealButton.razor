@@ -1,0 +1,24 @@
+﻿@inject ISnackbar _snackbar
+@inject IMediator _mediator
+@inject IMealPlanStateContainer _mealPlanStateContainer
+
+<MudIconButton OnClick="RemoveMealFromMealPlan" Icon="@Icons.Material.Filled.NoMeals" />
+
+@code {
+    private async Task RemoveMealFromMealPlan()
+    {
+        var meal = _mealPlanStateContainer.GetMealFromSelectedDate();
+
+        if (meal == null || meal.MealDate == null) 
+        {
+            _snackbar.Add("Meal or meal date cannot be empty", Severity.Error);
+            return;
+        }
+
+        var result = await _mediator.Send(new RemoveMealFromMealPlan.Command(meal.Id));
+        result.Handle(_snackbar);
+
+        _mealPlanStateContainer.MealPlan.MealOnDate.Remove(meal.MealDate.Value);
+        _mealPlanStateContainer.NotifyStateChanged();
+    }
+}

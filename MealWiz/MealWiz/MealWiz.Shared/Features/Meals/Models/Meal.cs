@@ -1,4 +1,5 @@
 ﻿using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Features.MealPlans.Models;
 
 namespace MealWiz.Shared.Features.Meals.Models;
 
@@ -11,6 +12,8 @@ public class Meal
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<Ingredient> Ingredients { get; set; }
+    public MealPlan? MealPlan { get; set; }
+    public DateTime? MealDate { get; set; }
 
     public Meal()
     {
@@ -28,6 +31,20 @@ public class Meal
         CreatedBy = mealDb.CreatedBy;
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
+
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
+    }
+
+    public Meal(MealDb mealDb, MealPlan mealPlan, DateTime mealDate)
+    {
+        Id = mealDb.Id;
+        Name = mealDb.Name;
+        Recipe = mealDb.Recipe;
+        CreatedBy = mealDb.CreatedBy;
+        CreatedAt = mealDb.CreatedAt;
+        UpdatedAt = mealDb.UpdatedAt;
+        MealPlan = mealPlan;
+        MealDate = mealDate;
 
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
     }

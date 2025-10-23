@@ -1,0 +1,18 @@
+﻿@inject IMediator _mediator
+@inject ISnackbar _snackbar
+@inject IMealPlanStateContainer _mealPlanStateContainer
+
+<MudButton Class="ma-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateMealPlan">Create meal plan for the week</MudButton>
+
+@code {
+    private async Task CreateMealPlan() 
+    {
+        var mealPlan = new MealPlan();
+
+        var result = await _mediator.Send(new CreateMealPlan.Command(mealPlan));
+
+        if (result.Handle(_snackbar).IsFailed) return;
+
+        _mealPlanStateContainer.MealPlan = result.Value;
+    }
+}
