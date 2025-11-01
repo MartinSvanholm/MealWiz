@@ -1,0 +1,65 @@
+﻿@page "/grocerylist"
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudGrid Spacing="0" Class="my-1">
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
+                <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            </MudItem>
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
+                <MudText Typo="Typo.h6">Grocery list</MudText>
+            </MudItem>
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
+                <MudIconButton Icon="@Icons.Material.Outlined.AddShoppingCart" />
+                <MudIconButton Icon="@Icons.Material.Filled.PostAdd" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MudStack Class="ma-3" Spacing="0">
+            @foreach (var item in GroceryList.Items) 
+            {
+                <MudCheckBox 
+                T="bool"
+                Value="@item.IsPicked"
+                ValueChanged="() => ItemValueChanged(item)"
+                CheckedIcon="@Icons.Material.Filled.RadioButtonChecked"
+                UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked"
+                Style="@(item.IsPicked ? "text-decoration-line: line-through" : "")"
+                Size="Size.Small">
+                    @item.Name
+                </MudCheckBox>
+            }
+        </MudStack>
+    </div>
+</MudStack>
+
+@code {
+    public GroceryList GroceryList { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        GroceryList.Items = new() {
+            new() {Name = "Salat"},
+            new() {Name = "Argurk"},
+            new() {Name = "Tomat"},
+            new() {Name = "Oksekød"},
+            new() {Name = "Rødløg"},
+            new() {Name = "Mayo"},
+            new() {Name = "Bacon"},
+            new() {Name = "Burger boller"}
+        };
+
+        base.OnInitialized();
+    }
+
+    public void ItemValueChanged(GroceryItem item) 
+    {
+        item.IsPicked = !item.IsPicked;
+
+        GroceryList.Items = GroceryList.Items.OrderBy(item => item.IsPicked).ToList();
+
+        StateHasChanged();
+    }
+}
