@@ -1,4 +1,6 @@
 ﻿@page "/grocerylist"
+@inject IMediator _mediator
+@inject ISnackbar _snackbar
 
 <MudStack Spacing="0" Style="height: calc(100vh - 56px)">
     <MudPaper>
@@ -28,7 +30,7 @@
                 UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked"
                 Style="@(item.IsPicked ? "text-decoration-line: line-through" : "")"
                 Size="Size.Small">
-                    @item.Name
+                    @item.Name (@item.Amount)
                 </MudCheckBox>
             }
         </MudStack>
@@ -38,20 +40,18 @@
 @code {
     public GroceryList GroceryList { get; set; } = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        GroceryList.Items = new() {
-            new() {Name = "Salat"},
-            new() {Name = "Argurk"},
-            new() {Name = "Tomat"},
-            new() {Name = "Oksekød"},
-            new() {Name = "Rødløg"},
-            new() {Name = "Mayo"},
-            new() {Name = "Bacon"},
-            new() {Name = "Burger boller"}
-        };
+        await GetAllGroceryItems();
 
-        base.OnInitialized();
+        await base.OnInitializedAsync();
+    }
+
+    public async Task GetAllGroceryItems() {
+        var result = await _mediator.Send(new GetAllGroceryItems.GetAllGroceryItems.Query());
+        if (result.Handle(_snackbar).IsFailed) return;
+
+        GroceryList.Items = result.Value;
     }
 
     public void ItemValueChanged(GroceryItem item) 
