@@ -26,4 +26,18 @@ public class GroceryItem
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+
+    public GroceryItemDb MapToDb()
+    {
+        return new ()
+        {
+            Id = Id,
+            Name = Name,
+            Amount = Amount,
+            IsPicked = IsPicked,
+            CreatedBy = CreatedBy,
+            CreatedAt = CreatedAt,
+            UpdatedAt = UpdatedAt
+        };
+    }
 }

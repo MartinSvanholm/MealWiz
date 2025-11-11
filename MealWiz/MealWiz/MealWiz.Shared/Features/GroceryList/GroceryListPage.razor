@@ -54,9 +54,16 @@
         GroceryList.Items = result.Value;
     }
 
-    public void ItemValueChanged(GroceryItem item) 
+    public async void ItemValueChanged(GroceryItem item) 
     {
         item.IsPicked = !item.IsPicked;
+
+        var result = await _mediator.Send(new UpdateGroceryItem.UpdateGroceryItem.Command(item));
+        if (result.Handle(_snackbar).IsFailed) 
+        {
+            item.IsPicked = !item.IsPicked;
+            return;
+        }
 
         GroceryList.Items = GroceryList.Items.OrderBy(item => item.IsPicked).ToList();
 
