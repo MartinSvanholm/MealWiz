@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using MauiWASM;
 using MauiWASM.Provider;
+using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Helpers;
@@ -21,6 +22,7 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
 builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
 builder.Services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
+builder.Services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddAuthorizationCore();

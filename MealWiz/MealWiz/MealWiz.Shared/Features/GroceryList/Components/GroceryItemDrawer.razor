@@ -1,0 +1,10 @@
+﻿<MudStack Class="pa-2">
+    <MudTextField AutoFocus Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined" />
+    <MudTextField Label="Amount" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined" />
+    <SaveGroceryItemButton GroceryItem="GroceryItem"/>
+</MudStack>
+
+@code {
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+}

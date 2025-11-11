@@ -14,9 +14,12 @@ public static class UpdateGroceryItem
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
+            var groceryItemDb = request.GroceryItem.MapToDb();
+            groceryItemDb.UpdatedAt = DateTime.Now;
+
             var result = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
                 .From<GroceryItemDb>()
-                .Update(request.GroceryItem.MapToDb()));
+                .Update(groceryItemDb));
 
             return result.Map(value => value.Model.Id);
         }

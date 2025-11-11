@@ -1,0 +1,24 @@
+﻿@inject IDrawerStateContainer _drawerStateContainer
+
+<Tooltip Text="Edit item">
+    <MudIconButton OnClick="UpdateItemClicked" Icon="@Icons.Material.Filled.Edit" />
+</Tooltip>
+
+@code {
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+
+    public void UpdateItemClicked()
+    {
+        DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+            {
+                Content = typeof(GroceryItemDrawer),
+                Title = "Edit item",
+                Height = "38%",
+                ContentParameters = new Dictionary<string, object>
+                {{ nameof(GroceryItemDrawer.GroceryItem), GroceryItem }}
+            };
+
+        _drawerStateContainer.OpenDrawer(drawerStateParameters);
+    }
+}

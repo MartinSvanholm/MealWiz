@@ -12,4 +12,8 @@ public class GroceryList
     public Guid CreatedBy { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime UpdatedDate { get; set; }
+    public void SortItemsByIsPicked()
+    {
+        Items = [.. Items.OrderBy(item => item.IsPicked)];
+    }
 }
