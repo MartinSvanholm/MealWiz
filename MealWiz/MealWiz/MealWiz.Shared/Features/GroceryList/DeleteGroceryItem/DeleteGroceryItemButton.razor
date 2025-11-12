@@ -1,0 +1,29 @@
+﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+@implements IDisposable
+
+<MudIconButton OnClick="OnDeleteClick" Icon="@Icons.Material.Filled.Delete"/>
+
+@code {
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+
+    public void Dispose()
+    {
+        _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
+        _drawerStateContainer.CloseDrawer();
+    }
+
+    private void OnDeleteClick() 
+    {
+        _drawerStateContainer.OpenConfirmDrawer("Delete grocery item?", "Are you sure you want to delete this grocery item?");
+        _drawerStateContainer.OnConfirmClick += OnConfirmDelete;
+    }
+
+    private async Task OnConfirmDelete()
+    {
+        await _groceryListStateContainer.DeleteGroceryItem(GroceryItem);
+        _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
+        _drawerStateContainer.CloseDrawer();
+    }
+}

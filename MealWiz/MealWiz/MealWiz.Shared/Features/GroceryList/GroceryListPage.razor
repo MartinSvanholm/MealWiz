@@ -1,5 +1,4 @@
 ﻿@page "/grocerylist"
-@inject IMediator _mediator
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
@@ -35,7 +34,10 @@
                     Size="Size.Small">
                         @GetItemDescription(item)
                     </MudCheckBox>
-                    <UpdatedGroceryItemButton GroceryItem="item" />
+                    <MudStack Row Spacing="0">
+                        <UpdatedGroceryItemButton GroceryItem="item" />
+                        <DeleteGroceryItemButton GroceryItem="item" />
+                    </MudStack>
                 </MudStack>
             }
         </MudStack>

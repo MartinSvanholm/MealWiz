@@ -17,6 +17,7 @@ public interface IGroceryListStateContainer
     void NotifyStateChanged();
     Task UpdateGroceryItem(GroceryItem groceryItem);
     Task ToggleIsPicked(GroceryItem item);
+    Task DeleteGroceryItem(GroceryItem groceryItem);
 }
 
 public class GroceryListStateContainer(
@@ -72,6 +73,15 @@ public class GroceryListStateContainer(
 
         GroceryList.SortItemsByIsPicked();
 
+        NotifyStateChanged();
+    }
+
+    public async Task DeleteGroceryItem(GroceryItem groceryItem)
+    {
+        var result = await mediator.Send(new DeleteGroceryItem.DeleteGroceryItem.Command(groceryItem));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        GroceryList.Items.Remove(groceryItem);
         NotifyStateChanged();
     }
 }
