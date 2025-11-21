@@ -1,0 +1,21 @@
+﻿@inject IDrawerStateContainer _drawerStateContainer
+
+<Tooltip Text="Add item">
+    <MudIconButton OnClick="AddItemClicked" Icon="@Icons.Material.Outlined.AddShoppingCart" />
+</Tooltip>
+
+@code {
+    public void AddItemClicked() 
+    {
+        DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+        {
+            Content = typeof(GroceryItemDrawer),
+            Title = "Add item",
+            Height = "38%",
+            ContentParameters = new Dictionary<string, object>
+                {{ nameof(GroceryItemDrawer.GroceryItem), new GroceryItem() }}
+        };
+
+        _drawerStateContainer.OpenDrawer(drawerStateParameters);
+    }
+}

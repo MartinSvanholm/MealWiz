@@ -1,0 +1,24 @@
+﻿@inject IMediator _mediator
+@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+
+<MudButton OnClick="SaveClicked" Color="Color.Primary" Variant="Variant.Filled">Save item</MudButton>
+
+@code {
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+
+    public async Task SaveClicked() {
+        if (GroceryItem.Id == 0) 
+        {
+            await _groceryListStateContainer.AddGroceryItemToGroceryList(GroceryItem);
+        }
+        else 
+        {
+            await _groceryListStateContainer.UpdateGroceryItem(GroceryItem);
+        }
+
+        _drawerStateContainer.CloseDrawer();
+    }
+}

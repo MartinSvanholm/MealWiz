@@ -1,5 +1,4 @@
-﻿using FluentResults;
-using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
+﻿using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -12,6 +11,7 @@ public interface IMealsStateContainer
     ISnackbar CurrentSnackbar { get; set; }
     List<Meal> Meals { get; set; }
     Meal MealToEdit { get; set; }
+    bool IsEdit { get; }
 
     event Action OnStateChanged;
 
@@ -40,6 +40,8 @@ public class MealsStateContainer(
     }
 
     public Meal MealToEdit { get; set; } = new Meal();
+
+    public bool IsEdit => MealToEdit.Id > 0;
 
     public async Task LoadMeals()
     {

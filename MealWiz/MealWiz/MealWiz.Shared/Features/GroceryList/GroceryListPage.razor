@@ -1,0 +1,67 @@
+﻿@page "/grocerylist"
+@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+@implements IDisposable
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper>
+        <MudGrid Spacing="0" Class="my-1">
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
+                <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+            </MudItem>
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
+                <MudText Typo="Typo.h6">Grocery list</MudText>
+            </MudItem>
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
+                <AddGroceryItemButton />
+                <MudIconButton Icon="@Icons.Material.Filled.PostAdd" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MudStack Class="ma-3" Spacing="0">
+            @foreach (var item in _groceryListStateContainer.GroceryList.Items) 
+            {
+                <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
+                    <MudCheckBox T="bool"
+                    Value="@item.IsPicked"
+                    ValueChanged="() => _groceryListStateContainer.ToggleIsPicked(item)"
+                    CheckedIcon="@Icons.Material.Filled.RadioButtonChecked"
+                    UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked"
+                    Style="@(item.IsPicked ? "text-decoration-line: line-through" : "")"
+                    Size="Size.Small">
+                        @GetItemDescription(item)
+                    </MudCheckBox>
+                    <MudStack Row Spacing="0">
+                        <UpdatedGroceryItemButton GroceryItem="item" />
+                        <DeleteGroceryItemButton GroceryItem="item" />
+                    </MudStack>
+                </MudStack>
+            }
+        </MudStack>
+    </div>
+</MudStack>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        _groceryListStateContainer.OnStateChanged += StateHasChanged;
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
+        await _groceryListStateContainer.LoadGroceryItems();
+
+        await base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _groceryListStateContainer.OnStateChanged -= StateHasChanged;
+        _drawerStateContainer.CloseDrawer();
+    }
+
+    private string GetItemDescription(GroceryItem groceryItem)
+    {
+        return $"{groceryItem.Name}{(string.IsNullOrWhiteSpace(groceryItem.Amount) ? string.Empty : $" ({groceryItem.Amount})")}";
+    }
+}

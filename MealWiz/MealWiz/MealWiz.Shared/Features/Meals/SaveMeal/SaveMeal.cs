@@ -2,16 +2,17 @@
 using MealWiz.Shared.Features.Meals.Models;
 using MediatR;
 using Supabase;
+using Supabase.Postgrest.Responses;
 
 namespace MealWiz.Shared.Features.Meals.SaveMeal;
 
 public static class SaveMeal
 {
-    public record Command(Meal Meal) : IRequest<Result>;
+    public record Command(Meal Meal) : IRequest<Result<Meal>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<Meal>>
     {
-        public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<Meal>> Handle(Command request, CancellationToken cancellationToken)
         {
             var mealDb = request.Meal.MapToMealDb();
 
@@ -20,17 +21,21 @@ public static class SaveMeal
                 mealDb.CreatedAt = DateTime.UtcNow;
                 mealDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
 
-                return await Result.Try(async Task () => await supabaseClient
+                var insertResult = await Result.Try(async Task<ModeledResponse<MealDb>> () => await supabaseClient
                     .From<MealDb>()
                     .Insert(mealDb));
+
+                return insertResult.Map(r => new Meal(r.Model ?? new()));
             }
             else
             {
                 mealDb.UpdatedAt = DateTime.UtcNow;
 
-                return await Result.Try(async Task () => await supabaseClient
+                var updateResult = await Result.Try(async Task<ModeledResponse<MealDb>> () => await supabaseClient
                     .From<MealDb>()
                     .Update(mealDb));
+
+                return updateResult.Map(r => new Meal(r.Model ?? new()));
             }
         }
     }
