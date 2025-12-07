@@ -35,7 +35,7 @@ public class Meal
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
     }
 
-    public Meal(MealDb mealDb, MealPlan mealPlan, DateTime mealDate)
+    public Meal(MealDb mealDb, MealPlan mealPlan, string mealDate)
     {
         Id = mealDb.Id;
         Name = mealDb.Name;
@@ -44,7 +44,7 @@ public class Meal
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
         MealPlan = mealPlan;
-        MealDate = mealDate;
+        MealDate = DateTime.Parse(mealDate);
 
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
     }

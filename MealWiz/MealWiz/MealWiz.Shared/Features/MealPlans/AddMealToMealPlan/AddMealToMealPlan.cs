@@ -23,7 +23,7 @@ public static class AddMealToMealPlan
             var mealPlanMealDb = new MealPlanMealDb()
             {
                 Id = 0,
-                MealDate = request.Meal.MealDate.Value,
+                MealDate = request.Meal.MealDate.Value.ToString("yyyy-MM-dd"),
                 MealId = request.Meal.Id,
                 MealPlanId = request.Meal.MealPlan.Id,
                 CreatedAt = DateTime.Now,
