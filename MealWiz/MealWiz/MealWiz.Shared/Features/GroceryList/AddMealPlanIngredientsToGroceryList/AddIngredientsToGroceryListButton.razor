@@ -1,0 +1,55 @@
+﻿@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+@inject IMediator _mediator
+
+<MudLoadingButton Icon="@Icons.Material.Filled.PostAdd" OnClick="AddIngredientToGroceryList" />
+
+@code {
+    public List<GroceryItem> GroceryItemsToAdd { get; set; } = [];
+    public List<GroceryItem> CurrentGroceryItems { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        if (_mealPlanStateContainer.MealPlan != null)
+        {
+            GroceryItemsToAdd = _mealPlanStateContainer.MealPlan.MealOnDate
+                .SelectMany(kvp => kvp.Value.Ingredients.ConvertAll(ingredient => new GroceryItem(ingredient)))
+                .ToList();
+        }
+
+        CurrentGroceryItems = _groceryListStateContainer.GroceryList.Items;
+    }
+
+    public async Task AddIngredientToGroceryList()
+    {
+        var matchingGroceryItems = MatchGroceryItems();
+
+        if (matchingGroceryItems != null && matchingGroceryItems.Count > 0)
+        {
+            //Add merged items to GroceryItemsToAdd
+        }
+
+        await _mediator.Send(new AddMealPlanIngredientsToGroceryList.Command(GroceryItemsToAdd));
+    }
+
+    public Dictionary<string, List<GroceryItem>> MatchGroceryItems()
+    {
+        var matchingGroceryItems = new Dictionary<string, List<GroceryItem>>();
+
+        for (int i = 0; i < CurrentGroceryItems.Count; i++)
+        {
+            var matchingItem = GroceryItemsToAdd
+            .Where(groceryItemToAdd => groceryItemToAdd.Name.Equals(CurrentGroceryItems[i].Name, StringComparison.InvariantCultureIgnoreCase))
+            .FirstOrDefault();
+
+            if (matchingItem == null) continue;
+
+            matchingGroceryItems.Add(matchingItem.Name, matchingItem);
+
+            GroceryItemsToAdd.Remove(matchingItem);
+            CurrentGroceryItems.RemoveAt(i);
+        }
+
+        return matchingGroceryItems;
+    }
+}
