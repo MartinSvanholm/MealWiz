@@ -12,4 +12,16 @@ public static class DictionaryExtensions
             keyValuePairs[key] = [value];
         }
     }
+
+    public static KeyValuePair<Tkey, TValue>? GetFirstAndRemove<Tkey, TValue>(this Dictionary<Tkey, TValue> keyValuePairs)
+    {
+        if (keyValuePairs.Count == 0) return null;
+
+        Tkey firstKey = keyValuePairs.Keys.First();
+        TValue firstValue = keyValuePairs.Values.First();
+
+        keyValuePairs.Remove(firstKey);
+
+        return new KeyValuePair<Tkey, TValue>(firstKey, firstValue);
+    }
 }

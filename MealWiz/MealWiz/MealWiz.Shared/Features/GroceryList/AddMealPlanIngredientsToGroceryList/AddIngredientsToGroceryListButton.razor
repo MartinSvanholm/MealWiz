@@ -1,55 +1,28 @@
-﻿@inject IMealPlanStateContainer _mealPlanStateContainer
-@inject IGroceryListStateContainer _groceryListStateContainer
-@inject IMediator _mediator
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
 
-<MudLoadingButton Icon="@Icons.Material.Filled.PostAdd" OnClick="AddIngredientToGroceryList" />
+<Tooltip Text="Add meal plan ingredients to grocery list">
+    <MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
+                      Icon="@Icons.Material.Filled.PostAdd"
+                      OnClick="OnAddIngredientsToGroceryListCliked" />
+</Tooltip>
 
 @code {
-    public List<GroceryItem> GroceryItemsToAdd { get; set; } = [];
-    public List<GroceryItem> CurrentGroceryItems { get; set; } = [];
-
-    protected override void OnInitialized()
+    private async Task OnAddIngredientsToGroceryListCliked()
     {
-        if (_mealPlanStateContainer.MealPlan != null)
+        if (_mealPlanStateContainer.MealPlan == null)
         {
-            GroceryItemsToAdd = _mealPlanStateContainer.MealPlan.MealOnDate
-                .SelectMany(kvp => kvp.Value.Ingredients.ConvertAll(ingredient => new GroceryItem(ingredient)))
-                .ToList();
+            _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+            await _mealPlanStateContainer.LoadMealPlan();
         }
 
-        CurrentGroceryItems = _groceryListStateContainer.GroceryList.Items;
-    }
-
-    public async Task AddIngredientToGroceryList()
-    {
-        var matchingGroceryItems = MatchGroceryItems();
-
-        if (matchingGroceryItems != null && matchingGroceryItems.Count > 0)
+        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
-            //Add merged items to GroceryItemsToAdd
-        }
-
-        await _mediator.Send(new AddMealPlanIngredientsToGroceryList.Command(GroceryItemsToAdd));
-    }
-
-    public Dictionary<string, List<GroceryItem>> MatchGroceryItems()
-    {
-        var matchingGroceryItems = new Dictionary<string, List<GroceryItem>>();
-
-        for (int i = 0; i < CurrentGroceryItems.Count; i++)
-        {
-            var matchingItem = GroceryItemsToAdd
-            .Where(groceryItemToAdd => groceryItemToAdd.Name.Equals(CurrentGroceryItems[i].Name, StringComparison.InvariantCultureIgnoreCase))
-            .FirstOrDefault();
-
-            if (matchingItem == null) continue;
-
-            matchingGroceryItems.Add(matchingItem.Name, matchingItem);
-
-            GroceryItemsToAdd.Remove(matchingItem);
-            CurrentGroceryItems.RemoveAt(i);
-        }
-
-        return matchingGroceryItems;
+            Content = typeof(AddPlanIngredientsToGroceryListDrawer),
+            Title = "Add items to grocery list",
+            Width = "100%",
+            Height = "100%"
+        });
     }
 }
