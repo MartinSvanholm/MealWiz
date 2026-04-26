@@ -4,40 +4,45 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 
-<MudStack Style="height: 100%;" Spacing="0">
-    <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
-        @foreach (var item in _mergeItems)
-        {
-            <MudPaper Class="pa-3" Elevation="1">
-                <MudStack Spacing="1">
-                    <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
-                    @if (item.IsDuplicate)
-                    {
-                        <MudStack Row Spacing="3">
-                            <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
-                        </MudStack>
-                    }
-                    <MudTextField Label="Amount"
-                                  @bind-Value="item.FinalAmount"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense" />
-                </MudStack>
-            </MudPaper>
-        }
-    </div>
+<MudForm @ref="_form" Style="height: 100%;">
+    <MudStack Style="height: 100%;" Spacing="0">
+        <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
+            @foreach (var item in _mergeItems)
+            {
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
+                        @if (item.IsDuplicate)
+                        {
+                            <MudStack Row Spacing="3">
+                                <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
+                            </MudStack>
+                        }
+                        <MudTextField Label="Amount"
+                                      @bind-Value="item.FinalAmount"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Required="true"
+                                      RequiredError="Required" />
+                    </MudStack>
+                </MudPaper>
+            }
+        </div>
 
-    <MudPaper Elevation="4" Square="true" Class="pa-3">
-        <MudButton Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   FullWidth="true"
-                   OnClick="OnConfirmClicked">
-            Add to grocery list
-        </MudButton>
-    </MudPaper>
-</MudStack>
+        <MudPaper Elevation="4" Square="true" Class="pa-3">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       OnClick="OnConfirmClicked">
+                Add to grocery list
+            </MudButton>
+        </MudPaper>
+    </MudStack>
+</MudForm>
 
 @code {
+    private MudForm _form = default!;
     private List<MergeItem> _mergeItems = [];
 
     protected override void OnInitialized()
@@ -59,7 +64,7 @@
             {
                 Name = ingredient.Name,
                 PlanAmount = ingredient.Amount ?? string.Empty,
-                FinalAmount = ingredient.Amount ?? string.Empty,
+                FinalAmount = existing == null ? (ingredient.Amount ?? string.Empty) : string.Empty,
                 ExistingAmount = existing?.Amount ?? string.Empty,
                 ExistingGroceryItem = existing,
                 PlanGroceryItem = new GroceryItem(ingredient)
@@ -69,6 +74,9 @@
 
     private async Task OnConfirmClicked()
     {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
         foreach (var item in _mergeItems.Where(m => m.IsDuplicate))
         {
             item.ExistingGroceryItem!.Amount = item.FinalAmount;
