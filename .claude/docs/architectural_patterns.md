@@ -159,3 +159,15 @@ New state containers must be added in **both** `Program.cs` files and in `Depend
 - `CustomSupabaseSessionProvider` (`MealWiz.Web/Providers/`) persists the session to `ISyncLocalStorageService` for SSR.
 - Pages protected with `@attribute [Authorize]`; unauthenticated users are redirected by `Layout/RedirectToLogin.razor`.
 - Database authorization is enforced by Supabase Row Level Security — see `supabase/migrations/*_rls.sql`.
+
+---
+
+## 9. Blazor Component Conventions
+
+- **Implicit `ChildContent`**: When passing child markup into a component that has a `RenderFragment` parameter named `ChildContent`, no explicit tag is needed — Blazor assigns it automatically. Use direct nesting, not `<Childcontent>...</Childcontent>`:
+  ```razor
+  <Tooltip Text="...">
+      <MudButton ... />   @* ← assigned to ChildContent automatically *@
+  </Tooltip>
+  ```
+- **Wrapper components** (`Tooltip.razor`, `BaseCard.razor`, etc.) live in `Components/Shared/` and accept `ChildContent` + styling parameters. Prefer these over using MudBlazor primitives directly for consistent styling.

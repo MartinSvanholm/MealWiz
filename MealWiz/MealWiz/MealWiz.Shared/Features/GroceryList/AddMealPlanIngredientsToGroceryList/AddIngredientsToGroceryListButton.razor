@@ -2,9 +2,11 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 
-<MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
-                  Icon="@Icons.Material.Filled.PostAdd"
-                  OnClick="OnAddIngredientsToGroceryListCliked" />
+<Tooltip Text="Add meal plan ingredients to grocery list">
+    <MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
+                      Icon="@Icons.Material.Filled.PostAdd"
+                      OnClick="OnAddIngredientsToGroceryListCliked" />
+</Tooltip>
 
 @code {
     private async Task OnAddIngredientsToGroceryListCliked()
