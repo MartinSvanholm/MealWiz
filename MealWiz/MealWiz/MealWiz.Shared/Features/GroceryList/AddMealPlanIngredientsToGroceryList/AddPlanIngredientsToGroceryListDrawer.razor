@@ -4,33 +4,37 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 
-<MudStack Class="pa-3" Spacing="2">
-    @foreach (var item in _mergeItems)
-    {
-        <MudPaper Class="pa-3" Elevation="1">
-            <MudStack Spacing="1">
-                <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
-                @if (item.IsDuplicate)
-                {
-                    <MudStack Row Spacing="3">
-                        <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Current: @item.ExistingAmount</MudText>
-                    </MudStack>
-                }
-                <MudTextField Label="Amount"
-                              @bind-Value="item.FinalAmount"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense" />
-            </MudStack>
-        </MudPaper>
-    }
+<MudStack Style="height: 100%;" Spacing="0">
+    <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
+        @foreach (var item in _mergeItems)
+        {
+            <MudPaper Class="pa-3" Elevation="1">
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
+                    @if (item.IsDuplicate)
+                    {
+                        <MudStack Row Spacing="3">
+                            <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
+                        </MudStack>
+                    }
+                    <MudTextField Label="Amount"
+                                  @bind-Value="item.FinalAmount"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudStack>
+            </MudPaper>
+        }
+    </div>
 
-    <MudButton Variant="Variant.Filled"
-               Color="Color.Primary"
-               FullWidth="true"
-               OnClick="OnConfirmClicked">
-        Add to grocery list
-    </MudButton>
+    <MudPaper Elevation="4" Square="true" Class="pa-3">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   OnClick="OnConfirmClicked">
+            Add to grocery list
+        </MudButton>
+    </MudPaper>
 </MudStack>
 
 @code {
