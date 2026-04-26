@@ -1,14 +1,20 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
 
 <MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
                   Icon="@Icons.Material.Filled.PostAdd"
-                  OnClick="OnAddIngredientsToGroceryListCliked"
-                  Disabled="@(_mealPlanStateContainer.MealPlan == null)" />
+                  OnClick="OnAddIngredientsToGroceryListCliked" />
 
 @code {
     private async Task OnAddIngredientsToGroceryListCliked()
     {
+        if (_mealPlanStateContainer.MealPlan == null)
+        {
+            _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+            await _mealPlanStateContainer.LoadMealPlan();
+        }
+
         _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(AddPlanIngredientsToGroceryListDrawer),
