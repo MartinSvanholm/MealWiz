@@ -1,8 +1,6 @@
 using Blazored.LocalStorage;
-using MealWiz.Shared.Features.MealPlans.State;
-using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
-using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
@@ -12,9 +10,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddMudServices();
 builder.Services.AddBlazoredLocalStorage();
-builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
-builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
-builder.Services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
+builder.Services.RegisterScopedServices();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 

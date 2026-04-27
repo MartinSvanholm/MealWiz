@@ -21,13 +21,8 @@ public interface IMealsStateContainer
 }
 
 public class MealsStateContainer(
-    IMediator mediator) : IMealsStateContainer
+    IMediator mediator) : StateContainerBase, IMealsStateContainer
 {
-    public event Action OnStateChanged;
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-
-    public ISnackbar CurrentSnackbar { get; set; }
-
     private List<Meal> meals { get; set; } = [];
     public List<Meal> Meals
     {
@@ -46,7 +41,7 @@ public class MealsStateContainer(
     public async Task LoadMeals()
     {
         var result = await mediator.Send(new GetAllMeals.GetAllMeals.Query());
-        result.Handle(CurrentSnackbar);
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
 
         Meals = result.Value;
     }

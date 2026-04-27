@@ -2,7 +2,7 @@
 
 <MudDrawer Width="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
     <MudStack Class="pa-4">
-        <MudText Style="@($"color:{Colors.Gray.Lighten3}")" >@_drawerStateContainer.StateParameters.description</MudText>
+        <MudText Style="@($"color:{Colors.Gray.Lighten3}")" >@_drawerStateContainer.StateParameters.Description</MudText>
         <Button Color="Color.Error" OnClick="OnConfirmClicked">Confirm</Button>
     </MudStack>
 </MudDrawer>

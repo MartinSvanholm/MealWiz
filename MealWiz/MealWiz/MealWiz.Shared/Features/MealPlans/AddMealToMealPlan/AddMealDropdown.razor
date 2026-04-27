@@ -1,4 +1,4 @@
-﻿@inject IMealPlanStateContainer _mealPlanStateContainer;
+﻿@inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IMediator _mediator
 @inject ISnackbar _snackbar
 @implements IDisposable
@@ -48,17 +48,9 @@
         return Meals.Where(meal => meal.Name.Contains(mealName, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private async Task AddMealToPlan(Meal meal) 
+    private async Task AddMealToPlan(Meal meal)
     {
-        meal.MealDate = _mealPlanStateContainer.SelectedDate.Date;
-        meal.MealPlan = _mealPlanStateContainer.MealPlan;
-
-        var result = await _mediator.Send(new AddMealToMealPlan.Command(meal));
-
-        if (result.Handle(_snackbar).IsFailed) return;
-
-        _mealPlanStateContainer.MealPlan.MealOnDate.Add(result.Value.MealDate.Value, result.Value);
-
-        _mealPlanStateContainer.NotifyStateChanged();
+        _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+        await _mealPlanStateContainer.AddMealToPlan(meal);
     }
 }

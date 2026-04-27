@@ -20,7 +20,7 @@ public static class RemoveMealFromMealPlan
 
             if (result.IsSuccess)
             {
-                result.WithSuccess("Meal removed");
+                result = result.WithSuccess("Meal removed");
             }
 
             return result;

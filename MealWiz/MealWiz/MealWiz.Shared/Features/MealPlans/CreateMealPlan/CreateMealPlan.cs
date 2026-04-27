@@ -2,6 +2,7 @@
 using MealWiz.Shared.Features.MealPlans.Models;
 using MediatR;
 using Supabase;
+using Supabase.Postgrest.Responses;
 
 namespace MealWiz.Shared.Features.MealPlans.CreateMealPlan;
 
@@ -13,10 +14,13 @@ public static class CreateMealPlan
     {
         public async Task<Result<MealPlan>> Handle(Command request, CancellationToken cancellationToken)
         {
-            request.MealPlan.CreatedAt = DateTime.Now;
+            if (supabaseClient.Auth.CurrentSession?.User == null)
+                return Result.Fail<MealPlan>("Not authenticated");
+
+            request.MealPlan.CreatedAt = DateTime.UtcNow;
             request.MealPlan.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession.User.Id);
 
-            var result = await Result.Try(() => supabaseClient
+            var result = await Result.Try(async Task<ModeledResponse<MealPlanDb>>() => await supabaseClient
                 .From<MealPlanDb>()
                 .Insert(request.MealPlan.MapToMealPlanDb()));
 

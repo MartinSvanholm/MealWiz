@@ -27,7 +27,7 @@ public class GroceryItem
         Amount = ingredient.Amount;
         IsPicked = false;
         CreatedBy = ingredient.CreatedBy;
-        CreatedAt = DateTime.Now;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public int Id { get; set; }

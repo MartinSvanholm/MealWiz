@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using AddMealToMealPlanAction = MealWiz.Shared.Features.MealPlans.AddMealToMealPlan.AddMealToMealPlan;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
@@ -22,18 +23,15 @@ public interface IMealPlanStateContainer
     void NotifyStateChanged();
     Task LoadMealPlan();
     Task NavigateToWeek(DateTime targetDate);
+    Task AddMealToPlan(Meal meal);
     Meal? GetMealFromSelectedDate();
 }
 
 public class MealPlanStateContainer(
     IMediator mediator,
-    ILocalStorageService localStorage) : IMealPlanStateContainer
+    ILocalStorageService localStorage) : StateContainerBase, IMealPlanStateContainer
 {
     private const string WeekStorageKey = "mealplan_selected_week";
-
-    public event Action OnStateChanged;
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-    public ISnackbar CurrentSnackbar { get; set; }
 
     public MealPlan? MealPlan
     {
@@ -83,6 +81,18 @@ public class MealPlanStateContainer(
         await LoadMealPlan();
 
         IsLoadingWeek = false;
+        NotifyStateChanged();
+    }
+
+    public async Task AddMealToPlan(Meal meal)
+    {
+        meal.MealDate = SelectedDate.Date;
+        meal.MealPlan = MealPlan;
+
+        var result = await mediator.Send(new AddMealToMealPlanAction.Command(meal));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        MealPlan!.MealOnDate.TryAdd(result.Value.MealDate!.Value, result.Value);
         NotifyStateChanged();
     }
 

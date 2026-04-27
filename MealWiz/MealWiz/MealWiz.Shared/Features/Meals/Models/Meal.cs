@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Features.Ingredients.Models;
+﻿using System.Globalization;
+using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Features.MealPlans.Models;
 
 namespace MealWiz.Shared.Features.Meals.Models;
@@ -32,7 +33,7 @@ public class Meal
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
 
-        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : [];
     }
 
     public Meal(MealDb mealDb, MealPlan mealPlan, string mealDate)
@@ -44,10 +45,13 @@ public class Meal
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
         MealPlan = mealPlan;
-        MealDate = DateTime.Parse(mealDate);
+        MealDate = DateTime.Parse(mealDate, CultureInfo.InvariantCulture);
 
-        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.ConvertAll(ingredientDb => new Ingredient(ingredientDb)) : [];
+        Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : [];
     }
+
+    public IReadOnlyList<string> RecipeSteps =>
+        Recipe.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
     public MealDb MapToMealDb()
     {
@@ -59,7 +63,7 @@ public class Meal
             CreatedBy = CreatedBy,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt,
-            Ingredients = Ingredients.ConvertAll(ingredient => ingredient.MapToIngredientDb())
+            Ingredients = Ingredients.Select(ingredient => ingredient.MapToIngredientDb()).ToList()
         };
     }
 }

@@ -35,12 +35,13 @@
         CreateIngredient();
     }
 
-    private async Task CreateMeal() 
+    private async Task CreateMeal()
     {
+        _drawerStateContainer.OnConfirmClick -= CreateMeal;
+
         var result = await _mediator.Send(new SaveMeal.Command(_mealStateContainer.MealToEdit));
         if (result.Handle(_snackbar).IsFailed) return;
 
-        _drawerStateContainer.OnConfirmClick += CreateMeal;
         _drawerStateContainer.CloseDrawer();
 
         _mealStateContainer.MealToEdit = result.Value;
