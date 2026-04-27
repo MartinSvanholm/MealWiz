@@ -13,10 +13,10 @@ public class MealPlan
     public DateTime UpdatedAt { get; set; }
     public Dictionary<DateTime, Meal> MealOnDate { get; set; }
 
-    public MealPlan()
+    public MealPlan(DateTime targetDate)
     {
-        StartDate = DateTime.Now.StartOfWeek().Date;
-        EndDate = DateTime.Now.EndOfWeek().Date;
+        StartDate = targetDate.StartOfWeek().Date;
+        EndDate = targetDate.EndOfWeek().Date;
         MealOnDate = [];
     }
 

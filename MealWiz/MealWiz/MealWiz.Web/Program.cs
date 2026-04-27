@@ -1,4 +1,5 @@
 using Blazored.LocalStorage;
+using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
@@ -17,6 +18,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
 builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
+builder.Services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddBlazoredLocalStorage();

@@ -1,13 +1,15 @@
-﻿@inject IMediator _mediator
+@inject IMediator _mediator
 @inject ISnackbar _snackbar
 @inject IMealPlanStateContainer _mealPlanStateContainer
 
-<MudButton Class="ma-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateMealPlan">Create meal plan for the week</MudButton>
+<MudButton Class="ma-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateMealPlan">
+    Create meal plan for Week @System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)
+</MudButton>
 
 @code {
-    private async Task CreateMealPlan() 
+    private async Task CreateMealPlan()
     {
-        var mealPlan = new MealPlan();
+        var mealPlan = new MealPlan(_mealPlanStateContainer.SelectedWeekStart);
 
         var result = await _mediator.Send(new CreateMealPlan.Command(mealPlan));
 
