@@ -1,11 +1,11 @@
 # MealWiz
 
 ## Overview
-Meal planning and grocery management app. Users create meals with ingredients, build date-ranged meal plans, and auto-generate grocery lists from those plans. Targets web (Blazor WASM + SSR) and mobile/desktop (MAUI).
+Meal planning and grocery management app. Users create meals with ingredients, build date-ranged meal plans, and auto-generate grocery lists from those plans. Targets web (Blazor WASM) and mobile/desktop (MAUI).
 
 ## Tech Stack
 - **Runtime:** .NET 9.0, C#
-- **UI:** Blazor (WebAssembly + Server interactive), MudBlazor v8
+- **UI:** Blazor WebAssembly, MudBlazor v8
 - **Database:** PostgreSQL via Supabase (direct C# SDK — no separate REST/GraphQL layer)
 - **Patterns:** CQRS via MediatR v13, FluentResults v4 for error handling
 - **Auth:** Supabase Auth + JWT + custom `AuthenticationStateProvider`
@@ -16,8 +16,7 @@ Meal planning and grocery management app. Users create meals with ingredients, b
 | Project | Role |
 |---------|------|
 | `MealWiz.Shared` | All feature code: pages, components, CQRS handlers, state, models |
-| `MealWiz.Web` | ASP.NET Core host — registers services, configures middleware |
-| `MealWiz.Web.Client` | Blazor WASM entry point — mirrors server DI registration |
+| `MauiWASM` | Blazor WASM web entry point — DI registration, Supabase client setup |
 | `MealWiz` (MAUI) | Mobile/desktop targets sharing the Shared project |
 
 ## Key Directories
@@ -30,12 +29,12 @@ MealWiz/MealWiz/
     Components/        # Generic reusable UI components
     Layout/            # App shell (MainLayout, nav, redirect)
 
-  MealWiz.Web/
-    Program.cs         # Service registration + Supabase client setup
+  MealWiz/             # MAUI project (mobile/desktop)
     Providers/         # Session persistence (CustomSupabaseSessionProvider)
 
-  MealWiz.Web.Client/
-    Program.cs         # WASM host — same DI registrations as server
+MealWiz/MauiWASM/      # Blazor WASM web project
+  Program.cs           # WASM host — service registration + Supabase client setup
+  Provider/            # Session persistence (CustomSupabaseSessionProvider)
 
 MealWiz/supabase/
   migrations/          # SQL migration files managed by Supabase CLI
@@ -46,8 +45,8 @@ MealWiz/supabase/
 # Build entire solution
 dotnet build MealWiz/MealWiz.sln
 
-# Run web host (serves both SSR and WASM)
-dotnet run --project MealWiz/MealWiz/MealWiz.Web/
+# Run web (Blazor WASM — open via browser after publish or use dotnet serve)
+dotnet build MealWiz/MauiWASM/MauiWASM.csproj
 ```
 
 ## Database Migrations
@@ -59,7 +58,7 @@ supabase db push
 Migration files: `MealWiz/supabase/migrations/YYYYMMDDHHMMSS_description.sql`
 
 ## Configuration
-Supabase credentials in `appsettings.*.json` (server) and `wwwroot/appsettings.*.json` (client):
+Supabase credentials in `MealWiz/MauiWASM/wwwroot/appsettings.*.json`:
 ```json
 { "Supabase": { "url": "...", "key": "..." } }
 ```
