@@ -1,0 +1,28 @@
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+
+<Tooltip Text="Add meal plan ingredients to grocery list">
+    <MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
+                      Icon="@Icons.Material.Filled.PostAdd"
+                      OnClick="OnAddIngredientsToGroceryListCliked" />
+</Tooltip>
+
+@code {
+    private async Task OnAddIngredientsToGroceryListCliked()
+    {
+        if (_mealPlanStateContainer.MealPlan == null)
+        {
+            _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+            await _mealPlanStateContainer.LoadMealPlan();
+        }
+
+        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(AddPlanIngredientsToGroceryListDrawer),
+            Title = "Add items to grocery list",
+            Width = "100%",
+            Height = "100%"
+        });
+    }
+}

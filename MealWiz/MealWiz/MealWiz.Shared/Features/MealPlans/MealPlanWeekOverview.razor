@@ -1,28 +1,57 @@
-﻿@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject ILocalStorageService _localStorage
 
-<MudStack Row Justify="Justify.SpaceEvenly">
-    @for (int i = 0; i < 7; i++)
-    {
-        var localIteration = i;
-        var date = GetDateForDay(i);
+<MudStack Row AlignItems="AlignItems.Center" Spacing="0">
+    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                   Size="Size.Small"
+                   Disabled="_mealPlanStateContainer.IsLoadingWeek"
+                   OnClick="PreviousWeek" />
 
-        <MudStack Spacing="1" AlignItems="AlignItems.Center">
-            <MudText Typo="Typo.body2">@date.DayOfWeek.ToString().Substring(0, 3).ToUpper()</MudText>
-            <div @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
-                <p class="day">@date.Day</p>
-            </div>
+    <MudSwipeArea OnSwipeEnd="HandleSwipe" Class="flex-grow-1">
+        <MudStack Row Justify="Justify.SpaceEvenly">
+            @for (int i = 0; i < 7; i++)
+            {
+                var date = GetDateForDay(i);
+
+                <MudStack Spacing="1" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2">@date.DayOfWeek.ToString().Substring(0, 3).ToUpper()</MudText>
+                    <div @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
+                        <p class="day">@date.Day</p>
+                    </div>
+                </MudStack>
+            }
         </MudStack>
-    }
+    </MudSwipeArea>
+
+    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+                   Size="Size.Small"
+                   Disabled="_mealPlanStateContainer.IsLoadingWeek"
+                   OnClick="NextWeek" />
 </MudStack>
 
 @code {
-    private DateTime GetDateForDay(int dayOffset)
-    {
-        int dayOfWeek = DateTime.Now.DayOfWeek == 0 ? 7 : (int)DateTime.Now.DayOfWeek;
+    private const string WeekStorageKey = "mealplan_selected_week";
 
-        var startDateOfWeek = DateTime.Now.AddDays(-(dayOfWeek - (int)DayOfWeek.Monday));
-        var date = startDateOfWeek.AddDays(dayOffset);
-        return date;
+    protected override async Task OnInitializedAsync()
+    {
+        var saved = await _localStorage.GetItemAsync<DateTime?>(WeekStorageKey);
+        await _mealPlanStateContainer.NavigateToWeek(saved ?? DateTime.Now);
+    }
+
+    private DateTime GetDateForDay(int dayOffset) =>
+        _mealPlanStateContainer.SelectedWeekStart.AddDays(dayOffset);
+
+    private Task PreviousWeek() =>
+        _mealPlanStateContainer.NavigateToWeek(_mealPlanStateContainer.SelectedWeekStart.AddDays(-7));
+
+    private Task NextWeek() =>
+        _mealPlanStateContainer.NavigateToWeek(_mealPlanStateContainer.SelectedWeekStart.AddDays(7));
+
+    private async Task HandleSwipe(SwipeEventArgs e)
+    {
+        if (_mealPlanStateContainer.IsLoadingWeek) return;
+        if (e.SwipeDirection == SwipeDirection.LeftToRight) await PreviousWeek();
+        else if (e.SwipeDirection == SwipeDirection.RightToLeft) await NextWeek();
     }
 
     private string GetDayContainerClass(DateTime date)

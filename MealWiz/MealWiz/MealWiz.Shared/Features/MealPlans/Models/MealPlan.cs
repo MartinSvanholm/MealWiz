@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Features.Meals.Models;
+﻿using System.Globalization;
+using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 
 namespace MealWiz.Shared.Features.MealPlans.Models;
@@ -13,23 +14,23 @@ public class MealPlan
     public DateTime UpdatedAt { get; set; }
     public Dictionary<DateTime, Meal> MealOnDate { get; set; }
 
-    public MealPlan()
+    public MealPlan(DateTime targetDate)
     {
-        StartDate = DateTime.Now.StartOfWeek().Date;
-        EndDate = DateTime.Now.EndOfWeek().Date;
+        StartDate = targetDate.StartOfWeek().Date;
+        EndDate = targetDate.EndOfWeek().Date;
         MealOnDate = [];
     }
 
     public MealPlan(MealPlanDb mealPlanDb)
     {
         Id = mealPlanDb.Id;
-        StartDate = DateTime.Parse(mealPlanDb.StartDate);
-        EndDate = DateTime.Parse(mealPlanDb.EndDate);
+        StartDate = DateTime.Parse(mealPlanDb.StartDate, CultureInfo.InvariantCulture);
+        EndDate = DateTime.Parse(mealPlanDb.EndDate, CultureInfo.InvariantCulture);
         CreatedAt = mealPlanDb.CreatedAt;
         CreatedBy = mealPlanDb.CreatedBy;
         UpdatedAt = mealPlanDb.UpdatedAt;
-        MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Any() ? 
-            mealPlanDb.MealPlanMeals.ToDictionary(x => x.MealDate, x => new Meal(x.Meal, this, x.MealDate))
+        MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Count > 0 ?
+            mealPlanDb.MealPlanMeals.ToDictionary(x => DateTime.Parse(x.MealDate, CultureInfo.InvariantCulture), x => new Meal(x.Meal, this, x.MealDate))
             : [];
     }
 
@@ -38,8 +39,8 @@ public class MealPlan
         return new MealPlanDb()
         {
             Id = Id,
-            StartDate = StartDate.ToString("MM/dd/yyyy"),
-            EndDate = EndDate.ToString("MM/dd/yyyy"),
+            StartDate = StartDate.ToString("yyyy-MM-dd"),
+            EndDate = EndDate.ToString("yyyy-MM-dd"),
             CreatedAt = CreatedAt,
             CreatedBy = CreatedBy,
             UpdatedAt = UpdatedAt

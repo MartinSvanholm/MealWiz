@@ -1,4 +1,6 @@
-﻿using MealWiz.Shared.Features.MealPlans.Models;
+using Blazored.LocalStorage;
+using AddMealToMealPlanAction = MealWiz.Shared.Features.MealPlans.AddMealToMealPlan.AddMealToMealPlan;
+using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -11,21 +13,25 @@ public interface IMealPlanStateContainer
     ISnackbar CurrentSnackbar { get; set; }
     MealPlan? MealPlan { get; set; }
     DateTime SelectedDate { get; set; }
+    DateTime SelectedWeekStart { get; }
     bool SelectedDateHasMeal { get; }
+    bool IsLoadingWeek { get; }
+    bool IsCurrentWeek();
 
     event Action OnStateChanged;
 
     void NotifyStateChanged();
     Task LoadMealPlan();
+    Task NavigateToWeek(DateTime targetDate);
+    Task AddMealToPlan(Meal meal);
     Meal? GetMealFromSelectedDate();
 }
 
 public class MealPlanStateContainer(
-    IMediator mediator) : IMealPlanStateContainer
+    IMediator mediator,
+    ILocalStorageService localStorage) : StateContainerBase, IMealPlanStateContainer
 {
-    public event Action OnStateChanged;
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-    public ISnackbar CurrentSnackbar { get; set; }
+    private const string WeekStorageKey = "mealplan_selected_week";
 
     public MealPlan? MealPlan
     {
@@ -49,12 +55,45 @@ public class MealPlanStateContainer(
     }
     private DateTime selectedDate { get; set; } = DateTime.Now;
 
+    public DateTime SelectedWeekStart { get; private set; } = DateTime.Now.StartOfWeek().Date;
+
+    public bool IsLoadingWeek { get; private set; } = true;
+
+    public bool IsCurrentWeek() =>
+        SelectedWeekStart == DateTime.Now.StartOfWeek().Date;
+
     public async Task LoadMealPlan()
     {
-        var result = await mediator.Send(new GetMealPlanByDate.GetMealPlanByDate.Query(DateTime.Now));
+        var result = await mediator.Send(new GetMealPlanByDate.GetMealPlanByDate.Query(SelectedWeekStart));
         result.Handle(CurrentSnackbar);
 
         MealPlan = result.Value;
+    }
+
+    public async Task NavigateToWeek(DateTime targetDate)
+    {
+        SelectedWeekStart = targetDate.StartOfWeek().Date;
+        SelectedDate = IsCurrentWeek() ? DateTime.Now.Date : SelectedWeekStart;
+        IsLoadingWeek = true;
+        NotifyStateChanged();
+
+        await localStorage.SetItemAsync(WeekStorageKey, SelectedWeekStart);
+        await LoadMealPlan();
+
+        IsLoadingWeek = false;
+        NotifyStateChanged();
+    }
+
+    public async Task AddMealToPlan(Meal meal)
+    {
+        meal.MealDate = SelectedDate.Date;
+        meal.MealPlan = MealPlan;
+
+        var result = await mediator.Send(new AddMealToMealPlanAction.Command(meal));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        MealPlan!.MealOnDate.TryAdd(result.Value.MealDate!.Value, result.Value);
+        NotifyStateChanged();
     }
 
     public Meal? GetMealFromSelectedDate()

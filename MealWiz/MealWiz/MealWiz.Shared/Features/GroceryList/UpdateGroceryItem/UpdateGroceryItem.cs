@@ -10,12 +10,12 @@ public static class UpdateGroceryItem
 {
     public record Command(GroceryItem GroceryItem) : IRequest<Result<int>>;
 
-    public class Hanlder(Client supabaseClient) : IRequestHandler<Command, Result<int>>
+    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
             var groceryItemDb = request.GroceryItem.MapToDb();
-            groceryItemDb.UpdatedAt = DateTime.Now;
+            groceryItemDb.UpdatedAt = DateTime.UtcNow;
 
             var result = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
                 .From<GroceryItemDb>()

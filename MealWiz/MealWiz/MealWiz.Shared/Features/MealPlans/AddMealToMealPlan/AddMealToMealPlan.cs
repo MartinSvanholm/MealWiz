@@ -16,23 +16,26 @@ public static class AddMealToMealPlan
         public async Task<Result<Meal>> Handle(Command request, CancellationToken cancellationToken)
         {
             if (request.Meal.MealPlan == null || request.Meal.MealDate == null)
-            {
                 return new Result().WithError("Meal plan or meal date cannot be empty");
-            }
+
+            if (supabaseClient.Auth.CurrentSession?.User == null)
+                return Result.Fail<Meal>("Not authenticated");
 
             var mealPlanMealDb = new MealPlanMealDb()
             {
                 Id = 0,
-                MealDate = request.Meal.MealDate.Value,
+                MealDate = request.Meal.MealDate.Value.ToString("yyyy-MM-dd"),
                 MealId = request.Meal.Id,
                 MealPlanId = request.Meal.MealPlan.Id,
-                CreatedAt = DateTime.Now,
-                CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id)
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = new Guid(supabaseClient.Auth.CurrentSession.User.Id)
             };
 
             var result = await Result.Try(async Task<ModeledResponse<MealPlanMealDb>> () => await supabaseClient
                 .From<MealPlanMealDb>()
                 .Insert(mealPlanMealDb));
+
+            if (result.IsFailed) return result.ToResult<Meal>();
 
             return new Result<Meal>().WithValue(request.Meal).WithSuccess("Meal added to plan");
         }
