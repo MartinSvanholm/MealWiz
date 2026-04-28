@@ -1,8 +1,4 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
-@inject IMealsStateContainer _mealStateContainer
-@inject IMediator _mediator
-@inject ISnackbar _snackbar
-@implements IDisposable
+@inject IDrawerStateContainer _drawerStateContainer
 
 <BaseCard Dense CardColor="Color.Primary" OnClick="OnCreateClick">
     <HeaderContent>
@@ -17,39 +13,7 @@
 </BaseCard>
 
 @code {
-    public void Dispose() 
-    {
-        _drawerStateContainer.OnConfirmClick -= CreateMeal;
-    }
-
-    private void OnCreateClick() 
-    {
-        if (!_mealStateContainer.IsEdit)
-        {
-            _drawerStateContainer.OnConfirmClick += CreateMeal;
-            _drawerStateContainer.OpenConfirmDrawer("Save meal", "You need to create your meal before you can add ingredients, would you like to do that now?");
-
-            return;
-        }
-
-        CreateIngredient();
-    }
-
-    private async Task CreateMeal()
-    {
-        _drawerStateContainer.OnConfirmClick -= CreateMeal;
-
-        var result = await _mediator.Send(new SaveMeal.Command(_mealStateContainer.MealToEdit));
-        if (result.Handle(_snackbar).IsFailed) return;
-
-        _drawerStateContainer.CloseDrawer();
-
-        _mealStateContainer.MealToEdit = result.Value;
-
-        CreateIngredient();
-    }
-
-    private void CreateIngredient()
+    private void OnCreateClick()
     {
         DrawerStateParameters drawerStateParameters = new DrawerStateParameters
         {
