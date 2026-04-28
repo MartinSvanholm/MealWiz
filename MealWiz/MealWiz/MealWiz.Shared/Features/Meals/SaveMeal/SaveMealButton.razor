@@ -23,13 +23,32 @@ OnClick="SaveMeal" />
             result.Handle(_snackbar);
             if (result.IsFailed) return;
 
-            IsSaving = false;
+            var savedMeal = result.Value;
+
+            var pendingIngredients = _mealsStateContainer.MealToEdit.Ingredients
+                .Where(i => i.Id == 0)
+                .ToList();
+
+            _mealsStateContainer.MealToEdit = savedMeal;
+
+            foreach (var ingredient in pendingIngredients)
+            {
+                var ingredientResult = await _mediator.Send(new SaveIngredient.Command(ingredient));
+                ingredientResult.Handle(_snackbar);
+
+                if (ingredientResult.IsFailed) return;
+            }
+
             _snackbar.Add("Meal saved", Severity.Success);
             _navigationManager.NavigateTo("/meals");
         }
         catch (Exception)
         {
             _snackbar.Add("An error has occurred, please try again.", Severity.Error);
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 }

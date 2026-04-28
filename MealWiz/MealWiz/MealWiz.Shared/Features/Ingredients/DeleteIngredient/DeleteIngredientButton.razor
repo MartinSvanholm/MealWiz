@@ -23,6 +23,13 @@ Class="pa-1" />
 
     private void OnDeleteClick()
     {
+        if (Ingredient.Id == 0)
+        {
+            _mealsStateContainer.RemovePendingIngredient(Ingredient);
+            _drawerStateContainer.CloseDrawer();
+            return;
+        }
+
         _drawerStateContainer.OpenConfirmDrawer("Delete ingredient?", "Are you sure you want to delete this ingredient?");
         _drawerStateContainer.OnConfirmClick += OnConfirmDelete;
     }
