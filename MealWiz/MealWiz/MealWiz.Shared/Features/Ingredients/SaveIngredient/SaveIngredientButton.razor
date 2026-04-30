@@ -17,21 +17,28 @@
 
         try
         {
-            var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
+            if (!_mealsStateContainer.IsEdit)
+            {
+                _mealsStateContainer.AddOrUpdatePendingIngredient(Ingredient);
+                _drawerStateContainer.CloseDrawer();
+            }
+            else
+            {
+                var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
 
-            result.Handle(_snackbar);
-            if (result.IsFailed) return;
+                result.Handle(_snackbar);
+                if (result.IsFailed) return;
 
-            await _mealsStateContainer.ReloadIngredientsForMealToEdit();
-
-            _drawerStateContainer.CloseDrawer();
-            _snackbar.Add("Ingredient saved.", Severity.Success);
+                await _mealsStateContainer.ReloadIngredientsForMealToEdit();
+                _drawerStateContainer.CloseDrawer();
+                _snackbar.Add("Ingredient saved.", Severity.Success);
+            }
         }
         catch (Exception)
         {
             _snackbar.Add("An error has occurred, please try again.", Severity.Error);
         }
-        
+
         IsLoading = false;
     }
 }

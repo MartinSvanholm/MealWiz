@@ -1,4 +1,6 @@
-﻿namespace MealWiz.Shared.Features.GroceryList.Models;
+﻿using MealWiz.Shared.Features.Ingredients.Models;
+
+namespace MealWiz.Shared.Features.GroceryList.Models;
 
 public class GroceryItem
 {
@@ -17,6 +19,15 @@ public class GroceryItem
         CreatedBy = groceryItemDb.CreatedBy;
         CreatedAt = groceryItemDb.CreatedAt;
         UpdatedAt = groceryItemDb.UpdatedAt;
+    }
+
+    public GroceryItem(Ingredient ingredient)
+    {
+        Name = ingredient.Name;
+        Amount = ingredient.Amount;
+        IsPicked = false;
+        CreatedBy = ingredient.CreatedBy;
+        CreatedAt = DateTime.UtcNow;
     }
 
     public int Id { get; set; }

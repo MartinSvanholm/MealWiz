@@ -1,4 +1,5 @@
 ﻿using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
+using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -16,18 +17,15 @@ public interface IMealsStateContainer
     event Action OnStateChanged;
 
     void NotifyStateChanged();
+    void AddOrUpdatePendingIngredient(Ingredient ingredient);
+    void RemovePendingIngredient(Ingredient ingredient);
     Task LoadMeals();
     Task ReloadIngredientsForMealToEdit();
 }
 
 public class MealsStateContainer(
-    IMediator mediator) : IMealsStateContainer
+    IMediator mediator) : StateContainerBase, IMealsStateContainer
 {
-    public event Action OnStateChanged;
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-
-    public ISnackbar CurrentSnackbar { get; set; }
-
     private List<Meal> meals { get; set; } = [];
     public List<Meal> Meals
     {
@@ -46,9 +44,22 @@ public class MealsStateContainer(
     public async Task LoadMeals()
     {
         var result = await mediator.Send(new GetAllMeals.GetAllMeals.Query());
-        result.Handle(CurrentSnackbar);
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
 
         Meals = result.Value;
+    }
+
+    public void AddOrUpdatePendingIngredient(Ingredient ingredient)
+    {
+        if (!MealToEdit.Ingredients.Contains(ingredient))
+            MealToEdit.Ingredients.Add(ingredient);
+        NotifyStateChanged();
+    }
+
+    public void RemovePendingIngredient(Ingredient ingredient)
+    {
+        MealToEdit.Ingredients.Remove(ingredient);
+        NotifyStateChanged();
     }
 
     public async Task ReloadIngredientsForMealToEdit()

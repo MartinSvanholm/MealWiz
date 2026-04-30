@@ -114,10 +114,10 @@ public partial class DrawerStateContainer : IDrawerStateContainer
         IsConfirmDrawerOpen = false;
     }
 
-    public void OpenConfirmDrawer(string tittle, string description)
+    public void OpenConfirmDrawer(string title, string description)
     {
-        StateParameters.Title = tittle;
-        StateParameters.description = description;
+        StateParameters.Title = title;
+        StateParameters.Description = description;
 
         IsConfirmDrawerOpen = true;
     }

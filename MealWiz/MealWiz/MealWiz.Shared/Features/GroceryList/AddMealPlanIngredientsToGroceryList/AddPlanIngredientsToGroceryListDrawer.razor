@@ -1,0 +1,112 @@
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+@inject IMediator _mediator
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+
+<MudForm @ref="_form" Style="height: 100%;">
+    <MudStack Style="height: 100%;" Spacing="0">
+        <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
+            @foreach (var item in _mergeItems)
+            {
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
+                        @if (item.IsDuplicate)
+                        {
+                            <MudStack Row Spacing="3">
+                                <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
+                            </MudStack>
+                        }
+                        <MudTextField Label="Amount"
+                                      @bind-Value="item.FinalAmount"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Required="true"
+                                      RequiredError="Required" />
+                    </MudStack>
+                </MudPaper>
+            }
+        </div>
+
+        <MudPaper Elevation="4" Square="true" Class="pa-3">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       OnClick="OnConfirmClicked">
+                Add to grocery list
+            </MudButton>
+        </MudPaper>
+    </MudStack>
+</MudForm>
+
+@code {
+    private MudForm _form = default!;
+    private List<MergeItem> _mergeItems = [];
+
+    protected override void OnInitialized()
+    {
+        if (_mealPlanStateContainer.MealPlan == null) return;
+
+        var currentItems = _groceryListStateContainer.GroceryList.Items;
+
+        var planIngredients = _mealPlanStateContainer.MealPlan.MealOnDate
+            .SelectMany(kvp => kvp.Value.Ingredients)
+            .ToList();
+
+        _mergeItems = planIngredients.Select(ingredient =>
+        {
+            var existing = currentItems.FirstOrDefault(g =>
+                string.Equals(g.Name, ingredient.Name, StringComparison.OrdinalIgnoreCase));
+
+            return new MergeItem
+            {
+                Name = ingredient.Name,
+                PlanAmount = ingredient.Amount ?? string.Empty,
+                FinalAmount = existing == null ? (ingredient.Amount ?? string.Empty) : string.Empty,
+                ExistingAmount = existing?.Amount ?? string.Empty,
+                ExistingGroceryItem = existing,
+                PlanGroceryItem = new GroceryItem(ingredient)
+            };
+        }).ToList();
+    }
+
+    private async Task OnConfirmClicked()
+    {
+        await _form.Validate();
+        if (!_form.IsValid) return;
+
+        foreach (var item in _mergeItems.Where(m => m.IsDuplicate))
+        {
+            item.ExistingGroceryItem!.Amount = item.FinalAmount;
+            await _groceryListStateContainer.UpdateGroceryItem(item.ExistingGroceryItem);
+        }
+
+        var newItems = _mergeItems
+            .Where(m => !m.IsDuplicate)
+            .Select(m => { m.PlanGroceryItem.Amount = m.FinalAmount; return m.PlanGroceryItem; })
+            .ToList();
+
+        if (newItems.Count > 0)
+        {
+            var result = await _mediator.Send(new AddMealPlanIngredientsToGroceryList.Command(newItems));
+            if (result.Handle(_snackbar).IsFailed) return;
+        }
+
+        await _groceryListStateContainer.LoadGroceryItems();
+        _drawerStateContainer.CloseDrawer();
+        _snackbar.Add("Ingredients added to list");
+    }
+
+    private class MergeItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string PlanAmount { get; set; } = string.Empty;
+        public string ExistingAmount { get; set; } = string.Empty;
+        public string FinalAmount { get; set; } = string.Empty;
+        public GroceryItem? ExistingGroceryItem { get; set; }
+        public GroceryItem PlanGroceryItem { get; set; } = new();
+        public bool IsDuplicate => ExistingGroceryItem != null;
+    }
+}

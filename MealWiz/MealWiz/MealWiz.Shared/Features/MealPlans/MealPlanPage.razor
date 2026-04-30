@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @attribute [Authorize]
 @implements IDisposable
 @inject IMealPlanStateContainer _mealPlanStateContainer
@@ -11,10 +11,23 @@
                 <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
             </MudItem>
             <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
-                <MudText Typo="Typo.h6">Meal plan</MudText>
+                @if (_mealPlanStateContainer.IsCurrentWeek())
+                {
+                    <MudText Typo="Typo.h6">Week @GetWeekNumber()</MudText>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Inherit"
+                               EndIcon="@Icons.Material.Filled.Refresh"
+                               Disabled="_mealPlanStateContainer.IsLoadingWeek"
+                               OnClick="GoToCurrentWeek">
+                        <MudText Typo="Typo.h6">Week @GetWeekNumber()</MudText>
+                    </MudButton>
+                }
             </MudItem>
             <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
-                @if (_mealPlanStateContainer.SelectedDateHasMeal) 
+                @if (_mealPlanStateContainer.SelectedDateHasMeal)
                 {
                     <RemoveMealButton />
                 }
@@ -22,19 +35,17 @@
             </MudItem>
         </MudGrid>
 
-        @if (_mealPlanStateContainer.MealPlan != null) {
-            <MudDivider Class="mb-4" DividerType="DividerType.Middle" />
-            <MudStack Class="mb-3">
-                <MealPlanWeekOverview />
-            </MudStack>
-        }
+        <MudDivider Class="mb-4" DividerType="DividerType.Middle" />
+        <MudStack Class="mb-3">
+            <MealPlanWeekOverview />
+        </MudStack>
     </MudPaper>
 
     <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
-        @if (IsLoading) 
+        @if (_mealPlanStateContainer.IsLoadingWeek)
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" />
-        }  
+        }
         else if (_mealPlanStateContainer.MealPlan == null)
         {
             <CreateMealPlanButton />
@@ -48,21 +59,17 @@
 </MudStack>
 
 @code {
-    private bool IsLoading { get; set; }
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        IsLoading = true;
-
         _mealPlanStateContainer.CurrentSnackbar = _snackbar;
         _mealPlanStateContainer.OnStateChanged += StateHasChanged;
-
-        await _mealPlanStateContainer.LoadMealPlan();
-
-        IsLoading = false;
-
-        await base.OnInitializedAsync();
     }
+
+    private int GetWeekNumber() =>
+        System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart);
+
+    private Task GoToCurrentWeek() =>
+        _mealPlanStateContainer.NavigateToWeek(DateTime.Now);
 
     public void Dispose()
     {

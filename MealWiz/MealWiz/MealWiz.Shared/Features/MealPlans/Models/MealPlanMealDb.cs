@@ -11,7 +11,7 @@ public class MealPlanMealDb : BaseModel
     public int Id { get; set; }
 
     [Column("meal_date")]
-    public DateTime MealDate { get; set; }
+    public string MealDate { get; set; }
 
     [Column("fk_meal")]
     public int MealId { get; set; }

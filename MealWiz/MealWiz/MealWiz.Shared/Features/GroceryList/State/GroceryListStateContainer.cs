@@ -21,11 +21,8 @@ public interface IGroceryListStateContainer
 }
 
 public class GroceryListStateContainer(
-    IMediator mediator) : IGroceryListStateContainer
+    IMediator mediator) : StateContainerBase, IGroceryListStateContainer
 {
-    public event Action OnStateChanged;
-    public void NotifyStateChanged() => OnStateChanged?.Invoke();
-    public ISnackbar CurrentSnackbar { get; set; }
     private Models.GroceryList groceryList { get; set; } = new();
     public Models.GroceryList GroceryList => groceryList;
 
