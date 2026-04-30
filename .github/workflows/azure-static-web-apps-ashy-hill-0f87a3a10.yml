@@ -7,9 +7,37 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy_supabase_migrations:
-    name: Deploy db migrations
+  build_and_deploy:
     runs-on: ubuntu-latest
+    name: Build and deploy
+    outputs:
+      previous_sha: ${{ steps.get_previous_sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          submodules: true
+          lfs: false
+
+      - name: Get previous commit SHA
+        id: get_previous_sha
+        run: echo "sha=$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Build and Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_HILL_0F87A3A10 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/MealWiz/MauiWASM"
+          api_location: ""
+          output_location: "wwwroot"
+
+  apply_migrations:
+    needs: build_and_deploy
+    runs-on: ubuntu-latest
+    name: Apply db migrations
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
@@ -22,28 +50,28 @@ jobs:
       - run: supabase link --project-ref $SUPABASE_PROJECT_ID
       - run: supabase db push
 
-  build_and_deploy_job:
-    needs: deploy_supabase_migrations
+  rollback_deployment:
+    needs: [build_and_deploy, apply_migrations]
+    if: needs.build_and_deploy.result == 'success' && needs.apply_migrations.result == 'failure'
     runs-on: ubuntu-latest
-    name: Build and deploy
+    name: Rollback deployment
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.build_and_deploy.outputs.previous_sha }}
+          fetch-depth: 1
           submodules: true
           lfs: false
-      - name: Build And Deploy
-        id: builddeploy
+
+      - name: Rollback to previous deployment
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_HILL_0F87A3A10 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/MealWiz/MauiWASM" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "wwwroot" # Built app content directory - optional
-          ###### End of Repository/Build Configurations ######
+          app_location: "/MealWiz/MauiWASM"
+          api_location: ""
+          output_location: "wwwroot"
 
   close_pull_request_job:
     runs-on: ubuntu-latest
@@ -55,9 +83,3 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_HILL_0F87A3A10 }}
           action: "close"
-
-
-
-
-
-
