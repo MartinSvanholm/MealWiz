@@ -1,12 +1,14 @@
-﻿.day-container {
+.day-container {
     cursor: pointer;
     border-radius: 50%;
-    width: 25px;
-    height: 25px;
+    width: 28px;
+    height: 28px;
     text-align: center;
     align-items: center;
     display: flex;
     justify-content: center;
+    position: relative;
+    transition: background-color 120ms ease;
 }
 
 .day:hover {
@@ -14,9 +16,27 @@
 }
 
 .current-day {
-    background-color: gray
+    background-color: var(--mud-palette-tertiary);
+    color: var(--mud-palette-tertiary-text);
 }
 
 .selected-day {
-    background-color: #5678B8;
+    background-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
+}
+
+.has-meal::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--mud-palette-secondary);
+}
+
+.selected-day.has-meal::after {
+    background-color: var(--mud-palette-primary-text);
 }

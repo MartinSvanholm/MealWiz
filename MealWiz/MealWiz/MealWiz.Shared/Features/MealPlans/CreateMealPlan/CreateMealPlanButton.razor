@@ -2,7 +2,7 @@
 @inject ISnackbar _snackbar
 @inject IMealPlanStateContainer _mealPlanStateContainer
 
-<MudButton Class="ma-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateMealPlan">
+<MudButton Class="ma-3" Variant="Variant.Filled" Color="Color.Secondary" OnClick="CreateMealPlan">
     Create meal plan for Week @System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)
 </MudButton>
 

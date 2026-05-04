@@ -2,7 +2,7 @@
 @inject IMediator _mediator
 @inject IMealPlanStateContainer _mealPlanStateContainer
 
-<MudIconButton OnClick="RemoveMealFromMealPlan" Icon="@Icons.Material.Filled.NoMeals" />
+<MudIconButton OnClick="RemoveMealFromMealPlan" Icon="@Icons.Material.Filled.NoMeals" Color="Color.Error" />
 
 @code {
     private async Task RemoveMealFromMealPlan()
