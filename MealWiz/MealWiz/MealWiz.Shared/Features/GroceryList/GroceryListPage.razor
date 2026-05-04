@@ -31,7 +31,8 @@
                     ValueChanged="() => _groceryListStateContainer.ToggleIsPicked(item)"
                     CheckedIcon="@Icons.Material.Filled.RadioButtonChecked"
                     UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked"
-                    Color="Color.Success"
+                    UncheckedColor="Color.Default"
+                    Color="Color.Primary"
                     Style="@(item.IsPicked ? "text-decoration-line: line-through; color: var(--mud-palette-text-secondary);" : "")"
                     Size="Size.Small">
                         @GetItemDescription(item)

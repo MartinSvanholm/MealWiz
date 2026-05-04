@@ -22,27 +22,10 @@
 }
 
 .current-day {
-    background-color: var(--mud-palette-tertiary);
-    color: var(--mud-palette-tertiary-text);
+    background-color: gray
 }
 
 .selected-day {
     background-color: var(--mud-palette-primary);
     color: var(--mud-palette-primary-text);
-}
-
-.has-meal::after {
-    content: "";
-    position: absolute;
-    bottom: -4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background-color: var(--mud-palette-secondary);
-}
-
-.selected-day.has-meal::after {
-    background-color: var(--mud-palette-primary-text);
 }

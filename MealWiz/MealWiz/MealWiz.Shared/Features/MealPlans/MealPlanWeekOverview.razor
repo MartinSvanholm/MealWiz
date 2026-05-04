@@ -1,5 +1,6 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ILocalStorageService _localStorage
+@implements IDisposable
 
 <MudStack Row AlignItems="AlignItems.Center" Spacing="0">
     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
@@ -43,6 +44,11 @@
 
         var saved = await _localStorage.GetItemAsync<DateTime?>(WeekStorageKey);
         await _mealPlanStateContainer.NavigateToWeek(saved ?? DateTime.Now);
+    }
+
+    public void Dispose()
+    {
+        _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
     }
 
     private DateTime GetDateForDay(int dayOffset) =>
