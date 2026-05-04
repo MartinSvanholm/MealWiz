@@ -18,6 +18,11 @@
                     <div @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
                         <p class="day">@date.Day</p>
                     </div>
+                    @if (_mealPlanStateContainer.DateHasMeal(date))
+                    {
+                        <div class="mud-theme-secondary rounded-sm mt-1" Style="@($"width: 8px; height: 8px;")">
+                        </div>
+                    }
                 </MudStack>
             }
         </MudStack>
@@ -34,6 +39,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _mealPlanStateContainer.OnStateChanged += StateHasChanged;
+
         var saved = await _localStorage.GetItemAsync<DateTime?>(WeekStorageKey);
         await _mealPlanStateContainer.NavigateToWeek(saved ?? DateTime.Now);
     }

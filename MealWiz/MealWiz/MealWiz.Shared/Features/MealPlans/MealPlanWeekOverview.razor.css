@@ -10,7 +10,13 @@
 }
 
 .day:hover {
-    opacity: 0.4;
+    color: #6C8FD6
+}
+
+@media (hover: none) {
+    .day:hover {
+        color: inherit
+    }
 }
 
 .current-day {
