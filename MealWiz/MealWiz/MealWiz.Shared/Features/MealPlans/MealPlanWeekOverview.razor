@@ -67,6 +67,7 @@
 
         classString += date.Date == _mealPlanStateContainer.SelectedDate.Date ? " selected-day" : string.Empty;
         classString += date.Date == DateTime.Now.Date ? " current-day" : string.Empty;
+        classString += _mealPlanStateContainer.MealPlan?.MealOnDate.ContainsKey(date.Date) == true ? " has-meal" : string.Empty;
 
         return classString;
     }

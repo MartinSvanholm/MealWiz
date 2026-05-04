@@ -3,12 +3,13 @@
 @implements IDisposable
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
 
 <MudStack Spacing="0" Style="height: calc(100vh - 56px)">
     <MudPaper>
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" />
+                <MudIconButton OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
             </MudItem>
             <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
                 @if (_mealPlanStateContainer.IsCurrentWeek())
@@ -31,7 +32,7 @@
                 {
                     <RemoveMealButton />
                 }
-                <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" />
+                <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" Color="Color.Primary" />
             </MudItem>
         </MudGrid>
 

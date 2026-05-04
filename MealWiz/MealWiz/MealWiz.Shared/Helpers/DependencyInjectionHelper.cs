@@ -2,6 +2,7 @@
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Services.DrawerStateContainer;
+using MealWiz.Shared.Theme;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MealWiz.Shared.Helpers;
@@ -14,5 +15,6 @@ public static class DependencyInjectionHelper
         services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
         services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
+        services.AddScoped<IThemeService, ThemeService>();
     }
 }
