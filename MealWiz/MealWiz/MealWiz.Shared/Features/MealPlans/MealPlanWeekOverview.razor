@@ -1,5 +1,6 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ILocalStorageService _localStorage
+@implements IDisposable
 
 <MudStack Row AlignItems="AlignItems.Center" Spacing="0">
     <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
@@ -18,6 +19,11 @@
                     <div @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
                         <p class="day">@date.Day</p>
                     </div>
+                    @if (_mealPlanStateContainer.DateHasMeal(date))
+                    {
+                        <div class="mud-theme-secondary rounded-sm mt-1" Style="@($"width: 8px; height: 8px;")">
+                        </div>
+                    }
                 </MudStack>
             }
         </MudStack>
@@ -34,8 +40,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _mealPlanStateContainer.OnStateChanged += StateHasChanged;
+
         var saved = await _localStorage.GetItemAsync<DateTime?>(WeekStorageKey);
         await _mealPlanStateContainer.NavigateToWeek(saved ?? DateTime.Now);
+    }
+
+    public void Dispose()
+    {
+        _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
     }
 
     private DateTime GetDateForDay(int dayOffset) =>
@@ -60,6 +73,7 @@
 
         classString += date.Date == _mealPlanStateContainer.SelectedDate.Date ? " selected-day" : string.Empty;
         classString += date.Date == DateTime.Now.Date ? " current-day" : string.Empty;
+        classString += _mealPlanStateContainer.MealPlan?.MealOnDate.ContainsKey(date.Date) == true ? " has-meal" : string.Empty;
 
         return classString;
     }

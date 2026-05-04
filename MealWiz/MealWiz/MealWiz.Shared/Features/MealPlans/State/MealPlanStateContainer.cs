@@ -25,6 +25,7 @@ public interface IMealPlanStateContainer
     Task NavigateToWeek(DateTime targetDate);
     Task AddMealToPlan(Meal meal);
     Meal? GetMealFromSelectedDate();
+    bool DateHasMeal(DateTime dateTime);
 }
 
 public class MealPlanStateContainer(
@@ -98,8 +99,18 @@ public class MealPlanStateContainer(
 
     public Meal? GetMealFromSelectedDate()
     {
+        return GetMealFromDate(SelectedDate);
+    }
+
+    public bool DateHasMeal(DateTime dateTime)
+    {
+        return GetMealFromDate(dateTime.Date) != null;
+    }
+
+    private Meal? GetMealFromDate(DateTime dateTime)
+    {
         Meal? meal = null;
-        MealPlan?.MealOnDate.TryGetValue(SelectedDate.Date, out meal);
+        MealPlan?.MealOnDate.TryGetValue(dateTime.Date, out meal);
 
         return meal;
     }

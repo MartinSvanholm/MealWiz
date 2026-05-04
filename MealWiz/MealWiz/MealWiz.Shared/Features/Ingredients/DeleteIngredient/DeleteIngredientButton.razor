@@ -4,11 +4,12 @@
 @inject ISnackbar _snackbar
 @implements IDisposable
 
-<MudLoadingButton 
-OnClick="OnDeleteClick" 
-ButtonVariant="@ButtonVariant.IconButton" 
-Icon="@Icons.Material.Filled.Delete" 
-Size="Size.Medium" 
+<MudLoadingButton
+OnClick="OnDeleteClick"
+ButtonVariant="@ButtonVariant.IconButton"
+Icon="@Icons.Material.Filled.Delete"
+Color="Color.Error"
+Size="Size.Medium"
 Class="pa-1" />
 
 @code {
