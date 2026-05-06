@@ -1,0 +1,81 @@
+@using MealWiz.Shared.Features.Meals.Models
+
+<MudStack Spacing="3">
+    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+        <MudTextField T="string"
+                      @bind-Value="_search"
+                      Placeholder="@SearchPlaceholder"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Clearable="true" />
+        @SearchAdornment
+    </MudStack>
+
+    @if (!Meals.Any())
+    {
+        <MudText Typo="Typo.body2">@EmptyMessage</MudText>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            @foreach (var meal in FilteredMeals)
+            {
+                <MudPaper Elevation="2"
+                    Class="@RowClass"
+                    Outlined
+                    @onclick="() => OnItemClick.InvokeAsync(meal)">
+                    <div class="@($"rounded-l-lg mud-theme-{StripColor.ToDescriptionString()}")"
+                         style="width: 6px; align-self: stretch;">
+                    </div>
+                    <div class="d-flex align-center justify-space-between flex-grow-1 pa-3">
+                        <MudText Typo="Typo.body1">@meal.Name</MudText>
+                        @if (ItemActions != null)
+                        {
+                            <span @onclick:stopPropagation="true">
+                                @ItemActions(meal)
+                            </span>
+                        }
+                    </div>
+                </MudPaper>
+            }
+        </MudStack>
+    }
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<Meal> Meals { get; set; } = [];
+
+    [Parameter]
+    public Color StripColor { get; set; } = Color.Tertiary;
+
+    [Parameter]
+    public EventCallback<Meal> OnItemClick { get; set; }
+
+    [Parameter]
+    public RenderFragment<Meal>? ItemActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? SearchAdornment { get; set; }
+
+    [Parameter]
+    public string SearchPlaceholder { get; set; } = "Search meals";
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No meals yet.";
+
+    private string _search = string.Empty;
+
+    private string RowClass =>
+        OnItemClick.HasDelegate
+            ? "d-flex align-stretch rounded-lg overflow-hidden cursor-pointer"
+            : "d-flex align-stretch rounded-lg overflow-hidden";
+
+    private IEnumerable<Meal> FilteredMeals =>
+        string.IsNullOrWhiteSpace(_search)
+            ? Meals
+            : Meals.Where(m => m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
+}

@@ -3,12 +3,8 @@
 @inject ISnackbar _snackbar
 @implements IDisposable
 
-<MudStack Class="pa-5"> 
-    @if (Meal == null) 
-    {
-        <AddMealDropdown />
-    }
-    else 
+<MudStack Class="pa-5">
+    @if (Meal != null)
     {
         <div class="d-flex justify-center">
             <MudText Typo="Typo.h6">@Meal.Name</MudText>

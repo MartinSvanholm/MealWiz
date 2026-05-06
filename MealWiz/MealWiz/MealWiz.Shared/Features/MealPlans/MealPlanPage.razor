@@ -47,13 +47,13 @@
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" />
         }
-        else if (_mealPlanStateContainer.MealPlan == null)
-        {
-            <CreateMealPlanButton />
-        }
-        else if (_mealPlanStateContainer.MealPlan.Id > 0)
+        else if (_mealPlanStateContainer.SelectedDateHasMeal)
         {
             <MealDisplayComponent />
+        }
+        else
+        {
+            <MealSelectionList />
         }
     </div>
 
