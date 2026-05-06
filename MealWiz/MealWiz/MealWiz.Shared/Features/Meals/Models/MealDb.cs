@@ -17,13 +17,16 @@ public class MealDb : BaseModel
     public string Recipe { get; set; }
 
     [Column("created_by")]
-    public Guid CreatedBy { get; set; }
+    public Guid? CreatedBy { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    [Column("meal_type")]
+    public string MealType { get; set; } = MealTypeExtensions.RegularValue;
 
     [Reference(typeof(IngredientDb), ReferenceAttribute.JoinType.Left)]
     public List<IngredientDb> Ingredients { get; set; }
