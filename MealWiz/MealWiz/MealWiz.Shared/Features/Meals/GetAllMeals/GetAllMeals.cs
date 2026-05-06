@@ -16,7 +16,11 @@ public static class GetAllMeals
             return await Result.Try(async Task<List<Meal>>() =>
             {
                 var result = await supabaseClient.From<MealDb>().Get();
-                return result.Models.Select(db => new Meal(db)).ToList();
+                return result.Models
+                    .Select(db => new Meal(db))
+                    .OrderByDescending(m => m.IsLeftover)
+                    .ThenBy(m => m.Name)
+                    .ToList();
             });
         }
     }

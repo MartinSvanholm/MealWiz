@@ -26,7 +26,10 @@
                       StripColor="Color.Tertiary"
                       OnItemClick="EditMeal">
                 <ItemActions Context="meal">
-                    <DeleteMealButton Meal="meal" />
+                    @if (!meal.IsLeftover)
+                    {
+                        <DeleteMealButton Meal="meal" />
+                    }
                 </ItemActions>
             </MealList>
         </MudStack>
@@ -60,6 +63,11 @@
 
     private void EditMeal(Meal meal)
     {
+        if (meal.IsLeftover)
+        {
+            return;
+        }
+
         _mealsStateContainer.MealToEdit = meal;
         _navigationManager.NavigateTo("/meals/edit");
     }
