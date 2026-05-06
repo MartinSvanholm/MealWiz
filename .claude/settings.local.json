@@ -4,7 +4,8 @@
       "Bash(dotnet build *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__plugin_supabase_supabase__search_docs"
     ]
   },
   "enabledMcpjsonServers": [
