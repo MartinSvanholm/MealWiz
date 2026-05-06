@@ -1,5 +1,6 @@
 using Blazored.LocalStorage;
 using AddMealToMealPlanAction = MealWiz.Shared.Features.MealPlans.AddMealToMealPlan.AddMealToMealPlan;
+using CreateMealPlanAction = MealWiz.Shared.Features.MealPlans.CreateMealPlan.CreateMealPlan;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
@@ -87,6 +88,15 @@ public class MealPlanStateContainer(
 
     public async Task AddMealToPlan(Meal meal)
     {
+        if (MealPlan is null)
+        {
+            var newPlan = new MealPlan(SelectedWeekStart);
+            var createResult = await mediator.Send(new CreateMealPlanAction.Command(newPlan));
+            if (createResult.Handle(CurrentSnackbar).IsFailed) return;
+
+            MealPlan = createResult.Value;
+        }
+
         meal.MealDate = SelectedDate.Date;
         meal.MealPlan = MealPlan;
 

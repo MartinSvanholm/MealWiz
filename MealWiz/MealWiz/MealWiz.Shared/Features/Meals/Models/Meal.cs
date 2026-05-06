@@ -9,12 +9,15 @@ public class Meal
     public int Id { get; set; }
     public string Name { get; set; }
     public string Recipe { get; set; }
-    public Guid CreatedBy { get; set; }
+    public Guid? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<Ingredient> Ingredients { get; set; }
     public MealPlan? MealPlan { get; set; }
     public DateTime? MealDate { get; set; }
+    public MealType Type { get; set; } = MealType.Regular;
+
+    public bool IsLeftover => Type == MealType.Leftover;
 
     public Meal()
     {
@@ -32,6 +35,7 @@ public class Meal
         CreatedBy = mealDb.CreatedBy;
         CreatedAt = mealDb.CreatedAt;
         UpdatedAt = mealDb.UpdatedAt;
+        Type = MealTypeExtensions.FromDbValue(mealDb.MealType);
 
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : [];
     }
@@ -46,6 +50,7 @@ public class Meal
         UpdatedAt = mealDb.UpdatedAt;
         MealPlan = mealPlan;
         MealDate = DateTime.Parse(mealDate, CultureInfo.InvariantCulture);
+        Type = MealTypeExtensions.FromDbValue(mealDb.MealType);
 
         Ingredients = mealDb.Ingredients != null ? mealDb.Ingredients.Select(ingredientDb => new Ingredient(ingredientDb)).ToList() : [];
     }
@@ -63,6 +68,7 @@ public class Meal
             CreatedBy = CreatedBy,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt,
+            MealType = Type.ToDbValue(),
             Ingredients = Ingredients.Select(ingredient => ingredient.MapToIngredientDb()).ToList()
         };
     }

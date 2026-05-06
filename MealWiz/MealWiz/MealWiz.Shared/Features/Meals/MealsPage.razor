@@ -22,10 +22,16 @@
 
     <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
         <MudStack Class="px-3 pt-3">
-            @foreach (Meal meal in _mealsStateContainer.Meals)
-            {
-                <MealCard Meal="meal" />
-            }
+            <MealList Meals="_mealsStateContainer.Meals"
+                      StripColor="Color.Tertiary"
+                      OnItemClick="EditMeal">
+                <ItemActions Context="meal">
+                    @if (!meal.IsLeftover)
+                    {
+                        <DeleteMealButton Meal="meal" />
+                    }
+                </ItemActions>
+            </MealList>
         </MudStack>
     </div>
 
@@ -52,6 +58,17 @@
     private void OnAddClick()
     {
         _mealsStateContainer.MealToEdit = new();
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+
+    private void EditMeal(Meal meal)
+    {
+        if (meal.IsLeftover)
+        {
+            return;
+        }
+
+        _mealsStateContainer.MealToEdit = meal;
         _navigationManager.NavigateTo("/meals/edit");
     }
 }

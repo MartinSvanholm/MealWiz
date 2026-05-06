@@ -1,0 +1,86 @@
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
+@implements IDisposable
+
+<MudStack Class="pa-5" Spacing="3">
+    <MudText Typo="Typo.h6">
+        Pick a meal for @_mealPlanStateContainer.SelectedDate.DayOfWeek.ToString().ToLower()
+    </MudText>
+
+    <MealList Meals="_shuffled"
+              StripColor="Color.Tertiary"
+              OnItemClick="AssignMeal"
+              EmptyMessage="You have no meals yet. Create one from the Meals page.">
+        <SearchAdornment>
+            <MudIconButton Icon="@Icons.Material.Filled.Shuffle"
+                           Color="Color.Tertiary"
+                           Variant="Variant.Filled"
+                           OnClick="ShuffleAsync"
+                           Disabled="_isShuffling" />
+        </SearchAdornment>
+        <ItemActions Context="meal">
+            @if (!meal.IsLeftover)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               OnClick="() => EditMeal(meal)" />
+            }
+        </ItemActions>
+    </MealList>
+</MudStack>
+
+@code {
+    private List<Meal> _shuffled = [];
+    private bool _isShuffling;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _mealsStateContainer.CurrentSnackbar = _snackbar;
+        _mealsStateContainer.OnStateChanged += StateHasChanged;
+        _mealPlanStateContainer.OnStateChanged += StateHasChanged;
+
+        await _mealsStateContainer.LoadMeals();
+        Shuffle();
+    }
+
+    public void Dispose()
+    {
+        _mealsStateContainer.OnStateChanged -= StateHasChanged;
+        _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
+    }
+
+    private void Shuffle()
+    {
+        var leftovers = _mealsStateContainer.Meals.Where(m => m.IsLeftover).ToList();
+        var list = _mealsStateContainer.Meals.Where(m => !m.IsLeftover).ToList();
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+        _shuffled = [.. leftovers, .. list];
+    }
+
+    private async Task ShuffleAsync()
+    {
+        _isShuffling = true;
+        await _mealsStateContainer.LoadMeals();
+        Shuffle();
+        _isShuffling = false;
+    }
+
+    private async Task AssignMeal(Meal meal)
+    {
+        _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+        await _mealPlanStateContainer.AddMealToPlan(meal);
+    }
+
+    private void EditMeal(Meal meal)
+    {
+        _mealsStateContainer.MealToEdit = meal;
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+}
