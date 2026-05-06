@@ -9,51 +9,27 @@
         Pick a meal for @_mealPlanStateContainer.SelectedDate.DayOfWeek.ToString().ToLower()
     </MudText>
 
-    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-        <MudTextField T="string"
-                      @bind-Value="_search"
-                      Placeholder="Search meals"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Adornment="Adornment.Start"
-                      AdornmentIcon="@Icons.Material.Filled.Search"
-                      Immediate="true"
-                      Clearable="true" />
-        <MudIconButton Icon="@Icons.Material.Filled.Shuffle"
-                       Color="Color.Tertiary"
-                       Variant="Variant.Filled"
-                       OnClick="ShuffleAsync"
-                       Disabled="_isShuffling" />
-    </MudStack>
-
-    @if (_mealsStateContainer.Meals.Count == 0)
-    {
-        <MudText Typo="Typo.body2" Class="mt-3">
-            You have no meals yet. Create one from the Meals page.
-        </MudText>
-    }
-    else
-    {
-        <MudStack Spacing="2">
-            @foreach (var meal in FilteredMeals)
-            {
-                <MudPaper Class="d-flex align-center justify-space-between pa-3 rounded-lg cursor-pointer"
-                          Elevation="2"
-                          @onclick="() => AssignMeal(meal)">
-                    <MudText Typo="Typo.body1">@meal.Name</MudText>
-                    <span @onclick:stopPropagation="true" @onclick="() => EditMeal(meal)">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Primary"
-                                       Size="Size.Small" />
-                    </span>
-                </MudPaper>
-            }
-        </MudStack>
-    }
+    <MealList Meals="_shuffled"
+              StripColor="Color.Tertiary"
+              OnItemClick="AssignMeal"
+              EmptyMessage="You have no meals yet. Create one from the Meals page.">
+        <SearchAdornment>
+            <MudIconButton Icon="@Icons.Material.Filled.Shuffle"
+                           Color="Color.Tertiary"
+                           Variant="Variant.Filled"
+                           OnClick="ShuffleAsync"
+                           Disabled="_isShuffling" />
+        </SearchAdornment>
+        <ItemActions Context="meal">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="() => EditMeal(meal)" />
+        </ItemActions>
+    </MealList>
 </MudStack>
 
 @code {
-    private string _search = string.Empty;
     private List<Meal> _shuffled = [];
     private bool _isShuffling;
 
@@ -72,11 +48,6 @@
         _mealsStateContainer.OnStateChanged -= StateHasChanged;
         _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
     }
-
-    private IEnumerable<Meal> FilteredMeals =>
-        string.IsNullOrWhiteSpace(_search)
-            ? _shuffled
-            : _shuffled.Where(m => m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
 
     private void Shuffle()
     {
