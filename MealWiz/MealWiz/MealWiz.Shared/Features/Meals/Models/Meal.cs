@@ -17,7 +17,7 @@ public class Meal
     public DateTime? MealDate { get; set; }
     public MealType Type { get; set; } = MealType.Regular;
 
-    public bool IsLeftover => Type == MealType.Leftover;
+    public bool IsRegular => Type == MealType.Regular;
 
     public Meal()
     {

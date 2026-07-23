@@ -26,7 +26,7 @@
                       StripColor="Color.Tertiary"
                       OnItemClick="EditMeal">
                 <ItemActions Context="meal">
-                    @if (!meal.IsLeftover)
+                    @if (meal.IsRegular)
                     {
                         <DeleteMealButton Meal="meal" />
                     }
@@ -63,7 +63,7 @@
 
     private void EditMeal(Meal meal)
     {
-        if (meal.IsLeftover)
+        if (!meal.IsRegular)
         {
             return;
         }
