@@ -3,12 +3,18 @@
 -- Only data inserts here, no schema. To deploy to remote: `supabase db push --include-seed`.
 
 -- ---------------------------------------------------------------------------
--- 1. Global system "Leftovers" meal (no owner, visible to all users via RLS).
+-- 1. Global system meals (no owner, visible to all users via RLS).
 -- ---------------------------------------------------------------------------
 INSERT INTO public.meals (name, recipe, meal_type, created_by, created_at)
 SELECT 'Leftovers', '', 'leftover', NULL, now()
 WHERE NOT EXISTS (
     SELECT 1 FROM public.meals WHERE meal_type = 'leftover'
+);
+
+INSERT INTO public.meals (name, recipe, meal_type, created_by, created_at)
+SELECT 'Eat Out', '', 'eat_out', NULL, now()
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.meals WHERE meal_type = 'eat_out'
 );
 
 -- ---------------------------------------------------------------------------

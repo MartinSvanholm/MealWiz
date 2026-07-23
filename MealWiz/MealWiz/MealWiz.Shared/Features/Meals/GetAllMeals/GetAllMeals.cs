@@ -18,7 +18,7 @@ public static class GetAllMeals
                 var result = await supabaseClient.From<MealDb>().Get();
                 return result.Models
                     .Select(db => new Meal(db))
-                    .OrderByDescending(m => m.IsLeftover)
+                    .OrderBy(m => m.IsRegular)
                     .ThenBy(m => m.Name)
                     .ToList();
             });

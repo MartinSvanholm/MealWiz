@@ -21,7 +21,7 @@
                            Disabled="_isShuffling" />
         </SearchAdornment>
         <ItemActions Context="meal">
-            @if (!meal.IsLeftover)
+            @if (meal.IsRegular)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                Color="Color.Primary"
@@ -54,14 +54,14 @@
 
     private void Shuffle()
     {
-        var leftovers = _mealsStateContainer.Meals.Where(m => m.IsLeftover).ToList();
-        var list = _mealsStateContainer.Meals.Where(m => !m.IsLeftover).ToList();
+        var systemMeals = _mealsStateContainer.Meals.Where(m => !m.IsRegular).OrderBy(m => m.Name).ToList();
+        var list = _mealsStateContainer.Meals.Where(m => m.IsRegular).ToList();
         for (int i = list.Count - 1; i > 0; i--)
         {
             int j = Random.Shared.Next(i + 1);
             (list[i], list[j]) = (list[j], list[i]);
         }
-        _shuffled = [.. leftovers, .. list];
+        _shuffled = [.. systemMeals, .. list];
     }
 
     private async Task ShuffleAsync()
