@@ -4,7 +4,13 @@
       "Bash(dotnet build *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__get_issue",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__get_project",
+      "WebSearch",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_status_update",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_comment",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_issue"
     ]
   },
   "enabledMcpjsonServers": [
