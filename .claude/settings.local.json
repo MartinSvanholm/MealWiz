@@ -10,7 +10,10 @@
       "WebSearch",
       "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_status_update",
       "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_comment",
-      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_issue"
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1__save_issue",
+      "Bash(docker exec *)",
+      "Bash(supabase db *)",
+      "Bash(supabase gen *)"
     ]
   },
   "enabledMcpjsonServers": [
