@@ -19,9 +19,10 @@ public class MealImportIngredientPayload
     public required string Name { get; init; }
 
     /// <summary>
-    /// Always empty — scraped ingredient lines aren't heuristically split into quantity/name.
-    /// Amounts are free-text in this codebase anyway, and the user reviews/edits on the
-    /// pre-fill form before saving.
+    /// Free text, like the rest of the codebase ("2½ dl", "1 (400 g) dåse"). Split heuristically from the
+    /// start of the ingredient line by IngredientLineParser; empty when the line has no recognisable
+    /// leading quantity, in which case the whole line is in <see cref="Name"/>. The user reviews/edits on
+    /// the pre-fill form before saving.
     /// </summary>
     public string Amount { get; init; } = string.Empty;
 }

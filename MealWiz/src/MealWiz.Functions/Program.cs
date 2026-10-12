@@ -1,6 +1,7 @@
 using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
 using MealWiz.Functions.Shared.Fetching;
+using MealWiz.Functions.Shared.Ingredients;
 using MealWiz.Functions.Shared.Ssrf;
 using MealWiz.Functions.Shared.SupabaseAccess;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,7 @@ var host = new HostBuilder()
         services.AddSingleton<IMicrodataRecipeParser, MicrodataRecipeParser>();
         services.AddSingleton<IOpenGraphRecipeParser, OpenGraphRecipeParser>();
         services.AddSingleton<IRecipeParser, RecipeParser>();
+        services.AddSingleton<IIngredientLineParser, IngredientLineParser>();
         services.AddSingleton<IRecipeMapper, RecipeMapper>();
 
         services.AddSingleton<IServiceRoleSupabaseClientFactory, ServiceRoleSupabaseClientFactory>();

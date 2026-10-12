@@ -1,6 +1,7 @@
 using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
 using MealWiz.Functions.Shared.Fetching;
+using MealWiz.Functions.Shared.Ingredients;
 using MealWiz.Functions.Shared.Models;
 using MealWiz.Functions.Shared.Ssrf;
 using MealWiz.Functions.Shared.SupabaseAccess;
@@ -31,8 +32,11 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         Assert.NotNull(row.ParsedMeal);
         Assert.Equal(RecipeTestServer.RecipeName, row.ParsedMeal.Name);
         Assert.Equal(RecipeTestServer.RecipeInstructions, row.ParsedMeal.Recipe);
-        Assert.Equal(RecipeTestServer.RecipeIngredients, row.ParsedMeal.Ingredients.Select(i => i.Name));
-        Assert.All(row.ParsedMeal.Ingredients, i => Assert.Equal(string.Empty, i.Amount));
+        Assert.Collection(row.ParsedMeal.Ingredients,
+            i => AssertIngredient(i, "2½ dl", "sødmælk, stuetempereret"),
+            i => AssertIngredient(i, "1 knivspids", "salt"),
+            i => AssertIngredient(i, "1 (400 g) dåse", "hakkede tomater"),
+            i => AssertIngredient(i, string.Empty, "salt og peber"));
     }
 
     [Fact]
@@ -101,8 +105,14 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         new ServiceRoleSupabaseClientFactory(supabase.Configuration),
         new RecipeFetcher(new SsrfGuardedHttpClientFactory(new LoopbackAllowingIpAddressGuard(new IpAddressGuard()))),
         new RecipeParser(new JsonLdRecipeParser(), new MicrodataRecipeParser(), new OpenGraphRecipeParser()),
-        new RecipeMapper(),
+        new RecipeMapper(new IngredientLineParser()),
         NullLogger<ScrapeRecipeHandler>.Instance);
+
+    private static void AssertIngredient(MealImportIngredientPayload ingredient, string expectedAmount, string expectedName)
+    {
+        Assert.Equal(expectedAmount, ingredient.Amount);
+        Assert.Equal(expectedName, ingredient.Name);
+    }
 
     private static void AssertFailed(MealImportDb row, string expectedError)
     {

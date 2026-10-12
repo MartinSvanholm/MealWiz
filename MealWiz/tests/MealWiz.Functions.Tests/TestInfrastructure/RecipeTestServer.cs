@@ -17,21 +17,28 @@ namespace MealWiz.Functions.Tests.TestInfrastructure;
 /// </summary>
 public sealed class RecipeTestServer : IAsyncLifetime
 {
-    public const string RecipeName = "Test Pancakes";
-    public const string RecipeInstructions = "Whisk everything into a smooth batter.\nCook for 1 min on each side.";
-    public static readonly string[] RecipeIngredients = ["100g plain flour", "2 large eggs", "300ml milk"];
+    // Danish on purpose: real imports are Danish, so this exercises æøå and ½ through the whole path
+    // (page encoding -> fetch -> parse -> ingredient split -> Supabase jsonb -> read back).
+    public const string RecipeName = "Æblepandekager";
+    public const string RecipeInstructions = "Pisk det hele til en jævn dej.\nSteg pandekagerne i 1 min på hver side.";
 
     private const string RecipePageHtml = """
         <html><head>
+        <meta charset="utf-8">
         <script type="application/ld+json">
         {
           "@context": "https://schema.org",
           "@type": "Recipe",
-          "name": "Test Pancakes",
-          "recipeIngredient": ["100g plain flour", "2 large eggs", "300ml milk"],
+          "name": "Æblepandekager",
+          "recipeIngredient": [
+            "2½ dl sødmælk, stuetempereret",
+            "en knivspids salt",
+            "1 (400 g) dåse hakkede tomater",
+            "salt og peber"
+          ],
           "recipeInstructions": [
-            { "@type": "HowToStep", "text": "Whisk everything into a smooth batter." },
-            { "@type": "HowToStep", "text": "Cook for 1 min on each side." }
+            { "@type": "HowToStep", "text": "Pisk det hele til en jævn dej." },
+            { "@type": "HowToStep", "text": "Steg pandekagerne i 1 min på hver side." }
           ]
         }
         </script>
