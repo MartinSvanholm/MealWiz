@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -9,9 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Hosts the local web server the integration tests scrape, so no test depends on a live website. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="Moq" Version="4.21.0" />
   </ItemGroup>
 
   <ItemGroup>

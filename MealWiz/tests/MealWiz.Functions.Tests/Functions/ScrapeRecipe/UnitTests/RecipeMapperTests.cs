@@ -2,7 +2,7 @@ using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
 using Xunit;
 
-namespace MealWiz.Functions.Tests.Functions.ScrapeRecipe;
+namespace MealWiz.Functions.Tests.Functions.ScrapeRecipe.UnitTests;
 
 public class RecipeMapperTests
 {

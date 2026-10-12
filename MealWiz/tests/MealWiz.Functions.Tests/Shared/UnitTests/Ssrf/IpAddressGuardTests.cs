@@ -2,7 +2,7 @@ using System.Net;
 using MealWiz.Functions.Shared.Ssrf;
 using Xunit;
 
-namespace MealWiz.Functions.Tests.Shared.Ssrf;
+namespace MealWiz.Functions.Tests.Shared.UnitTests.Ssrf;
 
 public class IpAddressGuardTests
 {
