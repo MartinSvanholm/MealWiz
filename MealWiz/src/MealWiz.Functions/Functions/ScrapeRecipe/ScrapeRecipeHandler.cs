@@ -42,10 +42,16 @@ public class ScrapeRecipeHandler(
             .Where(x => x.Id == request.JobId)
             .Single());
 
-        if (importRowResult.IsFailed || importRowResult.Value is null)
+        if (importRowResult.IsFailed)
         {
-            logger.LogWarning("meal_imports row {JobId} could not be loaded: {Error}",
+            logger.LogError("meal_imports row {JobId} could not be loaded: {Error}",
                 request.JobId, Describe(importRowResult.Errors));
+            return;
+        }
+
+        if (importRowResult.Value is null)
+        {
+            logger.LogWarning("meal_imports row {JobId} was not found.", request.JobId);
             return;
         }
 
