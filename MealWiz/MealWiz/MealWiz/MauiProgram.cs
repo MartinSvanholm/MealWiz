@@ -1,5 +1,7 @@
 ﻿using MealWiz.Providers;
 using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Features.RecipeImport.Models;
+using MealWiz.Shared.Features.RecipeImport.State;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
@@ -45,6 +47,13 @@ namespace MealWiz
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
+            builder.Services.AddScoped<IRecipeImportRealtimeSubscriber, RecipeImportRealtimeSubscriber>();
+            builder.Services.AddScoped<IRecipeImportStateContainer, RecipeImportStateContainer>();
+            builder.Services.AddSingleton(TimeProvider.System);
+            builder.Services.AddScoped(_ => new HttpClient());
+            builder.Services.AddSingleton(new RecipeImportFunctionOptions(
+                builder.Configuration["RecipeImportFunction:url"] ?? string.Empty,
+                builder.Configuration["RecipeImportFunction:key"]));
 
             string supabaseUrl = builder.Configuration["Supabase:url"];
             string supabaseKey = builder.Configuration["Supabase:key"];

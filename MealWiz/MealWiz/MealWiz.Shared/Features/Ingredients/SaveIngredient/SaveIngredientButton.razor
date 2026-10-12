@@ -24,7 +24,7 @@
             }
             else
             {
-                var result = await _mediator.Send(new SaveIngredient.Command(Ingredient));
+                var result = await _mediator.Send(new SaveIngredient.Command(Ingredient, _mealsStateContainer.MealToEdit.Id));
 
                 result.Handle(_snackbar);
                 if (result.IsFailed) return;

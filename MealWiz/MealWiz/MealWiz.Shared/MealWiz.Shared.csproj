@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="MealWiz.Shared.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
     <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="8.2.3" />
     <PackageReference Include="FluentResults" Version="4.0.0" />
