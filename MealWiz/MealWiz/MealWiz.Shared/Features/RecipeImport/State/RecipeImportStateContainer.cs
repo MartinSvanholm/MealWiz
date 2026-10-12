@@ -26,7 +26,9 @@ public interface IRecipeImportStateContainer
 
     /// <summary>True once a job has been awaiting its result for <see cref="RecipeImportStateContainer.BackgroundEligibilityDelay"/>.</summary>
     bool CanContinueInBackground { get; }
-    bool IsBackgrounded { get; }
+
+    /// <summary>True when the user chose "Continue in background"; the result is then saved/toasted without the drawer.</summary>
+    bool IsRunningInBackground { get; }
 
     event Action OnStateChanged;
 
@@ -42,7 +44,7 @@ public interface IRecipeImportStateContainer
 /// <summary>
 /// Runs one recipe import job at a time: inserts the pending meal_imports row, subscribes to it via Realtime,
 /// then calls the Function. The row is the source of truth for the outcome. Registered as scoped, which is
-/// app-lifetime in both WASM and BlazorWebView, so a backgrounded job keeps resolving after the drawer closes.
+/// app-lifetime in both WASM and BlazorWebView, so a background job keeps resolving after the drawer closes.
 ///
 /// Realtime callbacks can arrive off the UI thread (MAUI), so components should subscribe to
 /// <see cref="StateContainerBase.OnStateChanged"/> with <c>() => InvokeAsync(StateHasChanged)</c>.
@@ -73,7 +75,7 @@ public class RecipeImportStateContainer(
     public string? JobErrorMessage { get; private set; }
     public Models.RecipeImport? LatestImport { get; private set; }
     public bool CanContinueInBackground { get; private set; }
-    public bool IsBackgrounded { get; private set; }
+    public bool IsRunningInBackground { get; private set; }
 
     public bool IsImportInProgress => JobStatus is RecipeImportJobStatus.Submitting or RecipeImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == RecipeImportStatus.Failed;
@@ -81,37 +83,31 @@ public class RecipeImportStateContainer(
 
     public async Task LoadLatestImport()
     {
+        // A job in this session is newer than (or the same as) anything the query could return.
+        if (IsImportInProgress) return;
+
         var result = await mediator.Send(new GetLatestRecipeImport.GetLatestRecipeImport.Query());
         if (result.Handle(snackbar).IsFailed) return;
 
-        var loaded = result.Value;
-
-        // A job in this session is newer than (or the same as) anything the query could return, and a
-        // pending copy read before that job resolved mustn't overwrite its result.
+        // Re-check after the await: a job may have started, or resolved, while the query was in flight.
         if (IsImportInProgress) return;
-        if (loaded is not null && loaded.Id == LatestImport?.Id && LatestImport.IsResolved && !loaded.IsResolved) return;
+        if (RecipeImportJobHelper.IsStalePendingCopy(result.Value, LatestImport)) return;
 
-        LatestImport = loaded;
+        LatestImport = result.Value;
         NotifyStateChanged();
     }
 
     public async Task<Result> StartImport(string url)
     {
         if (IsImportInProgress) return Result.Fail(ImportInProgressMessage);
+        if (!RecipeImportJobHelper.TryNormalizeRecipeUrl(url, out var sourceUrl)) return Result.Fail(InvalidUrlMessage);
 
-        if (!Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-        {
-            return Result.Fail(InvalidUrlMessage);
-        }
-
-        var sourceUrl = uri.AbsoluteUri;
         var jobId = Guid.NewGuid();
 
         CurrentImport = null;
         JobErrorMessage = null;
         CanContinueInBackground = false;
-        IsBackgrounded = false;
+        IsRunningInBackground = false;
         JobStatus = RecipeImportJobStatus.Submitting;
         NotifyStateChanged();
 
@@ -147,7 +143,7 @@ public class RecipeImportStateContainer(
     {
         if (JobStatus != RecipeImportJobStatus.AwaitingResult || !CanContinueInBackground) return;
 
-        IsBackgrounded = true;
+        IsRunningInBackground = true;
         NotifyStateChanged();
     }
 
@@ -159,7 +155,7 @@ public class RecipeImportStateContainer(
         CurrentImport = null;
         JobErrorMessage = null;
         CanContinueInBackground = false;
-        IsBackgrounded = false;
+        IsRunningInBackground = false;
         NotifyStateChanged();
     }
 
@@ -171,12 +167,25 @@ public class RecipeImportStateContainer(
         return Task.WhenAll(pending);
     }
 
+    /// <summary>
+    /// Realtime callback for the job's row. Only a final status (succeeded/failed) resolves the job;
+    /// other updates to a still-pending row are ignored.
+    /// </summary>
     private async Task OnRowUpdated(Guid jobId, Models.RecipeImport update)
     {
         if (update.IsResolved)
             await Resolve(jobId, update);
     }
 
+    /// <summary>
+    /// Calls the Function, then makes sure the job ends up resolved even if Realtime misses the update:
+    /// <list type="number">
+    /// <item>Re-read the row. If the Function already wrote a result (or an error), use that.</item>
+    /// <item>If the Function acked but the row is still pending, keep waiting for Realtime.</item>
+    /// <item>If the Function couldn't be reached, mark the still-pending row failed in the DB.</item>
+    /// <item>If even that isn't possible, fail the job in memory only.</item>
+    /// </list>
+    /// </summary>
     private async Task RunScrape(Guid jobId, string sourceUrl)
     {
         try
@@ -184,8 +193,6 @@ public class RecipeImportStateContainer(
             var triggerResult = await mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl));
             if (!IsActive(jobId)) return;
 
-            // The Function only acks after writing the row, so by now it's normally resolved. Reading it covers a
-            // missed Realtime event — and if the Function did record an error, that's the one we show.
             var rowResult = await mediator.Send(new GetRecipeImport.GetRecipeImport.Query(jobId));
             if (rowResult.IsSuccess && rowResult.Value.IsResolved)
             {
@@ -193,10 +200,8 @@ public class RecipeImportStateContainer(
                 return;
             }
 
-            // Acked but still pending — keep waiting for Realtime.
             if (triggerResult.IsSuccess) return;
 
-            // The Function couldn't be reached, so nothing will ever progress the row: record the failure on it.
             var markResult = await mediator.Send(new MarkRecipeImportFailed.MarkRecipeImportFailed.Command(jobId, ServiceUnreachableMessage));
             if (markResult.IsSuccess && markResult.Value is not null)
             {
@@ -206,7 +211,8 @@ public class RecipeImportStateContainer(
 
             if (markResult.IsSuccess)
             {
-                // No longer pending: the Function resolved it after all. Show what it wrote.
+                // The conditional update matched no rows, so the row stopped being pending — the Function
+                // resolved it after all. Show what it wrote.
                 var rereadResult = await mediator.Send(new GetRecipeImport.GetRecipeImport.Query(jobId));
                 if (rereadResult.IsSuccess && rereadResult.Value.IsResolved)
                 {
@@ -215,30 +221,22 @@ public class RecipeImportStateContainer(
                 }
             }
 
-            await ResolveLocallyAsFailed(jobId, ServiceUnreachableMessage);
+            await Resolve(jobId, RecipeImportJobHelper.CreateLocallyFailedImport(
+                jobId, CurrentImport, ServiceUnreachableMessage, timeProvider.GetUtcNow().UtcDateTime));
         }
         catch (Exception)
         {
-            await ResolveLocallyAsFailed(jobId, ErrorMessages.GenericError);
+            await Resolve(jobId, RecipeImportJobHelper.CreateLocallyFailedImport(
+                jobId, CurrentImport, ErrorMessages.GenericError, timeProvider.GetUtcNow().UtcDateTime));
         }
     }
 
-    // Couldn't get a result onto the row; fail the job in memory only (the row may stay pending).
-    private Task ResolveLocallyAsFailed(Guid jobId, string errorMessage)
-    {
-        var failed = new Models.RecipeImport
-        {
-            Id = jobId,
-            CreatedBy = CurrentImport?.CreatedBy ?? Guid.Empty,
-            SourceUrl = CurrentImport?.SourceUrl ?? string.Empty,
-            CreatedAt = CurrentImport?.CreatedAt ?? DateTime.UtcNow,
-            Status = RecipeImportStatus.Failed,
-            ErrorMessage = errorMessage
-        };
-
-        return Resolve(jobId, failed);
-    }
-
+    /// <summary>
+    /// Finishes the job with its final row. Realtime, the post-ack re-read and the failure fallback can all race
+    /// to get here, so only the first call for the active job does anything. It stops the subscription and the
+    /// 30 s timer, then publishes the result. For a background job it also does what the drawer would have done:
+    /// saves the meal on success, or toasts the error on failure.
+    /// </summary>
     private async Task Resolve(Guid jobId, Models.RecipeImport row)
     {
         lock (jobLock)
@@ -250,12 +248,7 @@ public class RecipeImportStateContainer(
         backgroundEligibilityCts?.Cancel();
         await DisposeSubscription();
 
-        // A "succeeded" row without a payload can't be used, so treat it as a failure.
-        if (row.Status == RecipeImportStatus.Succeeded && row.ParsedMeal is null)
-        {
-            row.Status = RecipeImportStatus.Failed;
-            row.ErrorMessage ??= ErrorMessages.GenericError;
-        }
+        row = RecipeImportJobHelper.EnsureUsableResult(row);
 
         CurrentImport = row;
         LatestImport = row;
@@ -268,7 +261,7 @@ public class RecipeImportStateContainer(
                 JobErrorMessage = null;
                 JobStatus = RecipeImportJobStatus.Succeeded;
 
-                if (IsBackgrounded)
+                if (IsRunningInBackground)
                     await SaveImportedMeal(row.ParsedMeal!);
             }
             else
@@ -276,7 +269,7 @@ public class RecipeImportStateContainer(
                 JobErrorMessage = row.ErrorMessage ?? ErrorMessages.GenericError;
                 JobStatus = RecipeImportJobStatus.Failed;
 
-                if (IsBackgrounded)
+                if (IsRunningInBackground)
                     snackbar.Add($"Recipe import failed: {JobErrorMessage}", Severity.Error);
             }
         }
@@ -290,7 +283,10 @@ public class RecipeImportStateContainer(
         }
     }
 
-    // Backgrounded success skips the review step: save the meal + ingredients straight away.
+    /// <summary>
+    /// A background success skips the review form, so the meal and its ingredients are saved straight away,
+    /// then the meal list is reloaded and the user is told via a toast.
+    /// </summary>
     private async Task SaveImportedMeal(ParsedRecipeMeal parsedMeal)
     {
         var meal = parsedMeal.ToMeal();
@@ -320,6 +316,7 @@ public class RecipeImportStateContainer(
         snackbar.Add($"\"{meal.Name}\" was imported and added to your meals.", Severity.Success);
     }
 
+    /// <summary>Starts the 30 s countdown after which the drawer may offer "Continue in background".</summary>
     private void StartBackgroundEligibilityTimer(Guid jobId)
     {
         backgroundEligibilityCts?.Dispose();
@@ -329,6 +326,10 @@ public class RecipeImportStateContainer(
         Track(WaitForBackgroundEligibility(jobId, cts.Token));
     }
 
+    /// <summary>
+    /// Waits out the countdown, then raises <see cref="CanContinueInBackground"/> — unless the job resolved
+    /// first, which cancels the wait.
+    /// </summary>
     private async Task WaitForBackgroundEligibility(Guid jobId, CancellationToken cancellationToken)
     {
         try
@@ -346,11 +347,13 @@ public class RecipeImportStateContainer(
         NotifyStateChanged();
     }
 
+    /// <summary>Whether <paramref name="jobId"/> is still the job awaiting a result (i.e. hasn't been resolved yet).</summary>
     private bool IsActive(Guid jobId)
     {
         lock (jobLock) return activeJobId == jobId;
     }
 
+    /// <summary>Unsubscribes from the job's Realtime channel, at most once.</summary>
     private async Task DisposeSubscription()
     {
         var current = Interlocked.Exchange(ref subscription, null);
@@ -358,6 +361,10 @@ public class RecipeImportStateContainer(
             await current.DisposeAsync();
     }
 
+    /// <summary>
+    /// Keeps hold of fire-and-forget tasks (Function call, timer, Realtime resolution) so tests can await them
+    /// via <see cref="WhenBackgroundWorkCompleted"/>. Completed tasks are pruned as new ones are added.
+    /// </summary>
     private void Track(Task task)
     {
         lock (backgroundWork)

@@ -140,13 +140,13 @@ public class RecipeImportStateContainerTests
         Assert.False(_container.CanContinueInBackground);
 
         _container.ContinueInBackground();
-        Assert.False(_container.IsBackgrounded);
+        Assert.False(_container.IsRunningInBackground);
 
         _time.Advance(TimeSpan.FromSeconds(1));
         await Eventually(() => _container.CanContinueInBackground);
 
         _container.ContinueInBackground();
-        Assert.True(_container.IsBackgrounded);
+        Assert.True(_container.IsRunningInBackground);
     }
 
     [Fact]
@@ -367,6 +367,17 @@ public class RecipeImportStateContainerTests
     }
 
     [Fact]
+    public async Task LoadLatestImport_WhileAJobIsInProgress_DoesNotQuery()
+    {
+        await _container.StartImport(Url);
+
+        await _container.LoadLatestImport();
+
+        _mediator.Verify(m => m.Send(It.IsAny<GetLatestRecipeImport.Query>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(_jobId, _container.LatestImport?.Id);
+    }
+
+    [Fact]
     public async Task LoadLatestImport_StalePendingCopyOfAResolvedJob_DoesNotOverwriteIt()
     {
         await _container.StartImport(Url);
@@ -386,7 +397,7 @@ public class RecipeImportStateContainerTests
         _time.Advance(RecipeImportStateContainer.BackgroundEligibilityDelay);
         await Eventually(() => _container.CanContinueInBackground);
         _container.ContinueInBackground();
-        Assert.True(_container.IsBackgrounded);
+        Assert.True(_container.IsRunningInBackground);
     }
 
     private async Task PushRealtimeUpdate(RecipeImportModel row)

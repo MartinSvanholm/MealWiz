@@ -1,6 +1,5 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.Ingredients.Models;
-using MealWiz.Shared.Features.Meals.State;
 using MediatR;
 using Supabase;
 
@@ -8,10 +7,10 @@ namespace MealWiz.Shared.Features.Ingredients.SaveIngredient;
 
 public static class SaveIngredient
 {
-    /// <param name="MealId">Meal to attach a new ingredient to; defaults to the meal being edited.</param>
-    public record Command(Ingredient Ingredient, int? MealId = null) : IRequest<Result>;
+    /// <param name="MealId">Meal a new ingredient is attached to (unused when updating an existing ingredient).</param>
+    public record Command(Ingredient Ingredient, int MealId) : IRequest<Result>;
 
-    public class Handler(Client supabaseClient, IMealsStateContainer mealsStateContainer) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -21,7 +20,7 @@ public static class SaveIngredient
             {
                 ingredientDb.CreatedAt = DateTime.UtcNow;
                 ingredientDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
-                ingredientDb.MealId = request.MealId ?? mealsStateContainer.MealToEdit.Id;
+                ingredientDb.MealId = request.MealId;
 
                 return await Result.Try(async Task () => await supabaseClient
                     .From<IngredientDb>()
