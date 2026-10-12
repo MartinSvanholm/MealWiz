@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="Moq" Version="4.21.0" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\MealWiz\MealWiz.Shared\MealWiz.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

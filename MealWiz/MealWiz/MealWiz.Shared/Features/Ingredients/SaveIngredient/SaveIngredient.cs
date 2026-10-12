@@ -8,7 +8,8 @@ namespace MealWiz.Shared.Features.Ingredients.SaveIngredient;
 
 public static class SaveIngredient
 {
-    public record Command(Ingredient Ingredient) : IRequest<Result>;
+    /// <param name="MealId">Meal to attach a new ingredient to; defaults to the meal being edited.</param>
+    public record Command(Ingredient Ingredient, int? MealId = null) : IRequest<Result>;
 
     public class Handler(Client supabaseClient, IMealsStateContainer mealsStateContainer) : IRequestHandler<Command, Result>
     {
@@ -20,7 +21,7 @@ public static class SaveIngredient
             {
                 ingredientDb.CreatedAt = DateTime.UtcNow;
                 ingredientDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
-                ingredientDb.MealId = mealsStateContainer.MealToEdit.Id;
+                ingredientDb.MealId = request.MealId ?? mealsStateContainer.MealToEdit.Id;
 
                 return await Result.Try(async Task () => await supabaseClient
                     .From<IngredientDb>()
