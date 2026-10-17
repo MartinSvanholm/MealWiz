@@ -1,0 +1,183 @@
+@attribute [Authorize]
+@page "/meals/import"
+@inject IMealImportStateContainer _mealImportStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+@inject NavigationManager _navigationManager
+@implements IDisposable
+
+<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+    <MudPaper Class="rounded-t-0">
+        <MudGrid Spacing="0" Class="my-1">
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="OnBackClick" Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
+                <MudText Typo="Typo.h6">Import meal</MudText>
+            </MudItem>
+            <MudItem xs="4" />
+        </MudGrid>
+    </MudPaper>
+
+    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+        <MudStack Class="pa-4" Spacing="3">
+            @if (IsBusy)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="py-4" Spacing="3">
+                    <MudProgressCircular Indeterminate Color="Color.Primary" />
+
+                    @if (_mealImportStateContainer.IsRunningInBackground)
+                    {
+                        <MudText Align="Align.Center">Importing in the background — we'll add the meal to your list when it's done.</MudText>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OnBackClick">Back to meals</MudButton>
+                    }
+                    else
+                    {
+                        <MudText Align="Align.Center">Fetching and parsing your meal…</MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Style="word-break: break-all;">@_mealImportStateContainer.CurrentImport?.SourceUrl</MudText>
+
+                        @if (_mealImportStateContainer.CanContinueInBackground)
+                        {
+                            <MudText Typo="Typo.body2" Align="Align.Center">
+                                This is taking a while. You can keep using the app — we'll add the meal to your list when it's ready.
+                            </MudText>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OnContinueInBackgroundClick">Continue in background</MudButton>
+                        }
+                    }
+                </MudStack>
+            }
+            else
+            {
+                @if (_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_mealImportStateContainer.JobErrorMessage</MudAlert>
+                }
+                else if (_mealImportStateContainer.LatestImportFailed)
+                {
+                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                        <MudText Typo="Typo.subtitle1">Your last import failed</MudText>
+                        <MudText Typo="Typo.body2">@_mealImportStateContainer.LatestErrorMessage</MudText>
+                        @if (!string.IsNullOrEmpty(_mealImportStateContainer.LatestImport?.SourceUrl))
+                        {
+                            <MudText Typo="Typo.caption" Style="word-break: break-all;">@_mealImportStateContainer.LatestImport.SourceUrl</MudText>
+                        }
+                    </MudAlert>
+                }
+
+                <MudText Typo="Typo.body2">Paste a link to a meal and we'll fill it in for you.</MudText>
+
+                <MudTextField @bind-Value="_url"
+                              Label="Meal URL"
+                              Placeholder="https://"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Url"
+                              InputMode="InputMode.url"
+                              Immediate
+                              AutoFocus
+                              Error="@(_urlError is not null)"
+                              ErrorText="@_urlError"
+                              OnKeyDown="OnUrlKeyDown" />
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth OnClick="StartImport">
+                    @(_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed ? "Try again" : "Import")
+                </MudButton>
+            }
+        </MudStack>
+    </div>
+</MudStack>
+
+@code {
+    private string _url = string.Empty;
+    private string? _urlError;
+    private bool _isLeaving;
+
+    // Covers the moment between a fast success and the redirect to the pre-filled form.
+    private bool IsBusy => _mealImportStateContainer.IsImportInProgress || IsUnclaimedFastSuccess;
+
+    private bool IsUnclaimedFastSuccess =>
+        _mealImportStateContainer.JobStatus == MealImportJobStatus.Succeeded
+        && !_mealImportStateContainer.IsRunningInBackground
+        && _mealImportStateContainer.CurrentImport?.ParsedMeal is not null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Start clean unless a job is still running, or a foreground success hasn't been taken to the form yet
+        // (handled after the first render). A previous failure still shows via LatestImportFailed.
+        if (!_mealImportStateContainer.IsImportInProgress && !IsUnclaimedFastSuccess)
+            _mealImportStateContainer.ResetJob();
+
+        _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
+
+        await _mealImportStateContainer.LoadLatestImport();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            HandleJobState();
+    }
+
+    // Realtime callbacks can arrive off the UI thread (MAUI).
+    private void OnImportStateChanged() => InvokeAsync(HandleJobState);
+
+    private void HandleJobState()
+    {
+        if (_isLeaving) return;
+
+        if (IsUnclaimedFastSuccess)
+        {
+            // Resolved while the user waited here: review the meal in the existing Save Meal form.
+            _isLeaving = true;
+            _mealsStateContainer.MealToEdit = _mealImportStateContainer.CurrentImport!.ParsedMeal!.ToMeal();
+            _mealImportStateContainer.ResetJob();
+            _navigationManager.NavigateTo("/meals/edit");
+            return;
+        }
+
+        if (_mealImportStateContainer.IsRunningInBackground && !_mealImportStateContainer.IsImportInProgress)
+        {
+            // A background job resolved while the user came back here; the container already saved/toasted it.
+            _mealImportStateContainer.ResetJob();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task StartImport()
+    {
+        if (_mealImportStateContainer.IsImportInProgress) return;
+
+        _urlError = null;
+
+        var result = await _mealImportStateContainer.StartImport(_url);
+
+        // A failed insert fails the job itself (shown in the alert); anything else is about the input.
+        if (result.IsFailed && _mealImportStateContainer.JobStatus != MealImportJobStatus.Failed)
+            _urlError = result.Errors.First().Message;
+    }
+
+    private async Task OnUrlKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+            await StartImport();
+    }
+
+    private void OnContinueInBackgroundClick()
+    {
+        _mealImportStateContainer.ContinueInBackground();
+        _navigationManager.NavigateTo("/meals");
+    }
+
+    private void OnBackClick()
+    {
+        _navigationManager.NavigateTo("/meals");
+    }
+
+    public void Dispose()
+    {
+        _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;
+
+        // Leaving the page while the import runs (back arrow, nav bar, "Continue in background") backgrounds it.
+        if (_mealImportStateContainer.IsImportInProgress && !_mealImportStateContainer.IsRunningInBackground)
+            _mealImportStateContainer.ContinueInBackground();
+    }
+}
