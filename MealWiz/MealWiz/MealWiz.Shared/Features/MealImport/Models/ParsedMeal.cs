@@ -1,7 +1,7 @@
 using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Features.Meals.Models;
 
-namespace MealWiz.Shared.Features.RecipeImport.Models;
+namespace MealWiz.Shared.Features.MealImport.Models;
 
 /// <summary>
 /// The <c>meal_imports.parsed_meal</c> (jsonb) contract written by the import Function. Independently
@@ -9,14 +9,14 @@ namespace MealWiz.Shared.Features.RecipeImport.Models;
 /// (<c>MealWiz/src/MealWiz.Functions/Shared/Models/MealImportPayload.cs</c>) since the two projects can't
 /// share code — keep the property names (PascalCase in the JSON) in sync on both sides.
 /// </summary>
-public class ParsedRecipeMeal
+public class ParsedMeal
 {
     public string Name { get; set; } = string.Empty;
 
     /// <summary>Steps joined with "\n", matching <see cref="Meal.RecipeSteps"/>.</summary>
     public string Recipe { get; set; } = string.Empty;
 
-    public List<ParsedRecipeIngredient> Ingredients { get; set; } = [];
+    public List<ParsedMealIngredient> Ingredients { get; set; } = [];
 
     /// <summary>
     /// An unsaved <see cref="Meal"/> pre-filled from the import, for the Save Meal form or a direct save.
@@ -37,7 +37,7 @@ public class ParsedRecipeMeal
     }
 }
 
-public class ParsedRecipeIngredient
+public class ParsedMealIngredient
 {
     public string Name { get; set; } = string.Empty;
 

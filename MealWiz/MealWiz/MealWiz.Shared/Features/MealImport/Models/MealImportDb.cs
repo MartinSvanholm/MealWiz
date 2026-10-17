@@ -1,10 +1,10 @@
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
-namespace MealWiz.Shared.Features.RecipeImport.Models;
+namespace MealWiz.Shared.Features.MealImport.Models;
 
 [Table("meal_imports")]
-public class RecipeImportDb : BaseModel
+public class MealImportDb : BaseModel
 {
     // Client-generated, so it has to be sent on insert (Postgrest skips primary keys by default).
     [PrimaryKey("id", true)]
@@ -17,11 +17,11 @@ public class RecipeImportDb : BaseModel
     public string SourceUrl { get; set; } = string.Empty;
 
     [Column("status")]
-    public string Status { get; set; } = RecipeImportStatusExtensions.PendingValue;
+    public string Status { get; set; } = MealImportStatusExtensions.PendingValue;
 
     // jsonb — Newtonsoft (de)serializes the object directly.
     [Column("parsed_meal")]
-    public ParsedRecipeMeal? ParsedMeal { get; set; }
+    public ParsedMeal? ParsedMeal { get; set; }
 
     [Column("error_message")]
     public string? ErrorMessage { get; set; }

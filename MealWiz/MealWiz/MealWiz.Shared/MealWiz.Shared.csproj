@@ -23,6 +23,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.6" />
     <PackageReference Include="MudBlazor" Version="8.9.0" />
     <PackageReference Include="Supabase" Version="1.1.1" />
+    <!-- Supabase 1.1.1 pulls in Supabase.Realtime 7.0.2, whose socket calls ClientWebSocketOptions.SetRequestHeader
+         unconditionally. That throws PlatformNotSupportedException in Blazor WASM, so Realtime never connects.
+         7.1.0 skips the headers in the browser (the apikey travels as a query parameter instead). -->
+    <PackageReference Include="Supabase.Realtime" Version="7.1.0" />
   </ItemGroup>
 
 </Project>

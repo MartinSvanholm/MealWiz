@@ -1,20 +1,20 @@
-using MealWiz.Shared.Features.RecipeImport.Models;
+using MealWiz.Shared.Features.MealImport.Models;
 using Newtonsoft.Json;
 using Xunit;
-using RecipeImportModel = MealWiz.Shared.Features.RecipeImport.Models.RecipeImport;
+using MealImportModel = MealWiz.Shared.Features.MealImport.Models.MealImport;
 
-namespace MealWiz.Shared.Tests.Features.RecipeImport.UnitTests.Models;
+namespace MealWiz.Shared.Tests.Features.MealImport.UnitTests.Models;
 
-public class RecipeImportModelTests
+public class MealImportModelTests
 {
     [Theory]
-    [InlineData(RecipeImportStatus.Pending, "pending")]
-    [InlineData(RecipeImportStatus.Succeeded, "succeeded")]
-    [InlineData(RecipeImportStatus.Failed, "failed")]
-    public void Status_RoundTripsThroughDbValue(RecipeImportStatus status, string dbValue)
+    [InlineData(MealImportStatus.Pending, "pending")]
+    [InlineData(MealImportStatus.Succeeded, "succeeded")]
+    [InlineData(MealImportStatus.Failed, "failed")]
+    public void Status_RoundTripsThroughDbValue(MealImportStatus status, string dbValue)
     {
         Assert.Equal(dbValue, status.ToDbValue());
-        Assert.Equal(status, RecipeImportStatusExtensions.FromDbValue(dbValue));
+        Assert.Equal(status, MealImportStatusExtensions.FromDbValue(dbValue));
     }
 
     [Theory]
@@ -23,27 +23,27 @@ public class RecipeImportModelTests
     [InlineData("unknown")]
     public void Status_UnknownDbValue_FallsBackToPending(string? dbValue)
     {
-        Assert.Equal(RecipeImportStatus.Pending, RecipeImportStatusExtensions.FromDbValue(dbValue));
+        Assert.Equal(MealImportStatus.Pending, MealImportStatusExtensions.FromDbValue(dbValue));
     }
 
     [Fact]
-    public void RecipeImport_RoundTripsThroughDbModel()
+    public void MealImport_RoundTripsThroughDbModel()
     {
-        var original = new RecipeImportModel
+        var original = new MealImportModel
         {
             Id = Guid.NewGuid(),
             CreatedBy = Guid.NewGuid(),
             SourceUrl = "https://example.com/recipe",
-            Status = RecipeImportStatus.Failed,
-            ParsedMeal = new ParsedRecipeMeal { Name = "Pasta" },
+            Status = MealImportStatus.Failed,
+            ParsedMeal = new ParsedMeal { Name = "Pasta" },
             ErrorMessage = "Nope",
             CreatedAt = new DateTime(2026, 10, 12, 8, 0, 0, DateTimeKind.Utc),
             UpdatedAt = new DateTime(2026, 10, 12, 8, 1, 0, DateTimeKind.Utc),
             UpdatedBy = Guid.NewGuid()
         };
 
-        var db = original.MapToRecipeImportDb();
-        var roundTripped = new RecipeImportModel(db);
+        var db = original.MapToMealImportDb();
+        var roundTripped = new MealImportModel(db);
 
         Assert.Equal("failed", db.Status);
         Assert.Equal(original.Id, roundTripped.Id);
@@ -58,14 +58,14 @@ public class RecipeImportModelTests
     }
 
     [Fact]
-    public void ParsedRecipeMeal_DeserializesTheFunctionsPayloadShape()
+    public void ParsedMeal_DeserializesTheFunctionsPayloadShape()
     {
         // As written by MealWiz.Functions' MealImportPayload (PascalCase, Amount may be empty).
         const string json = """
             {"Name":"Pasta","Recipe":"Boil\nServe","Ingredients":[{"Name":"pasta","Amount":"500 g"},{"Name":"salt","Amount":""}]}
             """;
 
-        var parsed = JsonConvert.DeserializeObject<ParsedRecipeMeal>(json)!;
+        var parsed = JsonConvert.DeserializeObject<ParsedMeal>(json)!;
 
         Assert.Equal("Pasta", parsed.Name);
         Assert.Equal("Boil\nServe", parsed.Recipe);
@@ -77,14 +77,14 @@ public class RecipeImportModelTests
     [Fact]
     public void ToMeal_BuildsAnUnsavedMealWithIngredientsOnTheGroceryList()
     {
-        var parsed = new ParsedRecipeMeal
+        var parsed = new ParsedMeal
         {
             Name = "Pasta",
             Recipe = "Boil\nServe",
             Ingredients =
             [
-                new ParsedRecipeIngredient { Name = "pasta", Amount = "500 g" },
-                new ParsedRecipeIngredient { Name = "salt", Amount = "" }
+                new ParsedMealIngredient { Name = "pasta", Amount = "500 g" },
+                new ParsedMealIngredient { Name = "salt", Amount = "" }
             ]
         };
 

@@ -1,7 +1,7 @@
 ﻿using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
-using MealWiz.Shared.Features.RecipeImport.State;
+using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +17,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
-        services.AddScoped<IRecipeImportRealtimeSubscriber, RecipeImportRealtimeSubscriber>();
-        services.AddScoped<IRecipeImportStateContainer, RecipeImportStateContainer>();
+        services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
+        services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
     }
 }

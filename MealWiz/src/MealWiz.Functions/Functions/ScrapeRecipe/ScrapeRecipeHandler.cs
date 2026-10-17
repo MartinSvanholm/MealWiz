@@ -56,7 +56,23 @@ public class ScrapeRecipeHandler(
         }
 
         var importRow = importRowResult.Value;
-        var parsedMealResult = await ScrapeAndParseAsync(request.Url, cancellationToken);
+
+        // The function key ships in the WASM bundle, so a caller holding it can send any jobId and url.
+        // Only a still-pending row is resolved, and only from the URL the owner stored on it.
+        if (RecipeImportStatusExtensions.FromDbValue(importRow.Status) != RecipeImportStatus.Pending)
+        {
+            logger.LogWarning("meal_imports row {JobId} is no longer pending (status {Status}); skipping.",
+                request.JobId, importRow.Status);
+            return;
+        }
+
+        if (!string.Equals(request.Url, importRow.SourceUrl, StringComparison.Ordinal))
+        {
+            logger.LogWarning("Request URL for meal_imports row {JobId} doesn't match its source_url; scraping source_url.",
+                request.JobId);
+        }
+
+        var parsedMealResult = await ScrapeAndParseAsync(importRow.SourceUrl, cancellationToken);
 
         if (parsedMealResult.IsSuccess)
         {
@@ -76,11 +92,24 @@ public class ScrapeRecipeHandler(
 
         importRow.UpdatedAt = DateTime.UtcNow;
 
-        var updateResult = await Result.Try(() => supabaseClient.From<MealImportDb>().Update(importRow));
+        // The row can change while the scrape runs (a duplicate request, or the client failing it after a
+        // timeout), so the write only applies if it's still pending: the first resolution wins.
+        var updateResult = await Result.Try(() => supabaseClient
+            .From<MealImportDb>()
+            .Where(x => x.Status == RecipeImportStatusExtensions.PendingValue)
+            .Update(importRow));
+
         if (updateResult.IsFailed)
         {
             logger.LogError("Failed to write meal_imports row {JobId} back: {Error}",
                 request.JobId, Describe(updateResult.Errors));
+            return;
+        }
+
+        if (updateResult.Value.Models.Count == 0)
+        {
+            logger.LogWarning("meal_imports row {JobId} stopped being pending during the scrape; result discarded.",
+                request.JobId);
         }
     }
 

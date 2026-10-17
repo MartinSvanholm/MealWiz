@@ -6,8 +6,8 @@ namespace MealWiz.Functions.Shared.Models;
 /// deserialize it directly, without this project referencing MealWiz.Shared. Shared across any
 /// import function that writes to meal_imports (e.g. a future vision-model-based variant), not
 /// just ScrapeRecipe.
-/// Independently duplicated on the client as <c>ParsedRecipeMeal</c>
-/// (<c>MealWiz/MealWiz/MealWiz.Shared/Features/RecipeImport/Models/ParsedRecipeMeal.cs</c>) — keep the
+/// Independently duplicated on the client as <c>ParsedMeal</c>
+/// (<c>MealWiz/MealWiz/MealWiz.Shared/Features/MealImport/Models/ParsedMeal.cs</c>) — keep the
 /// property names in sync on both sides.
 /// </summary>
 public class MealImportPayload
