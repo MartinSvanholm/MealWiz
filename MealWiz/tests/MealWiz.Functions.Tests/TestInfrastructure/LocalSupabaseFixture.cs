@@ -15,8 +15,9 @@ namespace MealWiz.Functions.Tests.TestInfrastructure;
 /// SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY environment variables if set, otherwise from
 /// <c>supabase status -o env</c> run at the repo root. If the stack can't be reached, the fixture
 /// records a <see cref="SkipReason"/> instead of failing, so tests skip and <c>dotnet test</c> stays
-/// green on machines without Docker. Every row created through <see cref="InsertPendingRowAsync"/>
-/// is deleted when the fixture is disposed.
+/// green on machines without Docker. With REQUIRE_SUPABASE=true (set in CI) it throws instead, so a
+/// broken stack fails the tests rather than silently skipping them. Every row created through
+/// <see cref="InsertPendingRowAsync"/> is deleted when the fixture is disposed.
 /// </summary>
 public sealed class LocalSupabaseFixture : IAsyncLifetime
 {
@@ -25,6 +26,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
 
     private const string UrlVariable = "SUPABASE_URL";
     private const string ServiceRoleKeyVariable = "SUPABASE_SERVICE_ROLE_KEY";
+    private const string RequireSupabaseVariable = "REQUIRE_SUPABASE";
 
     private readonly ConcurrentBag<Guid> _createdRowIds = [];
 
@@ -38,7 +40,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         var credentialsResult = ResolveCredentials();
         if (credentialsResult.IsFailed)
         {
-            SkipReason = Describe(credentialsResult.Errors);
+            MarkUnavailable(credentialsResult.Errors);
             return;
         }
 
@@ -47,7 +49,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         var seedUserResult = await CheckSeededUserExistsAsync(url, serviceRoleKey);
         if (seedUserResult.IsFailed)
         {
-            SkipReason = Describe(seedUserResult.Errors);
+            MarkUnavailable(seedUserResult.Errors);
             return;
         }
 
@@ -192,6 +194,18 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         }
 
         return null;
+    }
+
+    private void MarkUnavailable(IReadOnlyList<IError> errors)
+    {
+        var reason = Describe(errors);
+
+        if (string.Equals(Environment.GetEnvironmentVariable(RequireSupabaseVariable), "true", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"{RequireSupabaseVariable} is set, but local Supabase isn't available: {reason}");
+        }
+
+        SkipReason = reason;
     }
 
     private static string Describe(IReadOnlyList<IError> errors) => string.Join("; ", errors.Select(e => e.Message));

@@ -45,3 +45,29 @@ Integration tests scrape a local web server started by the tests (never a live w
 `meal_imports` also need local Supabase (`supabase start`); without it they're skipped with the reason. Credentials
 come from `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` if set, otherwise from `supabase status -o env`. Rows they
 create are deleted afterwards.
+
+## Deployment ([MEA-17](https://linear.app/mealwiz/issue/MEA-17))
+
+`.github/workflows/azure-functions-app.yml` tests and deploys this project. It's path-filtered to it, so Blazor-only
+changes don't redeploy the function. The Static Web Apps and `CI.yml` workflows ignore this project in turn.
+
+- **Pull requests** touching this project, its tests, `supabase/` or `global.json` run the full test suite against
+  `supabase start`. `REQUIRE_SUPABASE=true` makes the integration tests fail instead of skip if the stack isn't
+  reachable.
+- **Pushes to `main`** (or a manual run on `main`) run the tests, then `dotnet publish` and deploy to the
+  `MealWizFunctions` Function App (Flex Consumption, .NET 10 isolated).
+
+The workflow signs in with OIDC, not a publish profile. The portal-provisioned user-assigned identity
+`MealWizFunctions-id-b54a` has Website Contributor on this Function App only. Its federated credential trusts this
+repo's `refs/heads/main` only, so deploying from another branch, or adding an `environment:` to the deploy job,
+fails the login. The client, tenant and subscription IDs are the `AZUREAPPSERVICE_*` repository secrets.
+
+Supabase credentials are Function App **app settings**, set once rather than pushed by the workflow:
+
+| App setting | Value |
+|---|---|
+| `Supabase__Url` | The production project's API URL |
+| `Supabase__ServiceRoleKey` | The production project's service-role key |
+
+The function reads them as `Supabase:Url` / `Supabase:ServiceRoleKey`. App settings use `__` as the separator,
+because `:` doesn't work in setting names on Linux.
