@@ -2,6 +2,11 @@ name: CI
 
 on:
   pull_request:
+    # The Function App's tests run in azure-functions-app.yml.
+    paths-ignore:
+      - 'MealWiz/src/MealWiz.Functions/**'
+      - 'MealWiz/tests/MealWiz.Functions.Tests/**'
+      - '.github/workflows/azure-functions-app.yml'
   workflow_dispatch:
 
 jobs:
