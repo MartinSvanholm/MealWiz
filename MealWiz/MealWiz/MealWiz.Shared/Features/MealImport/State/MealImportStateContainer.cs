@@ -1,33 +1,42 @@
 using FluentResults;
 using MealWiz.Shared.Features.Meals.State;
-using MealWiz.Shared.Features.RecipeImport.Models;
+using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
 
-namespace MealWiz.Shared.Features.RecipeImport.State;
+namespace MealWiz.Shared.Features.MealImport.State;
 
-public interface IRecipeImportStateContainer
+public interface IMealImportStateContainer
 {
-    RecipeImportJobStatus JobStatus { get; }
+    MealImportJobStatus JobStatus { get; }
 
     /// <summary>The row of the current/last job started in this session.</summary>
-    Models.RecipeImport? CurrentImport { get; }
+    Models.MealImport? CurrentImport { get; }
 
     /// <summary>Error to show for a failed job (also set when the job failed before a row existed).</summary>
     string? JobErrorMessage { get; }
 
     /// <summary>The user's newest import — from the DB on load, then kept current by jobs in this session.</summary>
-    Models.RecipeImport? LatestImport { get; }
+    Models.MealImport? LatestImport { get; }
     bool LatestImportFailed { get; }
     string? LatestErrorMessage { get; }
 
     bool IsImportInProgress { get; }
 
-    /// <summary>True once a job has been awaiting its result for <see cref="RecipeImportStateContainer.BackgroundEligibilityDelay"/>.</summary>
+    /// <summary>What the import entry points (Meals page menu, Import Meal page) should show.</summary>
+    MealImportEntryState EntryState { get; }
+
+    /// <summary>
+    /// True once a job has been awaiting its result for <see cref="MealImportStateContainer.BackgroundEligibilityDelay"/>,
+    /// i.e. when the Import page should offer "Continue in background".
+    /// </summary>
     bool CanContinueInBackground { get; }
 
-    /// <summary>True when the user chose "Continue in background"; the result is then saved/toasted without the drawer.</summary>
+    /// <summary>
+    /// True once the job was backgrounded ("Continue in background", or the user left the Import page while it ran);
+    /// the result is then saved/toasted without the page.
+    /// </summary>
     bool IsRunningInBackground { get; }
 
     event Action OnStateChanged;
@@ -35,32 +44,38 @@ public interface IRecipeImportStateContainer
     void NotifyStateChanged();
     Task LoadLatestImport();
     Task<Result> StartImport(string url);
+
+    /// <summary>
+    /// Hands the running job over to the container, which then saves a success (no review step) or toasts a failure.
+    /// Allowed at any point while the job is in progress, so leaving the Import page early backgrounds it too.
+    /// No-op when nothing is in progress.
+    /// </summary>
     void ContinueInBackground();
 
-    /// <summary>Clears a finished job back to <see cref="RecipeImportJobStatus.Idle"/>. No-op while one is in progress.</summary>
+    /// <summary>Clears a finished job back to <see cref="MealImportJobStatus.Idle"/>. No-op while one is in progress.</summary>
     void ResetJob();
 }
 
 /// <summary>
-/// Runs one recipe import job at a time: inserts the pending meal_imports row, subscribes to it via Realtime,
+/// Runs one meal import job at a time: inserts the pending meal_imports row, subscribes to it via Realtime,
 /// then calls the Function. The row is the source of truth for the outcome. Registered as scoped, which is
-/// app-lifetime in both WASM and BlazorWebView, so a background job keeps resolving after the drawer closes.
+/// app-lifetime in both WASM and BlazorWebView, so a background job keeps resolving after the user leaves the Import page.
 ///
 /// Realtime callbacks can arrive off the UI thread (MAUI), so components should subscribe to
 /// <see cref="StateContainerBase.OnStateChanged"/> with <c>() => InvokeAsync(StateHasChanged)</c>.
 /// </summary>
-public class RecipeImportStateContainer(
+public class MealImportStateContainer(
     IMediator mediator,
-    IRecipeImportRealtimeSubscriber realtimeSubscriber,
+    IMealImportRealtimeSubscriber realtimeSubscriber,
     IMealsStateContainer mealsStateContainer,
     ISnackbar snackbar,
-    TimeProvider timeProvider) : StateContainerBase, IRecipeImportStateContainer, IDisposable
+    TimeProvider timeProvider) : StateContainerBase, IMealImportStateContainer, IDisposable
 {
     public static readonly TimeSpan BackgroundEligibilityDelay = TimeSpan.FromSeconds(30);
 
-    public const string ServiceUnreachableMessage = "We couldn't reach the recipe import service. Please try again.";
-    public const string InvalidUrlMessage = "Please enter a valid recipe URL (starting with http:// or https://).";
-    public const string ImportInProgressMessage = "A recipe import is already in progress.";
+    public const string ServiceUnreachableMessage = "We couldn't reach the meal import service. Please try again.";
+    public const string InvalidUrlMessage = "Please enter a valid meal URL (starting with http:// or https://).";
+    public const string ImportInProgressMessage = "A meal import is already in progress.";
 
     private readonly object jobLock = new();
     private readonly List<Task> backgroundWork = [];
@@ -70,28 +85,29 @@ public class RecipeImportStateContainer(
     private IAsyncDisposable? subscription;
     private CancellationTokenSource? backgroundEligibilityCts;
 
-    public RecipeImportJobStatus JobStatus { get; private set; } = RecipeImportJobStatus.Idle;
-    public Models.RecipeImport? CurrentImport { get; private set; }
+    public MealImportJobStatus JobStatus { get; private set; } = MealImportJobStatus.Idle;
+    public Models.MealImport? CurrentImport { get; private set; }
     public string? JobErrorMessage { get; private set; }
-    public Models.RecipeImport? LatestImport { get; private set; }
+    public Models.MealImport? LatestImport { get; private set; }
     public bool CanContinueInBackground { get; private set; }
     public bool IsRunningInBackground { get; private set; }
 
-    public bool IsImportInProgress => JobStatus is RecipeImportJobStatus.Submitting or RecipeImportJobStatus.AwaitingResult;
-    public bool LatestImportFailed => LatestImport?.Status == RecipeImportStatus.Failed;
+    public bool IsImportInProgress => JobStatus is MealImportJobStatus.Submitting or MealImportJobStatus.AwaitingResult;
+    public bool LatestImportFailed => LatestImport?.Status == MealImportStatus.Failed;
     public string? LatestErrorMessage => LatestImportFailed ? LatestImport!.ErrorMessage ?? ErrorMessages.GenericError : null;
+    public MealImportEntryState EntryState => MealImportJobHelper.GetEntryState(IsImportInProgress, LatestImportFailed);
 
     public async Task LoadLatestImport()
     {
         // A job in this session is newer than (or the same as) anything the query could return.
         if (IsImportInProgress) return;
 
-        var result = await mediator.Send(new GetLatestRecipeImport.GetLatestRecipeImport.Query());
+        var result = await mediator.Send(new GetLatestMealImport.GetLatestMealImport.Query());
         if (result.Handle(snackbar).IsFailed) return;
 
         // Re-check after the await: a job may have started, or resolved, while the query was in flight.
         if (IsImportInProgress) return;
-        if (RecipeImportJobHelper.IsStalePendingCopy(result.Value, LatestImport)) return;
+        if (MealImportJobHelper.IsStalePendingCopy(result.Value, LatestImport)) return;
 
         LatestImport = result.Value;
         NotifyStateChanged();
@@ -100,7 +116,7 @@ public class RecipeImportStateContainer(
     public async Task<Result> StartImport(string url)
     {
         if (IsImportInProgress) return Result.Fail(ImportInProgressMessage);
-        if (!RecipeImportJobHelper.TryNormalizeRecipeUrl(url, out var sourceUrl)) return Result.Fail(InvalidUrlMessage);
+        if (!MealImportJobHelper.TryNormalizeMealUrl(url, out var sourceUrl)) return Result.Fail(InvalidUrlMessage);
 
         var jobId = Guid.NewGuid();
 
@@ -108,14 +124,19 @@ public class RecipeImportStateContainer(
         JobErrorMessage = null;
         CanContinueInBackground = false;
         IsRunningInBackground = false;
-        JobStatus = RecipeImportJobStatus.Submitting;
+        JobStatus = MealImportJobStatus.Submitting;
         NotifyStateChanged();
 
-        var createResult = await mediator.Send(new CreateRecipeImport.CreateRecipeImport.Command(jobId, sourceUrl));
+        var createResult = await mediator.Send(new CreateMealImport.CreateMealImport.Command(jobId, sourceUrl));
         if (createResult.IsFailed)
         {
             JobErrorMessage = createResult.Errors.First().Message;
-            JobStatus = RecipeImportJobStatus.Failed;
+            JobStatus = MealImportJobStatus.Failed;
+
+            // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
+            if (IsRunningInBackground)
+                snackbar.Add($"Meal import failed: {JobErrorMessage}", Severity.Error);
+
             NotifyStateChanged();
             return createResult.ToResult();
         }
@@ -130,7 +151,7 @@ public class RecipeImportStateContainer(
         if (subscribeResult.IsSuccess)
             subscription = subscribeResult.Value;
 
-        JobStatus = RecipeImportJobStatus.AwaitingResult;
+        JobStatus = MealImportJobStatus.AwaitingResult;
         NotifyStateChanged();
 
         StartBackgroundEligibilityTimer(jobId);
@@ -141,7 +162,7 @@ public class RecipeImportStateContainer(
 
     public void ContinueInBackground()
     {
-        if (JobStatus != RecipeImportJobStatus.AwaitingResult || !CanContinueInBackground) return;
+        if (!IsImportInProgress) return;
 
         IsRunningInBackground = true;
         NotifyStateChanged();
@@ -151,7 +172,7 @@ public class RecipeImportStateContainer(
     {
         if (IsImportInProgress) return;
 
-        JobStatus = RecipeImportJobStatus.Idle;
+        JobStatus = MealImportJobStatus.Idle;
         CurrentImport = null;
         JobErrorMessage = null;
         CanContinueInBackground = false;
@@ -171,7 +192,7 @@ public class RecipeImportStateContainer(
     /// Realtime callback for the job's row. Only a final status (succeeded/failed) resolves the job;
     /// other updates to a still-pending row are ignored.
     /// </summary>
-    private async Task OnRowUpdated(Guid jobId, Models.RecipeImport update)
+    private async Task OnRowUpdated(Guid jobId, Models.MealImport update)
     {
         if (update.IsResolved)
             await Resolve(jobId, update);
@@ -193,7 +214,7 @@ public class RecipeImportStateContainer(
             var triggerResult = await mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl));
             if (!IsActive(jobId)) return;
 
-            var rowResult = await mediator.Send(new GetRecipeImport.GetRecipeImport.Query(jobId));
+            var rowResult = await mediator.Send(new GetMealImport.GetMealImport.Query(jobId));
             if (rowResult.IsSuccess && rowResult.Value.IsResolved)
             {
                 await Resolve(jobId, rowResult.Value);
@@ -202,7 +223,7 @@ public class RecipeImportStateContainer(
 
             if (triggerResult.IsSuccess) return;
 
-            var markResult = await mediator.Send(new MarkRecipeImportFailed.MarkRecipeImportFailed.Command(jobId, ServiceUnreachableMessage));
+            var markResult = await mediator.Send(new MarkMealImportFailed.MarkMealImportFailed.Command(jobId, ServiceUnreachableMessage));
             if (markResult.IsSuccess && markResult.Value is not null)
             {
                 await Resolve(jobId, markResult.Value);
@@ -213,7 +234,7 @@ public class RecipeImportStateContainer(
             {
                 // The conditional update matched no rows, so the row stopped being pending — the Function
                 // resolved it after all. Show what it wrote.
-                var rereadResult = await mediator.Send(new GetRecipeImport.GetRecipeImport.Query(jobId));
+                var rereadResult = await mediator.Send(new GetMealImport.GetMealImport.Query(jobId));
                 if (rereadResult.IsSuccess && rereadResult.Value.IsResolved)
                 {
                     await Resolve(jobId, rereadResult.Value);
@@ -221,12 +242,12 @@ public class RecipeImportStateContainer(
                 }
             }
 
-            await Resolve(jobId, RecipeImportJobHelper.CreateLocallyFailedImport(
+            await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
                 jobId, CurrentImport, ServiceUnreachableMessage, timeProvider.GetUtcNow().UtcDateTime));
         }
         catch (Exception)
         {
-            await Resolve(jobId, RecipeImportJobHelper.CreateLocallyFailedImport(
+            await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
                 jobId, CurrentImport, ErrorMessages.GenericError, timeProvider.GetUtcNow().UtcDateTime));
         }
     }
@@ -234,10 +255,10 @@ public class RecipeImportStateContainer(
     /// <summary>
     /// Finishes the job with its final row. Realtime, the post-ack re-read and the failure fallback can all race
     /// to get here, so only the first call for the active job does anything. It stops the subscription and the
-    /// 30 s timer, then publishes the result. For a background job it also does what the drawer would have done:
+    /// 30 s timer, then publishes the result. For a background job it also does what the Import page would have done:
     /// saves the meal on success, or toasts the error on failure.
     /// </summary>
-    private async Task Resolve(Guid jobId, Models.RecipeImport row)
+    private async Task Resolve(Guid jobId, Models.MealImport row)
     {
         lock (jobLock)
         {
@@ -248,7 +269,7 @@ public class RecipeImportStateContainer(
         backgroundEligibilityCts?.Cancel();
         await DisposeSubscription();
 
-        row = RecipeImportJobHelper.EnsureUsableResult(row);
+        row = MealImportJobHelper.EnsureUsableResult(row);
 
         CurrentImport = row;
         LatestImport = row;
@@ -256,10 +277,10 @@ public class RecipeImportStateContainer(
 
         try
         {
-            if (row.Status == RecipeImportStatus.Succeeded)
+            if (row.Status == MealImportStatus.Succeeded)
             {
                 JobErrorMessage = null;
-                JobStatus = RecipeImportJobStatus.Succeeded;
+                JobStatus = MealImportJobStatus.Succeeded;
 
                 if (IsRunningInBackground)
                     await SaveImportedMeal(row.ParsedMeal!);
@@ -267,10 +288,10 @@ public class RecipeImportStateContainer(
             else
             {
                 JobErrorMessage = row.ErrorMessage ?? ErrorMessages.GenericError;
-                JobStatus = RecipeImportJobStatus.Failed;
+                JobStatus = MealImportJobStatus.Failed;
 
                 if (IsRunningInBackground)
-                    snackbar.Add($"Recipe import failed: {JobErrorMessage}", Severity.Error);
+                    snackbar.Add($"Meal import failed: {JobErrorMessage}", Severity.Error);
             }
         }
         catch (Exception)
@@ -287,7 +308,7 @@ public class RecipeImportStateContainer(
     /// A background success skips the review form, so the meal and its ingredients are saved straight away,
     /// then the meal list is reloaded and the user is told via a toast.
     /// </summary>
-    private async Task SaveImportedMeal(ParsedRecipeMeal parsedMeal)
+    private async Task SaveImportedMeal(ParsedMeal parsedMeal)
     {
         var meal = parsedMeal.ToMeal();
 
@@ -316,7 +337,7 @@ public class RecipeImportStateContainer(
         snackbar.Add($"\"{meal.Name}\" was imported and added to your meals.", Severity.Success);
     }
 
-    /// <summary>Starts the 30 s countdown after which the drawer may offer "Continue in background".</summary>
+    /// <summary>Starts the 30 s countdown after which the Import page may offer "Continue in background".</summary>
     private void StartBackgroundEligibilityTimer(Guid jobId)
     {
         backgroundEligibilityCts?.Dispose();

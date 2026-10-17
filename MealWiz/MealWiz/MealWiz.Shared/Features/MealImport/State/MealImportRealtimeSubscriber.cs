@@ -1,27 +1,27 @@
 using FluentResults;
-using MealWiz.Shared.Features.RecipeImport.Models;
+using MealWiz.Shared.Features.MealImport.Models;
 using Supabase;
 using Supabase.Realtime.Interfaces;
 using Supabase.Realtime.PostgresChanges;
 
-namespace MealWiz.Shared.Features.RecipeImport.State;
+namespace MealWiz.Shared.Features.MealImport.State;
 
 /// <summary>
 /// Watches a single meal_imports row over Supabase Realtime. Kept behind an interface so the state
 /// container's job lifecycle can be tested without a live Realtime socket.
 /// </summary>
-public interface IRecipeImportRealtimeSubscriber
+public interface IMealImportRealtimeSubscriber
 {
     /// <summary>
     /// Completes once the channel join is acknowledged, so no update written after this returns is missed.
     /// Dispose the returned handle to unsubscribe.
     /// </summary>
-    Task<Result<IAsyncDisposable>> Subscribe(Guid recipeImportId, Action<Models.RecipeImport> onUpdate);
+    Task<Result<IAsyncDisposable>> Subscribe(Guid mealImportId, Action<Models.MealImport> onUpdate);
 }
 
-public class RecipeImportRealtimeSubscriber(Client supabaseClient) : IRecipeImportRealtimeSubscriber
+public class MealImportRealtimeSubscriber(Client supabaseClient) : IMealImportRealtimeSubscriber
 {
-    public async Task<Result<IAsyncDisposable>> Subscribe(Guid recipeImportId, Action<Models.RecipeImport> onUpdate)
+    public async Task<Result<IAsyncDisposable>> Subscribe(Guid mealImportId, Action<Models.MealImport> onUpdate)
     {
         return await Result.Try(async Task<IAsyncDisposable> () =>
         {
@@ -36,13 +36,13 @@ public class RecipeImportRealtimeSubscriber(Client supabaseClient) : IRecipeImpo
             if (!string.IsNullOrEmpty(accessToken))
                 realtime.SetAuth(accessToken);
 
-            var channel = realtime.Channel("realtime", "public", "meal_imports", "id", recipeImportId.ToString());
+            var channel = realtime.Channel("realtime", "public", "meal_imports", "id", mealImportId.ToString());
 
             IRealtimeChannel.PostgresChangesHandler handler = (_, change) =>
             {
-                var recipeImportDb = change.Model<RecipeImportDb>();
-                if (recipeImportDb is not null)
-                    onUpdate(new Models.RecipeImport(recipeImportDb));
+                var mealImportDb = change.Model<MealImportDb>();
+                if (mealImportDb is not null)
+                    onUpdate(new Models.MealImport(mealImportDb));
             };
             channel.AddPostgresChangeHandler(PostgresChangesOptions.ListenType.Updates, handler);
 

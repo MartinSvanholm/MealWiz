@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using FluentResults;
-using MealWiz.Shared.Features.RecipeImport.Models;
+using MealWiz.Shared.Features.MealImport.Models;
 using MediatR;
 
-namespace MealWiz.Shared.Features.RecipeImport.TriggerScrapeRecipe;
+namespace MealWiz.Shared.Features.MealImport.TriggerScrapeRecipe;
 
 /// <summary>
 /// Calls the ScrapeRecipe Azure Function. Its response is only an ack — the meal_imports row (observed via
@@ -13,12 +13,12 @@ public static class TriggerScrapeRecipe
 {
     public record Command(Guid JobId, string Url) : IRequest<Result>;
 
-    public class Handler(HttpClient httpClient, RecipeImportFunctionOptions options) : IRequestHandler<Command, Result>
+    public class Handler(HttpClient httpClient, MealImportFunctionOptions options) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(options.Url))
-                return Result.Fail("The recipe import service is not configured.");
+                return Result.Fail("The meal import service is not configured.");
 
             var endpoint = $"{options.Url.TrimEnd('/')}/api/ScrapeRecipe";
 
@@ -38,7 +38,7 @@ public static class TriggerScrapeRecipe
             using var response = sendResult.Value;
             return response.IsSuccessStatusCode
                 ? Result.Ok()
-                : Result.Fail($"The recipe import service responded with {(int)response.StatusCode}.");
+                : Result.Fail($"The meal import service responded with {(int)response.StatusCode}.");
         }
     }
 }

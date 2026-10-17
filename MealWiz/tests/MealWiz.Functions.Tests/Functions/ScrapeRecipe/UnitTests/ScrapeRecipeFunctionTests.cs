@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using MealWiz.Functions.Functions.ScrapeRecipe;
@@ -61,6 +62,22 @@ public class ScrapeRecipeFunctionTests : IDisposable
         response.Body.Position = 0;
         using var json = await JsonDocument.ParseAsync(response.Body, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(jobId, json.RootElement.GetProperty("jobId").GetGuid());
+    }
+
+    // The function key is the only thing stopping casual calls (see the project README), so the
+    // trigger must not drift to Anonymous or pick up extra verbs.
+    [Fact]
+    public void HttpTrigger_RequiresFunctionKeyAndOnlyAcceptsPost()
+    {
+        var trigger = typeof(ScrapeRecipeFunction)
+            .GetMethod(nameof(ScrapeRecipeFunction.Run))!
+            .GetParameters()
+            .Select(p => p.GetCustomAttribute<HttpTriggerAttribute>())
+            .Single(a => a is not null)!;
+
+        Assert.Equal(AuthorizationLevel.Function, trigger.AuthLevel);
+        Assert.NotNull(trigger.Methods);
+        Assert.Equal(["post"], trigger.Methods);
     }
 
     private async Task<HttpResponseData> RunAsync(string body)
