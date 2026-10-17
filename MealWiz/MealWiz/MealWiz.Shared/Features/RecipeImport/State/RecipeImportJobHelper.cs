@@ -25,6 +25,15 @@ public static class RecipeImportJobHelper
     }
 
     /// <summary>
+    /// A running import takes precedence over an earlier failure — the failure is superseded once it resolves.
+    /// </summary>
+    public static RecipeImportEntryState GetEntryState(bool isImportInProgress, bool latestImportFailed)
+    {
+        if (isImportInProgress) return RecipeImportEntryState.InProgress;
+        return latestImportFailed ? RecipeImportEntryState.Failed : RecipeImportEntryState.Default;
+    }
+
+    /// <summary>
     /// True when <paramref name="loaded"/> is a still-pending copy of the import we already hold as resolved —
     /// i.e. it was read from the DB just before the job finished, and must not overwrite the result.
     /// </summary>

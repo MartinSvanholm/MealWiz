@@ -19,6 +19,16 @@ public class RecipeImportJobHelperTests
     }
 
     [Theory]
+    [InlineData(false, false, RecipeImportEntryState.Default)]
+    [InlineData(false, true, RecipeImportEntryState.Failed)]
+    [InlineData(true, false, RecipeImportEntryState.InProgress)]
+    [InlineData(true, true, RecipeImportEntryState.InProgress)]
+    public void GetEntryState_InProgressWinsOverAnEarlierFailure(bool inProgress, bool latestFailed, RecipeImportEntryState expected)
+    {
+        Assert.Equal(expected, RecipeImportJobHelper.GetEntryState(inProgress, latestFailed));
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("not a url")]

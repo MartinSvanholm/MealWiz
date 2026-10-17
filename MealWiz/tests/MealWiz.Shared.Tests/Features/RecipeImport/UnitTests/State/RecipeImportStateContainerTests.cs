@@ -139,14 +139,103 @@ public class RecipeImportStateContainerTests
         await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.False(_container.CanContinueInBackground);
 
-        _container.ContinueInBackground();
-        Assert.False(_container.IsRunningInBackground);
-
         _time.Advance(TimeSpan.FromSeconds(1));
         await Eventually(() => _container.CanContinueInBackground);
+    }
+
+    [Fact]
+    public async Task ContinueInBackground_Before30Seconds_StillBackgroundsTheJob()
+    {
+        await _container.StartImport(Url);
 
         _container.ContinueInBackground();
+
+        Assert.False(_container.CanContinueInBackground);
         Assert.True(_container.IsRunningInBackground);
+    }
+
+    [Fact]
+    public void ContinueInBackground_WithNoJob_IsANoOp()
+    {
+        _container.ContinueInBackground();
+
+        Assert.False(_container.IsRunningInBackground);
+    }
+
+    [Fact]
+    public async Task ContinueInBackground_AfterTheJobResolved_IsANoOp()
+    {
+        await _container.StartImport(Url);
+        await PushRealtimeUpdate(Row(RecipeImportStatus.Failed, errorMessage: "Nope"));
+
+        _container.ContinueInBackground();
+
+        Assert.False(_container.IsRunningInBackground);
+        VerifyNoSnackbar();
+    }
+
+    [Fact]
+    public async Task RealtimeSuccess_BackgroundedBefore30Seconds_SavesTheMeal()
+    {
+        _mediator
+            .Setup(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(new Meal { Id = 42, Name = "Pasta" }));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<SaveIngredient.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok());
+
+        await _container.StartImport(Url);
+        _container.ContinueInBackground();
+        await PushRealtimeUpdate(Row(RecipeImportStatus.Succeeded, parsedMeal: Pasta()));
+
+        _mediator.Verify(m => m.Send(It.Is<SaveMeal.Command>(c => c.Meal.Name == "Pasta"), It.IsAny<CancellationToken>()), Times.Once);
+        VerifySnackbar(Severity.Success, "Pasta");
+    }
+
+    [Fact]
+    public async Task StartImport_InsertFailsAfterBeingBackgroundedWhileSubmitting_Toasts()
+    {
+        var insert = new TaskCompletionSource<Result<RecipeImportModel>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mediator
+            .Setup(m => m.Send(It.IsAny<CreateRecipeImport.Command>(), It.IsAny<CancellationToken>()))
+            .Returns(insert.Task);
+
+        var start = _container.StartImport(Url);
+        Assert.Equal(RecipeImportJobStatus.Submitting, _container.JobStatus);
+
+        _container.ContinueInBackground();
+        insert.SetResult(Result.Fail<RecipeImportModel>("Insert failed"));
+        await start;
+
+        Assert.Equal(RecipeImportJobStatus.Failed, _container.JobStatus);
+        VerifySnackbar(Severity.Error, "Insert failed");
+    }
+
+    [Fact]
+    public async Task StartImport_InsertFailsInForeground_DoesNotToast()
+    {
+        _mediator
+            .Setup(m => m.Send(It.IsAny<CreateRecipeImport.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<RecipeImportModel>("Insert failed"));
+
+        await _container.StartImport(Url);
+
+        VerifyNoSnackbar();
+    }
+
+    [Fact]
+    public async Task EntryState_FollowsTheJobAndTheLatestImport()
+    {
+        Assert.Equal(RecipeImportEntryState.Default, _container.EntryState);
+
+        await _container.StartImport(Url);
+        Assert.Equal(RecipeImportEntryState.InProgress, _container.EntryState);
+
+        await PushRealtimeUpdate(Row(RecipeImportStatus.Failed, errorMessage: "Nope"));
+        Assert.Equal(RecipeImportEntryState.Failed, _container.EntryState);
+
+        _container.ResetJob();
+        Assert.Equal(RecipeImportEntryState.Failed, _container.EntryState);
     }
 
     [Fact]

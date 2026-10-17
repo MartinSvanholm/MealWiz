@@ -1,0 +1,70 @@
+@inject IMealsStateContainer _mealsStateContainer
+@inject IRecipeImportStateContainer _recipeImportStateContainer
+@inject NavigationManager _navigationManager
+@implements IDisposable
+
+<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" AriaLabel="Add meal">
+    <ActivatorContent>
+        <MudBadge Dot Overlap Bordered
+                  Visible="@(EntryState != RecipeImportEntryState.Default)"
+                  Color="@(EntryState == RecipeImportEntryState.Failed ? Color.Warning : Color.Info)">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" />
+        </MudBadge>
+    </ActivatorContent>
+    <ChildContent>
+        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="OnCreateManuallyClick">
+            Create manually
+        </MudMenuItem>
+        @switch (EntryState)
+        {
+            case RecipeImportEntryState.InProgress:
+                <MudMenuItem Icon="@SpinnerIcon" IconColor="Color.Info" OnClick="OnImportClick">
+                    Import in progress…
+                </MudMenuItem>
+                break;
+            case RecipeImportEntryState.Failed:
+                <MudMenuItem Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning" OnClick="OnImportClick">
+                    <span class="mud-warning-text">Last import failed – see why</span>
+                </MudMenuItem>
+                break;
+            default:
+                <MudMenuItem Icon="@Icons.Material.Filled.Link" OnClick="OnImportClick">
+                    Import from URL
+                </MudMenuItem>
+                break;
+        }
+    </ChildContent>
+</MudMenu>
+
+@code {
+    // A rotating arc as an icon, so it sits in the menu item's icon column (a MudProgressCircular can't go there).
+    private const string SpinnerIcon =
+        "<path d=\"M12 2a10 10 0 1 0 10 10h-2.5A7.5 7.5 0 1 1 12 4.5z\">" +
+        "<animateTransform attributeName=\"transform\" type=\"rotate\" from=\"0 12 12\" to=\"360 12 12\" dur=\"1s\" repeatCount=\"indefinite\"/>" +
+        "</path>";
+
+    private RecipeImportEntryState EntryState => _recipeImportStateContainer.EntryState;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _recipeImportStateContainer.OnStateChanged += OnImportStateChanged;
+
+        await _recipeImportStateContainer.LoadLatestImport();
+    }
+
+    // Realtime callbacks can arrive off the UI thread (MAUI).
+    private void OnImportStateChanged() => InvokeAsync(StateHasChanged);
+
+    private void OnCreateManuallyClick()
+    {
+        _mealsStateContainer.MealToEdit = new();
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+
+    private void OnImportClick()
+    {
+        _navigationManager.NavigateTo("/meals/import");
+    }
+
+    public void Dispose() => _recipeImportStateContainer.OnStateChanged -= OnImportStateChanged;
+}

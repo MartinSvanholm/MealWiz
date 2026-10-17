@@ -62,19 +62,22 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         Client = await new ServiceRoleSupabaseClientFactory(Configuration).CreateAsync(CancellationToken.None);
     }
 
-    public async Task<MealImportDb> InsertPendingRowAsync(string sourceUrl)
-    {
-        var response = await Client.From<MealImportDb>().Insert(new MealImportDb
-        {
-            CreatedBy = SeededUserId,
-            SourceUrl = sourceUrl,
-            Status = RecipeImportStatus.Pending.ToDbValue(),
-            CreatedAt = DateTime.UtcNow
-        });
+    public Task<MealImportDb> InsertPendingRowAsync(string sourceUrl) =>
+        InsertRowAsync(new MealImportDb { SourceUrl = sourceUrl, Status = RecipeImportStatus.Pending.ToDbValue() });
 
-        var row = response.Model ?? throw new InvalidOperationException("Inserting a meal_imports row returned no row.");
-        _createdRowIds.Add(row.Id);
-        return row;
+    /// <summary>
+    /// Inserts <paramref name="row"/> as-is (any status, parsed_meal, error_message), owned by the seed user.
+    /// </summary>
+    public async Task<MealImportDb> InsertRowAsync(MealImportDb row)
+    {
+        row.CreatedBy = SeededUserId;
+        row.CreatedAt = DateTime.UtcNow;
+
+        var response = await Client.From<MealImportDb>().Insert(row);
+
+        var inserted = response.Model ?? throw new InvalidOperationException("Inserting a meal_imports row returned no row.");
+        _createdRowIds.Add(inserted.Id);
+        return inserted;
     }
 
     public Task<MealImportDb?> GetRowAsync(Guid id) =>

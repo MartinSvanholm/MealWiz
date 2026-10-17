@@ -24,10 +24,19 @@ public interface IRecipeImportStateContainer
 
     bool IsImportInProgress { get; }
 
-    /// <summary>True once a job has been awaiting its result for <see cref="RecipeImportStateContainer.BackgroundEligibilityDelay"/>.</summary>
+    /// <summary>What the import entry points (Meals page menu, Import Recipe page) should show.</summary>
+    RecipeImportEntryState EntryState { get; }
+
+    /// <summary>
+    /// True once a job has been awaiting its result for <see cref="RecipeImportStateContainer.BackgroundEligibilityDelay"/>,
+    /// i.e. when the drawer should offer "Continue in background".
+    /// </summary>
     bool CanContinueInBackground { get; }
 
-    /// <summary>True when the user chose "Continue in background"; the result is then saved/toasted without the drawer.</summary>
+    /// <summary>
+    /// True once the job was backgrounded ("Continue in background", or the drawer was closed while it ran);
+    /// the result is then saved/toasted without the drawer.
+    /// </summary>
     bool IsRunningInBackground { get; }
 
     event Action OnStateChanged;
@@ -35,6 +44,12 @@ public interface IRecipeImportStateContainer
     void NotifyStateChanged();
     Task LoadLatestImport();
     Task<Result> StartImport(string url);
+
+    /// <summary>
+    /// Hands the running job over to the container, which then saves a success (no review step) or toasts a failure.
+    /// Allowed at any point while the job is in progress, so closing the drawer early backgrounds it too.
+    /// No-op when nothing is in progress.
+    /// </summary>
     void ContinueInBackground();
 
     /// <summary>Clears a finished job back to <see cref="RecipeImportJobStatus.Idle"/>. No-op while one is in progress.</summary>
@@ -80,6 +95,7 @@ public class RecipeImportStateContainer(
     public bool IsImportInProgress => JobStatus is RecipeImportJobStatus.Submitting or RecipeImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == RecipeImportStatus.Failed;
     public string? LatestErrorMessage => LatestImportFailed ? LatestImport!.ErrorMessage ?? ErrorMessages.GenericError : null;
+    public RecipeImportEntryState EntryState => RecipeImportJobHelper.GetEntryState(IsImportInProgress, LatestImportFailed);
 
     public async Task LoadLatestImport()
     {
@@ -116,6 +132,11 @@ public class RecipeImportStateContainer(
         {
             JobErrorMessage = createResult.Errors.First().Message;
             JobStatus = RecipeImportJobStatus.Failed;
+
+            // Backgrounded while submitting (the drawer was closed), so nothing else would show this.
+            if (IsRunningInBackground)
+                snackbar.Add($"Recipe import failed: {JobErrorMessage}", Severity.Error);
+
             NotifyStateChanged();
             return createResult.ToResult();
         }
@@ -141,7 +162,7 @@ public class RecipeImportStateContainer(
 
     public void ContinueInBackground()
     {
-        if (JobStatus != RecipeImportJobStatus.AwaitingResult || !CanContinueInBackground) return;
+        if (!IsImportInProgress) return;
 
         IsRunningInBackground = true;
         NotifyStateChanged();
