@@ -62,9 +62,10 @@ jobs:
       SUPABASE_PROJECT_ID: ${{ secrets.PRODUCTION_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
+      # Pinned (matches local) so a new CLI release can't change how production migrations are pushed.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.111.0
       - run: supabase link --project-ref $SUPABASE_PROJECT_ID
       - run: supabase db push
 

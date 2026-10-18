@@ -41,11 +41,17 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.111.0
+
+      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
+      # connection (e.g. an image pull) can grab one just before Supabase binds it: "address already in use".
+      - name: Keep outgoing connections off Supabase's ports
+        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
 
       # Full stack rather than `supabase db start`: the tests need the REST and Auth APIs plus seed.sql's user.
+      # mailpit (the email testing UI) isn't needed either.
       - name: Start Supabase local development setup
-        run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor
+        run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
 
       - name: Export Supabase credentials
         run: |

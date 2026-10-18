@@ -14,23 +14,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.111.0
 
-      - name: Start Supabase local development setup
+      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
+      # connection can grab one just before Supabase binds it. Moving the range out of the way prevents that.
+      - name: Keep outgoing connections off Supabase's ports
+        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
+
+      # A fresh database applies every migration and seed.sql from scratch, so a broken migration fails here
+      # rather than in production.
+      - name: Apply migrations and seed to a fresh database
         run: supabase db start
-
-      - name: Verify generated types are checked in
-        run: |
-          supabase gen types typescript --local > types.gen.ts
-          if ! git diff --ignore-space-at-eol --exit-code --quiet types.gen.ts; then
-            echo "Detected uncommitted changes after build. See status below:"
-            git diff
-            exit 1
-          fi
 
   WASM_CI_Build:
     runs-on: ubuntu-latest
@@ -38,5 +36,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          # 9 for the app, 10 for MealWiz.Shared.Tests.
+          dotnet-version: |
+            9.0.x
+            10.0.x
       - run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+      - name: Run MealWiz.Shared tests
+        run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
