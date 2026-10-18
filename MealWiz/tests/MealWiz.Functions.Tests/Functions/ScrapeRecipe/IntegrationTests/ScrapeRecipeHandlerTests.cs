@@ -7,6 +7,7 @@ using MealWiz.Functions.Shared.Models;
 using MealWiz.Functions.Shared.Ssrf;
 using MealWiz.Functions.Shared.SupabaseAccess;
 using MealWiz.Functions.Tests.TestInfrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -74,17 +75,43 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         AssertFailed(row, "The URL must be an absolute http or https URL.");
     }
 
+    // The client always inserts the row first, so a missing row means the Function reads the wrong database.
     [Fact]
-    public async Task UnknownJobId_CompletesWithoutCreatingARow()
+    public async Task UnknownJobId_FailsWithoutCreatingARow()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var unknownId = Guid.NewGuid();
 
-        await CreateHandler().HandleAsync(
+        var result = await CreateHandler().HandleAsync(
             new ScrapeRecipeRequest(unknownId, server.Url("/recipe")),
             TestContext.Current.CancellationToken);
 
+        Assert.True(result.IsFailed);
         Assert.Null(await supabase.GetRowAsync(unknownId));
+    }
+
+    // What happened in production: the key was a disabled legacy key, so loading the row returned 401.
+    [Fact]
+    public async Task RejectedServiceKey_FailsAndLeavesTheRowPending()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var pendingRow = await supabase.InsertPendingRowAsync(server.Url("/recipe"));
+        var rejectedKeyConfiguration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Supabase:Url"] = supabase.Configuration["Supabase:Url"],
+                ["Supabase:ServiceRoleKey"] = "sb_secret_not-a-real-key"
+            })
+            .Build();
+
+        var result = await CreateHandler(clientFactory: new ServiceRoleSupabaseClientFactory(rejectedKeyConfiguration))
+            .HandleAsync(new ScrapeRecipeRequest(pendingRow.Id, pendingRow.SourceUrl), TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsFailed);
+        var row = await supabase.GetRowAsync(pendingRow.Id);
+        Assert.NotNull(row);
+        Assert.Equal(RecipeImportStatus.Pending, RecipeImportStatusExtensions.FromDbValue(row.Status));
+        Assert.Null(row.UpdatedAt);
     }
 
     [Fact]
@@ -169,19 +196,26 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         return await HandleAsync(pendingRow.Id, url);
     }
 
+    /// <summary>
+    /// Runs the handler and returns the row as it ends up. Every outcome that goes through here leaves the row
+    /// telling the client what happened (resolved now, or already), so the handler must report success.
+    /// </summary>
     private async Task<MealImportDb> HandleAsync(Guid jobId, string url, IRecipeFetcher? fetcher = null)
     {
-        await CreateHandler(fetcher).HandleAsync(
+        var result = await CreateHandler(fetcher).HandleAsync(
             new ScrapeRecipeRequest(jobId, url),
             TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(e => e.Message)));
 
         var row = await supabase.GetRowAsync(jobId);
         Assert.NotNull(row);
         return row;
     }
 
-    private ScrapeRecipeHandler CreateHandler(IRecipeFetcher? fetcher = null) => new(
-        new ServiceRoleSupabaseClientFactory(supabase.Configuration),
+    private ScrapeRecipeHandler CreateHandler(
+        IRecipeFetcher? fetcher = null, IServiceRoleSupabaseClientFactory? clientFactory = null) => new(
+        clientFactory ?? new ServiceRoleSupabaseClientFactory(supabase.Configuration),
         fetcher ?? CreateRecipeFetcher(),
         new RecipeParser(new JsonLdRecipeParser(), new MicrodataRecipeParser(), new OpenGraphRecipeParser()),
         new RecipeMapper(new IngredientLineParser()),

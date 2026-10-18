@@ -390,6 +390,89 @@ public class MealImportStateContainerTests
         Assert.Equal(MealImportStateContainer.ServiceUnreachableMessage, _container.JobErrorMessage);
     }
 
+    // The Function answers 502 when it couldn't load or write the row (e.g. its Supabase key was rejected), and
+    // TriggerScrapeRecipe reports that as a failure. Nothing will resolve the row, so the client fails it itself.
+    [Fact]
+    public async Task FunctionReturnedServerError_RowStillPending_MarksTheRowFailed()
+    {
+        SetupGetMealImport(Row(MealImportStatus.Pending));
+        SetupMarkFailedReturnsTheFailedRow();
+        await _container.StartImport(Url);
+
+        await CompleteFunctionCall(Result.Fail("The meal import service responded with 502."));
+
+        Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
+        Assert.Equal(MealImportStateContainer.ServiceUnreachableMessage, _container.JobErrorMessage);
+        Assert.True(_container.LatestImportFailed);
+        _mediator.Verify(m => m.Send(
+            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorMessage == MealImportStateContainer.ServiceUnreachableMessage),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task NoResultWithinTheTimeout_RowStillPending_MarksTheRowFailed()
+    {
+        SetupGetMealImport(Row(MealImportStatus.Pending));
+        SetupMarkFailedReturnsTheFailedRow();
+        await _container.StartImport(Url);
+
+        _time.Advance(MealImportStateContainer.ResultTimeout - TimeSpan.FromSeconds(1));
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        Assert.Equal(MealImportJobStatus.AwaitingResult, _container.JobStatus);
+        VerifyNoMarkFailed();
+
+        _time.Advance(TimeSpan.FromSeconds(1));
+        await Eventually(() => _container.JobStatus == MealImportJobStatus.Failed);
+
+        Assert.Equal(MealImportStateContainer.TimedOutMessage, _container.JobErrorMessage);
+        Assert.True(_container.LatestImportFailed);
+        _mediator.Verify(m => m.Send(
+            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorMessage == MealImportStateContainer.TimedOutMessage),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _subscription.Verify(s => s.DisposeAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task NoResultWithinTheTimeout_RowAlreadyResolved_ShowsTheRowWithoutUpdatingIt()
+    {
+        SetupGetMealImport(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await _container.StartImport(Url);
+
+        _time.Advance(MealImportStateContainer.ResultTimeout);
+        await Eventually(() => _container.JobStatus == MealImportJobStatus.Succeeded);
+
+        VerifyNoMarkFailed();
+    }
+
+    [Fact]
+    public async Task NoResultWithinTheTimeout_RowCannotBeUpdated_FailsTheJobLocally()
+    {
+        SetupGetMealImport(Row(MealImportStatus.Pending));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<MealImportModel?>("Offline"));
+        await _container.StartImport(Url);
+
+        _time.Advance(MealImportStateContainer.ResultTimeout);
+        await Eventually(() => _container.JobStatus == MealImportJobStatus.Failed);
+
+        Assert.Equal(MealImportStateContainer.TimedOutMessage, _container.JobErrorMessage);
+    }
+
+    [Fact]
+    public async Task JobResolvedBeforeTheTimeout_TimeoutDoesNothing()
+    {
+        await _container.StartImport(Url);
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page."));
+
+        _time.Advance(MealImportStateContainer.ResultTimeout);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+
+        Assert.Equal("No recipe found on the page.", _container.JobErrorMessage);
+        _mediator.Verify(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNoMarkFailed();
+    }
+
     [Fact]
     public async Task SubscribeFails_StillCallsTheFunctionAndResolvesFromTheRow()
     {
@@ -520,6 +603,12 @@ public class MealImportStateContainerTests
         _mediator
             .Setup(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok(row));
+
+    private void SetupMarkFailedReturnsTheFailedRow() =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((MarkMealImportFailed.Command c, CancellationToken _) =>
+                Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorMessage: c.ErrorMessage)));
 
     private void VerifyNoMarkFailed() =>
         _mediator.Verify(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()), Times.Never);

@@ -25,8 +25,15 @@ step of the "import a meal from a URL" flow ([MEA-13](https://linear.app/mealwiz
    POST http://localhost:7071/api/ScrapeRecipe
    { "jobId": "<meal_imports.id>", "url": "https://example.com/some-recipe" }
    ```
-   The function never reports success/failure through the HTTP response — check the `meal_imports` row's
-   `status`/`parsed_meal`/`error_message` columns (or subscribe via Realtime, same as the client does).
+   The outcome is in the `meal_imports` row's `status`/`parsed_meal`/`error_message` columns (or subscribe via
+   Realtime, same as the client does), not in the response. The status code only says whether the row tells you:
+   - `200` with `{ "jobId": ... }`: the row is resolved. Either this call wrote `succeeded`, or it wrote `failed` with
+     the scrape error, or the row was already resolved.
+   - `502` with an empty body: the function couldn't reach the row. It couldn't create the Supabase client, couldn't
+     load the row (e.g. a rejected key), didn't find it, or couldn't write the result back. The row is still
+     `pending`, so the caller has to fail it (the client marks it `failed`, see `MealImportStateContainer`). The
+     reason is only in the function's log.
+   - `400`: the body isn't `{ jobId, url }`. Nothing was touched.
 
 Core Tools doesn't enforce function keys locally, so no `x-functions-key` header is needed here. That's why
 `MealImportFunction:key` is empty in the clients' `appsettings.Development.json`.
@@ -140,7 +147,13 @@ Supabase credentials are Function App **app settings**, set once rather than pus
 | App setting | Value |
 |---|---|
 | `Supabase__Url` | The production project's API URL |
-| `Supabase__ServiceRoleKey` | The production project's service-role key |
+| `Supabase__ServiceRoleKey` | The production project's **secret key** (`sb_secret_…`, Dashboard → Project Settings → API Keys) |
 
 The function reads them as `Supabase:Url` / `Supabase:ServiceRoleKey`. App settings use `__` as the separator,
 because `:` doesn't work in setting names on Linux.
+
+`Supabase__ServiceRoleKey` keeps its name but must hold the new-format secret key, **not** the legacy `service_role`
+JWT (`eyJ…`). The project disabled legacy API keys on 2026-05-06, and Supabase rejects them with
+`401 UNAUTHORIZED_DISABLED_LEGACY_KEY`. The secret key has the same elevated, RLS-bypassing access. The C# client
+sends the key as both `apikey` and `Authorization: Bearer`, and the gateway accepts a secret key in both. With a
+rejected key, `ScrapeRecipe` answers `502` and the client marks the import failed.
