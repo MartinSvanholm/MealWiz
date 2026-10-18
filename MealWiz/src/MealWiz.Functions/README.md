@@ -47,14 +47,21 @@ The key is still kept out of git, so it can be rotated without a commit:
 - The Static Web Apps workflow (`.github/workflows/azure-static-web-apps-*.yml`) writes the `MEAL_IMPORT_FUNCTION_KEY`
   GitHub secret into that file before deploying, including on rollback. The deploy fails if the secret isn't set.
 
-Create a dedicated function-level key, so the client's key can be rotated without touching the default one:
+The client uses a dedicated host-level key named `blazor-client` on `MealWizFunctions` (resource group `MealWiz`), so it
+can be rotated without touching the `default` key. It's host-level rather than scoped to `ScrapeRecipe` because the
+function only exists after the push to `main` that also deploys the Static Web App, and that deploy already needs the
+secret. A host-level function key is accepted by every `AuthorizationLevel.Function` function on the app.
+
+To create or rotate it, generate a new value, then copy it into the secret. `keys set` redacts its output, so read
+the value back with `keys list`:
 
 ```
-az functionapp function keys set -g <resource-group> -n <function-app> --function-name ScrapeRecipe --key-name blazor-client
+az functionapp keys set -g MealWiz -n MealWizFunctions --key-type functionKeys --key-name blazor-client
+az functionapp keys list -g MealWiz -n MealWizFunctions --query "functionKeys.\"blazor-client\"" -o tsv
 ```
 
-Store the returned `value` as the `MEAL_IMPORT_FUNCTION_KEY` repository secret. To rotate, run the same command again
-(it generates a new value), update the secret and redeploy the Static Web App.
+Store that value as the `MEAL_IMPORT_FUNCTION_KEY` repository secret, then re-run the Static Web Apps workflow
+(it has `workflow_dispatch`).
 
 The Staging appsettings files and the MAUI Production/Staging files leave `url`/`key` empty because nothing loads them
 yet. On Static Web Apps, the WASM app always runs as `Production` (no `Blazor-Environment` header is set), and
