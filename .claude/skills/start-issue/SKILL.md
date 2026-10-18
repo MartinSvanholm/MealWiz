@@ -142,14 +142,30 @@ along, unreleased work on `dev`.
 
 When an issue's PRs are merged (and released, for a feature), delete the worktrees, so finished work doesn't
 leave copies of the repo behind:
-1. For each session started for this work, including side sessions those sessions started:
-   - check its worktree has no uncommitted changes (`git -C <worktree> status --short`);
-   - check its branch is merged: `git branch --merged origin/dev`, or `origin/main` for hotfixes.
-2. Archive those sessions with `archive_session`, which also removes the worktree. The user approves each one.
-   Tell them which sessions you're archiving and why.
-   - If a worktree still holds uncommitted changes, stop and show the user what's there. Never discard work silently.
-3. Remove anything the app didn't create:
-   - worktrees you made with `git worktree add` (`git worktree remove <path>`);
+1. List the worktrees (`git worktree list`). For each one used by this work, including side sessions those
+   sessions started:
+   - check it has no uncommitted changes (`git -C <worktree> status --short`);
+   - check its branch is merged: `git merge-base --is-ancestor <branch> origin/dev`, or `origin/main` for hotfixes.
+
+   If a worktree holds uncommitted changes, show the user what's there. Removing it is fine only once you've
+   checked the changes already exist on the target branch (renamed paths count) and the user agrees.
+   Never discard work silently.
+2. Ask the user once, listing the sessions. Then archive them with `archive_session`. Archiving a session also
+   archives the side sessions it started.
+3. **Archiving does not reliably delete the worktree folders.** In practice they stayed registered, some on a
+   detached HEAD. So afterwards:
+   - remove each with `git worktree remove .claude/worktrees/<name>`, or `--force` for the agreed uncommitted ones;
+   - then `git worktree prune` and check `git worktree list`.
+4. **Windows blockers:**
+   - "Invalid argument" usually means a path over 260 characters or a locked file. The folder may already be
+     unregistered from git but still on disk.
+   - Delete what's left with a **literal** path (a variable path is blocked as unsafe):
+     `cmd /c 'rmdir /s /q "\\?\C:\Users\marti\Documents\GitHub\MealWiz\.claude\worktrees\<name>"'`.
+   - Files still in use, such as `.vs\…\*.vsidx` or `bin\Debug`, mean Visual Studio or a running app has that
+     worktree open. Don't kill those processes. Ask the user to close the solution, then delete the folder.
+5. Remove the rest:
    - temporary `.claude/launch.json` files;
+   - stray empty folders under `.claude/worktrees/`;
    - local branches that are fully merged (`git branch -d <branch>`; never `-D` without asking).
-4. Switch the main checkout back to an up-to-date `dev` if it's sitting on a merged branch.
+6. Switch the main checkout back to an up-to-date `dev`
+   (`git switch dev; git merge --ff-only origin/dev`) if it's sitting on a merged branch.
