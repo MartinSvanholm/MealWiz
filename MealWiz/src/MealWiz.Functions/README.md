@@ -123,9 +123,9 @@ create are deleted afterwards.
 
 ## Deployment ([MEA-17](https://linear.app/mealwiz/issue/MEA-17))
 
-- **Every pull request** runs `.github/workflows/CI.yml`. Its `functions` job runs the full test suite against
-  `supabase start`, which also applies every migration and the seed. `REQUIRE_SUPABASE=true` makes the integration
-  tests fail instead of skip if the stack isn't reachable.
+- **Every pull request** runs `.github/workflows/CI.yml`. Its single job starts Supabase first, which applies every
+  migration and the seed, then builds both apps and runs every test suite against it. `REQUIRE_SUPABASE=true` makes
+  the integration tests fail instead of skip if the stack isn't reachable.
 - **Pushes to `main`** run `.github/workflows/deploy.yml`. It applies database migrations first. Then, only if this
   project changed, it runs `dotnet publish` and deploys to the `MealWizFunctions` Function App (Flex Consumption,
   .NET 10 isolated). The Blazor app is deployed the same way, only when its code changed. A manual run deploys both.

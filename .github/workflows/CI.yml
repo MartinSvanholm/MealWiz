@@ -10,27 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  web:
-    name: Blazor app build and tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-dotnet@v5
-        with:
-          # 9 for the app, 10 for MealWiz.Shared.Tests.
-          dotnet-version: |
-            9.0.x
-            10.0.x
-
-      - name: Build
-        run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
-
-      - name: Run MealWiz.Shared tests
-        run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
-
-  functions:
-    name: Functions build and tests
+  build_and_test:
+    name: Build and test
     runs-on: ubuntu-latest
     env:
       # Makes LocalSupabaseFixture fail instead of skip, so a broken stack can't hide the integration tests.
@@ -40,7 +21,10 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
+          # 9 for the Blazor app, 10 for MealWiz.Functions and the test projects.
+          dotnet-version: |
+            9.0.x
+            10.0.x
 
       # Pinned to the local version.
       - uses: supabase/setup-cli@v1
@@ -52,12 +36,13 @@ jobs:
       - name: Keep outgoing connections off Supabase's ports
         run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
 
-      # Starting a fresh stack applies every migration and seed.sql, so a broken migration fails here rather than
-      # in production. The full stack (not `supabase db start`) is needed for the REST and Auth APIs the tests use.
+      # Started first, so every test below can use the database. A fresh stack applies every migration and
+      # seed.sql, so a broken migration fails here rather than in production.
       - name: Start Supabase (applies all migrations and the seed)
         run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
 
       - name: Export Supabase credentials
+        id: supabase
         run: |
           status="$(supabase status -o env)"
           url="$(sed -n 's/^API_URL="\(.*\)"$/\1/p' <<< "$status")"
@@ -69,6 +54,14 @@ jobs:
           echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
 
-      # Builds MealWiz.Functions too, since the test project references it.
+      - name: Build Blazor app
+        run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+
+      - name: Run MealWiz.Shared tests
+        run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
+
+      # Builds MealWiz.Functions too, since the test project references it. Runs even if the Blazor steps
+      # failed, so one PR run reports both apps, but not when Supabase never came up.
       - name: Run MealWiz.Functions tests
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
