@@ -1,45 +1,74 @@
 name: CI
 
+# Every pull request, whatever its target branch (so dev -> main release PRs too), builds both apps and runs
+# every test. Compiling is the type check.
 on:
   pull_request:
-    # The Function App's tests run in azure-functions-app.yml.
-    paths-ignore:
-      - 'MealWiz/src/MealWiz.Functions/**'
-      - 'MealWiz/tests/MealWiz.Functions.Tests/**'
-      - '.github/workflows/azure-functions-app.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  DB_CI_check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.111.0
-
-      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
-      # connection can grab one just before Supabase binds it. Moving the range out of the way prevents that.
-      - name: Keep outgoing connections off Supabase's ports
-        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
-
-      # A fresh database applies every migration and seed.sql from scratch, so a broken migration fails here
-      # rather than in production.
-      - name: Apply migrations and seed to a fresh database
-        run: supabase db start
-
-  WASM_CI_Build:
+  web:
+    name: Blazor app build and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-dotnet@v5
         with:
           # 9 for the app, 10 for MealWiz.Shared.Tests.
           dotnet-version: |
             9.0.x
             10.0.x
-      - run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+
+      - name: Build
+        run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+
       - name: Run MealWiz.Shared tests
         run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
+
+  functions:
+    name: Functions build and tests
+    runs-on: ubuntu-latest
+    env:
+      # Makes LocalSupabaseFixture fail instead of skip, so a broken stack can't hide the integration tests.
+      REQUIRE_SUPABASE: 'true'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      # Pinned to the local version.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+
+      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
+      # connection (e.g. an image pull) can grab one just before Supabase binds it: "address already in use".
+      - name: Keep outgoing connections off Supabase's ports
+        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
+
+      # Starting a fresh stack applies every migration and seed.sql, so a broken migration fails here rather than
+      # in production. The full stack (not `supabase db start`) is needed for the REST and Auth APIs the tests use.
+      - name: Start Supabase (applies all migrations and the seed)
+        run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
+
+      - name: Export Supabase credentials
+        run: |
+          status="$(supabase status -o env)"
+          url="$(sed -n 's/^API_URL="\(.*\)"$/\1/p' <<< "$status")"
+          key="$(sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p' <<< "$status")"
+          if [ -z "$url" ] || [ -z "$key" ]; then
+            echo "::error::supabase status didn't report API_URL and SERVICE_ROLE_KEY."
+            exit 1
+          fi
+          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
+
+      # Builds MealWiz.Functions too, since the test project references it.
+      - name: Run MealWiz.Functions tests
+        run: dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
