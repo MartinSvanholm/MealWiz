@@ -73,7 +73,14 @@ public class MealImportStateContainer(
 {
     public static readonly TimeSpan BackgroundEligibilityDelay = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// How long a job may stay pending before the client gives up and fails it. A safety net for a Function that acks
+    /// without ever writing the row; an unreachable or failing Function is already handled when its call returns.
+    /// </summary>
+    public static readonly TimeSpan ResultTimeout = TimeSpan.FromMinutes(3);
+
     public const string ServiceUnreachableMessage = "We couldn't reach the meal import service. Please try again.";
+    public const string TimedOutMessage = "The meal import took too long. Please try again.";
     public const string InvalidUrlMessage = "Please enter a valid meal URL (starting with http:// or https://).";
     public const string ImportInProgressMessage = "A meal import is already in progress.";
 
@@ -83,7 +90,7 @@ public class MealImportStateContainer(
     // Id of the job still awaiting its result; cleared exactly once, by whichever path resolves it first.
     private Guid? activeJobId;
     private IAsyncDisposable? subscription;
-    private CancellationTokenSource? backgroundEligibilityCts;
+    private CancellationTokenSource? jobTimersCts;
 
     public MealImportJobStatus JobStatus { get; private set; } = MealImportJobStatus.Idle;
     public Models.MealImport? CurrentImport { get; private set; }
@@ -154,7 +161,7 @@ public class MealImportStateContainer(
         JobStatus = MealImportJobStatus.AwaitingResult;
         NotifyStateChanged();
 
-        StartBackgroundEligibilityTimer(jobId);
+        StartJobTimers(jobId);
         Track(RunScrape(jobId, sourceUrl));
 
         return Result.Ok();
@@ -203,8 +210,8 @@ public class MealImportStateContainer(
     /// <list type="number">
     /// <item>Re-read the row. If the Function already wrote a result (or an error), use that.</item>
     /// <item>If the Function acked but the row is still pending, keep waiting for Realtime.</item>
-    /// <item>If the Function couldn't be reached, mark the still-pending row failed in the DB.</item>
-    /// <item>If even that isn't possible, fail the job in memory only.</item>
+    /// <item>If the Function couldn't be reached, or answered with an error (it couldn't reach the row), fail the
+    /// job via <see cref="FailPendingJob"/>.</item>
     /// </list>
     /// </summary>
     private async Task RunScrape(Guid jobId, string sourceUrl)
@@ -214,36 +221,11 @@ public class MealImportStateContainer(
             var triggerResult = await mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl));
             if (!IsActive(jobId)) return;
 
-            var rowResult = await mediator.Send(new GetMealImport.GetMealImport.Query(jobId));
-            if (rowResult.IsSuccess && rowResult.Value.IsResolved)
-            {
-                await Resolve(jobId, rowResult.Value);
-                return;
-            }
+            if (await TryResolveFromRow(jobId)) return;
 
             if (triggerResult.IsSuccess) return;
 
-            var markResult = await mediator.Send(new MarkMealImportFailed.MarkMealImportFailed.Command(jobId, ServiceUnreachableMessage));
-            if (markResult.IsSuccess && markResult.Value is not null)
-            {
-                await Resolve(jobId, markResult.Value);
-                return;
-            }
-
-            if (markResult.IsSuccess)
-            {
-                // The conditional update matched no rows, so the row stopped being pending — the Function
-                // resolved it after all. Show what it wrote.
-                var rereadResult = await mediator.Send(new GetMealImport.GetMealImport.Query(jobId));
-                if (rereadResult.IsSuccess && rereadResult.Value.IsResolved)
-                {
-                    await Resolve(jobId, rereadResult.Value);
-                    return;
-                }
-            }
-
-            await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
-                jobId, CurrentImport, ServiceUnreachableMessage, timeProvider.GetUtcNow().UtcDateTime));
+            await FailPendingJob(jobId, ServiceUnreachableMessage);
         }
         catch (Exception)
         {
@@ -252,10 +234,44 @@ public class MealImportStateContainer(
         }
     }
 
+    /// <summary>Re-reads the job's row and resolves the job if the row already has a final status.</summary>
+    private async Task<bool> TryResolveFromRow(Guid jobId)
+    {
+        var rowResult = await mediator.Send(new GetMealImport.GetMealImport.Query(jobId));
+        if (!rowResult.IsSuccess || !rowResult.Value.IsResolved) return false;
+
+        await Resolve(jobId, rowResult.Value);
+        return true;
+    }
+
+    /// <summary>
+    /// Fails a job whose row is still pending although nothing is going to resolve it:
+    /// <list type="number">
+    /// <item>Mark the still-pending row failed in the DB, so it doesn't stay pending.</item>
+    /// <item>If the row stopped being pending first, the Function resolved it after all: show what it wrote.</item>
+    /// <item>If neither is possible, fail the job in memory only.</item>
+    /// </list>
+    /// </summary>
+    private async Task FailPendingJob(Guid jobId, string errorMessage)
+    {
+        var markResult = await mediator.Send(new MarkMealImportFailed.MarkMealImportFailed.Command(jobId, errorMessage));
+        if (markResult.IsSuccess && markResult.Value is not null)
+        {
+            await Resolve(jobId, markResult.Value);
+            return;
+        }
+
+        // A success without a row means the conditional update matched no rows, so the row stopped being pending.
+        if (markResult.IsSuccess && await TryResolveFromRow(jobId)) return;
+
+        await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
+            jobId, CurrentImport, errorMessage, timeProvider.GetUtcNow().UtcDateTime));
+    }
+
     /// <summary>
     /// Finishes the job with its final row. Realtime, the post-ack re-read and the failure fallback can all race
     /// to get here, so only the first call for the active job does anything. It stops the subscription and the
-    /// 30 s timer, then publishes the result. For a background job it also does what the Import page would have done:
+    /// job's timers, then publishes the result. For a background job it also does what the Import page would have done:
     /// saves the meal on success, or toasts the error on failure.
     /// </summary>
     private async Task Resolve(Guid jobId, Models.MealImport row)
@@ -266,7 +282,7 @@ public class MealImportStateContainer(
             activeJobId = null;
         }
 
-        backgroundEligibilityCts?.Cancel();
+        jobTimersCts?.Cancel();
         await DisposeSubscription();
 
         row = MealImportJobHelper.EnsureUsableResult(row);
@@ -337,14 +353,18 @@ public class MealImportStateContainer(
         snackbar.Add($"\"{meal.Name}\" was imported and added to your meals.", Severity.Success);
     }
 
-    /// <summary>Starts the 30 s countdown after which the Import page may offer "Continue in background".</summary>
-    private void StartBackgroundEligibilityTimer(Guid jobId)
+    /// <summary>
+    /// Starts the job's countdowns: 30 s until the Import page may offer "Continue in background", and
+    /// <see cref="ResultTimeout"/> until the job is given up on. Resolving the job cancels both.
+    /// </summary>
+    private void StartJobTimers(Guid jobId)
     {
-        backgroundEligibilityCts?.Dispose();
+        jobTimersCts?.Dispose();
         var cts = new CancellationTokenSource();
-        backgroundEligibilityCts = cts;
+        jobTimersCts = cts;
 
         Track(WaitForBackgroundEligibility(jobId, cts.Token));
+        Track(WaitForResultTimeout(jobId, cts.Token));
     }
 
     /// <summary>
@@ -366,6 +386,36 @@ public class MealImportStateContainer(
 
         CanContinueInBackground = true;
         NotifyStateChanged();
+    }
+
+    /// <summary>
+    /// Waits out <see cref="ResultTimeout"/>, then fails a job that is still pending, so the import never spins
+    /// forever. A result written in the meantime (and missed by Realtime) still wins.
+    /// </summary>
+    private async Task WaitForResultTimeout(Guid jobId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(ResultTimeout, timeProvider, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (!IsActive(jobId)) return;
+
+        try
+        {
+            if (await TryResolveFromRow(jobId)) return;
+
+            await FailPendingJob(jobId, TimedOutMessage);
+        }
+        catch (Exception)
+        {
+            await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
+                jobId, CurrentImport, TimedOutMessage, timeProvider.GetUtcNow().UtcDateTime));
+        }
     }
 
     /// <summary>Whether <paramref name="jobId"/> is still the job awaiting a result (i.e. hasn't been resolved yet).</summary>
@@ -398,8 +448,8 @@ public class MealImportStateContainer(
     public void Dispose()
     {
         lock (jobLock) activeJobId = null;
-        backgroundEligibilityCts?.Cancel();
-        backgroundEligibilityCts?.Dispose();
+        jobTimersCts?.Cancel();
+        jobTimersCts?.Dispose();
         _ = DisposeSubscription();
     }
 }

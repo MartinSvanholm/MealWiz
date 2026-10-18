@@ -23,7 +23,7 @@ var host = new HostBuilder()
         services.AddSingleton<IRecipeMapper, RecipeMapper>();
 
         services.AddSingleton<IServiceRoleSupabaseClientFactory, ServiceRoleSupabaseClientFactory>();
-        services.AddScoped<ScrapeRecipeHandler>();
+        services.AddScoped<IScrapeRecipeHandler, ScrapeRecipeHandler>();
     })
     .Build();
 

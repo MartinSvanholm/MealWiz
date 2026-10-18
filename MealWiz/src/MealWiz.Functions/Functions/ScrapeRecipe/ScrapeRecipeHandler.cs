@@ -9,30 +9,38 @@ namespace MealWiz.Functions.Functions.ScrapeRecipe;
 
 public record ScrapeRecipeRequest(Guid JobId, string Url);
 
+public interface IScrapeRecipeHandler
+{
+    Task<Result> HandleAsync(ScrapeRecipeRequest request, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Orchestrates fetch -> parse -> map -> write-back for a single meal_imports row. Every fallible
 /// step returns a <see cref="Result{T}"/> instead of throwing — same convention as the main project's
-/// CQRS handlers (<c>Result.Try(...)</c> around every Supabase call). This is what makes "never an
-/// unhandled exception" (required because the client only reads the meal_imports row via Realtime,
-/// never this Function's HTTP response) hold without a top-level try/catch: every operation that can
-/// throw is wrapped in <c>Result.Try</c> right at the point it happens, so there's nothing left to
-/// escape.
+/// CQRS handlers (<c>Result.Try(...)</c> around every Supabase call), so no exception escapes without
+/// a top-level try/catch.
+///
+/// The returned <see cref="Result"/> says whether the meal_imports row now tells the client how the job
+/// went. It succeeds when this call resolved the row (succeeded, or failed with the scrape error), or
+/// the row was already resolved. It fails when the row couldn't be reached: the Supabase client couldn't
+/// be created, the row couldn't be loaded or wasn't found, or the result couldn't be written back. The
+/// row is then still pending and only the caller can fail it, so the Function answers with an error status.
 /// </summary>
 public class ScrapeRecipeHandler(
     IServiceRoleSupabaseClientFactory clientFactory,
     IRecipeFetcher recipeFetcher,
     IRecipeParser recipeParser,
     IRecipeMapper recipeMapper,
-    ILogger<ScrapeRecipeHandler> logger)
+    ILogger<ScrapeRecipeHandler> logger) : IScrapeRecipeHandler
 {
-    public async Task HandleAsync(ScrapeRecipeRequest request, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(ScrapeRecipeRequest request, CancellationToken cancellationToken)
     {
         var clientResult = await Result.Try(() => clientFactory.CreateAsync(cancellationToken));
         if (clientResult.IsFailed)
         {
             logger.LogError("Failed to create the Supabase service-role client for job {JobId}: {Error}",
                 request.JobId, Describe(clientResult.Errors));
-            return;
+            return clientResult.ToResult();
         }
 
         var supabaseClient = clientResult.Value;
@@ -46,13 +54,15 @@ public class ScrapeRecipeHandler(
         {
             logger.LogError("meal_imports row {JobId} could not be loaded: {Error}",
                 request.JobId, Describe(importRowResult.Errors));
-            return;
+            return importRowResult.ToResult();
         }
 
+        // The client inserts the row before calling, so a missing row means this Function reads a different
+        // database than the client (or the caller made the jobId up). Nothing here can resolve it.
         if (importRowResult.Value is null)
         {
-            logger.LogWarning("meal_imports row {JobId} was not found.", request.JobId);
-            return;
+            logger.LogError("meal_imports row {JobId} was not found.", request.JobId);
+            return Result.Fail($"meal_imports row {request.JobId} was not found.");
         }
 
         var importRow = importRowResult.Value;
@@ -63,7 +73,7 @@ public class ScrapeRecipeHandler(
         {
             logger.LogWarning("meal_imports row {JobId} is no longer pending (status {Status}); skipping.",
                 request.JobId, importRow.Status);
-            return;
+            return Result.Ok();
         }
 
         if (!string.Equals(request.Url, importRow.SourceUrl, StringComparison.Ordinal))
@@ -103,7 +113,7 @@ public class ScrapeRecipeHandler(
         {
             logger.LogError("Failed to write meal_imports row {JobId} back: {Error}",
                 request.JobId, Describe(updateResult.Errors));
-            return;
+            return updateResult.ToResult();
         }
 
         if (updateResult.Value.Models.Count == 0)
@@ -111,6 +121,8 @@ public class ScrapeRecipeHandler(
             logger.LogWarning("meal_imports row {JobId} stopped being pending during the scrape; result discarded.",
                 request.JobId);
         }
+
+        return Result.Ok();
     }
 
     private async Task<Result<MealImportPayload>> ScrapeAndParseAsync(string url, CancellationToken cancellationToken)
