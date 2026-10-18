@@ -44,8 +44,8 @@ auth is the [hardening path](#future-hardening-supabase-jwt) below.
 The key is still kept out of git, so it can be rotated without a commit:
 
 - `MauiWASM/wwwroot/appsettings.Production.json` commits the Function `url` with an empty `key`.
-- The Static Web Apps workflow (`.github/workflows/azure-static-web-apps-*.yml`) writes the `MEAL_IMPORT_FUNCTION_KEY`
-  GitHub secret into that file before deploying, including on rollback. The deploy fails if the secret isn't set.
+- The Blazor deploy job in `.github/workflows/deploy.yml` writes the `MEAL_IMPORT_FUNCTION_KEY` GitHub secret into
+  that file before deploying. The deploy fails if the secret isn't set.
 
 The client uses a dedicated host-level key named `blazor-client` on `MealWizFunctions` (resource group `MealWiz`), so it
 can be rotated without touching the `default` key. It's host-level rather than scoped to `ScrapeRecipe` because the
@@ -60,8 +60,8 @@ az functionapp keys set -g MealWiz -n MealWizFunctions --key-type functionKeys -
 az functionapp keys list -g MealWiz -n MealWizFunctions --query "functionKeys.\"blazor-client\"" -o tsv
 ```
 
-Store that value as the `MEAL_IMPORT_FUNCTION_KEY` repository secret, then re-run the Static Web Apps workflow
-(it has `workflow_dispatch`).
+Store that value as the `MEAL_IMPORT_FUNCTION_KEY` repository secret, then run the Deploy workflow manually
+(`workflow_dispatch`), which redeploys both apps.
 
 The Staging appsettings files and the MAUI Production/Staging files leave `url`/`key` empty because nothing loads them
 yet. On Static Web Apps, the WASM app always runs as `Production` (no `Blazor-Environment` header is set), and
@@ -123,14 +123,12 @@ create are deleted afterwards.
 
 ## Deployment ([MEA-17](https://linear.app/mealwiz/issue/MEA-17))
 
-`.github/workflows/azure-functions-app.yml` tests and deploys this project. It's path-filtered to it, so Blazor-only
-changes don't redeploy the function. The Static Web Apps and `CI.yml` workflows ignore this project in turn.
-
-- **Pull requests** touching this project, its tests, `supabase/` or `global.json` run the full test suite against
-  `supabase start`. `REQUIRE_SUPABASE=true` makes the integration tests fail instead of skip if the stack isn't
-  reachable.
-- **Pushes to `main`** (or a manual run on `main`) run the tests, then `dotnet publish` and deploy to the
-  `MealWizFunctions` Function App (Flex Consumption, .NET 10 isolated).
+- **Every pull request** runs `.github/workflows/CI.yml`. Its single job starts Supabase first, which applies every
+  migration and the seed, then builds both apps and runs every test suite against it. `REQUIRE_SUPABASE=true` makes
+  the integration tests fail instead of skip if the stack isn't reachable.
+- **Pushes to `main`** run `.github/workflows/deploy.yml`. It applies database migrations first. Then, only if this
+  project changed, it runs `dotnet publish` and deploys to the `MealWizFunctions` Function App (Flex Consumption,
+  .NET 10 isolated). The Blazor app is deployed the same way, only when its code changed. A manual run deploys both.
 
 The workflow signs in with OIDC, not a publish profile. The portal-provisioned user-assigned identity
 `MealWizFunctions-id-b54a` has Website Contributor on this Function App only. Its federated credential trusts this

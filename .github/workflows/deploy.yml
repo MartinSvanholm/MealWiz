@@ -1,0 +1,129 @@
+name: Deploy
+
+# Every push to main (normally a merged dev -> main PR, already checked by CI). Database migrations go first, so new
+# code never meets an old schema. Then each app deploys only if its code changed. A manual run deploys both.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Queue deploys instead of running two at once.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      functions: ${{ steps.filter.outputs.functions }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # Compares the push against the previous tip of main.
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'MealWiz/MauiWASM/**'
+              - 'MealWiz/MealWiz/MealWiz.Shared/**'
+              - '.github/workflows/deploy.yml'
+            functions:
+              - 'MealWiz/src/MealWiz.Functions/**'
+              - '.github/workflows/deploy.yml'
+
+  migrate:
+    name: Apply database migrations
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.PRODUCTION_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+
+      # Pinned (matches local) so a new CLI release can't change how production migrations are pushed.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+
+      - run: supabase link --project-ref $SUPABASE_PROJECT_ID
+
+      # Applies only migrations the remote doesn't have yet, so it's a no-op when there are none.
+      - run: supabase db push
+
+  # Skipped if the migrations fail (an `if:` without a status function implies success() of every need).
+  deploy_web:
+    name: Deploy Blazor app
+    needs: [changes, migrate]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # The function key isn't a true secret (it ships in the public bundle), but it's kept out of git.
+      - name: Inject MealImportFunction key
+        env:
+          MEAL_IMPORT_FUNCTION_KEY: ${{ secrets.MEAL_IMPORT_FUNCTION_KEY }}
+        run: |
+          if [ -z "$MEAL_IMPORT_FUNCTION_KEY" ]; then
+            echo "::error::The MEAL_IMPORT_FUNCTION_KEY secret is not set; meal imports would fail with 401."
+            exit 1
+          fi
+          settings=MealWiz/MauiWASM/wwwroot/appsettings.Production.json
+          jq --arg key "$MEAL_IMPORT_FUNCTION_KEY" '.MealImportFunction.key = $key' "$settings" > "$settings.tmp"
+          mv "$settings.tmp" "$settings"
+
+      - name: Build and deploy to Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_HILL_0F87A3A10 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/MealWiz/MauiWASM"
+          api_location: ""
+          output_location: "wwwroot"
+
+  deploy_functions:
+    name: Deploy Functions
+    needs: [changes, migrate]
+    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.functions == 'true'
+    # The Azure federated credential trusts refs/heads/main and nothing else, so don't add an `environment:` here:
+    # it changes the OIDC subject and the login would be rejected.
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AZURE_FUNCTIONAPP_NAME: MealWizFunctions
+      AZURE_FUNCTIONAPP_PACKAGE_PATH: ./output
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish MealWiz/src/MealWiz.Functions -c Release -o ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+
+      # Managed identity provisioned by the portal, scoped to Website Contributor on this Function App only.
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1F185598B5A94E529C285CEB2B9BCE15 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_336479C95381413E8418BFB867EA1255 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F8EA5A41E1C6403E91728DF4A86A6838 }}
+
+      - name: Deploy
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
