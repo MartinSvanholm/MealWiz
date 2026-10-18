@@ -6,8 +6,9 @@ using MediatR;
 namespace MealWiz.Shared.Features.MealImport.TriggerScrapeRecipe;
 
 /// <summary>
-/// Calls the ScrapeRecipe Azure Function. Its response is only an ack — the meal_imports row (observed via
-/// Realtime) is the source of truth for the outcome.
+/// Calls the ScrapeRecipe Azure Function. The meal_imports row (observed via Realtime) is the source of truth for
+/// the outcome. The response only says whether the row has one: a 2xx means it does, while an error status (502
+/// when the Function couldn't load or write the row) fails this command, so the caller fails the still-pending row.
 /// </summary>
 public static class TriggerScrapeRecipe
 {
