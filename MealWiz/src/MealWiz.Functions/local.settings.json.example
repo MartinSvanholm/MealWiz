@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "Supabase:Url": "http://127.0.0.1:54321",
+    "Supabase:ServiceRoleKey": "<service_role key from `supabase status`>"
+  },
+  "Host": {
+    "CORS": "http://localhost:5053,https://localhost:7033"
+  }
+}

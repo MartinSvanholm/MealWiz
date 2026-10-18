@@ -34,7 +34,7 @@ OnClick="SaveMeal" />
 
             foreach (var ingredient in pendingIngredients)
             {
-                var ingredientResult = await _mediator.Send(new SaveIngredient.Command(ingredient));
+                var ingredientResult = await _mediator.Send(new SaveIngredient.Command(ingredient, _mealsStateContainer.MealToEdit.Id));
                 ingredientResult.Handle(_snackbar);
 
                 if (ingredientResult.IsFailed) return;

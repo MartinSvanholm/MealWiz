@@ -36,9 +36,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
-        _mealPlanStateContainer.OnStateChanged += StateChanged;
+        try
+        {
+            Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
+            _mealPlanStateContainer.OnStateChanged += StateChanged;
 
+        }
+        catch (Exception e)
+        {
+            
+            throw;
+        }
         base.OnInitialized();
     }
 

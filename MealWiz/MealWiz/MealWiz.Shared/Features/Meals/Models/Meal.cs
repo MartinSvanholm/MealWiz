@@ -56,7 +56,7 @@ public class Meal
     }
 
     public IReadOnlyList<string> RecipeSteps =>
-        Recipe.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        Recipe?.Split(["\r\n", "\r", "\n"], StringSplitOptions.RemoveEmptyEntries) ?? [];
 
     public MealDb MapToMealDb()
     {

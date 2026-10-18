@@ -1,37 +1,67 @@
 name: CI
 
+# Every pull request, whatever its target branch (so dev -> main release PRs too), builds both apps and runs
+# every test. Compiling is the type check.
 on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  DB_CI_check:
+  build_and_test:
+    name: Build and test
     runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Start Supabase local development setup
-        run: supabase db start
-
-      - name: Verify generated types are checked in
-        run: |
-          supabase gen types typescript --local > types.gen.ts
-          if ! git diff --ignore-space-at-eol --exit-code --quiet types.gen.ts; then
-            echo "Detected uncommitted changes after build. See status below:"
-            git diff
-            exit 1
-          fi
-
-  WASM_CI_Build:
-    runs-on: ubuntu-latest
+    env:
+      # Makes LocalSupabaseFixture fail instead of skip, so a broken stack can't hide the integration tests.
+      REQUIRE_SUPABASE: 'true'
     steps:
       - uses: actions/checkout@v6
+
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
-      - run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+          # 9 for the Blazor app, 10 for MealWiz.Functions and the test projects.
+          dotnet-version: |
+            9.0.x
+            10.0.x
+
+      # Pinned to the local version.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.111.0
+
+      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
+      # connection (e.g. an image pull) can grab one just before Supabase binds it: "address already in use".
+      - name: Keep outgoing connections off Supabase's ports
+        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
+
+      # Started first, so every test below can use the database. A fresh stack applies every migration and
+      # seed.sql, so a broken migration fails here rather than in production.
+      - name: Start Supabase (applies all migrations and the seed)
+        run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
+
+      - name: Export Supabase credentials
+        id: supabase
+        run: |
+          status="$(supabase status -o env)"
+          url="$(sed -n 's/^API_URL="\(.*\)"$/\1/p' <<< "$status")"
+          key="$(sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p' <<< "$status")"
+          if [ -z "$url" ] || [ -z "$key" ]; then
+            echo "::error::supabase status didn't report API_URL and SERVICE_ROLE_KEY."
+            exit 1
+          fi
+          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
+
+      - name: Build Blazor app
+        run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+
+      - name: Run MealWiz.Shared tests
+        run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
+
+      # Builds MealWiz.Functions too, since the test project references it. Runs even if the Blazor steps
+      # failed, so one PR run reports both apps, but not when Supabase never came up.
+      - name: Run MealWiz.Functions tests
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
+        run: dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
