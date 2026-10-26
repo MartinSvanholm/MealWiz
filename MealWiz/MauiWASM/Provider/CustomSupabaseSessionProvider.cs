@@ -23,7 +23,18 @@ namespace MauiWASM.Provider
                 return new Session();
 
             var sessionJson = localStorage.GetItem<string>(SessionKey);
-            return JsonConvert.DeserializeObject<Session>(sessionJson);
+
+            // The client loads the session while it's being built at startup, so unreadable JSON (corrupt, or
+            // written by an older format) must not throw: drop it and start signed out instead.
+            try
+            {
+                return JsonConvert.DeserializeObject<Session>(sessionJson ?? string.Empty) ?? new Session();
+            }
+            catch (JsonException)
+            {
+                localStorage.RemoveItem(SessionKey);
+                return new Session();
+            }
         }
 
         public void SaveSession(Session session)

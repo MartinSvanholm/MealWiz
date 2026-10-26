@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="Moq" Version="4.21.0" />
+    <PackageReference Include="bunit" Version="2.13.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\MauiWASM\MauiWASM.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The real config files the web app ships, read by AppSettingsTests. -->
+    <None Include="..\..\MauiWASM\wwwroot\appsettings.*.json" LinkBase="appsettings" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

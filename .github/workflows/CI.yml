@@ -60,6 +60,11 @@ jobs:
       - name: Run MealWiz.Shared tests
         run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
 
+      # The web host: DI composition, session storage, appsettings and routes. Needs no Supabase.
+      - name: Run MauiWASM tests
+        if: ${{ !cancelled() }}
+        run: dotnet test --project MealWiz/tests/MauiWASM.Tests
+
       # Builds MealWiz.Functions too, since the test project references it. Runs even if the Blazor steps
       # failed, so one PR run reports both apps, but not when Supabase never came up.
       - name: Run MealWiz.Functions tests
