@@ -159,6 +159,21 @@ public sealed class E2ESupabase
             throw new InvalidOperationException($"Meal import {jobId} was not pending, so it wasn't resolved.");
     }
 
+    /// <summary>
+    /// Bumps <c>updated_at</c> on a still-pending meal_imports row. Realtime pushes it, but the app ignores updates
+    /// that don't resolve the job, so it proves the subscription works without changing what the user sees.
+    /// </summary>
+    public async Task TouchPendingMealImportAsync(Guid jobId)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Patch, $"rest/v1/meal_imports?id=eq.{jobId}&status=eq.pending")
+        {
+            Content = JsonContent.Create(new { updated_at = DateTimeOffset.UtcNow })
+        };
+
+        using var response = await _http.SendAsync(request);
+        await EnsureSuccessAsync(response, $"Touching meal import {jobId}");
+    }
+
     /// <summary>The row's status as stored, e.g. to check that the app failed it itself.</summary>
     public async Task<string?> GetMealImportStatusAsync(Guid jobId)
     {

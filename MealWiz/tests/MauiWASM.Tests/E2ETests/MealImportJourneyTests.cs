@@ -117,8 +117,12 @@ public class MealImportJourneyTests : E2ETestBase
         {
             await Expect(Page.GetByTestId("import-progress")).ToBeVisibleAsync();
 
-            // Write the result only once the job's channel is subscribed as the user, or Realtime drops it (MEA-43).
-            await realtime.WaitUntilLiveAsync(sentJobId.ToString()).WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            // Write the result only once the job's channel delivers to the user, or Realtime drops it (MEA-43).
+            await realtime.WaitUntilDeliveringAsync(
+                sentJobId.ToString(),
+                () => Supabase.TouchPendingMealImportAsync(sentJobId),
+                TimeSpan.FromSeconds(30),
+                TestContext.Current.CancellationToken);
         }
 
         return sentJobId;

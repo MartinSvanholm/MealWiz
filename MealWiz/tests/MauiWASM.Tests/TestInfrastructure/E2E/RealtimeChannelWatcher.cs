@@ -4,20 +4,20 @@ using Microsoft.Playwright;
 namespace MauiWASM.Tests.TestInfrastructure.E2E;
 
 /// <summary>
-/// Reads the page's Supabase Realtime frames to tell when a channel's postgres_changes subscription is really live
-/// for the signed-in user, so a test can write a row without racing the subscription.
+/// Reads the page's Supabase Realtime frames, so a test can make sure a channel actually delivers changes to the
+/// signed-in user before it writes the row the app is waiting for.
 /// <para>
-/// Why it's needed (MEA-43): the app joins the channel with the anon key and only then sends the user's access_token,
-/// which makes Realtime re-subscribe. Until that second "Subscribed to PostgreSQL" arrives, RLS hides the user's row
-/// and updates are dropped. The channel counts as live once the access_token has been sent and every join and token
-/// frame has been confirmed.
+/// Why it's needed (MEA-43): the app joins the channel with the anon key and only then sends the user's access_token.
+/// Until Realtime has re-subscribed with the user's claims, RLS hides the row and updates are dropped. How many
+/// "Subscribed to PostgreSQL" messages that takes differs between Realtime versions, so instead of counting them
+/// this waits for proof of delivery: a harmless change to the row arriving over the socket.
 /// </para>
 /// </summary>
 public sealed class RealtimeChannelWatcher
 {
     private readonly object _gate = new();
-    private readonly Dictionary<string, Channel> _channels = [];
-    private readonly List<(string TopicFragment, TaskCompletionSource Live)> _waiters = [];
+    private readonly Dictionary<string, int> _changesByTopic = [];
+    private readonly List<(string TopicFragment, int Beyond, TaskCompletionSource Arrived)> _waiters = [];
 
     /// <summary>Attach before the page opens its Realtime socket, i.e. before navigating.</summary>
     public RealtimeChannelWatcher(IPage page)
@@ -25,40 +25,70 @@ public sealed class RealtimeChannelWatcher
         page.WebSocket += (_, socket) =>
         {
             if (!socket.Url.Contains("/realtime/", StringComparison.Ordinal)) return;
-            socket.FrameSent += (_, frame) => OnFrame(frame.Text, sent: true);
-            socket.FrameReceived += (_, frame) => OnFrame(frame.Text, sent: false);
+            socket.FrameReceived += (_, frame) => OnFrameReceived(frame.Text);
         };
     }
 
-    /// <summary>Completes once a channel whose topic contains <paramref name="topicFragment"/> is live.</summary>
-    public Task WaitUntilLiveAsync(string topicFragment)
+    /// <summary>
+    /// Calls <paramref name="touch"/> (a change the app ignores) until that change arrives on a channel whose topic
+    /// contains <paramref name="topicFragment"/>. Each touch gets a second to arrive; gives up after
+    /// <paramref name="timeout"/>.
+    /// </summary>
+    public async Task WaitUntilDeliveringAsync(string topicFragment, Func<Task> touch, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var live = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(timeout);
+
+        while (true)
+        {
+            var seen = ChangesSeen(topicFragment);
+            await touch();
+
+            try
+            {
+                await WaitForChangeAsync(topicFragment, seen).WaitAsync(TimeSpan.FromSeconds(1), deadline.Token);
+                return;
+            }
+            catch (TimeoutException)
+            {
+                // Not subscribed as the user yet: touch again.
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException($"No Realtime change arrived for '{topicFragment}' within {timeout}.");
+            }
+        }
+    }
+
+    private int ChangesSeen(string topicFragment)
+    {
+        lock (_gate)
+            return _changesByTopic.Where(t => t.Key.Contains(topicFragment, StringComparison.Ordinal)).Sum(t => t.Value);
+    }
+
+    private Task WaitForChangeAsync(string topicFragment, int beyond)
+    {
+        var arrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (_gate)
         {
-            _waiters.Add((topicFragment, live));
+            _waiters.Add((topicFragment, beyond, arrived));
             Release();
         }
 
-        return live.Task;
+        return arrived.Task;
     }
 
-    private void OnFrame(string? text, bool sent)
+    private void OnFrameReceived(string? text)
     {
         if (text is null) return;
 
-        string? topic, @event;
-        bool subscribed;
+        string? topic;
         try
         {
             using var json = JsonDocument.Parse(text);
             var root = json.RootElement;
+            if (!root.TryGetProperty("event", out var e) || e.GetString() != "postgres_changes") return;
             topic = root.TryGetProperty("topic", out var t) ? t.GetString() : null;
-            @event = root.TryGetProperty("event", out var e) ? e.GetString() : null;
-            subscribed = !sent && @event == "system"
-                && root.TryGetProperty("payload", out var payload)
-                && payload.TryGetProperty("extension", out var extension) && extension.GetString() == "postgres_changes"
-                && payload.TryGetProperty("status", out var status) && status.GetString() == "ok";
         }
         catch (JsonException)
         {
@@ -69,17 +99,7 @@ public sealed class RealtimeChannelWatcher
 
         lock (_gate)
         {
-            if (!_channels.TryGetValue(topic, out var channel))
-                _channels[topic] = channel = new Channel();
-
-            if (sent && @event == "phx_join") channel.Requested++;
-            if (sent && @event == "access_token")
-            {
-                channel.Requested++;
-                channel.HasUserToken = true;
-            }
-            if (subscribed) channel.Confirmed++;
-
+            _changesByTopic[topic] = _changesByTopic.GetValueOrDefault(topic) + 1;
             Release();
         }
     }
@@ -89,19 +109,11 @@ public sealed class RealtimeChannelWatcher
     {
         foreach (var waiter in _waiters.ToList())
         {
-            var live = _channels.Any(c => c.Key.Contains(waiter.TopicFragment, StringComparison.Ordinal)
-                                          && c.Value.HasUserToken && c.Value.Confirmed >= c.Value.Requested);
-            if (!live) continue;
+            var seen = _changesByTopic.Where(t => t.Key.Contains(waiter.TopicFragment, StringComparison.Ordinal)).Sum(t => t.Value);
+            if (seen <= waiter.Beyond) continue;
 
-            waiter.Live.TrySetResult();
+            waiter.Arrived.TrySetResult();
             _waiters.Remove(waiter);
         }
-    }
-
-    private sealed class Channel
-    {
-        public int Requested { get; set; }
-        public int Confirmed { get; set; }
-        public bool HasUserToken { get; set; }
     }
 }

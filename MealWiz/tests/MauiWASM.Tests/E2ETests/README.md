@@ -41,7 +41,7 @@ Environment variables:
   pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <path>/trace.zip
   ```
 
-- **`RealtimeChannelWatcher`** reads the page's Realtime frames to tell when a channel is subscribed as the signed-in user. The app joins with the anon key first and only then sends the user token (MEA-43), so a row written too early is never pushed. `console.log` also records the Realtime frames, minus heartbeats.
+- **`RealtimeChannelWatcher`** proves a Realtime channel delivers to the signed-in user before a test writes the row the app waits for. It touches the pending row until that change arrives over the socket. Without it, a row written too early is never pushed, because the app joins with the anon key first and only then sends the user token (MEA-43). `console.log` also records the Realtime frames, minus heartbeats.
 
 The import journey doesn't run the Functions app. The browser's call to `/functions/api/ScrapeRecipe` is intercepted and acknowledged, and the test writes the row's result with the service role, so the app can only learn the result over Realtime. Scraping is covered by MealWiz.Functions.Tests.
 
