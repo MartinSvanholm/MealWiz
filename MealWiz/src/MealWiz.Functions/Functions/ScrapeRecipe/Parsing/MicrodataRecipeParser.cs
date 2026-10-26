@@ -26,13 +26,13 @@ public class MicrodataRecipeParser : IMicrodataRecipeParser
         if (string.IsNullOrWhiteSpace(name)) return null;
 
         var ingredients = GetItemPropElements(recipeScope, "recipeIngredient")
-            .Select(el => el.TextContent.Trim())
+            .Select(el => GetItemPropValue(el).Trim())
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .Select(text => new ParsedIngredient { Name = text })
             .ToList();
 
         var instructionSteps = GetItemPropElements(recipeScope, "recipeInstructions")
-            .Select(el => el.TextContent.Trim())
+            .Select(el => GetItemPropValue(el).Trim())
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .ToList();
 
@@ -45,7 +45,11 @@ public class MicrodataRecipeParser : IMicrodataRecipeParser
     }
 
     private static string? GetItemPropText(IElement scope, string propertyName) =>
-        GetItemPropElements(scope, propertyName).FirstOrDefault()?.TextContent;
+        GetItemPropElements(scope, propertyName).FirstOrDefault() is { } element ? GetItemPropValue(element) : null;
+
+    // Microdata puts a value that isn't visible text in a content attribute, e.g. <meta itemprop="name" content="…">.
+    private static string GetItemPropValue(IElement element) =>
+        element.GetAttribute("content") ?? element.TextContent;
 
     private static IEnumerable<IElement> GetItemPropElements(IElement scope, string propertyName) =>
         scope.QuerySelectorAll($"[itemprop='{propertyName}']")
