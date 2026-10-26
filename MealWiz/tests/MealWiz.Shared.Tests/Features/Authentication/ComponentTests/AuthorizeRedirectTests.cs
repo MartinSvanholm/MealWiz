@@ -17,15 +17,16 @@ namespace MealWiz.Shared.Tests.Features.Authentication.ComponentTests;
 /// <summary>[Authorize] pages: anonymous users are sent to /login, signed-in users get the page.</summary>
 public class AuthorizeRedirectTests : ComponentTestBase
 {
-    // Pages that don't require sign-in. LoginPage by design; the other two are gaps to close (follow-up to MEA-23)
-    // — remove them from this list when they get [Authorize].
-    private static readonly Type[] PublicPages = [typeof(LoginPage), typeof(GroceryListPage), typeof(EditMealPage)];
+    // Pages that don't require sign-in. Adding one here should be a deliberate decision.
+    private static readonly Type[] PublicPages = [typeof(LoginPage)];
 
     public static TheoryData<Type, string> ProtectedPages => new()
     {
         { typeof(MealPlanPage), "Week" },
         { typeof(MealsPage), "Your meals" },
+        { typeof(EditMealPage), "Edit meal" },
         { typeof(ImportMealPage), "Import meal" },
+        { typeof(GroceryListPage), "Grocery list" },
         { typeof(AccountPage), "Dark mode" },
     };
 
