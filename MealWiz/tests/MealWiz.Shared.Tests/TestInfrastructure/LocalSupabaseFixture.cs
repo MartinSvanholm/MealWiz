@@ -39,6 +39,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
 
     private readonly ConcurrentBag<Guid> _createdUserIds = [];
     private Credentials _credentials = null!;
+    private Task<TestUser>? _otherUser;
 
     public string? SkipReason { get; private set; }
     public bool IsAvailable => SkipReason is null;
@@ -82,15 +83,37 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
             ?? throw new InvalidOperationException($"Creating test user {email} returned no user.");
         _createdUserIds.Add(created.Id);
 
+        var client = await CreateSignedOutClientAsync();
+        await client.Auth.SignIn(email, password);
+
+        return new TestUser(created.Id, email, password, client);
+    }
+
+    /// <summary>
+    /// A second user shared by the tests in the class, for cross-user checks. Created on first use, so only classes
+    /// that need one pay a sign-in (GoTrue allows 30 per 5 minutes locally).
+    /// </summary>
+    public Task<TestUser> GetOtherUserAsync()
+    {
+        lock (_createdUserIds)
+        {
+            return _otherUser ??= CreateSignedInUserAsync();
+        }
+    }
+
+    /// <summary>
+    /// A client with the anon key and no session, like the app before sign-in. Use it for the signed-out paths and
+    /// for signing in through a handler.
+    /// </summary>
+    public async Task<Client> CreateSignedOutClientAsync()
+    {
         var client = new Client(_credentials.Url, _credentials.AnonKey, new SupabaseOptions
         {
             AutoRefreshToken = false,
             AutoConnectRealtime = false
         });
         await client.InitializeAsync();
-        await client.Auth.SignIn(email, password);
-
-        return new TestUser(created.Id, email, client);
+        return client;
     }
 
     public async ValueTask DisposeAsync()
@@ -258,5 +281,5 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     private sealed record CreatedUser([property: JsonPropertyName("id")] Guid Id);
 }
 
-/// <summary>A throwaway user and a <see cref="Supabase.Client"/> signed in as it with the anon key.</summary>
-public sealed record TestUser(Guid Id, string Email, Client Client);
+/// <summary>A throwaway user, its password, and a <see cref="Supabase.Client"/> signed in as it with the anon key.</summary>
+public sealed record TestUser(Guid Id, string Email, string Password, Client Client);
