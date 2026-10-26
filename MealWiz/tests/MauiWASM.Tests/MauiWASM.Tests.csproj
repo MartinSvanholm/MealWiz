@@ -14,6 +14,13 @@
     <PackageReference Include="xunit.v3" Version="4.0.2" />
     <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="bunit" Version="2.13.3" />
+    <!-- E2ETests drive Chromium only. The fixture installs it on first run (TestInfrastructure/E2E/E2EEnvironment). -->
+    <PackageReference Include="Microsoft.Playwright" Version="1.63.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Kestrel, for the static host that serves the published app to the E2E tests. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

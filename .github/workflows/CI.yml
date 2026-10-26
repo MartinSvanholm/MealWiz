@@ -39,7 +39,8 @@ jobs:
       # Started first, so every test below can use the database. A fresh stack applies every migration and
       # seed.sql, so a broken migration fails here rather than in production.
       - name: Start Supabase (applies all migrations and the seed)
-        run: supabase start -x studio,imgproxy,edge-runtime,realtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
+        # Realtime stays on: the meal import E2E tests get their result over it.
+        run: supabase start -x studio,imgproxy,edge-runtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
 
       - name: Export Supabase credentials
         id: supabase
@@ -63,10 +64,27 @@ jobs:
       - name: Run MealWiz.Shared tests
         run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
 
-      # The web host: DI composition, session storage, appsettings and routes. Needs no Supabase.
+      # For the E2E tests in MauiWASM.Tests. --with-deps adds the Linux libraries Chromium needs.
+      - name: Install Playwright Chromium
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet build MealWiz/tests/MauiWASM.Tests
+          pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      # The web host: DI composition, session storage, appsettings and routes. The E2E tests also publish the app
+      # and drive it in Chromium against the local Supabase stack, including Realtime.
       - name: Run MauiWASM tests
         if: ${{ !cancelled() }}
         run: dotnet test --project MealWiz/tests/MauiWASM.Tests
+
+      # A Playwright trace, screenshot and browser console log for each failed E2E test.
+      - name: Upload E2E failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: e2e-failures
+          path: MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/
+          if-no-files-found: ignore
 
       # Builds MealWiz.Functions too, since the test project references it. Runs even if the Blazor steps
       # failed, so one PR run reports both apps, but not when Supabase never came up.
