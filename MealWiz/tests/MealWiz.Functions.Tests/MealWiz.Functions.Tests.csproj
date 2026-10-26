@@ -24,4 +24,9 @@
     <ProjectReference Include="..\..\src\MealWiz.Functions\MealWiz.Functions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Golden files shared with the other test project; see ../Contracts/README.md. -->
+    <None Include="..\Contracts\*.json" Link="Contracts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

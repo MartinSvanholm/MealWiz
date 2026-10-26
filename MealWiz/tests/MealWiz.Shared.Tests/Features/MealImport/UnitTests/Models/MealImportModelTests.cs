@@ -57,22 +57,35 @@ public class MealImportModelTests
         Assert.Equal(original.UpdatedBy, roundTripped.UpdatedBy);
     }
 
+    // The golden files in tests/Contracts are what MealWiz.Functions writes (its ContractTests check that side).
     [Fact]
     public void ParsedMeal_DeserializesTheFunctionsPayloadShape()
     {
-        // As written by MealWiz.Functions' MealImportPayload (PascalCase, Amount may be empty).
-        const string json = """
-            {"Name":"Pasta","Recipe":"Boil\nServe","Ingredients":[{"Name":"pasta","Amount":"500 g"},{"Name":"salt","Amount":""}]}
-            """;
+        var parsed = JsonConvert.DeserializeObject<ParsedMeal>(ReadContract("parsed_meal.json"))!;
 
-        var parsed = JsonConvert.DeserializeObject<ParsedMeal>(json)!;
-
-        Assert.Equal("Pasta", parsed.Name);
-        Assert.Equal("Boil\nServe", parsed.Recipe);
+        Assert.Equal("Æblepandekager", parsed.Name);
+        Assert.Equal("Pisk dejen.\nSteg pandekagerne.", parsed.Recipe);
         Assert.Collection(parsed.Ingredients,
-            i => { Assert.Equal("pasta", i.Name); Assert.Equal("500 g", i.Amount); },
+            i => { Assert.Equal("sødmælk", i.Name); Assert.Equal("2½ dl", i.Amount); },
             i => { Assert.Equal("salt", i.Name); Assert.Equal("", i.Amount); });
     }
+
+    [Fact]
+    public void Status_DbValuesMatchTheFunctionsContract()
+    {
+        var contract = JsonConvert.DeserializeObject<Dictionary<string, string>>(ReadContract("meal_import_status.json"))!;
+
+        Assert.Equal(contract.Keys.Order(), Enum.GetNames<MealImportStatus>().Order());
+        foreach (var (name, dbValue) in contract)
+        {
+            var status = Enum.Parse<MealImportStatus>(name);
+            Assert.Equal(dbValue, status.ToDbValue());
+            Assert.Equal(status, MealImportStatusExtensions.FromDbValue(dbValue));
+        }
+    }
+
+    private static string ReadContract(string fileName) =>
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Contracts", fileName));
 
     [Fact]
     public void ToMeal_BuildsAnUnsavedMealWithIngredientsOnTheGroceryList()

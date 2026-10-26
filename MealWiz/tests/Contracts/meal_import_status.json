@@ -1,0 +1,5 @@
+{
+  "Pending": "pending",
+  "Succeeded": "succeeded",
+  "Failed": "failed"
+}

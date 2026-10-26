@@ -2,7 +2,8 @@ namespace MealWiz.Shared.Features.MealImport.Models;
 
 /// <summary>
 /// Status of a <c>meal_imports</c> row. Independently duplicated in the Function project
-/// (<c>MealWiz/src/MealWiz.Functions/Shared/Models/MealImportStatus.cs</c>) — keep the DB values in sync.
+/// (<c>MealWiz/src/MealWiz.Functions/Shared/Models/RecipeImportStatus.cs</c>) — keep the DB values in sync;
+/// <c>MealWiz/tests/Contracts/meal_import_status.json</c> checks both sides.
 /// </summary>
 public enum MealImportStatus
 {
