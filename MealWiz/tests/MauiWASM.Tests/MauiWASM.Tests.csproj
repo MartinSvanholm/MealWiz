@@ -12,6 +12,8 @@
   <ItemGroup>
     <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
     <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <!-- Code coverage (Cobertura) for the test run. CI collects it through the verify script's coverage option. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Include="Moq" Version="4.21.0" />
     <PackageReference Include="bunit" Version="2.13.3" />
     <!-- E2ETests drive Chromium only. The fixture installs it on first run (TestInfrastructure/E2E/E2EEnvironment). -->

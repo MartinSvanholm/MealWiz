@@ -2,6 +2,10 @@ name: CI
 
 # Every pull request, whatever its target branch (so dev -> main release PRs too), builds both apps and runs
 # every test. Compiling is the type check.
+#
+# The tests run through scripts/verify.sh, the command agents and developers run locally, so the two can't drift:
+# `verify full` is split into one step per test project with --only, and the last check fails if a step of
+# `verify full` never ran here.
 on:
   pull_request:
   workflow_dispatch:
@@ -13,15 +17,12 @@ jobs:
   build_and_test:
     name: Build and test
     runs-on: ubuntu-latest
-    env:
-      # Makes LocalSupabaseFixture fail instead of skip, so a broken stack can't hide the integration tests.
-      REQUIRE_SUPABASE: 'true'
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-dotnet@v5
         with:
-          # 9 for the Blazor app, 10 for MealWiz.Functions and the test projects.
+          # 9 for the Blazor app, 10 for MealWiz.Functions, the test projects and scripts/verify.cs.
           dotnet-version: |
             9.0.x
             10.0.x
@@ -37,63 +38,97 @@ jobs:
         run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
 
       # Started first, so every test below can use the database. A fresh stack applies every migration and
-      # seed.sql, so a broken migration fails here rather than in production.
+      # seed.sql, so a broken migration fails here rather than in production. verify then finds it running, and the
+      # test fixtures read the keys from `supabase status`, as they do locally.
       - name: Start Supabase (applies all migrations and the seed)
+        id: supabase
         # Realtime stays on: the meal import E2E tests get their result over it.
         run: supabase start -x studio,imgproxy,edge-runtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
 
-      - name: Export Supabase credentials
-        id: supabase
-        run: |
-          status="$(supabase status -o env)"
-          url="$(sed -n 's/^API_URL="\(.*\)"$/\1/p' <<< "$status")"
-          key="$(sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p' <<< "$status")"
-          anon_key="$(sed -n 's/^ANON_KEY="\(.*\)"$/\1/p' <<< "$status")"
-          if [ -z "$url" ] || [ -z "$key" ] || [ -z "$anon_key" ]; then
-            echo "::error::supabase status didn't report API_URL, SERVICE_ROLE_KEY and ANON_KEY."
-            exit 1
-          fi
-          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
-          # MealWiz.Shared.Tests signs in throwaway users with it, like the app does.
-          echo "SUPABASE_ANON_KEY=$anon_key" >> "$GITHUB_ENV"
+      # Builds MauiWASM, MealWiz.Functions and the three test projects (Debug). The test steps below don't rebuild.
+      - name: Build
+        id: build
+        run: scripts/verify.sh full --only build
 
-      - name: Build Blazor app
-        run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+      # For the E2E tests in MauiWASM.Tests. The browser is cached per Playwright version; the Linux libraries it
+      # needs (--with-deps / install-deps) aren't, so they're installed either way.
+      - name: Read Playwright version
+        id: playwright
+        run: echo "version=$(sed -n 's/.*"Microsoft.Playwright" Version="\([^"]*\)".*/\1/p' MealWiz/tests/MauiWASM.Tests/MauiWASM.Tests.csproj)" >> "$GITHUB_OUTPUT"
 
-      - name: Run MealWiz.Shared tests
-        run: dotnet test --project MealWiz/tests/MealWiz.Shared.Tests
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
-      # For the E2E tests in MauiWASM.Tests. --with-deps adds the Linux libraries Chromium needs.
       - name: Install Playwright Chromium
-        if: ${{ !cancelled() }}
         run: |
-          dotnet build MealWiz/tests/MauiWASM.Tests
-          pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+          playwright=MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
+            pwsh "$playwright" install-deps chromium
+          else
+            pwsh "$playwright" install --with-deps chromium
+          fi
+
+      # One step per test project. Each runs even if an earlier one failed, so one PR run reports everything.
+      # Unit and integration suites collect coverage; E2E can't (the app runs as WebAssembly in Chromium).
+      - name: Run MealWiz.Shared tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only shared-unit,shared-integration
+
+      - name: Run MealWiz.Functions tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only functions-unit,functions-integration
 
       # The web host: DI composition, session storage, appsettings and routes. The E2E tests also publish the app
       # and drive it in Chromium against the local Supabase stack, including Realtime.
       - name: Run MauiWASM tests
-        if: ${{ !cancelled() }}
-        run: dotnet test --project MealWiz/tests/MauiWASM.Tests
-
-      # A Playwright trace, screenshot and browser console log for each failed E2E test.
-      - name: Upload E2E failure artifacts
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v5
-        with:
-          name: e2e-failures
-          path: MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/
-          if-no-files-found: ignore
-
-      # Builds MealWiz.Functions too, since the test project references it. Runs even if the Blazor steps
-      # failed, so one PR run reports both apps, but not when Supabase never came up.
-      - name: Run MealWiz.Functions tests
-        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
-        run: dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only web-unit,e2e
 
       # pgTAP tests for every RLS policy (supabase/tests/database). Fail if a policy is loosened or a public
       # table is added without RLS and tests.
       - name: Run database tests
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
-        run: supabase test db
+        run: scripts/verify.sh full --only db
+
+      # Fails when verify.cs gained a step that no --only list above runs.
+      - name: Check every verify step ran
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --check-complete
+
+      # One merged report over every suite. No threshold yet: it's only reported.
+      - name: Merge coverage
+        if: ${{ !cancelled() && hashFiles('artifacts/verify/full/**/*.cobertura.xml') != '' }}
+        uses: danielpalme/ReportGenerator-GitHub-Action@5
+        with:
+          reports: artifacts/verify/full/**/*.cobertura.xml
+          targetdir: artifacts/coverage
+          reporttypes: Cobertura;MarkdownSummaryGithub;HtmlInline
+          title: MealWiz coverage
+
+      - name: Add coverage to the job summary
+        if: ${{ !cancelled() && hashFiles('artifacts/coverage/SummaryGithub.md') != '' }}
+        run: cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('artifacts/coverage/Cobertura.xml') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: artifacts/coverage/
+
+      # Every suite's log and TRX, supabase.log and db.log, plus a Playwright trace, screenshot and browser console
+      # log for each failed E2E test.
+      - name: Upload test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: |
+            artifacts/verify/full/
+            MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/
+          include-hidden-files: true
+          if-no-files-found: ignore

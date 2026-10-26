@@ -73,6 +73,10 @@ each failing test with its first assertion message, E2E screenshots/traces); ful
 smoke and full take a few minutes, so run them in the background. The `verify` skill
 (`.claude/skills/verify/SKILL.md`) explains how to read and triage failures.
 
+CI (`.github/workflows/CI.yml`) runs the same `verify full`, one step per test project (`--only`), with coverage in the
+job summary and a `test-results` artifact on failure. A new suite goes into `scripts/verify.cs`; CI fails until an
+`--only` list in CI.yml runs it.
+
 ## Database Migrations
 ```bash
 # Requires Supabase CLI
