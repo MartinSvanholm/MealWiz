@@ -17,6 +17,8 @@ jobs:
   build_and_test:
     name: Build and test
     runs-on: ubuntu-latest
+    # A normal run takes about 6 minutes. This stops a hung step from holding a runner for the 6-hour default.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
 
@@ -64,7 +66,10 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
       - name: Install Playwright Chromium
+        timeout-minutes: 5
         run: |
+          # A download from the Ubuntu mirror once stalled for 10+ minutes: time it out and retry instead.
+          echo 'Acquire::http::Timeout "30"; Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99-ci-retries > /dev/null
           playwright=MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
             pwsh "$playwright" install-deps chromium
