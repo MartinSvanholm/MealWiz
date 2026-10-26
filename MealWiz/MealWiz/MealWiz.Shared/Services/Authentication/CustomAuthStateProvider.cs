@@ -37,6 +37,9 @@ public class CustomAuthStateProvider(Client client) : AuthenticationStateProvide
 
     private static byte[] ParseBase64WithoutPadding(string base64)
     {
+        // JWT segments are base64url: map its alphabet back to standard base64 before decoding.
+        base64 = base64.Replace('-', '+').Replace('_', '/');
+
         switch (base64.Length % 4)
         {
             case 2: base64 += "=="; break;
