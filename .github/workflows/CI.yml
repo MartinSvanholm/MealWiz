@@ -47,12 +47,15 @@ jobs:
           status="$(supabase status -o env)"
           url="$(sed -n 's/^API_URL="\(.*\)"$/\1/p' <<< "$status")"
           key="$(sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p' <<< "$status")"
-          if [ -z "$url" ] || [ -z "$key" ]; then
-            echo "::error::supabase status didn't report API_URL and SERVICE_ROLE_KEY."
+          anon_key="$(sed -n 's/^ANON_KEY="\(.*\)"$/\1/p' <<< "$status")"
+          if [ -z "$url" ] || [ -z "$key" ] || [ -z "$anon_key" ]; then
+            echo "::error::supabase status didn't report API_URL, SERVICE_ROLE_KEY and ANON_KEY."
             exit 1
           fi
           echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
+          # MealWiz.Shared.Tests signs in throwaway users with it, like the app does.
+          echo "SUPABASE_ANON_KEY=$anon_key" >> "$GITHUB_ENV"
 
       - name: Build Blazor app
         run: dotnet build MealWiz/MauiWASM/MauiWASM.csproj
