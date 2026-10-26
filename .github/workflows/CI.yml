@@ -65,3 +65,9 @@ jobs:
       - name: Run MealWiz.Functions tests
         if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
         run: dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
+
+      # pgTAP tests for every RLS policy (supabase/tests/database). Fail if a policy is loosened or a public
+      # table is added without RLS and tests.
+      - name: Run database tests
+        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
+        run: supabase test db
