@@ -11,7 +11,7 @@ public enum RecipeImportStatus
 /// Mirrors the client's MealType/MealTypeExtensions convention: string DB values are only ever
 /// produced/consumed through these helpers, never written as raw literals. Independently duplicated on the
 /// client (<c>MealWiz/MealWiz/MealWiz.Shared/Features/MealImport/Models/MealImportStatus.cs</c>) — keep
-/// the DB values in sync.
+/// the DB values in sync; <c>MealWiz/tests/Contracts/meal_import_status.json</c> checks both sides.
 /// </summary>
 public static class RecipeImportStatusExtensions
 {

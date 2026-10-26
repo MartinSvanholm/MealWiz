@@ -1,0 +1,8 @@
+{
+  "Name": "Æblepandekager",
+  "Recipe": "Pisk dejen.\nSteg pandekagerne.",
+  "Ingredients": [
+    { "Name": "sødmælk", "Amount": "2½ dl" },
+    { "Name": "salt", "Amount": "" }
+  ]
+}

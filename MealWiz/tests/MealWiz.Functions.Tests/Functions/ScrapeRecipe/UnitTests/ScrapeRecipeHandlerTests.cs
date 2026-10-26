@@ -31,6 +31,7 @@ public class ScrapeRecipeHandlerTests
             TestContext.Current.CancellationToken);
 
         Assert.True(result.IsFailed);
+        Assert.Equal("Supabase:Url is not configured.", Assert.Single(result.Errors).Message);
         fetcher.Verify(f => f.FetchAsync(It.IsAny<Uri>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }
