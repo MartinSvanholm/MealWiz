@@ -67,6 +67,29 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Login_button_is_usable_again_after_a_failed_validation()
+    {
+        var cut = Render<LoginPage>();
+
+        cut.Find(TestId("login-submit")).Click();
+
+        Assert.False(cut.Find(TestId("login-submit")).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Login_button_is_usable_again_after_wrong_credentials()
+    {
+        SetupSend<Login.Command, Result<Session?>>(Result.Fail<Session?>("Invalid login credentials"));
+        var cut = Render<LoginPage>();
+
+        cut.Find(InputOf("login-email")).Input("me@example.com");
+        cut.Find(InputOf("login-password")).Input("wrong");
+        cut.Find(TestId("login-submit")).Click();
+
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("login-submit")).HasAttribute("disabled")));
+    }
+
+    [Fact]
     public void Logout_signs_out_and_reloads_the_page()
     {
         SetupSend<Logout.Command, Result>(Result.Ok());

@@ -25,15 +25,20 @@
     {
         IsLoading = true;
 
-        await Form.Validate();
-        if (!IsValid) return;
+        try
+        {
+            await Form.Validate();
+            if (!IsValid) return;
 
-        var result = await _mediator.Send(new Login.Command(Email, Password));
-        result.Handle(_snackbar);
+            var result = await _mediator.Send(new Login.Command(Email, Password));
+            result.Handle(_snackbar);
 
-        if (result.IsSuccess)
-            _navigationManager.NavigateTo("/");
-
-        IsLoading = false;
+            if (result.IsSuccess)
+                _navigationManager.NavigateTo("/");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }
