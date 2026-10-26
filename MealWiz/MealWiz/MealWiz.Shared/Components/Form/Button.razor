@@ -5,6 +5,7 @@ OnClick="@OnClick"
 Class="@Class"
 ButtonType="@ButtonType"
 Disabled="IsDisabled || IsLoading"
+@attributes="UserAttributes"
 >
     @if (IsLoading)
     {
@@ -40,4 +41,7 @@ Disabled="IsDisabled || IsLoading"
 
     [Parameter]
     public bool IsDisabled { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? UserAttributes { get; set; }
 }

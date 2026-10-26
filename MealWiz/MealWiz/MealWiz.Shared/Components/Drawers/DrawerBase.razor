@@ -11,13 +11,13 @@
             <MudStack Style="width: 100%;" Row=true Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
                 @if (_drawerStateContainer.DrawerNavigationStack.Count > 1)
                 {
-                    <MudIconButton OnClick="_drawerStateContainer.NavigateBack" Class="white-text" Icon="@Icons.Material.Filled.ArrowBack" />
+                    <MudIconButton data-testid="drawer-back" OnClick="_drawerStateContainer.NavigateBack" Class="white-text" Icon="@Icons.Material.Filled.ArrowBack" />
                 }
                 else
                 {
-                    <MudIconButton OnClick="_drawerStateContainer.CloseDrawer" Class="white-text" Icon="@Icons.Material.Filled.Close" />
+                    <MudIconButton data-testid="drawer-close" OnClick="_drawerStateContainer.CloseDrawer" Class="white-text" Icon="@Icons.Material.Filled.Close" />
                 }
-                <MudText Typo="Typo.h6">@_drawerStateContainer.StateParameters.Title</MudText>
+                <MudText data-testid="drawer-title" Typo="Typo.h6">@_drawerStateContainer.StateParameters.Title</MudText>
             </MudStack>
         }
     </MudDrawerHeader>

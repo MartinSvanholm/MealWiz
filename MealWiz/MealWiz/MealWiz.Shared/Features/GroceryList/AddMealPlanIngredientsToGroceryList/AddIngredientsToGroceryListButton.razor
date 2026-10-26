@@ -3,7 +3,7 @@
 @inject ISnackbar _snackbar
 
 <Tooltip Text="Add meal plan ingredients to grocery list">
-    <MudLoadingButton ButtonVariant="ButtonVariant.IconButton"
+    <MudLoadingButton data-testid="add-plan-ingredients-button" ButtonVariant="ButtonVariant.IconButton"
                       Icon="@Icons.Material.Filled.PostAdd"
                       Color="Color.Secondary"
                       OnClick="OnAddIngredientsToGroceryListCliked" />

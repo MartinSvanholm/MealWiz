@@ -3,7 +3,7 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
 
-<MudLoadingButton OnClick="SaveIngredient" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Success" ButtonVariant="ButtonVariant.Button">Save</MudLoadingButton>
+<MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveIngredient" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Success" ButtonVariant="ButtonVariant.Button">Save</MudLoadingButton>
 
 @code {
     [Parameter]

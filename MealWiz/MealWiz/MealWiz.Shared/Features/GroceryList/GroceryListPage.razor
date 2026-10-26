@@ -9,7 +9,7 @@
     <MudPaper Class="rounded-t-0">
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
+                <MudIconButton data-testid="account-button" OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
             </MudItem>
             <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
                 <MudText Typo="Typo.h6">Grocery list</MudText>
@@ -25,8 +25,8 @@
         <MudStack Class="ma-3" Spacing="0">
             @foreach (var item in _groceryListStateContainer.GroceryList.Items) 
             {
-                <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
-                    <MudCheckBox T="bool"
+                <MudStack data-testid="grocery-item" Row Spacing="0" Justify="Justify.SpaceBetween">
+                    <MudCheckBox T="bool" data-testid="grocery-item-checkbox"
                     Value="@item.IsPicked"
                     ValueChanged="() => _groceryListStateContainer.ToggleIsPicked(item)"
                     CheckedIcon="@Icons.Material.Filled.RadioButtonChecked"

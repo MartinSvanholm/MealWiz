@@ -7,7 +7,8 @@ Required="@Required"
 Class="@Class"
 Immediate="@Immediate"
 InputMode="@InputMode"
-InputType="@InputType"/>
+InputType="@InputType"
+@attributes="UserAttributes"/>
 
 @code {
     [Parameter]
@@ -36,4 +37,7 @@ InputType="@InputType"/>
 
     [Parameter]
     public InputType InputType { get; set; } = InputType.Text;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? UserAttributes { get; set; }
 }

@@ -13,6 +13,7 @@
     <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
     <PackageReference Include="xunit.v3" Version="4.0.2" />
     <PackageReference Include="Moq" Version="4.21.0" />
+    <PackageReference Include="bunit" Version="2.13.3" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.0.0" />
   </ItemGroup>
 

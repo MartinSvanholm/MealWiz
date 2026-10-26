@@ -2,7 +2,7 @@
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
 
-<MudIconButton OnClick="OnLogoutClick" Icon="@Icons.Material.Filled.Logout" />
+<MudIconButton data-testid="logout-button" OnClick="OnLogoutClick" Icon="@Icons.Material.Filled.Logout" />
 
 @code {
     private async Task OnLogoutClick()

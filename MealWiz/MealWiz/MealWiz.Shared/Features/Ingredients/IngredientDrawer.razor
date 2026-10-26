@@ -4,8 +4,8 @@
 @inject IMealsStateContainer _mealsStateContainer
 
 <MudStack Class="pa-2">
-    <MudTextField Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
-    <MudTextField Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined" />
+    <MudTextField data-testid="ingredient-name-input" Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
+    <MudTextField data-testid="ingredient-amount-input" Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined" />
     <SaveIngredientButton Ingredient="Ingredient" />
 </MudStack>
 
