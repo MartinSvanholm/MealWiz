@@ -52,8 +52,7 @@ jobs:
         id: build
         run: scripts/verify.sh full --only build
 
-      # For the E2E tests in MauiWASM.Tests. The browser is cached per Playwright version; the Linux libraries it
-      # needs (--with-deps / install-deps) aren't, so they're installed either way.
+      # For the E2E tests in MauiWASM.Tests: Chromium, cached per Playwright version, and the Linux packages it needs.
       - name: Read Playwright version
         id: playwright
         run: echo "version=$(sed -n 's/.*"Microsoft.Playwright" Version="\([^"]*\)".*/\1/p' MealWiz/tests/MauiWASM.Tests/MauiWASM.Tests.csproj)" >> "$GITHUB_OUTPUT"
@@ -66,16 +65,19 @@ jobs:
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
 
       - name: Install Playwright Chromium
+        if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
         timeout-minutes: 5
+        run: pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
+
+      # The runner image already has the libraries Chromium needs to run headless; this adds the rest (mostly fonts).
+      # Azure's Ubuntu mirror sometimes stalls for 10+ minutes, so a slow mirror only warns. If a library really is
+      # missing, the E2E tests fail with Chromium's launch error.
+      - name: Install Chromium's Linux packages
+        timeout-minutes: 4
+        continue-on-error: true
         run: |
-          # A download from the Ubuntu mirror once stalled for 10+ minutes: time it out and retry instead.
           echo 'Acquire::http::Timeout "30"; Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99-ci-retries > /dev/null
-          playwright=MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1
-          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = "true" ]; then
-            pwsh "$playwright" install-deps chromium
-          else
-            pwsh "$playwright" install --with-deps chromium
-          fi
+          pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install-deps chromium
 
       # One step per test project. Each runs even if an earlier one failed, so one PR run reports everything.
       # Unit and integration suites collect coverage; E2E can't (the app runs as WebAssembly in Chromium).
