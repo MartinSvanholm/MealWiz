@@ -69,7 +69,8 @@ public class MealPlanStateContainer(
         var result = await mediator.Send(new GetMealPlanByDate.GetMealPlanByDate.Query(SelectedWeekStart));
         result.Handle(CurrentSnackbar);
 
-        MealPlan = result.Value;
+        // A failed load clears the plan rather than leaving the previous week's showing.
+        MealPlan = result.ValueOrDefault;
     }
 
     public async Task NavigateToWeek(DateTime targetDate)
