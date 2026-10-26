@@ -115,6 +115,8 @@ jobs:
           targetdir: artifacts/coverage
           reporttypes: Cobertura;MarkdownSummaryGithub;HtmlInline
           title: MealWiz coverage
+          # Source-generated code (Functions worker registrations, [GeneratedRegex]) isn't ours to test.
+          filefilters: -**/obj/**
 
       - name: Add coverage to the job summary
         if: ${{ !cancelled() && hashFiles('artifacts/coverage/SummaryGithub.md') != '' }}
