@@ -2,6 +2,7 @@ using Blazored.LocalStorage;
 using Bunit;
 using Bunit.TestDoubles;
 using FluentResults;
+using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
@@ -79,6 +80,12 @@ public abstract class ComponentTestBase : BunitContext
     /// <summary>CSS selector for a <c>data-testid</c>, e.g. <c>cut.Find(TestId("save-meal-button"))</c>.</summary>
     protected static string TestId(string id) => $"[data-testid=\"{id}\"]";
 
+    /// <summary>
+    /// The text input of a field with that <c>data-testid</c>, whether the attribute ends up on the input itself
+    /// (MudTextField) or on a wrapper around it.
+    /// </summary>
+    protected static string InputOf(string id) => $"input{TestId(id)}, textarea{TestId(id)}, {TestId(id)} input, {TestId(id)} textarea";
+
     protected ISnackbar Snackbar =>Services.GetRequiredService<ISnackbar>();
 
     protected IEnumerable<string> SnackbarMessages => Snackbar.ShownSnackbars.Select(s => s.Message);
@@ -110,4 +117,21 @@ public abstract class ComponentTestBase : BunitContext
     }
 
     protected IRenderedComponent<MudPopoverProvider> Popovers { get; private set; } = default!;
+
+    /// <summary>
+    /// Renders the app's two drawers (as MainLayout does) so a test can drive a whole flow, e.g. click a button,
+    /// fill in the drawer it opens and confirm. Look for drawer content in <see cref="DrawerHost"/> and
+    /// <see cref="ConfirmDrawerHost"/>.
+    /// </summary>
+    protected void RenderDrawers()
+    {
+        DrawerHost = Render<DrawerBase>();
+        ConfirmDrawerHost = Render<ConfirmDrawer>();
+    }
+
+    protected IRenderedComponent<DrawerBase> DrawerHost { get; private set; } = default!;
+    protected IRenderedComponent<ConfirmDrawer> ConfirmDrawerHost { get; private set; } = default!;
+
+    /// <summary>Clicks Confirm in the confirm drawer.</summary>
+    protected void Confirm() => ConfirmDrawerHost.Find(TestId("confirm-drawer-confirm")).Click();
 }
