@@ -22,7 +22,7 @@
         <MudStack Class="pa-4" Spacing="3">
             @if (IsBusy)
             {
-                <MudStack AlignItems="AlignItems.Center" Class="py-4" Spacing="3">
+                <MudStack data-testid="import-progress" AlignItems="AlignItems.Center" Class="py-4" Spacing="3">
                     <MudProgressCircular Indeterminate Color="Color.Primary" />
 
                     @if (_mealImportStateContainer.IsRunningInBackground)
