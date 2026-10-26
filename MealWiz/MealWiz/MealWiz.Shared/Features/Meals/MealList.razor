@@ -2,7 +2,7 @@
 
 <MudStack Spacing="3">
     <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-        <MudTextField T="string"
+        <MudTextField T="string" data-testid="meal-list-search"
                       @bind-Value="_search"
                       Placeholder="@SearchPlaceholder"
                       Variant="Variant.Outlined"
@@ -16,14 +16,14 @@
 
     @if (!Meals.Any())
     {
-        <MudText Typo="Typo.body2">@EmptyMessage</MudText>
+        <MudText data-testid="meal-list-empty" Typo="Typo.body2">@EmptyMessage</MudText>
     }
     else
     {
         <MudStack Spacing="2">
             @foreach (var meal in FilteredMeals)
             {
-                <MudPaper Elevation="2"
+                <MudPaper data-testid="meal-list-item" Elevation="2"
                     Class="@RowClass"
                     Outlined
                     @onclick="() => OnItemClick.InvokeAsync(meal)">

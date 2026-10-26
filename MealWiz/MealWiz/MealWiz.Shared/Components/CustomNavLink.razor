@@ -1,6 +1,6 @@
 ﻿@inject NavigationManager navigationManager
 
-<MudStack Class="@(IsActive ? "active" : "")" AlignItems="AlignItems.Center" Row=false @onclick="Navigate" Spacing="0" Justify="Justify.Center" style="cursor: pointer;">
+<MudStack @attributes="UserAttributes" Class="@(IsActive ? "active" : "")" AlignItems="AlignItems.Center" Row=false @onclick="Navigate" Spacing="0" Justify="Justify.Center" style="cursor: pointer;">
     @if (Icon != null)
     {
         <MudIcon Icon="@Icon" Color="@(IsActive ? Color.Primary : Color.Default)" />
@@ -22,6 +22,9 @@
 
     [Parameter]
     public bool IsActive { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? UserAttributes { get; set; }
 
     private void Navigate()
     {

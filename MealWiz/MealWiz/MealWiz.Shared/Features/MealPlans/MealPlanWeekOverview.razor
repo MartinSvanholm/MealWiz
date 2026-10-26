@@ -3,7 +3,7 @@
 @implements IDisposable
 
 <MudStack Row AlignItems="AlignItems.Center" Spacing="0">
-    <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+    <MudIconButton data-testid="week-prev" Icon="@Icons.Material.Filled.ChevronLeft"
                    Size="Size.Small"
                    Disabled="_mealPlanStateContainer.IsLoadingWeek"
                    OnClick="PreviousWeek" />
@@ -16,12 +16,12 @@
 
                 <MudStack Spacing="1" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.body2">@date.DayOfWeek.ToString().Substring(0, 3).ToUpper()</MudText>
-                    <div @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
+                    <div data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd")" @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
                         <p class="day">@date.Day</p>
                     </div>
                     @if (_mealPlanStateContainer.DateHasMeal(date))
                     {
-                        <div class="mud-theme-tertiary rounded-sm mt-1" Style="@($"width: 8px; height: 8px;")">
+                        <div data-testid="week-day-meal-indicator" class="mud-theme-tertiary rounded-sm mt-1" Style="@($"width: 8px; height: 8px;")">
                         </div>
                     }
                 </MudStack>
@@ -29,7 +29,7 @@
         </MudStack>
     </MudSwipeArea>
 
-    <MudIconButton Icon="@Icons.Material.Filled.ChevronRight"
+    <MudIconButton data-testid="week-next" Icon="@Icons.Material.Filled.ChevronRight"
                    Size="Size.Small"
                    Disabled="_mealPlanStateContainer.IsLoadingWeek"
                    OnClick="NextWeek" />

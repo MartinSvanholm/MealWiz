@@ -5,13 +5,13 @@
 
 <CustomForm @ref="Form" Class="pa-5 d-flex flex-column" @bind-IsValid="IsValid" OnEnterClicked="Login">
     <MudText Typo="Typo.h6">Login</MudText>
-    <TextField @bind-Value="Email" Class="mt-4" Label="Email" Required InputType="InputType.Email" />
-    <TextField @bind-Value="Password" Class="mt-4" Label="Password" Required InputType="InputType.Password" />
+    <TextField data-testid="login-email" @bind-Value="Email" Class="mt-4" Label="Email" Required InputType="InputType.Email" />
+    <TextField data-testid="login-password" @bind-Value="Password" Class="mt-4" Label="Password" Required InputType="InputType.Password" />
     <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
         <Button Variant="Variant.Text">Create account</Button>
         <Button Variant="Variant.Text">Forgot password</Button>
     </MudStack>
-    <Button OnClick="Login" Class="mt-8" IsLoading="IsLoading">Login</Button>
+    <Button data-testid="login-submit" OnClick="Login" Class="mt-8" IsLoading="IsLoading">Login</Button>
 </CustomForm>
 
 @code {
@@ -25,15 +25,20 @@
     {
         IsLoading = true;
 
-        await Form.Validate();
-        if (!IsValid) return;
+        try
+        {
+            await Form.Validate();
+            if (!IsValid) return;
 
-        var result = await _mediator.Send(new Login.Command(Email, Password));
-        result.Handle(_snackbar);
+            var result = await _mediator.Send(new Login.Command(Email, Password));
+            result.Handle(_snackbar);
 
-        if (result.IsSuccess)
-            _navigationManager.NavigateTo("/");
-
-        IsLoading = false;
+            if (result.IsSuccess)
+                _navigationManager.NavigateTo("/");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 }

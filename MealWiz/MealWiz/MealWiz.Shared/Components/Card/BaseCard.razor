@@ -1,4 +1,4 @@
-﻿<MudPaper @onclick="OnClick" Elevation="4" Class="@($"rounded-lg mud-theme-{CardColor.ToDescriptionString()} {cursorClass} {hoverClass} {selectedClass}")">
+﻿<MudPaper @attributes="UserAttributes" @onclick="OnClick" Elevation="4" Class="@($"rounded-lg mud-theme-{CardColor.ToDescriptionString()} {cursorClass} {hoverClass} {selectedClass}")">
     <MudCard Elevation="0" Class="rounded-bl-0 rounded-tl-0 rounded-br-lg rounded-tr-lg ml-2">
         @if (hasHeaderContent)
         {
@@ -47,6 +47,9 @@
 
     [Parameter]
     public bool Dense { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? UserAttributes { get; set; }
 
     private string selectedClass => IsSelected ? "selected" : string.Empty;
 
