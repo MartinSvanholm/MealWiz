@@ -5,6 +5,7 @@ using Xunit;
 namespace MauiWASM.Tests.E2ETests;
 
 [Trait("Category", "E2E")]
+[Trait("Category", "Smoke")]
 public class GroceryListJourneyTests : E2ETestBase
 {
     [Fact]

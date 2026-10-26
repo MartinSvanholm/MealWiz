@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using Xunit;
+using Xunit.v3;
 
 namespace MauiWASM.Tests.TestInfrastructure.E2E;
 
@@ -21,6 +22,7 @@ namespace MauiWASM.Tests.TestInfrastructure.E2E;
 public abstract class E2ETestBase : IAsyncLifetime
 {
     private readonly List<string> _console = [];
+    private readonly List<string> _browserErrors = [];
     private IBrowserContext? _context;
 
     protected E2EEnvironment Env { get; private set; } = null!;
@@ -46,8 +48,16 @@ public abstract class E2ETestBase : IAsyncLifetime
         await _context.Tracing.StartAsync(new TracingStartOptions { Screenshots = true, Snapshots = true, Sources = false });
 
         Page = await _context.NewPageAsync();
-        Page.Console += (_, message) => Log($"[{message.Type}] {message.Text}");
-        Page.PageError += (_, error) => Log($"[pageerror] {error}");
+        Page.Console += (_, message) =>
+        {
+            Log($"[{message.Type}] {message.Text}");
+            if (message.Type == "error") AddBrowserError(message.Text);
+        };
+        Page.PageError += (_, error) =>
+        {
+            Log($"[pageerror] {error}");
+            AddBrowserError(error);
+        };
         Page.RequestFailed += (_, request) => Log($"[requestfailed] {request.Method} {request.Url}: {request.Failure}");
         // Supabase Realtime traffic, so a missed update can be told apart from one the app ignored.
         Page.WebSocket += (_, socket) =>
@@ -124,6 +134,20 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// <summary>A list row (meal, grocery item, ingredient card) by its test id and the text it shows.</summary>
     protected ILocator Row(string testId, string text) => Page.GetByTestId(testId).Filter(new LocatorFilterOptions { HasText = text });
 
+    /// <summary>
+    /// Every <c>console.error</c> and uncaught page error so far. An exception thrown while rendering a component
+    /// lands here ("Unhandled exception rendering component: ..." plus the .NET stack trace).
+    /// </summary>
+    protected IReadOnlyList<string> BrowserErrors
+    {
+        get { lock (_browserErrors) return [.. _browserErrors]; }
+    }
+
+    private void AddBrowserError(string error)
+    {
+        lock (_browserErrors) _browserErrors.Add(error);
+    }
+
     private void LogFrame(string direction, string? text)
     {
         if (text is null || text.Contains("\"phoenix\"") && text.Contains("heartbeat")) return;
@@ -139,6 +163,9 @@ public abstract class E2ETestBase : IAsyncLifetime
     {
         var test = TestContext.Current.Test;
         var name = test is null ? Guid.NewGuid().ToString("N") : $"{GetType().Name}.{test.TestCase.TestMethod?.MethodName}";
+        // Each case of a theory gets its own folder.
+        if (test is IXunitTest { TestMethodArguments.Length: > 0 } theoryCase)
+            name += $"({string.Join(",", theoryCase.TestMethodArguments)})";
         var directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "e2e", string.Join("_", name.Split(Path.GetInvalidFileNameChars())));
         Directory.CreateDirectory(directory);
 

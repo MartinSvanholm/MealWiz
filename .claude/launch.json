@@ -1,0 +1,15 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "MealWiz/MauiWASM/MauiWASM.csproj", "--launch-profile", "http"],
+      "port": 5053
+    },
+    {
+      "name": "supabase-studio",
+      "url": "http://127.0.0.1:54323"
+    }
+  ]
+}

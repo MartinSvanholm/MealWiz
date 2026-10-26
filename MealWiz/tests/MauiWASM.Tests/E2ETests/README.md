@@ -11,12 +11,14 @@ dotnet test --project MealWiz/tests/MauiWASM.Tests
 
 That one command runs the whole project: the unit tests plus the E2E journeys. The first run takes about two minutes longer, because it publishes the app in Release (trimmed, like the deploy) and downloads Chromium. Later runs publish incrementally.
 
+`scripts/verify.ps1 smoke` (or `verify.sh`) runs the Smoke subset together with the rest of the repo's tests and prints a short summary; `verify full` runs every journey. See "Verifying changes" in the root `CLAUDE.md`.
+
 To pick which tests run (xunit.v3 filters on Microsoft.Testing.Platform):
 
 | What | Arguments |
 |------|-----------|
 | Only the E2E tests | `--filter-trait "Category=E2E"` |
-| Smoke subset (auth and meal CRUD) | `--filter-trait "Category=Smoke"` |
+| Smoke subset (boot, every nav page, auth, meal CRUD, grocery list) | `--filter-trait "Category=Smoke"` |
 | Everything except E2E (fast; never publishes) | `--filter-not-trait "Category=E2E"` |
 | One journey | `--filter-class "*MealImportJourneyTests"` |
 
@@ -35,7 +37,7 @@ Environment variables:
 - **`E2EEnvironment`** is built once per run, on first use. It publishes MauiWASM, starts `E2EAppHost`, installs Chromium if it's missing and launches one browser.
 - **`E2EAppHost`** is a Kestrel static-file host on a random loopback port with an `index.html` fallback. It sends `Blazor-Environment: Development` and serves `appsettings.Development.json` from memory, pointing the app at the local stack and at a same-origin `/functions` stub for the import Function.
 - **`E2ESupabase`** provides GoTrue admin calls for throwaway users, plus service-role PostgREST calls to seed meals and to resolve meal imports.
-- **`E2ETestBase`** gives every test its own user and its own browser context, so tests are isolated and classes run in parallel. When a test fails it saves `trace.zip`, `screenshot.png` and `console.log` to `bin/Debug/net10.0/TestResults/e2e/<Class.Method>/` (uploaded as the `e2e-failures` artifact in CI). Open a trace with:
+- **`E2ETestBase`** gives every test its own user and its own browser context, so tests are isolated and classes run in parallel. When a test fails it saves `trace.zip`, `screenshot.png` and `console.log` to `bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`, uploaded as the `e2e-failures` artifact in CI. Theory cases add their arguments, e.g. `SmokeTests.Page_Renders(MealsPage,_meals,meal-list-item)`. Open a trace with:
 
   ```bash
   pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <path>/trace.zip
