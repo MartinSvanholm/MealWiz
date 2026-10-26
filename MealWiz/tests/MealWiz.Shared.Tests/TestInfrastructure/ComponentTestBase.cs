@@ -43,9 +43,16 @@ public abstract class ComponentTestBase : BunitContext
     protected GroceryListStateContainer GroceryList { get; }
     protected MealPlanStateContainer MealPlan { get; }
 
+    /// <summary>bUnit's fake authentication; see <see cref="AuthTestHelper"/>.</summary>
+    protected BunitAuthorizationContext Auth { get; }
+
     protected ComponentTestBase()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
+
+        // The 1s default is too tight on a busy machine or CI runner (the first MudMenu popover render is slow
+        // while cold); waits still return as soon as their condition holds.
+        DefaultWaitTimeout = TimeSpan.FromSeconds(5);
 
         Services.AddMudServices();
 
@@ -63,6 +70,10 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<IGroceryListStateContainer>(GroceryList);
         Services.AddSingleton<IMealPlanStateContainer>(MealPlan);
         Services.AddSingleton(_ => new Supabase.Client("http://localhost", "test-key"));
+
+        // Registered up front because bUnit allows no registrations once a service has been resolved (below).
+        // Anonymous until a test calls Auth.SetAuthorized(...).
+        Auth = AddAuthorization();
 
         // Pages set CurrentSnackbar themselves; leaf components (buttons, drawers) rely on a page having done it.
         Meals.CurrentSnackbar = Snackbar;

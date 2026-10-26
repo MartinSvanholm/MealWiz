@@ -41,9 +41,9 @@ public class AddMealMenuTests : ComponentTestBase
         cut.Find(TestId("add-meal-menu")).Click();
         Popovers.WaitForElement(TestId("add-meal-create-manually")).Click();
 
+        cut.WaitForAssertion(() => Assert.Equal("meals/edit", CurrentPath));
         Assert.NotSame(previous, Meals.MealToEdit);
         Assert.Equal(0, Meals.MealToEdit.Id);
-        Assert.Equal("meals/edit", CurrentPath);
     }
 
     [Fact]
@@ -54,6 +54,7 @@ public class AddMealMenuTests : ComponentTestBase
         cut.Find(TestId("add-meal-menu")).Click();
         Popovers.WaitForElement(TestId("add-meal-import")).Click();
 
-        Assert.Equal("meals/import", CurrentPath);
+        // MudMenuItem closes the menu (async) before it runs OnClick.
+        cut.WaitForAssertion(() => Assert.Equal("meals/import", CurrentPath));
     }
 }

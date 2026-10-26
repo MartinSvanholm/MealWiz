@@ -53,7 +53,7 @@
                 }
                 else if (_mealImportStateContainer.LatestImportFailed)
                 {
-                    <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    <MudAlert data-testid="import-latest-failed" Severity="Severity.Error" Variant="Variant.Outlined">
                         <MudText Typo="Typo.subtitle1">Your last import failed</MudText>
                         <MudText Typo="Typo.body2">@_mealImportStateContainer.LatestErrorMessage</MudText>
                         @if (!string.IsNullOrEmpty(_mealImportStateContainer.LatestImport?.SourceUrl))
