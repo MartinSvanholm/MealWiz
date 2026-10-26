@@ -9,31 +9,31 @@ public static class ResultHelper
 {
     public static void SetDefaultCatchHandler()
     {
-        Result.Setup(cfg =>
+        Result.Setup(cfg => cfg.DefaultTryCatchHandler = MapException);
+    }
+
+    /// <summary>The default <c>Result.Try</c> catch handler: turns a caught exception into an error.</summary>
+    internal static IError MapException(Exception exception)
+    {
+        if (exception is GotrueException gotrueException)
         {
-            cfg.DefaultTryCatchHandler = exception =>
-            {
-                if (exception is GotrueException gotrueException)
-                {
-                    string errorMessage = "No response from server";
-#if DEBUG    
-                    errorMessage = SupabaseHelper.GetSupabaseErrorMessage(gotrueException).Message;
-#endif
-                    return new Error(errorMessage).CausedBy(gotrueException);
-                }
-
-                if (exception is PostgrestException postgrestException)
-                {
-                    string errorMessage = "No response from server";
+            string errorMessage = "No response from server";
 #if DEBUG
-                    errorMessage = SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Message;
+            errorMessage = SupabaseHelper.GetSupabaseErrorMessage(gotrueException).Message;
 #endif
-                    return new Error(errorMessage).CausedBy(postgrestException);
-                }
+            return new Error(errorMessage).CausedBy(gotrueException);
+        }
 
-                return new Error(exception.Message).CausedBy(exception);
-            };
-        });
+        if (exception is PostgrestException postgrestException)
+        {
+            string errorMessage = "No response from server";
+#if DEBUG
+            errorMessage = SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Message;
+#endif
+            return new Error(errorMessage).CausedBy(postgrestException);
+        }
+
+        return new Error(exception.Message).CausedBy(exception);
     }
 
     public static Result<T> Handle<T>(this Result<T> result, ISnackbar snackbar)
