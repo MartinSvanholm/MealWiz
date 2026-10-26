@@ -18,6 +18,7 @@ public class SmokeTests : E2ETestBase
     {
         await GoToAsync("login");
         await Expect(Page.GetByTestId("login-email")).ToBeVisibleAsync();
+        Assert.Fail("MEA-26 temporary failure to check the CI test-results artifact.");
 
         Assert.True(BrowserErrors.Count == 0, $"The app logged errors while booting:\n{Describe(BrowserErrors)}");
     }
