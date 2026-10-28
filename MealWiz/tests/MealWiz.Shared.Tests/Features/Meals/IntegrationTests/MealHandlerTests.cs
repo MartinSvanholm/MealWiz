@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.Meals.DeleteMeal;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.SaveMeal;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
 using Supabase;
@@ -76,6 +77,18 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
         Assert.Equal(0, ResultAssert.Ok(result).Id);
         var row = await GetMealRowAsync(otherUser.Client, othersMeal.Id);
         Assert.Equal("Theirs", row?.Name);
+    }
+
+    [Fact]
+    public async Task SaveMeal_NewMealSignedOut_FailsWithNotSignedIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var signedOut = await supabase.CreateSignedOutClientAsync();
+
+        var result = await new SaveMeal.Handler(signedOut)
+            .Handle(new SaveMeal.Command(new MealBuilder().Build()), CancellationToken);
+
+        ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
     }
 
     [Fact]

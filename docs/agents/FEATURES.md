@@ -327,7 +327,9 @@ key, CORS and deployment.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
-  - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers its own services by hand, and always loads the embedded
+  - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
+    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `MealImportFunctionOptions` and the Supabase `Client`
+    like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
   - It needs mobile workloads, so verify and CI don't build it, and it has no test project.

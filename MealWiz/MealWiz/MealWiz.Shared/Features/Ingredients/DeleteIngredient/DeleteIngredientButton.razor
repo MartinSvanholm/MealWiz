@@ -36,21 +36,12 @@ Class="pa-1" />
 
     private async Task OnConfirmDelete()
     {
-        try
-        {
-            var result = await _mediator.Send(new DeleteIngredient.Command(Ingredient));
+        var result = await _mediator.Send(new DeleteIngredient.Command(Ingredient));
+        if (result.Handle(_snackbar).IsFailed) return;
 
-            result.Handle(_snackbar);
-            if (result.IsFailed) return;
+        await _mealsStateContainer.ReloadIngredientsForMealToEdit();
 
-            await _mealsStateContainer.ReloadIngredientsForMealToEdit();
-
-            _snackbar.Add("Ingredient deleted.", Severity.Success);
-            _drawerStateContainer.CloseDrawer();
-        }
-        catch (Exception)
-        {
-            _snackbar.Add(ErrorMessages.GenericError, Severity.Error);
-        }
+        _snackbar.Add("Ingredient deleted.", Severity.Success);
+        _drawerStateContainer.CloseDrawer();
     }
 }

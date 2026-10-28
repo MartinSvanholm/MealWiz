@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
 using Supabase;
 
@@ -18,8 +19,11 @@ public static class SaveIngredient
 
             if (request.Ingredient.Id == 0)
             {
+                var userId = supabaseClient.Auth.CurrentSession?.User?.Id;
+                if (userId is null) return Result.Fail(ErrorMessages.NotSignedIn);
+
                 ingredientDb.CreatedAt = DateTime.UtcNow;
-                ingredientDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
+                ingredientDb.CreatedBy = new Guid(userId);
                 ingredientDb.MealId = request.MealId;
 
                 return await Result.Try(async Task () => await supabaseClient

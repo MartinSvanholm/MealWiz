@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
 using Supabase;
 using Supabase.Postgrest.Responses;
@@ -14,10 +15,13 @@ public static class AddGroceryItem
     {
         public async Task<Result<GroceryItem>> Handle(Command request, CancellationToken cancellationToken)
         {
+            var userId = supabaseClient.Auth.CurrentSession?.User?.Id;
+            if (userId is null) return Result.Fail(ErrorMessages.NotSignedIn);
+
             var groceryItemDb = request.GroceryItem.MapToDb();
 
             groceryItemDb.CreatedAt = DateTime.UtcNow;
-            groceryItemDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
+            groceryItemDb.CreatedBy = new Guid(userId);
 
             var result = await Result.Try(async Task<ModeledResponse<GroceryItemDb>>() => await supabaseClient
                 .From<GroceryItemDb>()
