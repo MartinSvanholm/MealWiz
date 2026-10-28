@@ -12,6 +12,17 @@
 //
 // The exit code is the verdict: 0 all passed, 1 something failed, 2 couldn't run (bad arguments, no Docker...).
 // Only a short summary is printed. Full build and test logs, and a TRX per suite, go to artifacts/verify/<level>/.
+//
+// CI runs `full` in pieces, so each test project shows up as its own step in the PR check, and the suite list stays
+// in this one file:
+//
+//   --only <steps>     run only these steps of the level (comma list: build, shared-unit, ..., db; see --help).
+//                      Without "build" the build is skipped, so build first.
+//   --coverage         collect Cobertura coverage for the unit and integration suites (<suite>/<suite>.cobertura.xml)
+//   --check-complete   fail if a step of the level hasn't run since the level's last full run, so CI.yml can't fall
+//                      behind when a suite is added here
+//
+// On GitHub Actions the summary is also appended to the job summary.
 
 using System.Diagnostics;
 using System.Text;
@@ -31,6 +42,12 @@ if (level is null or "-h" or "--help" or "help")
           full   smoke + every E2E journey + pgTAP database tests
 
         Exit code 0 = passed, 1 = failed, 2 = couldn't run. Full logs: artifacts/verify/<level>/
+
+        For CI (see the top of scripts/verify.cs):
+          --only <steps>     comma list of steps to run: build, shared-unit, functions-unit, web-unit,
+                             shared-integration, functions-integration, e2e-smoke (smoke), e2e (full), db (full)
+          --coverage         Cobertura coverage for the unit and integration suites
+          --check-complete   fail if a step of the level hasn't run
         """);
     return level is null ? CouldNotRun : Passed;
 }
@@ -40,6 +57,28 @@ if (level is not ("fast" or "smoke" or "full"))
     return CouldNotRun;
 }
 
+HashSet<string>? only = null;
+var coverage = false;
+var checkComplete = false;
+for (var i = 1; i < args.Length; i++)
+{
+    switch (args[i])
+    {
+        case "--only" when i + 1 < args.Length:
+            only = args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
+            break;
+        case "--coverage":
+            coverage = true;
+            break;
+        case "--check-complete":
+            checkComplete = true;
+            break;
+        default:
+            Console.WriteLine($"Unknown option '{args[i]}'. See scripts/verify.sh --help.");
+            return CouldNotRun;
+    }
+}
+
 var root = FindRepoRoot();
 if (root is null)
 {
@@ -47,15 +86,69 @@ if (root is null)
     return CouldNotRun;
 }
 
-var outDir = Path.Combine(root, "artifacts", "verify", level);
-if (Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true);
-Directory.CreateDirectory(outDir);
-
 const string SharedTests = "MealWiz/tests/MealWiz.Shared.Tests";
 const string FunctionsTests = "MealWiz/tests/MealWiz.Functions.Tests";
 const string WebTests = "MealWiz/tests/MauiWASM.Tests";
 // Where E2ETestBase saves a trace, screenshot and console log for each failed E2E test.
 var e2eArtifacts = Path.Combine(root, WebTests, "bin", "Debug", "net10.0", "TestResults", "e2e");
+
+// The test suites of this level. Coverage is off for E2E: the app runs as WebAssembly in Chromium, out of reach.
+var suites = new List<(string Id, string Name, string Project, string[] Filter, bool Coverage)>
+{
+    ("shared-unit", "Shared unit + bUnit", SharedTests, ["--filter-not-trait", "Category=Integration"], true),
+    ("functions-unit", "Functions unit", FunctionsTests, ["--filter-not-trait", "Category=Integration"], true),
+    ("web-unit", "MauiWASM unit", WebTests, ["--filter-not-trait", "Category=E2E"], true),
+};
+if (level is not "fast")
+{
+    suites.Add(("shared-integration", "Shared integration", SharedTests, ["--filter-trait", "Category=Integration"], true));
+    suites.Add(("functions-integration", "Functions integration", FunctionsTests, ["--filter-trait", "Category=Integration"], true));
+    suites.Add(level is "smoke"
+        ? ("e2e-smoke", "E2E smoke", WebTests, ["--filter-trait", "Category=Smoke"], false)
+        : ("e2e", "E2E (all journeys)", WebTests, ["--filter-trait", "Category=E2E"], false));
+}
+
+// Every step of the level, in order, as --only names them.
+var steps = new List<string> { "build" };
+steps.AddRange(suites.Select(s => s.Id));
+if (level is "full") steps.Add("db");
+
+var outDir = Path.Combine(root, "artifacts", "verify", level);
+// The steps run since the last full run of this level, one per line, for --check-complete.
+var stepsRun = Path.Combine(outDir, ".steps-run");
+
+if (checkComplete)
+{
+    var ran = File.Exists(stepsRun) ? File.ReadAllLines(stepsRun).ToHashSet() : [];
+    var missing = steps.Where(s => !ran.Contains(s)).ToList();
+    Console.WriteLine(missing.Count == 0
+        ? $"verify {level}: every step ran ({string.Join(", ", steps)})"
+        : $"verify {level}: these steps never ran: {string.Join(", ", missing)}. Add them to an --only list in .github/workflows/CI.yml.");
+    return missing.Count == 0 ? Passed : Failed;
+}
+
+if (only is not null)
+{
+    var unknown = only.Where(s => !steps.Contains(s)).ToList();
+    if (unknown.Count > 0)
+    {
+        Console.WriteLine($"Unknown step(s) for {level}: {string.Join(", ", unknown)}. The steps are: {string.Join(", ", steps)}.");
+        return CouldNotRun;
+    }
+    suites.RemoveAll(s => !only.Contains(s.Id));
+}
+
+bool Selected(string step) => only is null || only.Contains(step);
+
+// A full run starts clean. A partial one only replaces its own steps' output, so CI's steps add up.
+if (only is null && Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true);
+Directory.CreateDirectory(outDir);
+foreach (var step in steps.Where(Selected))
+{
+    if (Directory.Exists(Path.Combine(outDir, step))) Directory.Delete(Path.Combine(outDir, step), recursive: true);
+    File.Delete(Path.Combine(outDir, step + ".log"));
+}
+File.AppendAllLines(stepsRun, steps.Where(Selected));
 
 var clock = Stopwatch.StartNew();
 var summary = new List<string>();
@@ -64,25 +157,28 @@ var failed = false;
 
 // 1. Build. The MAUI head in MealWiz.sln needs mobile workloads, so build what the tests reference instead
 // (MealWiz.Shared, MauiWASM, MealWiz.Functions and the three test projects), like CI.
-Progress("build");
-var buildLog = Path.Combine(outDir, "build.log");
-foreach (var project in new[] { SharedTests, FunctionsTests, WebTests })
+if (Selected("build"))
 {
-    var exit = Run("dotnet", ["build", project, "-nologo", "-v:minimal", "-clp:NoSummary"], buildLog);
-    if (exit != 0)
+    Progress("build");
+    var buildLog = Path.Combine(outDir, "build.log");
+    foreach (var project in new[] { SharedTests, FunctionsTests, WebTests })
     {
-        summary.Add(Row("build", $"FAILED ({project})"));
-        details.Add("Build errors:");
-        details.AddRange(BuildErrors(buildLog).Select(e => "  " + e));
-        return Finish(Failed);
+        var exit = Run("dotnet", ["build", project, "-nologo", "-v:minimal", "-clp:NoSummary"], buildLog);
+        if (exit != 0)
+        {
+            summary.Add(Row("build", $"FAILED ({project})"));
+            details.Add("Build errors:");
+            details.AddRange(BuildErrors(buildLog).Select(e => "  " + e));
+            return Finish(Failed);
+        }
     }
+    summary.Add(Row("build", "ok"));
 }
-summary.Add(Row("build", "ok"));
 
-// 2. Supabase, for everything past fast. REQUIRE_SUPABASE makes the fixtures fail instead of skipping, so a
-// broken stack can't pass as "all skipped".
+// 2. Supabase, for the steps that use it: integration, E2E and pgTAP. REQUIRE_SUPABASE makes the fixtures fail
+// instead of skipping, so a broken stack can't pass as "all skipped".
 var env = new Dictionary<string, string>();
-if (level is not "fast")
+if (suites.Any(s => !s.Id.EndsWith("-unit")) || Selected("db") && level is "full")
 {
     Progress("supabase");
     var (state, problem) = EnsureSupabase();
@@ -96,22 +192,7 @@ if (level is not "fast")
 }
 
 // 3. Test suites. All of them run even after a failure, so one run reports everything.
-var suites = new List<(string Id, string Name, string Project, string[] Filter)>
-{
-    ("shared-unit", "Shared unit + bUnit", SharedTests, ["--filter-not-trait", "Category=Integration"]),
-    ("functions-unit", "Functions unit", FunctionsTests, ["--filter-not-trait", "Category=Integration"]),
-    ("web-unit", "MauiWASM unit", WebTests, ["--filter-not-trait", "Category=E2E"]),
-};
-if (level is not "fast")
-{
-    suites.Add(("shared-integration", "Shared integration", SharedTests, ["--filter-trait", "Category=Integration"]));
-    suites.Add(("functions-integration", "Functions integration", FunctionsTests, ["--filter-trait", "Category=Integration"]));
-    suites.Add(level is "smoke"
-        ? ("e2e-smoke", "E2E smoke", WebTests, ["--filter-trait", "Category=Smoke"])
-        : ("e2e", "E2E (all journeys)", WebTests, ["--filter-trait", "Category=E2E"]));
-}
-
-if (Directory.Exists(e2eArtifacts)) Directory.Delete(e2eArtifacts, recursive: true);
+if (suites.Any(s => s.Id.StartsWith("e2e")) && Directory.Exists(e2eArtifacts)) Directory.Delete(e2eArtifacts, recursive: true);
 
 foreach (var suite in suites)
 {
@@ -119,10 +200,13 @@ foreach (var suite in suites)
     var suiteClock = Stopwatch.StartNew();
     var resultsDir = Path.Combine(outDir, suite.Id);
     var log = Path.Combine(outDir, suite.Id + ".log");
+    string[] coverageArgs = coverage && suite.Coverage
+        ? ["--coverage", "--coverage-output-format", "cobertura", "--coverage-output", suite.Id + ".cobertura.xml"]
+        : [];
     var exit = Run("dotnet",
         ["test", "--project", suite.Project, "--no-build", "--no-progress",
          "--results-directory", resultsDir, "--report-xunit-trx", "--report-xunit-trx-filename", suite.Id + ".trx",
-         .. suite.Filter],
+         .. coverageArgs, .. suite.Filter],
         log, env);
 
     var trx = Directory.Exists(resultsDir) ? Directory.GetFiles(resultsDir, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
@@ -157,7 +241,7 @@ foreach (var suite in suites)
 }
 
 // 4. pgTAP, full only.
-if (level is "full")
+if (level is "full" && Selected("db"))
 {
     Progress("database (pgTAP)");
     var dbClock = Stopwatch.StartNew();
@@ -184,16 +268,18 @@ return Finish(failed ? Failed : Passed);
 int Finish(int exitCode)
 {
     var verdict = exitCode switch { Passed => "PASSED", Failed => "FAILED", _ => "COULD NOT RUN" };
+    var scope = only is null ? level : $"{level} ({string.Join(", ", steps.Where(Selected))})";
+    var report = new List<string> { $"verify {scope}: {verdict} in {Duration(clock.Elapsed)}" };
+    report.AddRange(summary);
+    if (details.Count > 0) report.AddRange(["", .. details]);
+
     Console.WriteLine();
-    Console.WriteLine($"verify {level}: {verdict} in {Duration(clock.Elapsed)}");
-    summary.ForEach(Console.WriteLine);
-    if (details.Count > 0)
-    {
-        Console.WriteLine();
-        details.ForEach(Console.WriteLine);
-    }
+    report.ForEach(Console.WriteLine);
     Console.WriteLine();
     Console.WriteLine($"Full logs: {Relative(outDir)}/");
+
+    if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } jobSummary)
+        File.AppendAllLines(jobSummary, ["```", .. report, "```", ""]);
     return exitCode;
 }
 
