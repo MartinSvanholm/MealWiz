@@ -37,7 +37,7 @@ Environment variables:
 - **`E2EEnvironment`** is built once per run, on first use. It publishes MauiWASM, starts `E2EAppHost`, installs Chromium if it's missing and launches one browser.
 - **`E2EAppHost`** is a Kestrel static-file host on a random loopback port with an `index.html` fallback. It sends `Blazor-Environment: Development` and serves `appsettings.Development.json` from memory, pointing the app at the local stack and at a same-origin `/functions` stub for the import Function.
 - **`E2ESupabase`** provides GoTrue admin calls for throwaway users, plus service-role PostgREST calls to seed meals and to resolve meal imports.
-- **`E2ETestBase`** gives every test its own user and its own browser context, so tests are isolated and classes run in parallel. When a test fails it saves `trace.zip`, `screenshot.png` and `console.log` to `bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`, uploaded as the `e2e-failures` artifact in CI. Theory cases add their arguments, e.g. `SmokeTests.Page_Renders(MealsPage,_meals,meal-list-item)`. Open a trace with:
+- **`E2ETestBase`** gives every test its own user and its own browser context, so tests are isolated and classes run in parallel. When a test fails it saves `trace.zip`, `screenshot.png` and `console.log` to `bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`, included in the `test-results` artifact when CI fails. Theory cases add their arguments, e.g. `SmokeTests.Page_Renders(MealsPage,_meals,meal-list-item)`. Open a trace with:
 
   ```bash
   pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <path>/trace.zip

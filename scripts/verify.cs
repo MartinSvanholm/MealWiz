@@ -3,10 +3,10 @@
 //   scripts/verify.ps1 <fast|smoke|full>     (Windows)
 //   scripts/verify.sh  <fast|smoke|full>     (Linux, macOS, Git Bash)
 //
-// They run this file as a .NET 10 file-based app (`dotnet run scripts/verify.cs -- <level>`), so both shells share
-// one implementation. Each level includes the one before it:
+// They run this file as a .NET 10 file-based app (`dotnet run --file scripts/verify.cs -- <level>`), so both shells
+// share one implementation. Each level includes the one before it:
 //
-//   fast   build + unit and bUnit tests. No Docker needed.
+//   fast   docs check + build + unit and bUnit tests. No Docker needed.
 //   smoke  + make sure local Supabase is running (start it if not) + integration tests + the Smoke E2E tests.
 //   full   + every E2E journey + the pgTAP database tests (`supabase test db`).
 //
@@ -16,7 +16,7 @@
 // CI runs `full` in pieces, so each test project shows up as its own step in the PR check, and the suite list stays
 // in this one file:
 //
-//   --only <steps>     run only these steps of the level (comma list: build, shared-unit, ..., db; see --help).
+//   --only <steps>     run only these steps of the level (comma list: docs, build, shared-unit, ..., db; see --help).
 //                      Without "build" the build is skipped, so build first.
 //   --coverage         collect Cobertura coverage for the unit and integration suites (<suite>/<suite>.cobertura.xml)
 //   --check-complete   fail if a step of the level hasn't run since the level's last full run, so CI.yml can't fall
@@ -37,14 +37,14 @@ if (level is null or "-h" or "--help" or "help")
     Console.WriteLine("""
         usage: scripts/verify.ps1 <level>   or   scripts/verify.sh <level>
 
-          fast   build + unit and bUnit tests (no Docker)
+          fast   docs check + build + unit and bUnit tests (no Docker)
           smoke  fast + local Supabase (started if needed) + integration tests + Smoke E2E tests
           full   smoke + every E2E journey + pgTAP database tests
 
         Exit code 0 = passed, 1 = failed, 2 = couldn't run. Full logs: artifacts/verify/<level>/
 
         For CI (see the top of scripts/verify.cs):
-          --only <steps>     comma list of steps to run: build, shared-unit, functions-unit, web-unit,
+          --only <steps>     comma list of steps to run: docs, build, shared-unit, functions-unit, web-unit,
                              shared-integration, functions-integration, e2e-smoke (smoke), e2e (full), db (full)
           --coverage         Cobertura coverage for the unit and integration suites
           --check-complete   fail if a step of the level hasn't run
@@ -109,7 +109,7 @@ if (level is not "fast")
 }
 
 // Every step of the level, in order, as --only names them.
-var steps = new List<string> { "build" };
+var steps = new List<string> { "docs", "build" };
 steps.AddRange(suites.Select(s => s.Id));
 if (level is "full") steps.Add("db");
 
@@ -155,7 +155,25 @@ var summary = new List<string>();
 var details = new List<string>();
 var failed = false;
 
-// 1. Build. The MAUI head in MealWiz.sln needs mobile workloads, so build what the tests reference instead
+// 1. Docs. The agent docs must name every feature folder, handler, table and verify step, and every path they put in
+// backticks must exist (DOC-01 in docs/agents/ARCHITECTURE.md). A failure doesn't stop the run.
+if (Selected("docs"))
+{
+    Progress("docs");
+    var problems = CheckDocs();
+    File.WriteAllLines(Path.Combine(outDir, "docs.log"), problems.Count == 0 ? ["ok"] : problems);
+    if (problems.Count == 0)
+        summary.Add(Row("docs", "ok"));
+    else
+    {
+        failed = true;
+        summary.Add(Row("docs", $"FAILED ({problems.Count} problem{(problems.Count == 1 ? "" : "s")})"));
+        details.Add("Agent docs are out of date (DOC-01). Fix docs/agents/ or CLAUDE.md:");
+        details.AddRange(problems.Take(15).Select(p => "  " + p));
+    }
+}
+
+// 2. Build. The MAUI head in MealWiz.sln needs mobile workloads, so build what the tests reference instead
 // (MealWiz.Shared, MauiWASM, MealWiz.Functions and the three test projects), like CI.
 if (Selected("build"))
 {
@@ -175,7 +193,7 @@ if (Selected("build"))
     summary.Add(Row("build", "ok"));
 }
 
-// 2. Supabase, for the steps that use it: integration, E2E and pgTAP. REQUIRE_SUPABASE makes the fixtures fail
+// 3. Supabase, for the steps that use it: integration, E2E and pgTAP. REQUIRE_SUPABASE makes the fixtures fail
 // instead of skipping, so a broken stack can't pass as "all skipped".
 var env = new Dictionary<string, string>();
 if (suites.Any(s => !s.Id.EndsWith("-unit")) || Selected("db") && level is "full")
@@ -191,7 +209,7 @@ if (suites.Any(s => !s.Id.EndsWith("-unit")) || Selected("db") && level is "full
     env["REQUIRE_SUPABASE"] = "true";
 }
 
-// 3. Test suites. All of them run even after a failure, so one run reports everything.
+// 4. Test suites. All of them run even after a failure, so one run reports everything.
 if (suites.Any(s => s.Id.StartsWith("e2e")) && Directory.Exists(e2eArtifacts)) Directory.Delete(e2eArtifacts, recursive: true);
 
 foreach (var suite in suites)
@@ -240,7 +258,7 @@ foreach (var suite in suites)
         details.Add($"SKIPPED {test}: {reason}");
 }
 
-// 4. pgTAP, full only.
+// 5. pgTAP, full only.
 if (level is "full" && Selected("db"))
 {
     Progress("database (pgTAP)");
@@ -281,6 +299,59 @@ int Finish(int exitCode)
     if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } jobSummary)
         File.AppendAllLines(jobSummary, ["```", .. report, "```", ""]);
     return exitCode;
+}
+
+// The checks behind the docs step. Each problem is one line naming the doc and what's missing.
+List<string> CheckDocs()
+{
+    const string FeaturesDoc = "docs/agents/FEATURES.md", TestingDoc = "docs/agents/TESTING.md";
+    const string SharedFeatures = "MealWiz/MealWiz/MealWiz.Shared/Features";
+    var problems = new List<string>();
+    string ReadDoc(string relative) => File.Exists(Path.Combine(root, relative)) ? File.ReadAllText(Path.Combine(root, relative)) : "";
+    // A whole name: "meal_plans" doesn't count as named inside "meal_plans-meals".
+    static bool Names(string text, string name) => Regex.IsMatch(text, $@"(?<![\w-]){Regex.Escape(name)}(?![\w-])");
+
+    var features = ReadDoc(FeaturesDoc);
+    var headings = string.Join('\n', features.Split('\n').Where(l => l.StartsWith('#')));
+    foreach (var parent in new[] { SharedFeatures, "MealWiz/src/MealWiz.Functions/Functions" })
+        foreach (var folder in Directory.GetDirectories(Path.Combine(root, parent)).Select(Path.GetFileName))
+            if (!Names(headings, folder!))
+                problems.Add($"{FeaturesDoc}: no heading for {parent}/{folder}/");
+
+    foreach (var file in Directory.GetFiles(Path.Combine(root, SharedFeatures), "*.cs", SearchOption.AllDirectories))
+        if (File.ReadAllText(file).Contains("IRequestHandler<") && !Names(features, Path.GetFileNameWithoutExtension(file)))
+            problems.Add($"{FeaturesDoc}: handler {Path.GetFileNameWithoutExtension(file)} isn't listed ({Relative(file)})");
+
+    // Tables still standing after every migration, in order.
+    var tables = new SortedSet<string>();
+    foreach (var migration in Directory.GetFiles(Path.Combine(root, "supabase", "migrations"), "*.sql").Order())
+        foreach (Match m in Regex.Matches(File.ReadAllText(migration),
+                     @"\b(create|drop)\s+table\s+(?:if\s+(?:not\s+)?exists\s+)?(?:""?public""?\.)?""?([\w-]+)""?", RegexOptions.IgnoreCase))
+            if (m.Groups[1].Value.Equals("create", StringComparison.OrdinalIgnoreCase)) tables.Add(m.Groups[2].Value);
+            else tables.Remove(m.Groups[2].Value);
+    problems.AddRange(tables.Where(t => !Names(features, t)).Select(t => $"{FeaturesDoc}: table {t} isn't listed"));
+
+    var testing = ReadDoc(TestingDoc);
+    problems.AddRange(steps.Union(["e2e-smoke", "e2e", "db"]).Where(s => !testing.Contains($"`{s}`"))
+        .Select(s => $"{TestingDoc}: verify step `{s}` isn't described"));
+
+    // A path in backticks resolves from the repo root or from a project folder, so `Features/Meals/` works too.
+    // Skipped: placeholders and globs (<>*{}…), routes (/meals), URLs, and names with no slash or no extension.
+    var bases = Directory.GetFiles(Path.Combine(root, "MealWiz"), "*.csproj", SearchOption.AllDirectories)
+        .Select(p => Path.GetDirectoryName(p)!).Prepend(root).ToList();
+    var docs = Directory.GetFiles(Path.Combine(root, "docs", "agents"), "*.md").Prepend(Path.Combine(root, "CLAUDE.md"));
+    foreach (var doc in docs.Where(File.Exists))
+    {
+        var text = Regex.Replace(File.ReadAllText(doc), @"(?ms)^\s*```.*?^\s*```", "");
+        foreach (var path in Regex.Matches(text, @"`([^`\s]+)`").Select(m => m.Groups[1].Value).Distinct())
+        {
+            if (!path.Contains('/') || path.StartsWith('/') || path.IndexOfAny("<>*{}…:$|=()".ToCharArray()) >= 0) continue;
+            if (!path.EndsWith('/') && !path.Split('/').Last().Contains('.')) continue;
+            if (!bases.Any(b => File.Exists(Path.Combine(b, path)) || Directory.Exists(Path.Combine(b, path))))
+                problems.Add($"{Relative(doc)}: `{path}` doesn't exist");
+        }
+    }
+    return problems;
 }
 
 static void Progress(string step) => Console.WriteLine($"[verify] {step}...");
