@@ -8,27 +8,27 @@
         <MudBadge Dot Overlap Bordered
                   Visible="@(EntryState != MealImportEntryState.Default)"
                   Color="@(EntryState == MealImportEntryState.Failed ? Color.Warning : Color.Info)">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" />
+            <MudIconButton data-testid="add-meal-menu" Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" />
         </MudBadge>
     </ActivatorContent>
     <ChildContent>
-        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="OnCreateManuallyClick">
+        <MudMenuItem data-testid="add-meal-create-manually" Icon="@Icons.Material.Filled.Edit" OnClick="OnCreateManuallyClick">
             Create manually
         </MudMenuItem>
         @switch (EntryState)
         {
             case MealImportEntryState.InProgress:
-                <MudMenuItem Icon="@SpinnerIcon" IconColor="Color.Info" OnClick="OnImportClick">
+                <MudMenuItem data-testid="add-meal-import" Icon="@SpinnerIcon" IconColor="Color.Info" OnClick="OnImportClick">
                     Import in progress…
                 </MudMenuItem>
                 break;
             case MealImportEntryState.Failed:
-                <MudMenuItem Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning" OnClick="OnImportClick">
+                <MudMenuItem data-testid="add-meal-import" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning" OnClick="OnImportClick">
                     <span class="mud-warning-text">Last import failed – see why</span>
                 </MudMenuItem>
                 break;
             default:
-                <MudMenuItem Icon="@Icons.Material.Filled.Link" OnClick="OnImportClick">
+                <MudMenuItem data-testid="add-meal-import" Icon="@Icons.Material.Filled.Link" OnClick="OnImportClick">
                     Import from URL
                 </MudMenuItem>
                 break;

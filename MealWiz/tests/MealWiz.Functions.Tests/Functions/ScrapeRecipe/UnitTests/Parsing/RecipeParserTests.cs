@@ -85,6 +85,198 @@ public class RecipeParserTests
     }
 
     [Fact]
+    public async Task ParseAsync_JsonLd_HowToSectionInstructions()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            {
+              "@type": "Recipe",
+              "name": "Sectioned Pancakes",
+              "recipeInstructions": [
+                {
+                  "@type": "HowToSection",
+                  "name": "Batter",
+                  "itemListElement": [
+                    {"@type": "HowToStep", "text": "Whisk the eggs."},
+                    {"@type": "HowToStep", "text": "Mix in the flour."}
+                  ]
+                },
+                {
+                  "@type": "HowToSection",
+                  "name": "Cooking",
+                  "itemListElement": [{"@type": "HowToStep", "text": "Cook on a hot pan."}]
+                },
+                {"@type": "HowToStep", "text": "Serve."}
+              ]
+            }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Whisk the eggs.\nMix in the flour.\nCook on a hot pan.\nServe.", result.Recipe);
+    }
+
+    // Many WordPress recipe plugins HTML-encode their JSON-LD strings. Microdata and OpenGraph values are
+    // decoded by the HTML parser, so JSON-LD is decoded too to give the same text whichever tier matched.
+    [Fact]
+    public async Task ParseAsync_JsonLd_DecodesHtmlEntities()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            {
+              "@type": "Recipe",
+              "name": "Mac &amp; Cheese",
+              "recipeIngredient": ["1 &frac12; cup milk"],
+              "recipeInstructions": [{"@type": "HowToStep", "text": "Stir until &quot;creamy&quot;."}]
+            }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Mac & Cheese", result.Name);
+        Assert.Equal(["1 ½ cup milk"], result.Ingredients.Select(i => i.Name));
+        Assert.Equal("Stir until \"creamy\".", result.Recipe);
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLd_StringInstructionsAreDecoded()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            { "@type": "Recipe", "name": "Toast", "recipeInstructions": "Toast &amp; butter." }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Toast & butter.", result.Recipe);
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLd_MalformedBlockIsSkipped()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">{ "@type": "Recipe", "name": "Broken", </script>
+            <script type="application/ld+json">
+            { "@type": "Recipe", "name": "Second Block Pancakes", "recipeInstructions": "Mix and cook." }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Second Block Pancakes", result.Name);
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLd_TypeArray()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            { "@type": ["Recipe", "NewsArticle"], "name": "Multi-Typed Pancakes", "recipeInstructions": "Mix and cook." }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Multi-Typed Pancakes", result.Name);
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLd_LegacyIngredientsProperty()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            { "@type": "Recipe", "name": "Legacy Pancakes", "ingredients": ["1 cup flour", "2 eggs"] }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal(["1 cup flour", "2 eggs"], result.Ingredients.Select(i => i.Name));
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLd_IgnoresNonStringIngredients()
+    {
+        const string html = """
+            <html><head>
+            <script type="application/ld+json">
+            {
+              "@type": "Recipe",
+              "name": "Messy Pancakes",
+              "recipeIngredient": ["1 cup flour", 2, null, {"name": "eggs"}, ["milk"], "  ", "salt"]
+            }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal(["1 cup flour", "salt"], result.Ingredients.Select(i => i.Name));
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLdWithoutName_FallsThroughToMicrodata()
+    {
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="OG Title Should Be Ignored" />
+            <script type="application/ld+json">
+            { "@type": "Recipe", "recipeIngredient": ["1 cup flour"] }
+            </script>
+            </head><body>
+            <div itemscope itemtype="https://schema.org/Recipe">
+              <span itemprop="name">Microdata Pancakes</span>
+            </div>
+            </body></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Microdata Pancakes", result.Name);
+    }
+
+    [Fact]
+    public async Task ParseAsync_JsonLdWithoutName_FallsThroughToOpenGraph()
+    {
+        const string html = """
+            <html><head>
+            <meta property="og:title" content="OG Only Recipe" />
+            <script type="application/ld+json">
+            { "@type": "Recipe", "name": "  ", "recipeIngredient": ["1 cup flour"] }
+            </script>
+            </head></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("OG Only Recipe", result.Name);
+    }
+
+    [Fact]
     public async Task ParseAsync_JsonLd_GraphWrapper()
     {
         const string html = """
@@ -164,6 +356,29 @@ public class RecipeParserTests
 
         Assert.NotNull(result);
         Assert.Equal("Microdata Pancakes", result.Name);
+        Assert.Equal(ExpectedInstructions, result.Recipe);
+        Assert.Equal(["1 cup flour", "2 eggs"], result.Ingredients.Select(i => i.Name));
+    }
+
+    [Fact]
+    public async Task ParseAsync_Microdata_MetaContentValues()
+    {
+        const string html = """
+            <html><body>
+            <div itemscope itemtype="https://schema.org/Recipe">
+              <meta itemprop="name" content="Meta Pancakes" />
+              <meta itemprop="recipeIngredient" content="1 cup flour" />
+              <span itemprop="recipeIngredient">2 eggs</span>
+              <meta itemprop="recipeInstructions" content="Mix everything." />
+              <meta itemprop="recipeInstructions" content="Cook on a hot pan." />
+            </div>
+            </body></html>
+            """;
+
+        var result = await _parser.ParseAsync(html);
+
+        Assert.NotNull(result);
+        Assert.Equal("Meta Pancakes", result.Name);
         Assert.Equal(ExpectedInstructions, result.Recipe);
         Assert.Equal(["1 cup flour", "2 eggs"], result.Ingredients.Select(i => i.Name));
     }

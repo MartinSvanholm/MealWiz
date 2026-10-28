@@ -8,7 +8,7 @@ namespace MealWiz.Functions.Shared.Models;
 /// just ScrapeRecipe.
 /// Independently duplicated on the client as <c>ParsedMeal</c>
 /// (<c>MealWiz/MealWiz/MealWiz.Shared/Features/MealImport/Models/ParsedMeal.cs</c>) — keep the
-/// property names in sync on both sides.
+/// property names in sync on both sides; <c>MealWiz/tests/Contracts/parsed_meal.json</c> checks both sides.
 /// </summary>
 public class MealImportPayload
 {

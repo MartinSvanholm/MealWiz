@@ -3,7 +3,8 @@
 @inject ISnackbar _snackbar
 @inject ISender _mediator
 
-<MudLoadingButton 
+<MudLoadingButton
+data-testid="save-meal-button" 
 @bind-Loading="IsSaving" 
 ButtonVariant="@ButtonVariant.IconButton" 
 Icon="@Icons.Material.Filled.Save"

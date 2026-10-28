@@ -7,7 +7,8 @@ namespace MealWiz.Shared.Features.MealImport.Models;
 /// The <c>meal_imports.parsed_meal</c> (jsonb) contract written by the import Function. Independently
 /// duplicated in the Function project as <c>MealImportPayload</c>
 /// (<c>MealWiz/src/MealWiz.Functions/Shared/Models/MealImportPayload.cs</c>) since the two projects can't
-/// share code — keep the property names (PascalCase in the JSON) in sync on both sides.
+/// share code — keep the property names (PascalCase in the JSON) in sync on both sides;
+/// <c>MealWiz/tests/Contracts/parsed_meal.json</c> checks both sides.
 /// </summary>
 public class ParsedMeal
 {

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using AngleSharp.Dom;
 
@@ -12,7 +13,10 @@ public interface IJsonLdRecipeParser
 /// Extracts a schema.org Recipe from any &lt;script type="application/ld+json"&gt; block. Handles a bare
 /// Recipe object, an array of objects (picking out the one typed Recipe), and an "@graph" wrapper.
 /// <c>recipeInstructions</c> is handled in all three shapes schema.org allows: a plain string, an array
-/// of strings, or an array of HowToStep objects (read via their "text" property).
+/// of strings, or an array of HowToStep objects (read via their "text" property). HowToSection objects,
+/// which group steps under a heading in "itemListElement", are flattened into their steps.
+/// Strings are HTML-decoded: many sites entity-encode their JSON-LD ("Mac &amp;amp; Cheese"), and the
+/// Microdata/OpenGraph tiers already get decoded text from the HTML parser.
 /// </summary>
 public class JsonLdRecipeParser : IJsonLdRecipeParser
 {
@@ -95,7 +99,7 @@ public class JsonLdRecipeParser : IJsonLdRecipeParser
     private static ParsedRecipe? TryParseRecipeElement(JsonElement element)
     {
         var name = element.TryGetProperty("name", out var nameProperty) && nameProperty.ValueKind == JsonValueKind.String
-            ? nameProperty.GetString()
+            ? Decode(nameProperty.GetString())
             : null;
 
         if (string.IsNullOrWhiteSpace(name)) return null;
@@ -119,7 +123,7 @@ public class JsonLdRecipeParser : IJsonLdRecipeParser
 
         return property.EnumerateArray()
             .Where(item => item.ValueKind == JsonValueKind.String)
-            .Select(item => item.GetString())
+            .Select(item => Decode(item.GetString()))
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .Select(text => new ParsedIngredient { Name = text! })
             .ToList();
@@ -134,7 +138,7 @@ public class JsonLdRecipeParser : IJsonLdRecipeParser
 
         return property.ValueKind switch
         {
-            JsonValueKind.String => property.GetString(),
+            JsonValueKind.String => Decode(property.GetString()),
             JsonValueKind.Array => JoinSteps(property),
             _ => null
         };
@@ -143,18 +147,23 @@ public class JsonLdRecipeParser : IJsonLdRecipeParser
     private static string? JoinSteps(JsonElement array)
     {
         var steps = array.EnumerateArray()
-            .Select(ExtractStep)
+            .SelectMany(ExtractSteps)
+            .Select(Decode)
             .Where(step => !string.IsNullOrWhiteSpace(step))
             .ToList();
 
         return steps.Count > 0 ? string.Join('\n', steps) : null;
     }
 
-    private static string? ExtractStep(JsonElement item) => item.ValueKind switch
+    private static IEnumerable<string?> ExtractSteps(JsonElement item) => item.ValueKind switch
     {
-        JsonValueKind.String => item.GetString(),
+        JsonValueKind.String => [item.GetString()],
         JsonValueKind.Object when item.TryGetProperty("text", out var text) && text.ValueKind == JsonValueKind.String
-            => text.GetString(),
-        _ => null
+            => [text.GetString()],
+        JsonValueKind.Object when item.TryGetProperty("itemListElement", out var section) && section.ValueKind == JsonValueKind.Array
+            => section.EnumerateArray().SelectMany(ExtractSteps),
+        _ => []
     };
+
+    private static string? Decode(string? value) => value is null ? null : WebUtility.HtmlDecode(value);
 }

@@ -1,7 +1,7 @@
 ﻿@inject IDrawerStateContainer _drawerStateContainer
 
 <Tooltip Text="Edit item">
-    <MudIconButton OnClick="UpdateItemClicked" Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" />
+    <MudIconButton data-testid="edit-grocery-item-button" OnClick="UpdateItemClicked" Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" />
 </Tooltip>
 
 @code {

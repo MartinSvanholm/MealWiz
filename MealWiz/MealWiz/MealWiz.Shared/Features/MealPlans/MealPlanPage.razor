@@ -9,21 +9,21 @@
     <MudPaper Class="rounded-t-0">
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
+                <MudIconButton data-testid="account-button" OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
             </MudItem>
             <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
                 @if (_mealPlanStateContainer.IsCurrentWeek())
                 {
-                    <MudText Typo="Typo.h6">Week @GetWeekNumber()</MudText>
+                    <MudText data-testid="meal-plan-week-title" Typo="Typo.h6">Week @GetWeekNumber()</MudText>
                 }
                 else
                 {
-                    <MudButton Variant="Variant.Text"
+                    <MudButton data-testid="meal-plan-current-week" Variant="Variant.Text"
                                Color="Color.Inherit"
                                EndIcon="@Icons.Material.Filled.Refresh"
                                Disabled="_mealPlanStateContainer.IsLoadingWeek"
                                OnClick="GoToCurrentWeek">
-                        <MudText Typo="Typo.h6">Week @GetWeekNumber()</MudText>
+                        <MudText data-testid="meal-plan-week-title" Typo="Typo.h6">Week @GetWeekNumber()</MudText>
                     </MudButton>
                 }
             </MudItem>

@@ -1,9 +1,9 @@
 ﻿@inject IDrawerStateContainer _drawerStateContainer
 
-<MudDrawer Width="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
+<MudDrawer data-testid="confirm-drawer" data-open="@_drawerStateContainer.IsConfirmDrawerOpen" Width="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
     <MudStack Class="pa-4">
-        <MudText Style="@($"color:{Colors.Gray.Lighten3}")" >@_drawerStateContainer.StateParameters.Description</MudText>
-        <Button Color="Color.Error" OnClick="OnConfirmClicked">Confirm</Button>
+        <MudText data-testid="confirm-drawer-description" Style="@($"color:{Colors.Gray.Lighten3}")" >@_drawerStateContainer.StateParameters.Description</MudText>
+        <Button data-testid="confirm-drawer-confirm" Color="Color.Error" OnClick="OnConfirmClicked">Confirm</Button>
     </MudStack>
 </MudDrawer>
 

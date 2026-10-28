@@ -17,11 +17,18 @@
   <ItemGroup>
     <!-- Runs on Microsoft.Testing.Platform (opted in via the repo-root global.json), so no VSTest adapter packages. -->
     <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <!-- Code coverage (Cobertura) for the test run. CI collects it through the verify script's coverage option. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
     <PackageReference Include="Moq" Version="4.21.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MealWiz.Functions\MealWiz.Functions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Golden files shared with the other test project; see ../Contracts/README.md. -->
+    <None Include="..\Contracts\*.json" Link="Contracts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

@@ -9,7 +9,7 @@
         <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
             @foreach (var item in _mergeItems)
             {
-                <MudPaper Class="pa-3" Elevation="1">
+                <MudPaper data-testid="plan-ingredient-item" Class="pa-3" Elevation="1">
                     <MudStack Spacing="1">
                         <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
                         @if (item.IsDuplicate)
@@ -19,7 +19,7 @@
                                 <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
                             </MudStack>
                         }
-                        <MudTextField Label="Amount"
+                        <MudTextField data-testid="plan-ingredient-amount-input" Label="Amount"
                                       @bind-Value="item.FinalAmount"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
@@ -31,7 +31,7 @@
         </div>
 
         <MudPaper Elevation="4" Square="true" Class="pa-3">
-            <MudButton Variant="Variant.Filled"
+            <MudButton data-testid="plan-ingredients-confirm" Variant="Variant.Filled"
                        Color="Color.Primary"
                        FullWidth="true"
                        OnClick="OnConfirmClicked">
