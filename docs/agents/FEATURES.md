@@ -214,7 +214,6 @@ stays pending past 3 minutes. One job runs at a time.
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealImportJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_imports.test.sql`
   - contracts: `MealWiz/tests/Contracts/`
-- **Known bug:** the Realtime channel joins with the anon key, [MEA-43](https://linear.app/mealwiz/issue/MEA-43).
 
 ## Authentication
 
