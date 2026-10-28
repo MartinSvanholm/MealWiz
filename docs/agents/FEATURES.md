@@ -341,4 +341,4 @@ table and policy list.
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`; the Function writes the result with the service role |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |
