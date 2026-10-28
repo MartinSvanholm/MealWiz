@@ -55,18 +55,24 @@ public class MealImportRealtimeSubscriber(Client supabaseClient) : IMealImportRe
             IRealtimeChannel.MessageReceivedHandler onMessage = (_, message) => confirmations.OnMessage(message);
             channel.AddMessageReceivedHandler(onMessage);
 
-            await channel.Subscribe();
+            try
+            {
+                await channel.Subscribe();
 
-            // If the user's confirmation never comes, carry on: RunScrape still re-reads the row after the ack.
-            if (!string.IsNullOrEmpty(accessToken))
-                await Task.WhenAny(confirmations.AsUser, Task.Delay(AsUserTimeout));
-            channel.RemoveMessageReceivedHandler(onMessage);
+                // If the user's confirmation never comes, carry on: RunScrape still re-reads the row after the ack.
+                if (!string.IsNullOrEmpty(accessToken))
+                    await Task.WhenAny(confirmations.AsUser, Task.Delay(AsUserTimeout));
+            }
+            finally
+            {
+                channel.RemoveMessageReceivedHandler(onMessage);
+            }
 
             return new Subscription(realtime, channel, handler);
         });
     }
 
-    internal static readonly TimeSpan AsUserTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan AsUserTimeout = TimeSpan.FromSeconds(10);
 
     private sealed class Subscription(
         IRealtimeClient<Supabase.Realtime.RealtimeSocket, Supabase.Realtime.RealtimeChannel> realtime,
