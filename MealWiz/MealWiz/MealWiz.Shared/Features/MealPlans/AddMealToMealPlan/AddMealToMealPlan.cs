@@ -1,5 +1,5 @@
-﻿using FluentResults;
-using System.Globalization;
+﻿using System.Globalization;
+using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MediatR;
