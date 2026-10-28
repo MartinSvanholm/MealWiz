@@ -7,6 +7,8 @@ Run the `implement-issue` skill in bug mode for these Linear bugs, in one branch
 - <ID> "<title>" (<url>)<flags, e.g. " — may need an RLS change: ask before that part">
 - <ID> "<title>" (<url>)
 
+<Cleared by the user before start: <decision, quoting the user>. This counts as the user's answer for that flag.>
+
 Likely files (a prediction, not a limit): <files>.
 Other groups running in parallel own: <their files>. Don't edit those; if your fix needs to, stop and ask.
 <Pinned by tests: <test file>. Flip the pinning assertion as TESTING.md says.>

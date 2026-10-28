@@ -38,7 +38,11 @@ the fix flips those assertions.
 
 ## 3. Group
 
-- Bugs that share a file go in the same group (follow chains: A shares with B, B with C → one group).
+- Bugs that share a **source** file or a **pinning test** go in the same group (follow chains: A shares with B, B with
+  C → one group). Other shared test files (`MealHandlerTests.cs`, a journey) don't link bugs: new test methods in the
+  same file merge cleanly. Counting them chains most of the backlog into one cluster.
+- Migrations are new files, so they don't link bugs, but pgTAP files do, and so does `00_rls_enabled.test.sql` when
+  policies change.
 - **At most 3 bugs per group.** A bigger cluster splits by feature folder, and the groups that share a file run one
   after the other (the second is blocked by the first).
 - A bug with flags is still grouped, but marked: its session must stop and ask before that part (implement-issue,
@@ -48,6 +52,10 @@ the fix flips those assertions.
 Show the user a table (group, bugs with titles, files, flags, starts now / waits for) and the excluded bugs with the
 reason. **Wait for their OK** (AskUserQuestion: start all / adjust / cancel). Their yes is the request to start
 sessions.
+
+Flagged bugs and bugs whose issue leaves a product decision open would each stop their session later. Offer to
+settle them now, one AskUserQuestion round, and put the answers in that group's brief ("cleared by the user: …"),
+so the session doesn't have to stop.
 
 ## 4. Start the group sessions
 
