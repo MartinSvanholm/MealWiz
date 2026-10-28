@@ -1,10 +1,15 @@
 ﻿<MudStack Class="pa-2">
-    <MudTextField data-testid="grocery-item-name-input" AutoFocus Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined" />
-    <MudTextField data-testid="grocery-item-amount-input" Label="Amount" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined" />
-    <SaveGroceryItemButton GroceryItem="GroceryItem"/>
+    <MudTextField data-testid="grocery-item-name-input" AutoFocus Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
+                  OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" Label="Amount" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
+                  Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
+    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="GroceryItem"/>
 </MudStack>
 
 @code {
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
+
+    private MudTextField<string> _amountField = default!;
+    private SaveGroceryItemButton _saveButton = default!;
 }

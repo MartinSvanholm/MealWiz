@@ -8,9 +8,19 @@ Class="@Class"
 Immediate="@Immediate"
 InputMode="@InputMode"
 InputType="@InputType"
+OnKeyDown="@OnKeyDown"
+@ref="_field"
 @attributes="UserAttributes"/>
 
 @code {
+    private MudTextField<string> _field = default!;
+
+    public ValueTask FocusAsync() => _field.FocusAsync();
+
+    /// <summary>For Enter to move to the next field, see <see cref="EnterKey"/>.</summary>
+    [Parameter]
+    public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
     [Parameter]
     public string Value { get; set; } = default!;
 

@@ -21,7 +21,9 @@
             </MudStack>
         }
     </MudDrawerHeader>
-    <div style="flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;">
+    @* Scrolls when the content is taller than the drawer (short phones, open keyboard), and keeps it clear of the
+       home indicator (MEA-6). *@
+    <div style="flex: 1 1 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom);">
         @if (_drawerStateContainer.StateParameters.Content != null)
         {
             <DynamicComponent Type="_drawerStateContainer.StateParameters.Content" Parameters="_drawerStateContainer.StateParameters.ContentParameters" />

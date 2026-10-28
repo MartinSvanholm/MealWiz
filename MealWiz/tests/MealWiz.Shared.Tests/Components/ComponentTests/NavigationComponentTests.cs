@@ -2,6 +2,7 @@ using Bunit;
 using MealWiz.Shared.Components;
 using MealWiz.Shared.Components.Card;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Components.ComponentTests;
@@ -13,7 +14,6 @@ public class NavigationComponentTests : ComponentTestBase
     [InlineData("nav-meal-plan", "")]
     [InlineData("nav-grocery-list", "grocerylist")]
     [InlineData("nav-meals", "meals")]
-    [InlineData("nav-freezer", "freezer")]
     public void NavMenu_link_navigates_to_its_page(string testId, string expectedPath)
     {
         Navigation.NavigateTo("/account");
@@ -22,6 +22,26 @@ public class NavigationComponentTests : ComponentTestBase
         cut.Find(TestId(testId)).Click();
 
         Assert.Equal(expectedPath, CurrentPath);
+    }
+
+    // MEA-48: the menu had a Freezer link to /freezer, which no page declares.
+    [Fact]
+    public void NavMenu_links_only_to_pages_that_exist()
+    {
+        var pageRoutes = typeof(NavMenu).Assembly.GetTypes()
+            .SelectMany(type => type.GetCustomAttributes(typeof(RouteAttribute), inherit: false).Cast<RouteAttribute>())
+            .Select(route => route.Template.Trim('/'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Navigation.NavigateTo("/account");
+        var cut = Render<NavMenu>();
+        var links = cut.FindAll("[data-testid^=\"nav-\"]");
+
+        Assert.NotEmpty(links);
+        foreach (var link in links)
+        {
+            link.Click();
+            Assert.True(pageRoutes.Contains(CurrentPath), $"{link.GetAttribute("data-testid")} goes to /{CurrentPath}, which has no page");
+        }
     }
 
     [Fact]

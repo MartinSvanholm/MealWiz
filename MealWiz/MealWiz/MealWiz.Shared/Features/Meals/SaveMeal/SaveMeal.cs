@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.Meals.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
 using Supabase;
 using Supabase.Postgrest.Responses;
@@ -18,8 +19,11 @@ public static class SaveMeal
 
             if (mealDb.Id == 0)
             {
+                var userId = supabaseClient.Auth.CurrentSession?.User?.Id;
+                if (userId is null) return Result.Fail(ErrorMessages.NotSignedIn);
+
                 mealDb.CreatedAt = DateTime.UtcNow;
-                mealDb.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession?.User.Id);
+                mealDb.CreatedBy = new Guid(userId);
 
                 var insertResult = await Result.Try(async Task<ModeledResponse<MealDb>> () => await supabaseClient
                     .From<MealDb>()

@@ -1,8 +1,10 @@
 using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.DeleteMeal;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.SaveMeal;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
 using Supabase;
@@ -36,8 +38,7 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
         Assert.Equal(MealTypeExtensions.RegularValue, row.MealType);
         Assert.Equal(supabase.UserId, row.CreatedBy);
         TimeAssert.CloseTo(before, row.CreatedAt);
-        // Pins current behaviour, see MEA-40: UpdatedAt isn't nullable, so a new meal is stored with 0001-01-01.
-        Assert.Equal(1, row.UpdatedAt.Year);
+        Assert.Null(row.UpdatedAt);
     }
 
     [Fact]
@@ -76,6 +77,18 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
         Assert.Equal(0, ResultAssert.Ok(result).Id);
         var row = await GetMealRowAsync(otherUser.Client, othersMeal.Id);
         Assert.Equal("Theirs", row?.Name);
+    }
+
+    [Fact]
+    public async Task SaveMeal_NewMealSignedOut_FailsWithNotSignedIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var signedOut = await supabase.CreateSignedOutClientAsync();
+
+        var result = await new SaveMeal.Handler(signedOut)
+            .Handle(new SaveMeal.Command(new MealBuilder().Build()), CancellationToken);
+
+        ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
     }
 
     [Fact]
@@ -121,7 +134,7 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
     }
 
     [Fact]
-    public async Task DeleteMeal_PlannedMeal_FailsAndKeepsTheMeal()
+    public async Task DeleteMeal_PlannedMeal_RemovesTheMealFromItsPlans()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var meal = await new MealBuilder().InsertAsync(supabase.Client);
@@ -130,10 +143,10 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
 
         var result = await new DeleteMeal.Handler(supabase.Client).Handle(new DeleteMeal.Command(meal.Id), CancellationToken);
 
-        // Pins current behaviour, see MEA-39: meal_plans-meals.fk_meal has no ON DELETE action, so a planned meal
-        // can't be deleted. The FK violation comes back as a failed result, not an exception.
-        ResultAssert.Failed(result);
-        Assert.NotNull(await GetMealRowAsync(supabase.Client, meal.Id));
+        ResultAssert.Ok(result);
+        Assert.Null(await GetMealRowAsync(supabase.Client, meal.Id));
+        var planned = await supabase.Client.From<MealPlanMealDb>().Where(x => x.MealId == meal.Id).Get(CancellationToken);
+        Assert.Empty(planned.Models);
     }
 
     [Fact]

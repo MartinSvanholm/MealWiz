@@ -21,7 +21,10 @@ public static class UpdateGroceryItem
                 .From<GroceryItemDb>()
                 .Update(groceryItemDb));
 
-            return result.Map(value => value.Model.Id);
+            if (result.IsFailed) return result.ToResult<int>();
+            if (result.Value.Model is null) return Result.Fail("The grocery item could not be found.");
+
+            return result.Value.Model.Id;
         }
     }
 }

@@ -41,9 +41,8 @@ public class GroceryListStateContainer(
         var result = await mediator.Send(new AddGroceryItem.AddGroceryItem.Command(groceryItem));
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
-        groceryItem.Id = result.Value;
-
-        groceryList.Items.Add(groceryItem);
+        // Keep the saved row, not the item we sent: it has the owner and timestamps an update needs
+        groceryList.Items.Add(result.Value);
         groceryList.SortItemsByIsPicked();
 
         NotifyStateChanged();

@@ -23,9 +23,35 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
+    public void Enter_in_the_drawers_name_moves_to_the_amount()
+    {
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, TestData.GroceryItem("Milk")));
+
+        PressEnter(cut.Find(InputOf("grocery-item-name-input")));
+
+        AssertFocused(cut.Find(InputOf("grocery-item-amount-input")));
+    }
+
+    [Fact]
+    public void Enter_in_the_drawers_amount_saves_the_item()
+    {
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(TestData.GroceryItem("Eggs", "6", id: 5)));
+        Drawer.OpenDrawer("Add item", typeof(GroceryItemDrawer));
+        var item = TestData.GroceryItem("Eggs");
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, item));
+
+        cut.Find(InputOf("grocery-item-amount-input")).Input("6");
+        PressEnter(cut.Find(InputOf("grocery-item-amount-input")));
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal("6", Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem.Amount);
+    }
+
+    [Fact]
     public void Saving_a_new_item_adds_it_and_closes_the_drawer()
     {
-        SetupSend<AddGroceryItem.Command, Result<int>>(Result.Ok(5));
+        var saved = TestData.GroceryItem("Eggs", id: 5);
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(saved));
         Drawer.OpenDrawer("Add item", typeof(GroceryItemDrawer));
         var item = TestData.GroceryItem("Eggs");
         var cut = Render<SaveGroceryItemButton>(p => p.Add(b => b.GroceryItem, item));
@@ -34,7 +60,7 @@ public class GroceryItemComponentTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
         Assert.Same(item, Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem);
-        Assert.Contains(item, GroceryList.GroceryList.Items);
+        Assert.Contains(saved, GroceryList.GroceryList.Items);
         Assert.Empty(Sent<UpdateGroceryItem.Command>());
     }
 
@@ -97,5 +123,27 @@ public class GroceryItemComponentTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.Empty(GroceryList.GroceryList.Items));
         Assert.Single(Sent<DeleteGroceryItem.Command>());
+    }
+
+    // MEA-32: a dismissed confirmation used to leave its handler subscribed, so the next confirm deleted it too.
+    [Fact]
+    public void Dismissing_the_confirmation_then_confirming_another_deletes_only_the_confirmed_item()
+    {
+        SetupSend<DeleteGroceryItem.Command, Result<int>>(Result.Ok(1));
+        var milk = TestData.GroceryItem("Milk", id: 1);
+        var bread = TestData.GroceryItem("Bread", id: 2);
+        GroceryList.GroceryList.Items.AddRange([milk, bread]);
+        RenderDrawers();
+        var milkButton = Render<DeleteGroceryItemButton>(p => p.Add(b => b.GroceryItem, milk));
+        var breadButton = Render<DeleteGroceryItemButton>(p => p.Add(b => b.GroceryItem, bread));
+
+        milkButton.Find(TestId("delete-grocery-item-button")).Click();
+        ConfirmDrawerHost.InvokeAsync(() => Drawer.IsConfirmDrawerOpen = false);
+        breadButton.Find(TestId("delete-grocery-item-button")).Click();
+        Confirm();
+
+        breadButton.WaitForAssertion(() => Assert.DoesNotContain(bread, GroceryList.GroceryList.Items));
+        Assert.Single(Sent<DeleteGroceryItem.Command>());
+        Assert.Contains(milk, GroceryList.GroceryList.Items);
     }
 }

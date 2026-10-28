@@ -3,10 +3,12 @@
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
 
-<CustomForm @ref="Form" Class="pa-5 d-flex flex-column" @bind-IsValid="IsValid" OnEnterClicked="Login">
+<CustomForm @ref="Form" Class="pa-5 d-flex flex-column" @bind-IsValid="IsValid">
     <MudText Typo="Typo.h6">Login</MudText>
-    <TextField data-testid="login-email" @bind-Value="Email" Class="mt-4" Label="Email" Required InputType="InputType.Email" />
-    <TextField data-testid="login-password" @bind-Value="Password" Class="mt-4" Label="Password" Required InputType="InputType.Password" />
+    <TextField data-testid="login-email" @bind-Value="Email" Class="mt-4" Label="Email" Required InputType="InputType.Email"
+               OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
+    <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" Class="mt-4" Label="Password" Required InputType="InputType.Password"
+               OnKeyDown="EnterKey.Then(Login)" />
     <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
         <Button Variant="Variant.Text">Create account</Button>
         <Button Variant="Variant.Text">Forgot password</Button>
@@ -19,6 +21,7 @@
     private string Password { get; set; } = default!;
     private bool IsValid { get; set; }
     private CustomForm Form { get; set; } = default!;
+    private TextField PasswordField { get; set; } = default!;
     private bool IsLoading{ get; set; }
 
     private async Task Login()

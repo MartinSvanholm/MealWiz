@@ -2,6 +2,7 @@ using MealWiz.Shared.Features.Ingredients.DeleteIngredient;
 using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
 using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Features.Ingredients.SaveIngredient;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
 using Xunit;
@@ -68,6 +69,19 @@ public class IngredientHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
 
         // The fk_meal foreign key rejects it, and the error comes back as a failed result.
         ResultAssert.Failed(result);
+    }
+
+    [Fact]
+    public async Task SaveIngredient_NewIngredientSignedOut_FailsWithNotSignedIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+        var signedOut = await supabase.CreateSignedOutClientAsync();
+
+        var result = await new SaveIngredient.Handler(signedOut)
+            .Handle(new SaveIngredient.Command(new IngredientBuilder().Build(), meal.Id), CancellationToken);
+
+        ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
     }
 
     [Fact]

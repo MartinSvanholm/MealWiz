@@ -37,7 +37,7 @@ first saves the meal, then each pending ingredient (see Ingredients).
   |---|---|---|
   | GetAllMeals | `Query()` → `Result<List<Meal>>` | Every meal visible to the user (own + system), regular meals last, then by name |
   | SaveMeal | `Command(Meal)` → `Result<Meal>` | Insert when `Id == 0` (sets `created_by`), otherwise update |
-  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; ingredients cascade |
+  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade |
 
 - **State:** `Features/Meals/State/MealsStateContainer.cs` (`IMealsStateContainer`). It holds `Meals`, `MealToEdit`,
   and the pending ingredients; methods include `LoadMeals` and `ReloadIngredientsForMealToEdit`.
@@ -57,9 +57,10 @@ first saves the meal, then each pending ingredient (see Ingredients).
 
 ## Ingredients
 
-A meal's ingredients: name, amount, and a "show on grocery list" flag (stored but never read; see
-[MEA-38](https://linear.app/mealwiz/issue/MEA-38)). They're edited only from the Edit Meal page, in a drawer. A new
-meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is saved and has an id.
+A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch in the drawer, on by default;
+ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
+Edit Meal page, in a drawer. A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
+saved and has an id.
 
 - **Folder:** `Features/Ingredients/`
 - **Pages:** none. The Edit Meal page hosts this feature.
@@ -80,6 +81,8 @@ meal's ingredients are kept as pending in `IMealsStateContainer` until the meal 
 - **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `ReloadIngredientsForMealToEdit`).
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
+- **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
+  ingredient saved before the switch existed, and defaults the column to true.
 - **Tests:**
   - unit: `Features/Ingredients/UnitTests/Models/`
   - bUnit: `Features/Ingredients/ComponentTests/`
@@ -106,7 +109,7 @@ stored as `yyyy-MM-dd` strings.
   | GetMealPlanByDate | `Query(DateTime Date)` → `Result<MealPlan?>` | The plan whose `start_date..end_date` contains the date, with its meals; `null` if none |
   | CreateMealPlan | `Command(MealPlan)` → `Result<MealPlan>` | Insert a week's plan (sets `created_by`) |
   | AddMealToMealPlan | `Command(Meal)` → `Result<Meal>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate` |
-  | RemoveMealFromMealPlan | `Command(int MealId)` → `Result` | Delete plan rows for the meal. It currently deletes every date, not one: [MEA-35](https://linear.app/mealwiz/issue/MEA-35) |
+  | RemoveMealFromMealPlan | `Command(int MealId, int MealPlanId, DateTime MealDate)` → `Result` | Delete the meal's row on that date in that plan |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
   `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`.
@@ -138,16 +141,16 @@ ignoring case, and lets you set the final amount; matches update the existing it
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: deletes after a confirm drawer.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
-    drawer. It reads `IMealPlanStateContainer`.
+    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllGroceryItems | `Query()` → `Result<List<GroceryItem>>` | All of the user's items |
-  | AddGroceryItem | `Command(GroceryItem)` → `Result<int>` | Insert one item (sets `created_by`), returns its id |
+  | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
   | AddMealPlanIngredientsToGroceryList | `Command(List<GroceryItem>)` → `Result<List<int>>` | Bulk insert; `created_by` comes from each ingredient |
-  | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off |
-  | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item |
+  | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
+  | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`.
@@ -211,7 +214,6 @@ stays pending past 3 minutes. One job runs at a time.
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealImportJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_imports.test.sql`
   - contracts: `MealWiz/tests/Contracts/`
-- **Known bug:** the Realtime channel joins with the anon key, [MEA-43](https://linear.app/mealwiz/issue/MEA-43).
 
 ## Authentication
 
@@ -303,6 +305,8 @@ key, CORS and deployment.
   - `Components/Tooltip.razor`
   - `Components/Card/BaseCard.razor`
   - `Components/Form/Button.razor`, `Components/Form/TextField.razor`, `Components/Form/CustomForm.razor`
+  - `Components/Form/EnterKey.cs`: `EnterKey.Then(...)`, the OnKeyDown handler that makes Enter (also on a phone
+    keyboard) move to a form's next field, and submit on its last single-line field. Every multi-field form uses it.
 - **`Layout/`:** `Layout/MainLayout.razor` (theme, snackbar provider, drawers, nav menu) and `Layout/RedirectToLogin.razor`.
 - **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.
@@ -322,7 +326,9 @@ key, CORS and deployment.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
-  - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers its own services by hand, and always loads the embedded
+  - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
+    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `MealImportFunctionOptions` and the Supabase `Client`
+    like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
   - It needs mobile workloads, so verify and CI don't build it, and it has no test project.
@@ -336,9 +342,9 @@ table and policy list.
 
 | Table | Feature | Created in | Notes |
 |---|---|---|---|
-| `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); UPDATE and DELETE only for `regular`. INSERT is `WITH CHECK (true)` |
-| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade |
+| `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
+| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
-| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting |
+| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`; the Function writes the result with the service role |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |

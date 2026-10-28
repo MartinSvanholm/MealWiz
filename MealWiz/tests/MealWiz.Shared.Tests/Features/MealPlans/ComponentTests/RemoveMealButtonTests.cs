@@ -26,7 +26,21 @@ public class RemoveMealButtonTests : ComponentTestBase
         cut.Find(TestId("remove-meal-button")).Click();
 
         cut.WaitForAssertion(() => Assert.False(MealPlan.SelectedDateHasMeal));
-        Assert.Equal(8, Assert.Single(Sent<RemoveMealFromMealPlan.Command>()).MealId);
+        Assert.Equal(new RemoveMealFromMealPlan.Command(8, 1, MealPlan.SelectedDate.Date), Assert.Single(Sent<RemoveMealFromMealPlan.Command>()));
+    }
+
+    // MEA-33: the meal used to disappear from the date even when the request failed.
+    [Fact]
+    public void A_failed_remove_shows_the_error_and_keeps_the_meal_on_the_date()
+    {
+        MealPlan.MealPlan = TestData.MealPlanWith(MealPlan.SelectedDate, TestData.Meal("Tacos", id: 8));
+        SetupSend<RemoveMealFromMealPlan.Command, Result>(Result.Fail("Could not remove the meal"));
+        var cut = Render<RemoveMealButton>();
+
+        cut.Find(TestId("remove-meal-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Could not remove the meal", SnackbarMessages));
+        Assert.Equal(8, MealPlan.GetMealFromSelectedDate()?.Id);
     }
 
     [Fact]

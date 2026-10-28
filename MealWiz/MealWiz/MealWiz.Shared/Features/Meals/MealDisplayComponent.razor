@@ -34,19 +34,11 @@
 @code {
     public Meal? Meal { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        try
-        {
-            Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
-            _mealPlanStateContainer.OnStateChanged += StateChanged;
+        Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
+        _mealPlanStateContainer.OnStateChanged += StateChanged;
 
-        }
-        catch (Exception e)
-        {
-            
-            throw;
-        }
         base.OnInitialized();
     }
 

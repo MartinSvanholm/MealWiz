@@ -7,8 +7,10 @@
 <MudForm @ref="_form" Style="height: 100%;">
     <MudStack Style="height: 100%;" Spacing="0">
         <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
-            @foreach (var item in _mergeItems)
+            @for (var i = 0; i < _mergeItems.Count; i++)
             {
+                var item = _mergeItems[i];
+                var index = i;
                 <MudPaper data-testid="plan-ingredient-item" Class="pa-3" Elevation="1">
                     <MudStack Spacing="1">
                         <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
@@ -19,8 +21,10 @@
                                 <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
                             </MudStack>
                         }
-                        <MudTextField data-testid="plan-ingredient-amount-input" Label="Amount"
+                        <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input" Label="Amount"
                                       @bind-Value="item.FinalAmount"
+                                      Immediate
+                                      OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       Required="true"
@@ -44,6 +48,7 @@
 @code {
     private MudForm _form = default!;
     private List<MergeItem> _mergeItems = [];
+    private MudTextField<string>[] _amountFields = [];
 
     protected override void OnInitialized()
     {
@@ -53,6 +58,7 @@
 
         var planIngredients = _mealPlanStateContainer.MealPlan.MealOnDate
             .SelectMany(kvp => kvp.Value.Ingredients)
+            .Where(ingredient => ingredient.ShowOnGroceryList)
             .ToList();
 
         _mergeItems = planIngredients.Select(ingredient =>
@@ -70,6 +76,16 @@
                 PlanGroceryItem = new GroceryItem(ingredient)
             };
         }).ToList();
+
+        _amountFields = new MudTextField<string>[_mergeItems.Count];
+    }
+
+    private async Task OnAmountEnter(int index)
+    {
+        if (index < _amountFields.Length - 1)
+            await _amountFields[index + 1].FocusAsync();
+        else
+            await OnConfirmClicked();
     }
 
     private async Task OnConfirmClicked()

@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(23);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -43,6 +43,27 @@ select lives_ok(
     $$ insert into public.meals (id, name, meal_type, created_by, created_at)
        values (900003, 'A soup', 'regular', 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
     'user A can insert their own meal'
+);
+
+select throws_ok(
+    $$ insert into public.meals (name, meal_type, created_by, created_at)
+       values ('A for B', 'regular', 'bbbbbbbb-0000-0000-0000-0000000000b2', now()) $$,
+    '42501', null,
+    'user A cannot insert a meal owned by user B'
+);
+
+select throws_ok(
+    $$ insert into public.meals (name, meal_type, created_by, created_at)
+       values ('Fake leftovers', 'leftover', null, now()) $$,
+    '42501', null,
+    'user A cannot insert a fake system meal'
+);
+
+select throws_ok(
+    $$ insert into public.meals (name, meal_type, created_by, created_at)
+       values ('A eat out', 'eat_out', 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '42501', null,
+    'user A cannot insert a non-regular meal, even their own'
 );
 
 select results_eq(

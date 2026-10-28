@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.MealImport.Models;
 using Supabase;
 using Supabase.Realtime.Interfaces;
 using Supabase.Realtime.PostgresChanges;
+using Supabase.Realtime.Socket;
 
 namespace MealWiz.Shared.Features.MealImport.State;
 
@@ -13,7 +14,8 @@ namespace MealWiz.Shared.Features.MealImport.State;
 public interface IMealImportRealtimeSubscriber
 {
     /// <summary>
-    /// Completes once the channel join is acknowledged, so no update written after this returns is missed.
+    /// Completes once Realtime has subscribed the channel as the signed-in user, so no update written after this
+    /// returns is missed.
     /// Dispose the returned handle to unsubscribe.
     /// </summary>
     Task<Result<IAsyncDisposable>> Subscribe(Guid mealImportId, Action<Models.MealImport> onUpdate);
@@ -46,11 +48,31 @@ public class MealImportRealtimeSubscriber(Client supabaseClient) : IMealImportRe
             };
             channel.AddPostgresChangeHandler(PostgresChangesOptions.ListenType.Updates, handler);
 
-            await channel.Subscribe();
+            // The join carries only the socket's anon key; the client sends the user's access_token after the join
+            // reply, and Realtime then re-subscribes with the user's claims. Subscribe() returns on the first,
+            // anonymous confirmation, while RLS still hides the row, so also wait for the user's one (MEA-43).
+            var confirmations = new PostgresSubscriptionConfirmations();
+            IRealtimeChannel.MessageReceivedHandler onMessage = (_, message) => confirmations.OnMessage(message);
+            channel.AddMessageReceivedHandler(onMessage);
+
+            try
+            {
+                await channel.Subscribe();
+
+                // If the user's confirmation never comes, carry on: RunScrape still re-reads the row after the ack.
+                if (!string.IsNullOrEmpty(accessToken))
+                    await Task.WhenAny(confirmations.AsUser, Task.Delay(AsUserTimeout));
+            }
+            finally
+            {
+                channel.RemoveMessageReceivedHandler(onMessage);
+            }
 
             return new Subscription(realtime, channel, handler);
         });
     }
+
+    private static readonly TimeSpan AsUserTimeout = TimeSpan.FromSeconds(10);
 
     private sealed class Subscription(
         IRealtimeClient<Supabase.Realtime.RealtimeSocket, Supabase.Realtime.RealtimeChannel> realtime,
@@ -67,5 +89,27 @@ public class MealImportRealtimeSubscriber(Client supabaseClient) : IMealImportRe
 
             return ValueTask.CompletedTask;
         }
+    }
+}
+
+/// <summary>
+/// Counts Realtime's "Subscribed to PostgreSQL" confirmations on a channel. The first answers the anonymous join;
+/// the second comes once Realtime has re-subscribed with the access_token sent after it.
+/// </summary>
+internal sealed class PostgresSubscriptionConfirmations
+{
+    private readonly TaskCompletionSource asUser = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int confirmed;
+
+    /// <summary>Completes on the second confirmation.</summary>
+    public Task AsUser => asUser.Task;
+
+    public void OnMessage(SocketResponse message)
+    {
+        if (message.Event != Supabase.Realtime.Constants.EventType.System) return;
+        if (message.Payload is not { Extension: "postgres_changes", Status: "ok" }) return;
+
+        if (Interlocked.Increment(ref confirmed) >= 2)
+            asUser.TrySetResult();
     }
 }

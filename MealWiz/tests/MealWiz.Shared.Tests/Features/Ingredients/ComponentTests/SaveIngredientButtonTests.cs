@@ -68,5 +68,7 @@ public class SaveIngredientButtonTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.Contains("Amount is too long", SnackbarMessages));
         Assert.True(Drawer.IsDrawerOpen);
         Assert.Empty(Sent<GetIngredientsByMealId.Query>());
+        // MEA-33: the button used to stay loading (disabled) after a failed save.
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("save-ingredient-button")).HasAttribute("disabled")));
     }
 }

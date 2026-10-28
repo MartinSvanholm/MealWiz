@@ -15,8 +15,8 @@
             return;
         }
 
-        var result = await _mediator.Send(new RemoveMealFromMealPlan.Command(meal.Id));
-        result.Handle(_snackbar);
+        var result = await _mediator.Send(new RemoveMealFromMealPlan.Command(meal.Id, _mealPlanStateContainer.MealPlan.Id, meal.MealDate.Value));
+        if (result.Handle(_snackbar).IsFailed) return;
 
         _mealPlanStateContainer.MealPlan.MealOnDate.Remove(meal.MealDate.Value);
         _mealPlanStateContainer.NotifyStateChanged();

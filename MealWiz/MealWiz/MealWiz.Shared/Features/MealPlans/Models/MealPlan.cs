@@ -11,7 +11,7 @@ public class MealPlan
     public DateTime EndDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public Dictionary<DateTime, Meal> MealOnDate { get; set; }
 
     public MealPlan(DateTime targetDate)
@@ -39,8 +39,8 @@ public class MealPlan
         return new MealPlanDb()
         {
             Id = Id,
-            StartDate = StartDate.ToString("yyyy-MM-dd"),
-            EndDate = EndDate.ToString("yyyy-MM-dd"),
+            StartDate = StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            EndDate = EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             CreatedAt = CreatedAt,
             CreatedBy = CreatedBy,
             UpdatedAt = UpdatedAt

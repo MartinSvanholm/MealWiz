@@ -4,6 +4,7 @@
 @inject ISnackbar _snackbar
 @inject Client _client;
 @inject NavigationManager _navigationManager
+@implements IDisposable
 
 <MudStack Spacing="0" Style="height: calc(100vh - 56px)">
     <MudPaper Class="rounded-t-0">
@@ -48,6 +49,11 @@
         await _mealsStateContainer.LoadMeals();
 
         await base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _mealsStateContainer.OnStateChanged -= StateHasChanged;
     }
 
     private void OnAccountClicked()
