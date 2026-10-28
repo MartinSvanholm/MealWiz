@@ -22,7 +22,7 @@ public class MealPlanDb : BaseModel
     public Guid CreatedBy { get; set; }
 
     [Column("updated_at")]
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [Reference(typeof(MealPlanMealDb), ReferenceAttribute.JoinType.Left)]
     public List<MealPlanMealDb> MealPlanMeals { get; set; }

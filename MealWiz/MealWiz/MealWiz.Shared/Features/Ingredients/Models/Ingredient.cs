@@ -8,7 +8,7 @@ public class Ingredient
     public bool ShowOnGroceryList { get; set; }
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public int MealId { get; set; }
 
     public Ingredient()
