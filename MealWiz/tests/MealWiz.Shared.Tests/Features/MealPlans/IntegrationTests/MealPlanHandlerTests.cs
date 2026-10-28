@@ -111,29 +111,34 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     }
 
     [Fact]
-    public async Task GetMealPlanByDate_UnderANonGregorianCulture_DoesNotFindThePlan()
+    public async Task GetMealPlanByDate_UnderANonGregorianCulture_FindsThePlan()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
-        var thai = CultureInfo.GetCultureInfo("th-TH");
-        Assert.SkipUnless(thai.Calendar is ThaiBuddhistCalendar, "The th-TH culture isn't available (invariant globalization).");
-        await new MealPlanBuilder().ForWeekOf(Week(10)).InsertAsync(supabase.Client);
+        var thai = ThaiCultureOrSkip();
+        var plan = await new MealPlanBuilder().ForWeekOf(Week(10)).InsertAsync(supabase.Client);
 
-        var original = CultureInfo.CurrentCulture;
-        FluentResults.Result<MealPlan?> result;
-        try
-        {
-            CultureInfo.CurrentCulture = thai;
-            result = await GetByDateAsync(Week(10));
-        }
-        finally
-        {
-            CultureInfo.CurrentCulture = original;
-        }
+        // MEA-37: under th-TH the date used to be formatted with the Buddhist calendar (2574-01-20) and miss the plan.
+        var result = await UnderCultureAsync(thai, () => GetByDateAsync(Week(10)));
 
-        // Pins current behaviour, see MEA-37: the date is formatted with the current culture's calendar, so under
-        // th-TH the query asks for 2574-01-20 and misses the 2031 plan.
-        Assert.Null(ResultAssert.Ok(result));
-        Assert.NotNull(ResultAssert.Ok(await GetByDateAsync(Week(10))));
+        Assert.Equal(plan.Id, ResultAssert.Ok(result)?.Id);
+    }
+
+    [Fact]
+    public async Task CreateMealPlanAndAddMeal_UnderANonGregorianCulture_WriteGregorianDates()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var thai = ThaiCultureOrSkip();
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+
+        var plan = ResultAssert.Ok(await UnderCultureAsync(thai, () => CreateAsync(supabase.Client, new MealPlan(Week(11)))));
+        meal.MealPlan = plan;
+        meal.MealDate = Week(11).AddDays(2);
+        ResultAssert.Ok(await UnderCultureAsync(thai, () => AddAsync(meal)));
+
+        var planRow = await supabase.Client.From<MealPlanDb>().Where(x => x.Id == plan.Id).Single(CancellationToken);
+        Assert.Equal(Iso(Week(11)), planRow?.StartDate);
+        Assert.Equal(Iso(Week(11).AddDays(6)), planRow?.EndDate);
+        Assert.Equal(Iso(Week(11).AddDays(2)), Assert.Single(await GetPlanRowsAsync(plan.Id)).MealDate);
     }
 
     [Fact]
@@ -188,7 +193,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
             .WithMeal(Week(16).AddDays(1), keep)
             .InsertAsync(supabase.Client);
 
-        var result = await RemoveAsync(meal.Id);
+        var result = await RemoveAsync(meal.Id, plan.Id, Week(16));
 
         ResultAssert.Ok(result);
         var remaining = Assert.Single(await GetPlanRowsAsync(plan.Id));
@@ -196,7 +201,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     }
 
     [Fact]
-    public async Task RemoveMealFromMealPlan_MealPlannedOnSeveralDates_RemovesEveryOne()
+    public async Task RemoveMealFromMealPlan_MealPlannedOnSeveralDates_RemovesOnlyTheGivenDate()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var meal = await new MealBuilder().InsertAsync(supabase.Client);
@@ -207,14 +212,36 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
             .InsertAsync(supabase.Client);
         var nextWeek = await new MealPlanBuilder().ForWeekOf(Week(19)).WithMeal(Week(19), meal).InsertAsync(supabase.Client);
 
-        // The Remove button means "this date", but the command only carries the meal id.
-        var result = await RemoveAsync(meal.Id);
+        // MEA-35: the delete used to filter on fk_meal alone and remove the meal from every date in every plan.
+        var result = await RemoveAsync(meal.Id, thisWeek.Id, Week(18).AddDays(3));
 
-        // Pins current behaviour, see MEA-35: the delete filters on fk_meal alone, so the meal goes from every date
-        // in every plan. With a system meal like Leftovers that empties all of the user's Leftovers days.
         ResultAssert.Ok(result);
-        Assert.Empty(await GetPlanRowsAsync(thisWeek.Id));
-        Assert.Empty(await GetPlanRowsAsync(nextWeek.Id));
+        var kept = Assert.Single(await GetPlanRowsAsync(thisWeek.Id));
+        Assert.Equal(Iso(Week(18)), kept.MealDate);
+        Assert.Single(await GetPlanRowsAsync(nextWeek.Id));
+    }
+
+    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static CultureInfo ThaiCultureOrSkip()
+    {
+        var thai = CultureInfo.GetCultureInfo("th-TH");
+        Assert.SkipUnless(thai.Calendar is ThaiBuddhistCalendar, "The th-TH culture isn't available (invariant globalization).");
+        return thai;
+    }
+
+    private static async Task<T> UnderCultureAsync<T>(CultureInfo culture, Func<Task<T>> action)
+    {
+        var original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = culture;
+            return await action();
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
     }
 
     private Task<FluentResults.Result<MealPlan>> CreateAsync(Client client, MealPlan mealPlan) =>
@@ -226,8 +253,8 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     private Task<FluentResults.Result<Meal>> AddAsync(Meal meal) =>
         new AddMealToMealPlan.Handler(supabase.Client).Handle(new AddMealToMealPlan.Command(meal), CancellationToken);
 
-    private Task<FluentResults.Result> RemoveAsync(int mealId) =>
-        new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId), CancellationToken);
+    private Task<FluentResults.Result> RemoveAsync(int mealId, int mealPlanId, DateTime mealDate) =>
+        new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId, mealPlanId, mealDate), CancellationToken);
 
     private async Task<List<MealPlanMealDb>> GetPlanRowsAsync(int mealPlanId)
     {
