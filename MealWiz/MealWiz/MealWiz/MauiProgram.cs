@@ -1,10 +1,8 @@
-﻿using MealWiz.Providers;
-using MealWiz.Shared.Features.Meals.State;
+﻿using Blazored.LocalStorage;
+using MealWiz.Providers;
 using MealWiz.Shared.Features.MealImport.Models;
-using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
-using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -41,14 +39,12 @@ namespace MealWiz
                 .Build();
             builder.Configuration.AddConfiguration(config);
 
+            builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddMudServices();
-            builder.Services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
-            builder.Services.AddScoped<IMealsStateContainer, MealsStateContainer>();
+            builder.Services.RegisterScopedServices();
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
-            builder.Services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
-            builder.Services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
             builder.Services.AddSingleton(TimeProvider.System);
             builder.Services.AddScoped(_ => new HttpClient());
             builder.Services.AddSingleton(new MealImportFunctionOptions(
