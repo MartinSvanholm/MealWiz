@@ -36,6 +36,17 @@ public class EditMealPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Enter_in_the_name_moves_to_the_recipe()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        var cut = Render<EditMealPage>();
+
+        PressEnter(cut.Find(InputOf("meal-name-input")));
+
+        AssertFocused(cut.Find(InputOf("meal-recipe-input")));
+    }
+
+    [Fact]
     public void Back_returns_to_the_meals_page()
     {
         var cut = Render<EditMealPage>();
@@ -55,7 +66,7 @@ public class EditMealPageTests : ComponentTestBase
         cut.Find(TestId("create-ingredient-card")).Click();
         Assert.Equal(typeof(IngredientDrawer), Drawer.StateParameters.Content);
         DrawerHost.Find(InputOf("ingredient-name-input")).Change("Eggs");
-        DrawerHost.Find(InputOf("ingredient-amount-input")).Change("3");
+        DrawerHost.Find(InputOf("ingredient-amount-input")).Input("3");
         DrawerHost.Find(TestId("save-ingredient-button")).Click();
 
         Assert.False(Drawer.IsDrawerOpen);

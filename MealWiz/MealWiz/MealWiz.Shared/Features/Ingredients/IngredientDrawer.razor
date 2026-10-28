@@ -4,14 +4,19 @@
 @inject IMealsStateContainer _mealsStateContainer
 
 <MudStack Class="pa-2">
-    <MudTextField data-testid="ingredient-name-input" Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
-    <MudTextField data-testid="ingredient-amount-input" Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined" />
+    <MudTextField data-testid="ingredient-name-input" AutoFocus Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined"
+                  OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined"
+                  Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
     <MudSwitch T="bool" data-testid="ingredient-show-on-grocery-list-switch" @bind-Value="Ingredient.ShowOnGroceryList"
                Label="Add to grocery list" Color="Color.Primary" />
-    <SaveIngredientButton Ingredient="Ingredient" />
+    <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" />
 </MudStack>
 
 @code {
     [Parameter]
     public Ingredient Ingredient { get; set; }
+
+    private MudTextField<string> _amountField = default!;
+    private SaveIngredientButton _saveButton = default!;
 }

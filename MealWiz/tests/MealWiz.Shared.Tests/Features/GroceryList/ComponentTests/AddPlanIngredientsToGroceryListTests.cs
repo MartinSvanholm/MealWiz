@@ -75,7 +75,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         Drawer.OpenDrawer("Add items to grocery list", typeof(AddPlanIngredientsToGroceryListDrawer));
         var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
 
-        cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].Change("1.3 l");
+        cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].Input("1.3 l");
         cut.Find(TestId("plan-ingredients-confirm")).Click();
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
@@ -86,6 +86,30 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         Assert.Equal(("Flour", "200g"), (added.Name, added.Amount));
         Assert.Single(Sent<GetAllGroceryItems.Query>());
         Assert.Contains("Ingredients added to list", SnackbarMessages);
+    }
+
+    [Fact]
+    public void Enter_in_an_amount_moves_to_the_next_amount()
+    {
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+
+        PressEnter(cut.FindAll(InputOf("plan-ingredient-amount-input"))[0]);
+
+        AssertFocused(cut.FindAll(InputOf("plan-ingredient-amount-input"))[1]);
+        Assert.Empty(SentRequests);
+    }
+
+    [Fact]
+    public void Enter_in_the_last_amount_confirms()
+    {
+        Drawer.OpenDrawer("Add items to grocery list", typeof(AddPlanIngredientsToGroceryListDrawer));
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+
+        cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].Input("1.3 l");
+        PressEnter(cut.FindAll(InputOf("plan-ingredient-amount-input"))[1]);
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal("1.3 l", Assert.Single(Sent<UpdateGroceryItem.Command>()).GroceryItem.Amount);
     }
 
     [Fact]
