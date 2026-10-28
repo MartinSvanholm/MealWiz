@@ -22,7 +22,6 @@ public class SmokeTests : E2ETestBase
         Assert.True(BrowserErrors.Count == 0, $"The app logged errors while booting:\n{Describe(BrowserErrors)}");
     }
 
-    // The nav's Freezer link has no page yet (/freezer is the router's NotFound), so it isn't listed.
     [Theory]
     [InlineData("MealPlanPage", "/", "meal-plan-week-title")]
     [InlineData("GroceryListPage", "/grocerylist", "add-grocery-item-button")]
