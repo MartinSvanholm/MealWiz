@@ -336,7 +336,7 @@ table and policy list.
 
 | Table | Feature | Created in | Notes |
 |---|---|---|---|
-| `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); UPDATE and DELETE only for `regular`. INSERT is `WITH CHECK (true)` |
+| `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting |
