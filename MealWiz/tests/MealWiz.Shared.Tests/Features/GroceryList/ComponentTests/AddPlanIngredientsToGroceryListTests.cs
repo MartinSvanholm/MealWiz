@@ -42,6 +42,24 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     }
 
     [Fact]
+    public void Leaves_out_ingredients_that_are_not_shown_on_the_grocery_list()
+    {
+        MealPlan.MealPlan = TestData.MealPlanWith(DateTime.Today, TestData.Meal(
+            "Pasta",
+            ingredients: [TestData.Ingredient("Penne", "500 g"), TestData.Ingredient("Salt", "1 tsp", showOnGroceryList: false)]));
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+
+        var item = Assert.Single(cut.FindAll(TestId("plan-ingredient-item")));
+        Assert.Contains("Penne", item.TextContent);
+
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Single(Sent<AddMealPlanIngredientsToGroceryList.Command>()));
+        var sent = Assert.Single(Sent<AddMealPlanIngredientsToGroceryList.Command>()[0].GroceryItems);
+        Assert.Equal("Penne", sent.Name);
+    }
+
+    [Fact]
     public void Confirm_requires_an_amount_for_each_item()
     {
         var cut = Render<AddPlanIngredientsToGroceryListDrawer>();

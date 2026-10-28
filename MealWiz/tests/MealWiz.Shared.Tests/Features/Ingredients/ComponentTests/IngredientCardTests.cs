@@ -47,6 +47,20 @@ public class IngredientCardTests : ComponentTestBase
         Assert.Equal("Create Ingredient", Drawer.StateParameters.Title);
         var ingredient = Assert.IsType<Ingredient>(Drawer.StateParameters.ContentParameters[nameof(IngredientDrawer.Ingredient)]);
         Assert.Equal(0, ingredient.Id);
+        Assert.True(ingredient.ShowOnGroceryList);
         Assert.NotNull(DrawerHost.Find(TestId("save-ingredient-button")));
+    }
+
+    [Fact]
+    public void Drawer_switch_sets_whether_the_ingredient_goes_on_the_grocery_list()
+    {
+        var salt = TestData.Ingredient("Salt");
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, salt));
+
+        cut.Find(InputOf("ingredient-show-on-grocery-list-switch")).Change(false);
+        Assert.False(salt.ShowOnGroceryList);
+
+        cut.Find(InputOf("ingredient-show-on-grocery-list-switch")).Change(true);
+        Assert.True(salt.ShowOnGroceryList);
     }
 }

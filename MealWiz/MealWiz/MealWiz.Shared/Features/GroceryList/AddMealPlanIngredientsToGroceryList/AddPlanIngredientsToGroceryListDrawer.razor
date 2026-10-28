@@ -53,6 +53,7 @@
 
         var planIngredients = _mealPlanStateContainer.MealPlan.MealOnDate
             .SelectMany(kvp => kvp.Value.Ingredients)
+            .Where(ingredient => ingredient.ShowOnGroceryList)
             .ToList();
 
         _mergeItems = planIngredients.Select(ingredient =>

@@ -2,7 +2,11 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(20);
+
+-- MEA-38: an ingredient goes on the grocery list unless someone turns it off.
+select col_default_is('public', 'ingredients', 'show_on_grocery_list', 'true',
+    'show_on_grocery_list defaults to true');
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values

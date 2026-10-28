@@ -8,11 +8,11 @@ namespace MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 
 public static class AddGroceryItem
 {
-    public record Command(GroceryItem GroceryItem) : IRequest<Result<int>>;
+    public record Command(GroceryItem GroceryItem) : IRequest<Result<GroceryItem>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<int>>
+    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<GroceryItem>>
     {
-        public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<GroceryItem>> Handle(Command request, CancellationToken cancellationToken)
         {
             var groceryItemDb = request.GroceryItem.MapToDb();
 
@@ -23,7 +23,10 @@ public static class AddGroceryItem
                 .From<GroceryItemDb>()
                 .Insert(groceryItemDb));
 
-            return result.Map(value => value.Model.Id);
+            if (result.IsFailed) return result.ToResult<GroceryItem>();
+            if (result.Value.Model is null) return Result.Fail("The grocery item could not be added.");
+
+            return new GroceryItem(result.Value.Model);
         }
     }
 }
