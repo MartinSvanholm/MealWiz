@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(15);
+select plan(19);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -45,6 +45,21 @@ select throws_ok(
     'user A cannot insert a ingredient owned by user B'
 );
 
+select throws_ok(
+    $$ insert into public.ingredients (name, show_on_grocery_list, fk_meal, created_by, created_at)
+       values ('A on B', true, 900002, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '42501', null,
+    'user A cannot add an ingredient to user B''s meal'
+);
+
+select throws_ok(
+    $$ insert into public.ingredients (name, show_on_grocery_list, fk_meal, created_by, created_at)
+       select 'A on leftovers', true, id, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()
+       from public.meals where meal_type = 'leftover' and created_by is null $$,
+    '42501', null,
+    'user A cannot add an ingredient to a system meal'
+);
+
 select results_eq(
     $$ update public.ingredients set amount = '500 g' where id = 900001 returning id $$,
     $$ values (900001::bigint) $$,
@@ -55,6 +70,12 @@ select throws_ok(
     $$ update public.ingredients set created_by = 'bbbbbbbb-0000-0000-0000-0000000000b2' where id = 900001 $$,
     '42501', null,
     'user A cannot hand their ingredient over to user B'
+);
+
+select throws_ok(
+    $$ update public.ingredients set fk_meal = 900002 where id = 900001 $$,
+    '42501', null,
+    'user A cannot move their ingredient onto user B''s meal'
 );
 
 select results_eq(
@@ -112,6 +133,13 @@ select results_eq(
     $$ select id from public.ingredients where id in (900001, 900002) order by id $$,
     $$ values (900001::bigint), (900002::bigint) $$,
     'no ingredient was deleted by another user or anon'
+);
+
+select is_empty(
+    $$ select id from public.ingredients
+       where fk_meal = 900002 and created_by <> 'bbbbbbbb-0000-0000-0000-0000000000b2'
+          or fk_meal in (select id from public.meals where created_by is null) $$,
+    'no ingredient was attached to user B''s meal or a system meal'
 );
 
 select * from finish();

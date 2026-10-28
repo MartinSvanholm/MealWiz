@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(20);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -45,6 +45,27 @@ select throws_ok(
     'user A cannot insert a planned meal owned by user B'
 );
 
+select lives_ok(
+    $$ insert into public."meal_plans-meals" (id, meal_date, fk_meal, fk_meal_plan, created_by, created_at)
+       select 900004, '2026-01-08', id, 900001, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()
+       from public.meals where meal_type = 'leftover' and created_by is null $$,
+    'user A can plan a system meal in their own plan'
+);
+
+select throws_ok(
+    $$ insert into public."meal_plans-meals" (meal_date, fk_meal, fk_meal_plan, created_by, created_at)
+       values ('2026-01-06', 900002, 900001, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '42501', null,
+    'user A cannot plan user B''s meal'
+);
+
+select throws_ok(
+    $$ insert into public."meal_plans-meals" (meal_date, fk_meal, fk_meal_plan, created_by, created_at)
+       values ('2026-01-06', 900001, 900002, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '42501', null,
+    'user A cannot plan a meal in user B''s plan'
+);
+
 select results_eq(
     $$ update public."meal_plans-meals" set meal_date = '2026-01-07' where id = 900001 returning id $$,
     $$ values (900001::bigint) $$,
@@ -55,6 +76,18 @@ select throws_ok(
     $$ update public."meal_plans-meals" set created_by = 'bbbbbbbb-0000-0000-0000-0000000000b2' where id = 900001 $$,
     '42501', null,
     'user A cannot hand their planned meal over to user B'
+);
+
+select throws_ok(
+    $$ update public."meal_plans-meals" set fk_meal = 900002 where id = 900001 $$,
+    '42501', null,
+    'user A cannot swap user B''s meal into their planned meal'
+);
+
+select throws_ok(
+    $$ update public."meal_plans-meals" set fk_meal_plan = 900002 where id = 900001 $$,
+    '42501', null,
+    'user A cannot move their planned meal into user B''s plan'
 );
 
 select results_eq(
@@ -112,6 +145,12 @@ select results_eq(
     $$ select id from public."meal_plans-meals" where id in (900001, 900002) order by id $$,
     $$ values (900001::bigint), (900002::bigint) $$,
     'no planned meal was deleted by another user or anon'
+);
+
+select is_empty(
+    $$ select id from public."meal_plans-meals"
+       where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1' and (fk_meal = 900002 or fk_meal_plan = 900002) $$,
+    'user A has no planned meal pointing at user B''s meal or plan'
 );
 
 select * from finish();

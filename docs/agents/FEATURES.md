@@ -337,8 +337,8 @@ table and policy list.
 | Table | Feature | Created in | Notes |
 |---|---|---|---|
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
-| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade |
+| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
-| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting |
+| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`; the Function writes the result with the service role |
