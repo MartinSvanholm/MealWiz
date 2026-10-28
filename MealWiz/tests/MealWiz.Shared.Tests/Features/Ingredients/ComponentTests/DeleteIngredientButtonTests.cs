@@ -45,4 +45,26 @@ public class DeleteIngredientButtonTests : ComponentTestBase
         Assert.Empty(Meals.MealToEdit.Ingredients);
         Assert.Contains("Ingredient deleted.", SnackbarMessages);
     }
+
+    // MEA-32: a dismissed confirmation used to leave its handler subscribed, so the next confirm deleted it too.
+    [Fact]
+    public void Dismissing_the_confirmation_then_confirming_another_deletes_only_the_confirmed_ingredient()
+    {
+        var eggs = TestData.Ingredient("Eggs", id: 11);
+        var milk = TestData.Ingredient("Milk", id: 12);
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 42, ingredients: [eggs, milk]);
+        SetupSend<DeleteIngredient.Command, Result>(Result.Ok());
+        SetupSend<GetIngredientsByMealId.Query, Result<List<Ingredient>>>(Result.Ok(new List<Ingredient> { eggs }));
+        RenderDrawers();
+        var eggsButton = Render<DeleteIngredientButton>(p => p.Add(b => b.Ingredient, eggs));
+        var milkButton = Render<DeleteIngredientButton>(p => p.Add(b => b.Ingredient, milk));
+
+        eggsButton.Find(TestId("delete-ingredient-button")).Click();
+        ConfirmDrawerHost.InvokeAsync(() => Drawer.IsConfirmDrawerOpen = false);
+        milkButton.Find(TestId("delete-ingredient-button")).Click();
+        Confirm();
+
+        milkButton.WaitForAssertion(() => Assert.False(Drawer.IsConfirmDrawerOpen));
+        Assert.Same(milk, Assert.Single(Sent<DeleteIngredient.Command>()).Ingredient);
+    }
 }

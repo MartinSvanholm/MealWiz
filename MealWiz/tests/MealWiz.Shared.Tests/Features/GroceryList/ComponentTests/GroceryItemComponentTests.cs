@@ -98,4 +98,26 @@ public class GroceryItemComponentTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.Empty(GroceryList.GroceryList.Items));
         Assert.Single(Sent<DeleteGroceryItem.Command>());
     }
+
+    // MEA-32: a dismissed confirmation used to leave its handler subscribed, so the next confirm deleted it too.
+    [Fact]
+    public void Dismissing_the_confirmation_then_confirming_another_deletes_only_the_confirmed_item()
+    {
+        SetupSend<DeleteGroceryItem.Command, Result<int>>(Result.Ok(1));
+        var milk = TestData.GroceryItem("Milk", id: 1);
+        var bread = TestData.GroceryItem("Bread", id: 2);
+        GroceryList.GroceryList.Items.AddRange([milk, bread]);
+        RenderDrawers();
+        var milkButton = Render<DeleteGroceryItemButton>(p => p.Add(b => b.GroceryItem, milk));
+        var breadButton = Render<DeleteGroceryItemButton>(p => p.Add(b => b.GroceryItem, bread));
+
+        milkButton.Find(TestId("delete-grocery-item-button")).Click();
+        ConfirmDrawerHost.InvokeAsync(() => Drawer.IsConfirmDrawerOpen = false);
+        breadButton.Find(TestId("delete-grocery-item-button")).Click();
+        Confirm();
+
+        breadButton.WaitForAssertion(() => Assert.DoesNotContain(bread, GroceryList.GroceryList.Items));
+        Assert.Single(Sent<DeleteGroceryItem.Command>());
+        Assert.Contains(milk, GroceryList.GroceryList.Items);
+    }
 }

@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Components;
-using static MealWiz.Shared.Services.DrawerStateContainer.DrawerStateContainer;
 
 namespace MealWiz.Shared.Services.DrawerStateContainer;
 
@@ -12,15 +11,13 @@ public interface IDrawerStateContainer
 
     event Action? OnDrawerChange;
 
-    event ConfirmClickHandler? OnConfirmClick;
-
     void CloseDrawer();
     void NavigateBack();
     void NotifyStateChanged();
-    void NotifyConfirmClicked();
+    Task NotifyConfirmClickedAsync();
     void OpenDrawer(RenderFragment header, Type content);
     void OpenDrawer(string title, Type content);
     void OpenDrawer(DrawerStateParameters drawerStateParameters);
     void SwitchDrawerContent(Type content, string title = "", Dictionary<string, object> parameters = null);
-    void OpenConfirmDrawer(string title, string description);
+    void OpenConfirmDrawer(string title, string description, Func<Task> onConfirm);
 }

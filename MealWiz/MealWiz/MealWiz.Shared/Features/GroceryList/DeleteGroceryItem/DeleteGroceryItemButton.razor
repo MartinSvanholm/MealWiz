@@ -10,20 +10,17 @@
 
     public void Dispose()
     {
-        _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
         _drawerStateContainer.CloseDrawer();
     }
 
-    private void OnDeleteClick() 
+    private void OnDeleteClick()
     {
-        _drawerStateContainer.OpenConfirmDrawer("Delete grocery item?", "Are you sure you want to delete this grocery item?");
-        _drawerStateContainer.OnConfirmClick += OnConfirmDelete;
+        _drawerStateContainer.OpenConfirmDrawer("Delete grocery item?", "Are you sure you want to delete this grocery item?", OnConfirmDelete);
     }
 
     private async Task OnConfirmDelete()
     {
         await _groceryListStateContainer.DeleteGroceryItem(GroceryItem);
-        _drawerStateContainer.OnConfirmClick -= OnConfirmDelete;
         _drawerStateContainer.CloseDrawer();
     }
 }

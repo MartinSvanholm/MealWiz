@@ -12,19 +12,18 @@ public class ConfirmDrawerTests : ComponentTestBase
     {
         var cut = Render<ConfirmDrawer>();
 
-        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?"));
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?", () => Task.CompletedTask));
 
         Assert.True(Drawer.IsConfirmDrawerOpen);
         Assert.Equal("Are you sure?", cut.Find(TestId("confirm-drawer-description")).TextContent);
     }
 
     [Fact]
-    public void Confirm_raises_OnConfirmClick()
+    public void Confirm_runs_the_callback_it_was_opened_with()
     {
         var confirmed = 0;
-        Drawer.OnConfirmClick += () => { confirmed++; return Task.CompletedTask; };
         var cut = Render<ConfirmDrawer>();
-        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?"));
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?", () => { confirmed++; return Task.CompletedTask; }));
 
         cut.Find($"{TestId("confirm-drawer-confirm")}").Click();
 

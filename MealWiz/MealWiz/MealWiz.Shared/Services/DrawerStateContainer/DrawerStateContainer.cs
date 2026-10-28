@@ -30,6 +30,8 @@ public partial class DrawerStateContainer : IDrawerStateContainer
         }
     }
     private bool _isConfirmDrawerOpen { get; set; }
+    // Set by OpenConfirmDrawer for that one confirmation; cleared whenever the confirm drawer closes, confirmed or not.
+    private Func<Task>? _onConfirm;
     public bool IsConfirmDrawerOpen
     {
         get { return _isConfirmDrawerOpen; }
@@ -39,6 +41,8 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
             if (value == false)
             {
+                _onConfirm = null;
+
                 DrawerStateParameters newParameters = new()
                 {
                     Width = StateParameters.Width,
@@ -55,11 +59,15 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
     public event Action? OnDrawerChange;
 
-    public delegate Task ConfirmClickHandler();
-    public event ConfirmClickHandler? OnConfirmClick;
-
     public void NotifyStateChanged() => OnDrawerChange?.Invoke();
-    public void NotifyConfirmClicked() => OnConfirmClick?.Invoke();
+
+    public async Task NotifyConfirmClickedAsync()
+    {
+        if (_onConfirm is { } onConfirm)
+        {
+            await onConfirm();
+        }
+    }
 
     public void OpenDrawer(string title, Type content)
     {
@@ -114,10 +122,11 @@ public partial class DrawerStateContainer : IDrawerStateContainer
         IsConfirmDrawerOpen = false;
     }
 
-    public void OpenConfirmDrawer(string title, string description)
+    public void OpenConfirmDrawer(string title, string description, Func<Task> onConfirm)
     {
         StateParameters.Title = title;
         StateParameters.Description = description;
+        _onConfirm = onConfirm;
 
         IsConfirmDrawerOpen = true;
     }
