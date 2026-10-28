@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(21);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -86,6 +86,28 @@ select is_empty(
     'user A cannot delete their own import'
 );
 
+-- Failing an import may only touch the columns MarkMealImportFailed sends.
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', source_url = 'https://example.test/changed'
+       where id = '00000000-0000-0000-0000-00000000a001' $$,
+    '42501', null,
+    'user A cannot change the source_url while failing their import'
+);
+
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', parsed_meal = '{"name":"fake"}'
+       where id = '00000000-0000-0000-0000-00000000a001' $$,
+    '42501', null,
+    'user A cannot write a parsed_meal while failing their import'
+);
+
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', created_at = '2000-01-01'
+       where id = '00000000-0000-0000-0000-00000000a001' $$,
+    '42501', null,
+    'user A cannot change created_at while failing their import'
+);
+
 -- The same update MarkMealImportFailed sends.
 select results_eq(
     $$ update public.meal_imports
@@ -145,6 +167,13 @@ select results_eq(
               ('00000000-0000-0000-0000-00000000a003'::uuid, 'succeeded'::text),
               ('00000000-0000-0000-0000-00000000b001'::uuid, 'pending'::text) $$,
     'only user A''s pending-to-failed update went through, and nothing was deleted'
+);
+
+select results_eq(
+    $$ select source_url, parsed_meal, error_message from public.meal_imports
+       where id = '00000000-0000-0000-0000-00000000a001' $$,
+    $$ values ('https://example.test/a1'::text, null::jsonb, 'Function unreachable'::text) $$,
+    'failing the import changed only the columns MarkMealImportFailed sends'
 );
 
 select * from finish();
