@@ -193,7 +193,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
             .WithMeal(Week(16).AddDays(1), keep)
             .InsertAsync(supabase.Client);
 
-        var result = await RemoveAsync(meal.Id);
+        var result = await RemoveAsync(meal.Id, plan.Id, Week(16));
 
         ResultAssert.Ok(result);
         var remaining = Assert.Single(await GetPlanRowsAsync(plan.Id));
@@ -201,7 +201,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     }
 
     [Fact]
-    public async Task RemoveMealFromMealPlan_MealPlannedOnSeveralDates_RemovesEveryOne()
+    public async Task RemoveMealFromMealPlan_MealPlannedOnSeveralDates_RemovesOnlyTheGivenDate()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var meal = await new MealBuilder().InsertAsync(supabase.Client);
@@ -212,14 +212,13 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
             .InsertAsync(supabase.Client);
         var nextWeek = await new MealPlanBuilder().ForWeekOf(Week(19)).WithMeal(Week(19), meal).InsertAsync(supabase.Client);
 
-        // The Remove button means "this date", but the command only carries the meal id.
-        var result = await RemoveAsync(meal.Id);
+        // MEA-35: the delete used to filter on fk_meal alone and remove the meal from every date in every plan.
+        var result = await RemoveAsync(meal.Id, thisWeek.Id, Week(18).AddDays(3));
 
-        // Pins current behaviour, see MEA-35: the delete filters on fk_meal alone, so the meal goes from every date
-        // in every plan. With a system meal like Leftovers that empties all of the user's Leftovers days.
         ResultAssert.Ok(result);
-        Assert.Empty(await GetPlanRowsAsync(thisWeek.Id));
-        Assert.Empty(await GetPlanRowsAsync(nextWeek.Id));
+        var kept = Assert.Single(await GetPlanRowsAsync(thisWeek.Id));
+        Assert.Equal(Iso(Week(18)), kept.MealDate);
+        Assert.Single(await GetPlanRowsAsync(nextWeek.Id));
     }
 
     private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
@@ -254,8 +253,8 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     private Task<FluentResults.Result<Meal>> AddAsync(Meal meal) =>
         new AddMealToMealPlan.Handler(supabase.Client).Handle(new AddMealToMealPlan.Command(meal), CancellationToken);
 
-    private Task<FluentResults.Result> RemoveAsync(int mealId) =>
-        new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId), CancellationToken);
+    private Task<FluentResults.Result> RemoveAsync(int mealId, int mealPlanId, DateTime mealDate) =>
+        new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId, mealPlanId, mealDate), CancellationToken);
 
     private async Task<List<MealPlanMealDb>> GetPlanRowsAsync(int mealPlanId)
     {
