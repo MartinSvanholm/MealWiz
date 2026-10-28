@@ -14,7 +14,7 @@
     <MudMainContent Class="pa-0">
         @Body
     </MudMainContent>
-    <MudAppBar Bottom Gutters="false" Elevation="20" Fixed Style="background: var(--mud-palette-appbar-background);">
+    <MudAppBar data-testid="bottom-nav" Bottom Gutters="false" Elevation="20" Fixed Style="background: var(--mud-palette-appbar-background); padding-bottom: env(safe-area-inset-bottom);">
         <NavMenu />
     </MudAppBar>
 </MudLayout>

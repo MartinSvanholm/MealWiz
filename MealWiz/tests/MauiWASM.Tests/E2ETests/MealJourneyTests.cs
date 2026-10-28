@@ -71,6 +71,37 @@ public class MealJourneyTests : E2ETestBase
         await Expect(Row("meal-list-item", renamed)).ToHaveCountAsync(0);
     }
 
+    [Fact]
+    public async Task Meal_OnShortPhone_ShowsLastIngredientAndDrawerSaveButton()
+    {
+        const string name = "E2E Paella";
+        var ingredients = Enumerable.Range(1, 12).Select(i => new SeedIngredient($"Ingredient {i:00}", $"{i} g")).ToArray();
+        await Supabase.InsertMealAsync(User, name, ingredients);
+
+        await LoginAsync();
+        // iPhone SE: short enough that a 45% drawer can't fit its whole form.
+        await Page.SetViewportSizeAsync(375, 667);
+        await Page.GetByTestId("nav-meals").ClickAsync();
+        await Row("meal-list-item", name).ClickAsync();
+        await Expect(Page.GetByTestId("ingredient-card")).ToHaveCountAsync(ingredients.Length);
+
+        // MEA-9: the last ingredient scrolls fully clear of the bottom nav bar.
+        var last = Row("ingredient-card", "Ingredient 12");
+        await last.ScrollIntoViewIfNeededAsync();
+        var lastBox = await last.BoundingBoxAsync();
+        var navBox = await Page.GetByTestId("bottom-nav").BoundingBoxAsync();
+        Assert.True(lastBox!.Y + lastBox.Height <= navBox!.Y,
+            $"Last ingredient ends at {lastBox.Y + lastBox.Height}px, under the nav bar at {navBox.Y}px");
+
+        // MEA-6: a drawer whose form is taller than the drawer scrolls, so its save button can be reached.
+        await last.ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit Ingredient");
+        await Expect(Drawer.GetByTestId("ingredient-name-input")).ToBeInViewportAsync(new() { Ratio = 1 });
+        await Drawer.GetByTestId("ingredient-name-input").HoverAsync();
+        await Page.Mouse.WheelAsync(0, 500);
+        await Expect(Drawer.GetByTestId("save-ingredient-button")).ToBeInViewportAsync(new() { Ratio = 1 });
+    }
+
     private async Task AddIngredientAsync(string name, string amount)
     {
         await Page.GetByTestId("create-ingredient-button").ClickAsync();
