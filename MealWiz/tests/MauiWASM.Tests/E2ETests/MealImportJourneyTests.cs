@@ -95,8 +95,6 @@ public class MealImportJourneyTests : E2ETestBase
             request.TrySetResult((jobId, body.GetProperty("url").GetString() ?? string.Empty));
         });
 
-        var realtime = new RealtimeChannelWatcher(Page);
-
         await LoginAsync();
         await Page.GetByTestId("nav-meals").ClickAsync();
         await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
@@ -109,21 +107,12 @@ public class MealImportJourneyTests : E2ETestBase
         await Page.GetByTestId("import-submit").ClickAsync();
 
         // Bounded by the test's own timeout rather than a sleep: the app calls the Function once the row is created
-        // and its Realtime channel has been joined.
+        // and its Realtime channel is subscribed as the user, so the result can be written straight away (MEA-43).
         var (sentJobId, sentUrl) = await request.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         Assert.Equal(SourceUrl, sentUrl);
 
         if (acknowledgeWith == 200)
-        {
             await Expect(Page.GetByTestId("import-progress")).ToBeVisibleAsync();
-
-            // Write the result only once the job's channel delivers to the user, or Realtime drops it (MEA-43).
-            await realtime.WaitUntilDeliveringAsync(
-                sentJobId.ToString(),
-                () => Supabase.TouchPendingMealImportAsync(sentJobId),
-                TimeSpan.FromSeconds(30),
-                TestContext.Current.CancellationToken);
-        }
 
         return sentJobId;
     }
