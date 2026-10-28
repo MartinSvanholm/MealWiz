@@ -92,8 +92,10 @@ only PRs you opened, based on `dev`, in this session.
 5. **Self-review** with `mw-code-review` (light), then **open the PR** (below), with one `Fixes MEA-xx` line per bug.
 6. **Wait for CI** with one background command: `gh pr checks <n> --watch --fail-fast` (Bash, `run_in_background`).
    You're notified when it exits. Don't check in between.
-7. **Green:** confirm `gh pr view <n> --json baseRefName,mergeable,headRefName` shows base `dev`, then
-   `gh pr merge <n> --merge --delete-branch`. Set each issue to **Done** if the integration hasn't. End your turn with
+7. **Green:** merge with `scripts/merge-to-dev.sh <n>` (Bash). It refuses anything that isn't an open, non-draft,
+   mergeable PR into `dev` with every check green, then runs `gh pr merge --merge --delete-branch`. Never call
+   `gh pr merge` directly. If the script refuses, don't work around it: read why, then fix it or stop and ask.
+   Set each issue to **Done** if the integration hasn't. End your turn with
    `MERGED <PR url>` and one line per bug: root cause and fix.
 8. **Red:** read the failure (verify skill; `gh run download <run-id> -n test-results`), fix, push, and watch again.
    - A known flake (GoTrue `429`, "JWT issued at future") gets one rerun (`gh run rerun <run-id> --failed`) that
