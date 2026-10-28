@@ -73,16 +73,14 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
-    public async Task UpdateGroceryItem_ItemThatDoesNotExist_Throws()
+    public async Task UpdateGroceryItem_ItemThatDoesNotExist_Fails()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var missing = new GroceryItemBuilder().Build();
         missing.Id = int.MaxValue;
         missing.CreatedBy = supabase.UserId;
 
-        // Pins current behaviour, see MEA-36: the update matches no rows, and `value.Model.Id` runs outside
-        // Result.Try, so the handler throws instead of returning a failed result.
-        await Assert.ThrowsAsync<NullReferenceException>(() => UpdateAsync(missing));
+        ResultAssert.Failed(await UpdateAsync(missing), "The grocery item could not be found.");
     }
 
     [Fact]
@@ -98,15 +96,14 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
-    public async Task DeleteGroceryItem_AnotherUsersItem_ThrowsAndKeepsIt()
+    public async Task DeleteGroceryItem_AnotherUsersItem_FailsAndKeepsIt()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var otherUser = await supabase.GetOtherUserAsync();
         var others = await new GroceryItemBuilder().InsertAsync(otherUser.Client);
 
-        // Pins current behaviour, see MEA-36: RLS hides the row, the delete matches nothing, and the handler throws
-        // instead of returning a failed result.
-        await Assert.ThrowsAsync<NullReferenceException>(() => DeleteAsync(others));
+        // RLS hides the row, so the delete matches nothing
+        ResultAssert.Failed(await DeleteAsync(others), "The grocery item could not be found.");
 
         var response = await otherUser.Client.From<GroceryItemDb>().Where(x => x.Id == others.Id).Get(CancellationToken);
         Assert.Single(response.Models);
