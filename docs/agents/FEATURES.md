@@ -82,7 +82,7 @@ saved and has an id.
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
-  ingredient saved before the switch existed.
+  ingredient saved before the switch existed, and defaults the column to true.
 - **Tests:**
   - unit: `Features/Ingredients/UnitTests/Models/`
   - bUnit: `Features/Ingredients/ComponentTests/`
