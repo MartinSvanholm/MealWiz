@@ -38,6 +38,23 @@ public class DeleteMealButtonTests : ComponentTestBase
         Assert.Contains("Meal deleted", SnackbarMessages);
     }
 
+    // MEA-33: a failed delete used to reload the list, close the drawer and report success next to the error.
+    [Fact]
+    public void A_failed_delete_shows_the_error_and_keeps_the_confirmation_open()
+    {
+        SetupSend<DeleteMeal.Command, Result>(Result.Fail("The meal is in a meal plan"));
+        RenderDrawers();
+        var cut = Render<DeleteMealButton>(p => p.Add(b => b.Meal, TestData.Meal("Pasta", id: 5)));
+
+        cut.Find(TestId("delete-meal-button")).Click();
+        Confirm();
+
+        cut.WaitForAssertion(() => Assert.Contains("The meal is in a meal plan", SnackbarMessages));
+        Assert.True(Drawer.IsConfirmDrawerOpen);
+        Assert.Empty(Sent<GetAllMeals.Query>());
+        Assert.DoesNotContain("Meal deleted", SnackbarMessages);
+    }
+
     // MEA-32: a dismissed confirmation used to leave its handler subscribed, so the next confirm deleted it too.
     [Fact]
     public void Dismissing_the_confirmation_then_confirming_another_deletes_only_the_confirmed_meal()

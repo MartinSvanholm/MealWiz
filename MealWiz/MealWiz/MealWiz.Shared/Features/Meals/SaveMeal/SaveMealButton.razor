@@ -21,32 +21,32 @@ OnClick="SaveMeal" />
             IsSaving = true;
 
             var result = await _mediator.Send(new SaveMeal.Command(_mealsStateContainer.MealToEdit));
-
-            result.Handle(_snackbar);
-            if (result.IsFailed) return;
-
-            var savedMeal = result.Value;
+            if (result.Handle(_snackbar).IsFailed) return;
 
             var pendingIngredients = _mealsStateContainer.MealToEdit.Ingredients
                 .Where(i => i.Id == 0)
                 .ToList();
 
+            // The saved meal comes back without ingredients; keep the form's until they're saved too.
+            var savedMeal = result.Value;
+            savedMeal.Ingredients = _mealsStateContainer.MealToEdit.Ingredients;
             _mealsStateContainer.MealToEdit = savedMeal;
 
-            foreach (var ingredient in pendingIngredients)
+            for (var i = 0; i < pendingIngredients.Count; i++)
             {
-                var ingredientResult = await _mediator.Send(new SaveIngredient.Command(ingredient, _mealsStateContainer.MealToEdit.Id));
-                ingredientResult.Handle(_snackbar);
-
-                if (ingredientResult.IsFailed) return;
+                var ingredientResult = await _mediator.Send(new SaveIngredient.Command(pendingIngredients[i], savedMeal.Id));
+                if (ingredientResult.Handle(_snackbar).IsFailed)
+                {
+                    // Show what was saved, with the rest still pending, so saving again doesn't duplicate any.
+                    await _mealsStateContainer.ReloadIngredientsForMealToEdit();
+                    foreach (var unsaved in pendingIngredients.Skip(i))
+                        _mealsStateContainer.AddOrUpdatePendingIngredient(unsaved);
+                    return;
+                }
             }
 
             _snackbar.Add("Meal saved", Severity.Success);
             _navigationManager.NavigateTo("/meals");
-        }
-        catch (Exception)
-        {
-            _snackbar.Add("An error has occurred, please try again.", Severity.Error);
         }
         finally
         {

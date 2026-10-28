@@ -23,19 +23,12 @@ Class="pa-1" />
 
     private async Task OnConfirmDelete()
     {
-        try
-        {
-            var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
-            result.Handle(_snackbar);
+        var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
+        if (result.Handle(_snackbar).IsFailed) return;
 
-            await _mealsStateContainer.LoadMeals();
+        await _mealsStateContainer.LoadMeals();
 
-            _drawerStateContainer.CloseDrawer();
-            _snackbar.Add("Meal deleted", Severity.Success);
-        }
-        catch (Exception)
-        {
-            _snackbar.Add(ErrorMessages.GenericError);
-        }
+        _drawerStateContainer.CloseDrawer();
+        _snackbar.Add("Meal deleted", Severity.Success);
     }
 }
