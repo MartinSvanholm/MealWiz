@@ -47,10 +47,11 @@ jobs:
         # Realtime stays on: the meal import E2E tests get their result over it.
         run: supabase start -x studio,imgproxy,edge-runtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
 
-      # Builds MauiWASM, MealWiz.Functions and the three test projects (Debug). The test steps below don't rebuild.
+      # Checks the agent docs (docs/agents/, CLAUDE.md), then builds MauiWASM, MealWiz.Functions and the three test
+      # projects (Debug). The test steps below don't rebuild.
       - name: Build
         id: build
-        run: scripts/verify.sh full --only build
+        run: scripts/verify.sh full --only build,docs
 
       # For the E2E tests in MauiWASM.Tests: Chromium, cached per Playwright version, and the Linux packages it needs.
       - name: Read Playwright version

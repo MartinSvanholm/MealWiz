@@ -6,13 +6,14 @@ description: Run MealWiz's one-command verification (build, unit/bUnit, integrat
 # Verify a change
 
 `scripts/verify.ps1 <level>` (Windows) or `scripts/verify.sh <level>` (bash) builds the app and runs the test suites
-for that level. It prints only a short summary; the exit code is the verdict.
+for that level. It prints only a short summary; the exit code is the verdict. What each suite covers, which tests a
+change needs, and how to write them is in `docs/agents/TESTING.md`.
 
 ## 1. Pick the level
 
 | Level | Runs | When |
 |-------|------|------|
-| `fast` | build + unit and bUnit tests, no Docker | while iterating |
+| `fast` | docs check + build + unit and bUnit tests, no Docker | while iterating |
 | `smoke` | `fast` + local Supabase (started if needed) + integration tests + Smoke E2E | **before saying a change is done** |
 | `full` | `smoke` + all E2E journeys + `supabase test db` (pgTAP RLS tests) | migrations, RLS, meal import/Realtime, meal plans, before a PR |
 
@@ -54,9 +55,13 @@ Full logs: artifacts/verify/smoke/
 
 ## 4. Triage by what failed
 
+- **docs**: each line names a doc and what it's missing: a feature folder, handler or table not in
+  `docs/agents/FEATURES.md`, a verify step not in `docs/agents/TESTING.md`, or a path in backticks that doesn't exist.
+  Update the doc to match the code (DOC-01). Don't delete the entry to make the check pass. `docs.log` has the full list.
 - **build**: the summary lists `file(line,col): error CSxxxx`. Fix it there. `build.log` has the rest.
 - **unit / bUnit**: the test name tells you the file: `MealWiz/tests/<Project>/**/<Class>.cs`. Read the assertion message first, then the test, then the code under test. To rerun one class: `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealsPageTests"`.
-- **integration** (Shared/Functions `Category=Integration`): these run handlers against local Supabase through RLS.
+- **integration** (Shared/Functions `Category=Integration`): Shared runs its handlers against local Supabase as a
+  throwaway user, through RLS. Functions uses the service role and a local recipe web server.
   - "REQUIRE_SUPABASE is set, but…" means the stack isn't reachable. Check `supabase status`.
   - A GoTrue `429` means the sign-in rate limit was hit by back-to-back runs. Wait a few minutes.
   - A migration change needs `supabase db reset` to apply locally. It wipes local data and re-runs `seed.sql`.

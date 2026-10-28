@@ -120,7 +120,7 @@ dotnet test --project MealWiz/tests/MealWiz.Functions.Tests
 
 Unit tests only:
 ```
-dotnet test --project MealWiz/tests/MealWiz.Functions.Tests -- --filter-not-trait "Category=Integration"
+dotnet test --project MealWiz/tests/MealWiz.Functions.Tests --filter-not-trait "Category=Integration"
 ```
 
 Integration tests scrape a local web server started by the tests (never a live website). The ones that write to
