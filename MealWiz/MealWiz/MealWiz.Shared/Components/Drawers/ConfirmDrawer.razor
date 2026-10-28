@@ -1,4 +1,5 @@
 ﻿@inject IDrawerStateContainer _drawerStateContainer
+@implements IDisposable
 
 <MudDrawer data-testid="confirm-drawer" data-open="@_drawerStateContainer.IsConfirmDrawerOpen" Width="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
     <MudStack Class="pa-4">
@@ -11,6 +12,11 @@
     protected override void OnInitialized()
     {
         _drawerStateContainer.OnDrawerChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        _drawerStateContainer.OnDrawerChange -= StateHasChanged;
     }
 
     public Task OnConfirmClicked() => _drawerStateContainer.NotifyConfirmClickedAsync();
