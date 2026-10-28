@@ -13,7 +13,5 @@
         _drawerStateContainer.OnDrawerChange += StateHasChanged;
     }
 
-    public void OnConfirmClicked() {
-        _drawerStateContainer.NotifyConfirmClicked();
-    }
+    public Task OnConfirmClicked() => _drawerStateContainer.NotifyConfirmClickedAsync();
 }

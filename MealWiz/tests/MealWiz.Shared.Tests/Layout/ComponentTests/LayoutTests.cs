@@ -36,7 +36,7 @@ public class LayoutTests : ComponentTestBase
     {
         var cut = Render<MainLayout>(p => p.Add(l => l.Body, (RenderFragment)(_ => { })));
 
-        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete?", "Really delete?"));
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete?", "Really delete?", () => Task.CompletedTask));
 
         Assert.Equal("Really delete?", cut.Find(TestId("confirm-drawer-description")).TextContent);
     }

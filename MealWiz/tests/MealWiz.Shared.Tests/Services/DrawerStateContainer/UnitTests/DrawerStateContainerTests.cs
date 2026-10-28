@@ -145,7 +145,7 @@ public class DrawerStateContainerTests
     [Fact]
     public void OpenConfirmDrawer_SetsTitleAndDescriptionAndOpens()
     {
-        _container.OpenConfirmDrawer("Delete meal?", "This can't be undone.");
+        _container.OpenConfirmDrawer("Delete meal?", "This can't be undone.", () => Task.CompletedTask);
 
         Assert.True(_container.IsConfirmDrawerOpen);
         Assert.False(_container.IsDrawerOpen);
@@ -158,7 +158,7 @@ public class DrawerStateContainerTests
     public void CloseDrawer_ClosesBothDrawersAndNotifies()
     {
         _container.OpenDrawer("Edit meal", typeof(FirstPage));
-        _container.OpenConfirmDrawer("Delete meal?", "Sure?");
+        _container.OpenConfirmDrawer("Delete meal?", "Sure?", () => Task.CompletedTask);
         _notifications = 0;
 
         _container.CloseDrawer();
@@ -170,23 +170,47 @@ public class DrawerStateContainerTests
     }
 
     [Fact]
-    public void NotifyConfirmClicked_InvokesTheConfirmHandler()
+    public async Task NotifyConfirmClicked_RunsTheCallbackTheConfirmDrawerWasOpenedWith()
     {
         var clicked = 0;
-        _container.OnConfirmClick += () =>
+        _container.OpenConfirmDrawer("Delete meal?", "Sure?", () =>
         {
             clicked++;
             return Task.CompletedTask;
-        };
+        });
 
-        _container.NotifyConfirmClicked();
+        await _container.NotifyConfirmClickedAsync();
 
         Assert.Equal(1, clicked);
     }
 
     [Fact]
-    public void NotifyConfirmClicked_WithoutAHandler_DoesNotThrow()
+    public async Task NotifyConfirmClicked_AwaitsTheCallback()
     {
-        _container.NotifyConfirmClicked();
+        _container.OpenConfirmDrawer("Delete meal?", "Sure?", () => Task.FromException(new InvalidOperationException("boom")));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _container.NotifyConfirmClickedAsync());
+    }
+
+    [Fact]
+    public async Task NotifyConfirmClicked_AfterTheConfirmDrawerWasDismissed_RunsNothing()
+    {
+        var clicked = 0;
+        _container.OpenConfirmDrawer("Delete meal?", "Sure?", () =>
+        {
+            clicked++;
+            return Task.CompletedTask;
+        });
+        _container.IsConfirmDrawerOpen = false;
+
+        await _container.NotifyConfirmClickedAsync();
+
+        Assert.Equal(0, clicked);
+    }
+
+    [Fact]
+    public async Task NotifyConfirmClicked_WithoutAnOpenConfirmation_DoesNotThrow()
+    {
+        await _container.NotifyConfirmClickedAsync();
     }
 }
