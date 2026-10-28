@@ -14,6 +14,27 @@ MAUI app (mobile and desktop) that share one UI project.
 | write tests or pick which to run | [docs/agents/TESTING.md](docs/agents/TESTING.md): every suite, which to run for which change, how to write tests |
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
+## How work is done
+Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement). Project skills in
+`.claude/skills/` run the workflow:
+
+| Skill | Use it to |
+|---|---|
+| `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
+| `/plan-project` | research, split a specced project into issues with blocking relations, then coordinate one session per issue (max 4 at once) |
+| `/implement-issue` | implement one issue (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
+| `/fix-bugs` | group the open Bug issues by the files they touch and start one bug-mode session per group |
+
+They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
+`mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
+
+Rules for every session:
+- **Work only on the issues you were given.** Don't start, fix or edit other issues.
+- **File bugs you find, don't fix them.** Create a Linear issue in team MealWiz with the **Bug** label, status
+  Backlog and **no project**, even when you found it while working on a project. Say what you saw and where.
+- PRs target `dev`. Feature PRs are merged by the user; only bug-mode sessions merge their own PR, and only to `dev`.
+  Nothing goes to `main` (see below).
+
 ## Tech stack
 - **Runtime:** C#. The apps target .NET 9. `MealWiz.Functions`, the test projects and `scripts/verify.cs` need the
   .NET 10 SDK.
