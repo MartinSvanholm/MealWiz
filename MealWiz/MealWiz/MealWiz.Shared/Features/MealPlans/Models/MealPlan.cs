@@ -39,8 +39,8 @@ public class MealPlan
         return new MealPlanDb()
         {
             Id = Id,
-            StartDate = StartDate.ToString("yyyy-MM-dd"),
-            EndDate = EndDate.ToString("yyyy-MM-dd"),
+            StartDate = StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            EndDate = EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             CreatedAt = CreatedAt,
             CreatedBy = CreatedBy,
             UpdatedAt = UpdatedAt
