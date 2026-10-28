@@ -25,7 +25,8 @@ public class GroceryItemComponentTests : ComponentTestBase
     [Fact]
     public void Saving_a_new_item_adds_it_and_closes_the_drawer()
     {
-        SetupSend<AddGroceryItem.Command, Result<int>>(Result.Ok(5));
+        var saved = TestData.GroceryItem("Eggs", id: 5);
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(saved));
         Drawer.OpenDrawer("Add item", typeof(GroceryItemDrawer));
         var item = TestData.GroceryItem("Eggs");
         var cut = Render<SaveGroceryItemButton>(p => p.Add(b => b.GroceryItem, item));
@@ -34,7 +35,7 @@ public class GroceryItemComponentTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
         Assert.Same(item, Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem);
-        Assert.Contains(item, GroceryList.GroceryList.Items);
+        Assert.Contains(saved, GroceryList.GroceryList.Items);
         Assert.Empty(Sent<UpdateGroceryItem.Command>());
     }
 

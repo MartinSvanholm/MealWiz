@@ -51,20 +51,13 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Row("grocery-item", "Milk (1 l)")).ToBeVisibleAsync();
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
 
-        // Pins current behaviour, see MEA-42: the item added by hand is kept in memory without its owner, so ticking
-        // it before a reload is rejected by RLS and the tick is rolled back. Expect a 200 and a ticked box once fixed.
+        // Check it off straight away, without a reload (MEA-42), and it stays checked after one
         var milkCheckbox = Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox");
         await Expect(milkCheckbox).Not.ToBeCheckedAsync();
-        var rejected = await Page.RunAndWaitForResponseAsync(
+        var saved = await Page.RunAndWaitForResponseAsync(
             () => milkCheckbox.ClickAsync(),
             response => response.Url.Contains("/rest/v1/grocery_items") && response.Request.Method == "PATCH");
-        Assert.Equal(403, rejected.Status);
-        await Expect(milkCheckbox).Not.ToBeCheckedAsync();
-
-        // Loaded from the database it has its owner, so checking it off works, and it stays checked after a reload
-        await Page.ReloadAsync();
-        milkCheckbox = Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox");
-        await milkCheckbox.CheckAsync();
+        Assert.True(saved.Ok, $"Expected the update to succeed, got {saved.Status}.");
         await Expect(milkCheckbox).ToBeCheckedAsync();
 
         await Page.ReloadAsync();

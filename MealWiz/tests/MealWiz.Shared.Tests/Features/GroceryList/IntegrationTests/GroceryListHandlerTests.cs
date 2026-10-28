@@ -21,21 +21,40 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task AddGroceryItem_InsertsItOwnedByTheUser()
+    public async Task AddGroceryItem_InsertsItOwnedByTheUserAndReturnsTheRow()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var before = DateTime.UtcNow;
         var item = new GroceryItemBuilder().WithName("Apples").WithAmount("4").Build();
 
-        var id = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
 
-        var row = await GetRowAsync(id);
+        var row = await GetRowAsync(added.Id);
         Assert.NotNull(row);
         Assert.Equal("Apples", row.Name);
         Assert.Equal("4", row.Amount);
         Assert.False(row.IsPicked);
         Assert.Equal(supabase.UserId, row.CreatedBy);
         TimeAssert.CloseTo(before, row.CreatedAt);
+        // The returned item carries its owner, so it can be updated straight away (MEA-42)
+        Assert.Equal(supabase.UserId, added.CreatedBy);
+        Assert.Equal(row.CreatedAt, added.CreatedAt);
+        Assert.Equal("Apples", added.Name);
+    }
+
+    [Fact]
+    public async Task AddGroceryItem_ThenUpdateTheReturnedItem_SavesTheChange()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var item = new GroceryItemBuilder().WithName("Milk").Build();
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+
+        added.IsPicked = true;
+        ResultAssert.Ok(await UpdateAsync(added));
+
+        var row = await GetRowAsync(added.Id);
+        Assert.NotNull(row);
+        Assert.True(row.IsPicked);
     }
 
     [Fact]

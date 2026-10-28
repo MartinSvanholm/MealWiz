@@ -53,17 +53,19 @@ public class GroceryListStateContainerTests
     }
 
     [Fact]
-    public async Task AddGroceryItemToGroceryList_Success_AssignsTheIdAndAddsItBeforePickedItems()
+    public async Task AddGroceryItemToGroceryList_Success_AddsTheSavedRowBeforePickedItems()
     {
         await LoadItems(Item(1, "picked", picked: true));
+        var owner = Guid.NewGuid();
+        var saved = new GroceryItem { Id = 42, Name = "milk", CreatedBy = owner };
         _mediator
             .Setup(m => m.Send(It.IsAny<AddGroceryItem.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Ok(42));
-        var item = new GroceryItem { Name = "milk" };
+            .ReturnsAsync(Result.Ok(saved));
 
-        await _container.AddGroceryItemToGroceryList(item);
+        await _container.AddGroceryItemToGroceryList(new GroceryItem { Name = "milk" });
 
-        Assert.Equal(42, item.Id);
+        // The saved row has its owner, so it can be ticked or edited before a reload (MEA-42)
+        Assert.Same(saved, _container.GroceryList.Items[0]);
         Assert.Equal(new[] { "milk", "picked" }, Names());
         Assert.Equal(1, _notifications);
     }
@@ -73,12 +75,11 @@ public class GroceryListStateContainerTests
     {
         _mediator
             .Setup(m => m.Send(It.IsAny<AddGroceryItem.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Fail<int>("Add failed"));
+            .ReturnsAsync(Result.Fail<GroceryItem>("Add failed"));
         var item = new GroceryItem { Name = "milk" };
 
         await _container.AddGroceryItemToGroceryList(item);
 
-        Assert.Equal(0, item.Id);
         Assert.Empty(_container.GroceryList.Items);
         Assert.Equal(0, _notifications);
         VerifyToast("Add failed", Severity.Error);

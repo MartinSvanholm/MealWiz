@@ -7,6 +7,7 @@ using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Moq;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.GroceryList.ComponentTests;
@@ -20,7 +21,11 @@ public class GroceryListPageTests : ComponentTestBase
     public GroceryListPageTests()
     {
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread }));
-        SetupSend<AddGroceryItem.Command, Result<int>>(Result.Ok(99));
+        // AddGroceryItem returns the saved row: the item with its new id
+        Mediator
+            .Setup(m => m.Send(It.IsAny<AddGroceryItem.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AddGroceryItem.Command c, CancellationToken _) =>
+                Result.Ok(new GroceryItem { Id = 99, Name = c.GroceryItem.Name, Amount = c.GroceryItem.Amount }));
         SetupSend<UpdateGroceryItem.Command, Result<int>>(Result.Ok(1));
         SetupSend<DeleteGroceryItem.Command, Result<int>>(Result.Ok(1));
     }
@@ -81,7 +86,7 @@ public class GroceryListPageTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.Equal(3, Rows(cut).Count));
         var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
         Assert.Equal(("Eggs", "12"), (added.Name, added.Amount));
-        Assert.Equal(99, added.Id);
+        Assert.Contains(GroceryList.GroceryList.Items, i => i is { Id: 99, Name: "Eggs" });
         Assert.Contains(Rows(cut), r => r.Contains("Eggs (12)"));
         Assert.False(Drawer.IsDrawerOpen);
     }
