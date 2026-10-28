@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
+using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
 using Xunit;
@@ -55,6 +56,18 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var row = await GetRowAsync(added.Id);
         Assert.NotNull(row);
         Assert.True(row.IsPicked);
+    }
+
+    [Fact]
+    public async Task AddGroceryItem_SignedOut_FailsWithNotSignedIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var signedOut = await supabase.CreateSignedOutClientAsync();
+
+        var result = await new AddGroceryItem.Handler(signedOut)
+            .Handle(new AddGroceryItem.Command(new GroceryItemBuilder().Build()), CancellationToken);
+
+        ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
     }
 
     [Fact]
