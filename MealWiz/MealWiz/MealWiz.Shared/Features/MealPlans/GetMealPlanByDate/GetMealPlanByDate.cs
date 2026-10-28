@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using System.Globalization;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MediatR;
 using Supabase.Postgrest;
@@ -15,7 +16,7 @@ public static class GetMealPlanByDate
     {
         public async Task<Result<MealPlan?>> Handle(Query request, CancellationToken cancellationToken)
         {
-            string date = request.Date.Date.ToString("yyyy-MM-dd");
+            string date = request.Date.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
             var result = await Result.Try(async Task<ModeledResponse<MealPlanDb>> () => await supabaseClient.From<MealPlanDb>()
                 .Select("*")

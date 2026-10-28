@@ -1,4 +1,5 @@
 ﻿using FluentResults;
+using System.Globalization;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MediatR;
@@ -24,7 +25,7 @@ public static class AddMealToMealPlan
             var mealPlanMealDb = new MealPlanMealDb()
             {
                 Id = 0,
-                MealDate = request.Meal.MealDate.Value.ToString("yyyy-MM-dd"),
+                MealDate = request.Meal.MealDate.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 MealId = request.Meal.Id,
                 MealPlanId = request.Meal.MealPlan.Id,
                 CreatedAt = DateTime.UtcNow,
