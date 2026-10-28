@@ -458,8 +458,9 @@ _drawerStateContainer.OpenDrawer(new DrawerStateParameters
 });
 ```
 
-For a confirmation, call `OpenConfirmDrawer(title, description)` and subscribe to `OnConfirmClick`. Unsubscribe in
-the handler and in `Dispose`, and call `CloseDrawer()` there too. `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`
+For a confirmation, call `OpenConfirmDrawer(title, description, onConfirm)`. The container keeps `onConfirm` for that
+one confirmation only: Confirm awaits it, and closing the confirm drawer (confirmed or dismissed) drops it. Call
+`CloseDrawer()` at the end of `onConfirm`. `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`
 is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFragment, Type)` and
 `SwitchDrawerContent` exist but nothing uses them.
 
