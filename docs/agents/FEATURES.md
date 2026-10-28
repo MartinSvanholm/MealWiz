@@ -306,6 +306,8 @@ key, CORS and deployment.
   - `Components/Tooltip.razor`
   - `Components/Card/BaseCard.razor`
   - `Components/Form/Button.razor`, `Components/Form/TextField.razor`, `Components/Form/CustomForm.razor`
+  - `Components/Form/EnterKey.cs`: `EnterKey.Then(...)`, the OnKeyDown handler that makes Enter (also on a phone
+    keyboard) move to a form's next field, and submit on its last single-line field. Every multi-field form uses it.
 - **`Layout/`:** `Layout/MainLayout.razor` (theme, snackbar provider, drawers, nav menu) and `Layout/RedirectToLogin.razor`.
 - **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.

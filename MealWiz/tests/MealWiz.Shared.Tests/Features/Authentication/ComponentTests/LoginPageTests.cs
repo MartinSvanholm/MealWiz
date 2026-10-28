@@ -67,6 +67,32 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Enter_in_the_email_moves_to_the_password_without_signing_in()
+    {
+        var cut = Render<LoginPage>();
+
+        cut.Find(InputOf("login-email")).Input("me@example.com");
+        PressEnter(cut.Find(InputOf("login-email")));
+
+        AssertFocused(cut.Find(InputOf("login-password")));
+        Assert.Empty(Sent<Login.Command>());
+    }
+
+    [Fact]
+    public void Enter_in_the_password_signs_in()
+    {
+        SetupSend<Login.Command, Result<Session?>>(Result.Ok<Session?>(new Session()));
+        var cut = Render<LoginPage>();
+
+        cut.Find(InputOf("login-email")).Input("me@example.com");
+        cut.Find(InputOf("login-password")).Input("secret");
+        PressEnter(cut.Find(InputOf("login-password")));
+
+        cut.WaitForAssertion(() => Assert.Equal("", CurrentPath));
+        Assert.Single(Sent<Login.Command>());
+    }
+
+    [Fact]
     public void Login_button_is_usable_again_after_a_failed_validation()
     {
         var cut = Render<LoginPage>();

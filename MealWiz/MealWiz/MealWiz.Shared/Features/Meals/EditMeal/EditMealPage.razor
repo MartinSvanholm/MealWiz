@@ -23,8 +23,9 @@
     <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
 
         <MudStack Class="pa-4">
-            <MudTextField data-testid="meal-name-input" Class="flex-grow-0" Label="Name" @bind-Value="_mealsStateContainer.MealToEdit.Name" Variant="Variant.Outlined" />
-            <MudTextFieldExtended data-testid="meal-recipe-input" Class="flex-grow-0" Clearable Lines="4" Label="Recipe" @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
+            <MudTextField data-testid="meal-name-input" Class="flex-grow-0" Label="Name" @bind-Value="_mealsStateContainer.MealToEdit.Name" Variant="Variant.Outlined"
+                          OnKeyDown="EnterKey.Then(() => _recipeField.FocusAsync())" />
+            <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Class="flex-grow-0" Clearable Lines="4" Label="Recipe" @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
 
             <CreateIngredientCard />
 
@@ -40,6 +41,8 @@
 </MudStack>
 
 @code {
+    private MudTextFieldExtended<string> _recipeField = default!;
+
     protected override void OnInitialized()
     {
         _mealsStateContainer.OnStateChanged += StateHasChanged;

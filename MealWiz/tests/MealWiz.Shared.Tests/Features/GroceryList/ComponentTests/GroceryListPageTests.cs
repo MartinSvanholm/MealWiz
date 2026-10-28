@@ -80,7 +80,7 @@ public class GroceryListPageTests : ComponentTestBase
         cut.Find(TestId("add-grocery-item-button")).Click();
         Assert.Equal("Add item", Drawer.StateParameters.Title);
         DrawerHost.Find(InputOf("grocery-item-name-input")).Change("Eggs");
-        DrawerHost.Find(InputOf("grocery-item-amount-input")).Change("12");
+        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("12");
         DrawerHost.Find(TestId("save-grocery-item-button")).Click();
 
         cut.WaitForAssertion(() => Assert.Equal(3, Rows(cut).Count));
@@ -99,7 +99,7 @@ public class GroceryListPageTests : ComponentTestBase
 
         cut.FindAll(TestId("edit-grocery-item-button"))[0].Click();
         Assert.Equal("Edit item", Drawer.StateParameters.Title);
-        DrawerHost.Find(InputOf("grocery-item-amount-input")).Change("2 l");
+        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("2 l");
         DrawerHost.Find(TestId("save-grocery-item-button")).Click();
 
         cut.WaitForAssertion(() => Assert.Contains("Milk (2 l)", Rows(cut)[0]));

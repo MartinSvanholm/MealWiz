@@ -33,17 +33,27 @@ public class FormTests : ComponentTestBase
     }
 
     [Fact]
-    public void Pressing_Enter_in_CustomForm_invokes_OnEnterClicked()
+    public void EnterKey_handler_on_a_TextField_runs_only_for_Enter()
     {
         var entered = 0;
-        var cut = Render<CustomForm>(p => p
-            .Add(f => f.OnEnterClicked, () => entered++)
-            .AddChildContent<TextField>(t => t.Add(f => f.Label, "Email")));
+        var cut = Render<TextField>(p => p
+            .Add(t => t.Label, "Email")
+            .Add(t => t.OnKeyDown, EnterKey.Then(() => { entered++; return Task.CompletedTask; })));
 
-        cut.Find("form").KeyPress(new KeyboardEventArgs { Key = "a" });
-        cut.Find("form").KeyPress(new KeyboardEventArgs { Key = "Enter" });
+        cut.Find("input").KeyDown(new KeyboardEventArgs { Key = "a" });
+        cut.Find("input").KeyDown(new KeyboardEventArgs { Key = "Enter" });
 
         Assert.Equal(1, entered);
+    }
+
+    [Fact]
+    public async Task TextField_FocusAsync_focuses_its_input()
+    {
+        var cut = Render<TextField>(p => p.Add(t => t.Label, "Email"));
+
+        await cut.InvokeAsync(() => cut.Instance.FocusAsync().AsTask());
+
+        AssertFocused(cut.Find("input"));
     }
 
     [Fact]

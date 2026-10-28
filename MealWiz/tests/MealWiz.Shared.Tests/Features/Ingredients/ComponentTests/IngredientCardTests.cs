@@ -3,7 +3,6 @@ using MealWiz.Shared.Features.Ingredients;
 using MealWiz.Shared.Features.Ingredients.CreateIngredient;
 using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
-using Microsoft.AspNetCore.Components;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Ingredients.ComponentTests;
@@ -57,8 +56,32 @@ public class IngredientCardTests : ComponentTestBase
     {
         var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
 
-        var focused = (ElementReference)JSInterop.VerifyFocusAsyncInvoke().Arguments[0]!;
-        Assert.Equal(focused.Id, cut.Find(InputOf("ingredient-name-input")).GetAttribute("blazor:elementReference"));
+        AssertFocused(cut.Find(InputOf("ingredient-name-input")));
+    }
+
+    [Fact]
+    public void Enter_in_the_drawers_name_moves_to_the_amount()
+    {
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
+
+        PressEnter(cut.Find(InputOf("ingredient-name-input")));
+
+        AssertFocused(cut.Find(InputOf("ingredient-amount-input")));
+    }
+
+    [Fact]
+    public void Enter_in_the_drawers_amount_saves_the_ingredient()
+    {
+        Drawer.OpenDrawer("Create Ingredient", typeof(IngredientDrawer));
+        var salt = TestData.Ingredient("Salt");
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, salt));
+
+        cut.Find(InputOf("ingredient-amount-input")).Input("1 tsp");
+        PressEnter(cut.Find(InputOf("ingredient-amount-input")));
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal("1 tsp", salt.Amount);
+        Assert.Contains(salt, Meals.MealToEdit.Ingredients);
     }
 
     [Fact]

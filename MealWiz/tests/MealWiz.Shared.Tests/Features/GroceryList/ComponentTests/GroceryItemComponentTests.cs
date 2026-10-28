@@ -23,6 +23,31 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
+    public void Enter_in_the_drawers_name_moves_to_the_amount()
+    {
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, TestData.GroceryItem("Milk")));
+
+        PressEnter(cut.Find(InputOf("grocery-item-name-input")));
+
+        AssertFocused(cut.Find(InputOf("grocery-item-amount-input")));
+    }
+
+    [Fact]
+    public void Enter_in_the_drawers_amount_saves_the_item()
+    {
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(TestData.GroceryItem("Eggs", "6", id: 5)));
+        Drawer.OpenDrawer("Add item", typeof(GroceryItemDrawer));
+        var item = TestData.GroceryItem("Eggs");
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, item));
+
+        cut.Find(InputOf("grocery-item-amount-input")).Input("6");
+        PressEnter(cut.Find(InputOf("grocery-item-amount-input")));
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal("6", Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem.Amount);
+    }
+
+    [Fact]
     public void Saving_a_new_item_adds_it_and_closes_the_drawer()
     {
         var saved = TestData.GroceryItem("Eggs", id: 5);

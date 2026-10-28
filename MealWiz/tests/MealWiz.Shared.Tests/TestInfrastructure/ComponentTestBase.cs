@@ -17,11 +17,14 @@ using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
 using MediatR;
+using AngleSharp.Dom;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
+using Xunit;
 
 namespace MealWiz.Shared.Tests.TestInfrastructure;
 
@@ -96,6 +99,16 @@ public abstract class ComponentTestBase : BunitContext
     /// (MudTextField) or on a wrapper around it.
     /// </summary>
     protected static string InputOf(string id) => $"input{TestId(id)}, textarea{TestId(id)}, {TestId(id)} input, {TestId(id)} textarea";
+
+    /// <summary>Presses Enter in a field, as the Enter (or Next) key of a phone keyboard does.</summary>
+    protected static void PressEnter(IElement input) => input.KeyDown(new KeyboardEventArgs { Key = "Enter" });
+
+    /// <summary>Asserts that <paramref name="input"/> is the element most recently focused through FocusAsync.</summary>
+    protected void AssertFocused(IElement input)
+    {
+        var focused = (ElementReference)JSInterop.Invocations["Blazor._internal.domWrapper.focus"].Last().Arguments[0]!;
+        Assert.Equal(focused.Id, input.GetAttribute("blazor:elementReference"));
+    }
 
     protected ISnackbar Snackbar =>Services.GetRequiredService<ISnackbar>();
 

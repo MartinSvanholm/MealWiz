@@ -1,9 +1,8 @@
-﻿<MudForm 
+﻿<MudForm
 @ref=@MudForm
 Class="@Class"
 IsValid="@IsValid"
-IsValidChanged="@IsValidChanged"
-@onkeypress="OnKeyPress">
+IsValidChanged="@IsValidChanged">
     @ChildContent
 </MudForm>
 
@@ -21,18 +20,7 @@ IsValidChanged="@IsValidChanged"
     public string Class { get; set; } = default!;
 
     [Parameter]
-    public EventCallback OnEnterClicked { get; set; }
-
-    [Parameter]
     public MudForm MudForm { get; set; } = default!;
-
-    private void OnKeyPress(KeyboardEventArgs args)
-    {
-        if (args.Key == "Enter")
-        {
-            OnEnterClicked.InvokeAsync();
-        }
-    }
 
     public async Task Validate()
     {
