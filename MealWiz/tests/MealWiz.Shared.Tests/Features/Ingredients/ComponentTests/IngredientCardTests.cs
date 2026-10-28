@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.Ingredients;
 using MealWiz.Shared.Features.Ingredients.CreateIngredient;
 using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Ingredients.ComponentTests;
@@ -49,6 +50,15 @@ public class IngredientCardTests : ComponentTestBase
         Assert.Equal(0, ingredient.Id);
         Assert.True(ingredient.ShowOnGroceryList);
         Assert.NotNull(DrawerHost.Find(TestId("save-ingredient-button")));
+    }
+
+    [Fact]
+    public void Drawer_focuses_the_name_field_when_it_opens()
+    {
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
+
+        var focused = (ElementReference)JSInterop.VerifyFocusAsyncInvoke().Arguments[0]!;
+        Assert.Equal(focused.Id, cut.Find(InputOf("ingredient-name-input")).GetAttribute("blazor:elementReference"));
     }
 
     [Fact]

@@ -4,7 +4,7 @@
 @inject IMealsStateContainer _mealsStateContainer
 
 <MudStack Class="pa-2">
-    <MudTextField data-testid="ingredient-name-input" Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
+    <MudTextField data-testid="ingredient-name-input" AutoFocus Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined" />
     <MudTextField data-testid="ingredient-amount-input" Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined" />
     <MudSwitch T="bool" data-testid="ingredient-show-on-grocery-list-switch" @bind-Value="Ingredient.ShowOnGroceryList"
                Label="Add to grocery list" Color="Color.Primary" />
