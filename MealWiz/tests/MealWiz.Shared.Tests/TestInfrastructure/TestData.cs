@@ -17,8 +17,8 @@ public static class TestData
             Ingredients = [.. ingredients]
         };
 
-    public static Ingredient Ingredient(string name, string amount = "", int id = 0) =>
-        new() { Id = id, Name = name, Amount = amount };
+    public static Ingredient Ingredient(string name, string amount = "", int id = 0, bool showOnGroceryList = true) =>
+        new() { Id = id, Name = name, Amount = amount, ShowOnGroceryList = showOnGroceryList };
 
     public static GroceryItem GroceryItem(string name, string amount = "", int id = 0, bool isPicked = false) =>
         new() { Id = id, Name = name, Amount = amount, IsPicked = isPicked };

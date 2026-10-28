@@ -19,10 +19,10 @@
         {
             Content = typeof(IngredientDrawer),
             Title = "Create Ingredient",
-            Height = "38%",
+            Height = "45%",
             ContentParameters = new Dictionary<string, object>
             {
-                { nameof(IngredientDrawer.Ingredient), new Ingredient() }
+                { nameof(IngredientDrawer.Ingredient), new Ingredient { ShowOnGroceryList = true } }
             }
         };
 
