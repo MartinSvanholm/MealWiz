@@ -30,16 +30,14 @@ public class GroceryListJourneyTests : E2ETestBase
         // Add the plan's ingredients
         await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
         await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add items to grocery list");
-        // Every ingredient in the plan is offered today, including the one with show_on_grocery_list = false: the
-        // drawer doesn't filter on the flag (MEA-38). Tighten this to just Penne when that's fixed.
-        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        // Only ingredients shown on the grocery list are offered, so olive oil is left out
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(1);
         await Expect(Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Penne" })).ToBeVisibleAsync();
-        await Expect(Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Olive oil" })).ToBeVisibleAsync();
 
         await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Row("grocery-item", "Penne (500 g)")).ToBeVisibleAsync();
-        await Expect(Row("grocery-item", "Olive oil (2 tbsp)")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Olive oil")).ToHaveCountAsync(0);
 
         // Add an item by hand
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
@@ -49,7 +47,7 @@ public class GroceryListJourneyTests : E2ETestBase
         await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Row("grocery-item", "Milk (1 l)")).ToBeVisibleAsync();
-        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
 
         // Check it off straight away, without a reload (MEA-42), and it stays checked after one
         var milkCheckbox = Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox");
@@ -70,7 +68,7 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
 
         await Page.ReloadAsync();
-        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(1);
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
     }
 }

@@ -57,9 +57,10 @@ first saves the meal, then each pending ingredient (see Ingredients).
 
 ## Ingredients
 
-A meal's ingredients: name, amount, and a "show on grocery list" flag (stored but never read; see
-[MEA-38](https://linear.app/mealwiz/issue/MEA-38)). They're edited only from the Edit Meal page, in a drawer. A new
-meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is saved and has an id.
+A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch in the drawer, on by default;
+ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
+Edit Meal page, in a drawer. A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
+saved and has an id.
 
 - **Folder:** `Features/Ingredients/`
 - **Pages:** none. The Edit Meal page hosts this feature.
@@ -80,6 +81,8 @@ meal's ingredients are kept as pending in `IMealsStateContainer` until the meal 
 - **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `ReloadIngredientsForMealToEdit`).
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
+- **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
+  ingredient saved before the switch existed.
 - **Tests:**
   - unit: `Features/Ingredients/UnitTests/Models/`
   - bUnit: `Features/Ingredients/ComponentTests/`
@@ -138,16 +141,16 @@ ignoring case, and lets you set the final amount; matches update the existing it
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: deletes after a confirm drawer.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
-    drawer. It reads `IMealPlanStateContainer`.
+    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllGroceryItems | `Query()` → `Result<List<GroceryItem>>` | All of the user's items |
-  | AddGroceryItem | `Command(GroceryItem)` → `Result<int>` | Insert one item (sets `created_by`), returns its id |
+  | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
   | AddMealPlanIngredientsToGroceryList | `Command(List<GroceryItem>)` → `Result<List<int>>` | Bulk insert; `created_by` comes from each ingredient |
-  | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off |
-  | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item |
+  | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
+  | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`.

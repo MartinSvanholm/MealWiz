@@ -140,11 +140,13 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var monday = new DateTime(2032, 2, 2);
         await new MealPlanBuilder().ForWeekOf(monday).WithMeal(monday, meal).InsertAsync(supabase.Client);
 
-        // What AddPlanIngredientsToGroceryListDrawer does: load the week's plan, then turn every planned meal's
-        // ingredients into grocery items (none of them are already on the list here).
+        // What AddPlanIngredientsToGroceryListDrawer does: load the week's plan, then turn the planned meals'
+        // ingredients that are shown on the grocery list into grocery items (none of them are on the list here).
         var plan = ResultAssert.Ok(await new GetMealPlanByDate.Handler(supabase.Client).Handle(new GetMealPlanByDate.Query(monday), CancellationToken));
         Assert.NotNull(plan);
-        var items = plan.MealOnDate.Values.SelectMany(m => m.Ingredients).Select(i => new GroceryItem(i)).ToList();
+        var items = plan.MealOnDate.Values.SelectMany(m => m.Ingredients)
+            .Where(i => i.ShowOnGroceryList)
+            .Select(i => new GroceryItem(i)).ToList();
 
         var ids = ResultAssert.Ok(await new AddMealPlanIngredientsToGroceryList.Handler(supabase.Client)
             .Handle(new AddMealPlanIngredientsToGroceryList.Command(items), CancellationToken));
@@ -156,9 +158,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         Assert.Contains(inserted, r => r is { Name: "Flour", Amount: "500 g", IsPicked: false });
         Assert.Contains(inserted, r => r is { Name: "Yeast", Amount: "1 packet" });
         Assert.All(inserted, r => Assert.Equal(supabase.UserId, r.CreatedBy));
-
-        // Pins current behaviour, see MEA-38: nothing reads show_on_grocery_list, so the hidden ingredient is added too.
-        Assert.Contains(inserted, r => r.Name == "Water");
+        Assert.DoesNotContain(inserted, r => r.Name == "Water");
     }
 
     [Fact]
