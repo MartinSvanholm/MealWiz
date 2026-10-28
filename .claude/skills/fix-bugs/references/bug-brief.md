@@ -16,7 +16,7 @@ Other groups running in parallel own: <their files>. Don't edit those; if your f
 Verify level: <smoke|full>.
 
 Merge rule, written by the user for this flow: when CI is green on your PR to dev, merge it yourself without asking
-(`gh pr merge <n> --merge --delete-branch`), unless the skill's "ask before fixing" list applied and the user hasn't
+(`scripts/merge-to-dev.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
 cleared it.
 ```
 

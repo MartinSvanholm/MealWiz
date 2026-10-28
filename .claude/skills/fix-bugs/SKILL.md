@@ -70,8 +70,9 @@ so the session doesn't have to stop.
 If the app refuses a start (on a turn a session's message started), propose it instead with
 `initiation: "own_initiative"` and the same brief, and tell the user in one line.
 
-Tell the user once: each session will ask the app to approve `set_monitor`, and possibly `gh pr merge` the first time,
-unless they've allowed it. `.claude/settings.json` allows `gh pr merge`, `gh pr view` and `gh pr checks`.
+Tell the user once: each session will ask the app to approve `set_monitor` the first time, unless they've allowed it.
+`.claude/settings.json` pre-approves `scripts/merge-to-dev.sh` (which only merges green PRs into `dev`), `gh pr view` and
+`gh pr checks`. It deliberately doesn't pre-approve `gh pr merge`, which could merge a release PR into `main`.
 
 ## 5. Every time you're woken
 
