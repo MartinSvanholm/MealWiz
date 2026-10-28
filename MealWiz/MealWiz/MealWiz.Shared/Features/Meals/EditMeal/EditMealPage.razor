@@ -5,7 +5,9 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @implements IDisposable
 
-<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+@* Fills the screen above the bottom nav: the visible height (dvh, with a vh fallback) minus the nav bar and the
+   safe areas the MAUI app draws under (status bar on top, home indicator under the nav bar). MEA-9. *@
+<MudStack Spacing="0" Style="height: calc(100vh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom));">
     <MudPaper Class="rounded-t-0">
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
@@ -20,7 +22,7 @@
         </MudGrid>
     </MudPaper>
 
-    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+    <div style="flex: 1 1 0; min-height: 0;" class="overflow-y-auto">
 
         <MudStack Class="pa-4">
             <MudTextField data-testid="meal-name-input" Class="flex-grow-0" Label="Name" @bind-Value="_mealsStateContainer.MealToEdit.Name" Variant="Variant.Outlined"
