@@ -18,7 +18,10 @@ public static class DeleteGroceryItem
                 .From<GroceryItemDb>()
                 .Delete(request.GroceryItem.MapToDb()));
 
-            return result.Map(value => value.Model.Id);
+            if (result.IsFailed) return result.ToResult<int>();
+            if (result.Value.Model is null) return Result.Fail("The grocery item could not be found.");
+
+            return result.Value.Model.Id;
         }
     }
 }

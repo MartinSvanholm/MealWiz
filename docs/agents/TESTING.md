@@ -250,9 +250,7 @@ an UPDATE or DELETE policy may not change effective access, and `policies_are` i
 
 | Issue | Pinned in |
 |---|---|
-| [MEA-36](https://linear.app/mealwiz/issue/MEA-36), [MEA-38](https://linear.app/mealwiz/issue/MEA-38) | `MealWiz/tests/MealWiz.Shared.Tests/Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs` |
 | [MEA-39](https://linear.app/mealwiz/issue/MEA-39), [MEA-40](https://linear.app/mealwiz/issue/MEA-40) | `MealWiz/tests/MealWiz.Shared.Tests/Features/Meals/IntegrationTests/MealHandlerTests.cs` |
-| [MEA-38](https://linear.app/mealwiz/issue/MEA-38), [MEA-42](https://linear.app/mealwiz/issue/MEA-42) | `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs` |
 | [MEA-43](https://linear.app/mealwiz/issue/MEA-43) | `MealWiz/tests/MauiWASM.Tests/E2ETests/MealImportJourneyTests.cs` |
 
 ## Adding a test suite or verify step

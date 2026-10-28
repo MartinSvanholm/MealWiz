@@ -21,21 +21,40 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task AddGroceryItem_InsertsItOwnedByTheUser()
+    public async Task AddGroceryItem_InsertsItOwnedByTheUserAndReturnsTheRow()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var before = DateTime.UtcNow;
         var item = new GroceryItemBuilder().WithName("Apples").WithAmount("4").Build();
 
-        var id = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
 
-        var row = await GetRowAsync(id);
+        var row = await GetRowAsync(added.Id);
         Assert.NotNull(row);
         Assert.Equal("Apples", row.Name);
         Assert.Equal("4", row.Amount);
         Assert.False(row.IsPicked);
         Assert.Equal(supabase.UserId, row.CreatedBy);
         TimeAssert.CloseTo(before, row.CreatedAt);
+        // The returned item carries its owner, so it can be updated straight away (MEA-42)
+        Assert.Equal(supabase.UserId, added.CreatedBy);
+        Assert.Equal(row.CreatedAt, added.CreatedAt);
+        Assert.Equal("Apples", added.Name);
+    }
+
+    [Fact]
+    public async Task AddGroceryItem_ThenUpdateTheReturnedItem_SavesTheChange()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var item = new GroceryItemBuilder().WithName("Milk").Build();
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+
+        added.IsPicked = true;
+        ResultAssert.Ok(await UpdateAsync(added));
+
+        var row = await GetRowAsync(added.Id);
+        Assert.NotNull(row);
+        Assert.True(row.IsPicked);
     }
 
     [Fact]
@@ -73,16 +92,14 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
-    public async Task UpdateGroceryItem_ItemThatDoesNotExist_Throws()
+    public async Task UpdateGroceryItem_ItemThatDoesNotExist_Fails()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var missing = new GroceryItemBuilder().Build();
         missing.Id = int.MaxValue;
         missing.CreatedBy = supabase.UserId;
 
-        // Pins current behaviour, see MEA-36: the update matches no rows, and `value.Model.Id` runs outside
-        // Result.Try, so the handler throws instead of returning a failed result.
-        await Assert.ThrowsAsync<NullReferenceException>(() => UpdateAsync(missing));
+        ResultAssert.Failed(await UpdateAsync(missing), "The grocery item could not be found.");
     }
 
     [Fact]
@@ -98,15 +115,14 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
-    public async Task DeleteGroceryItem_AnotherUsersItem_ThrowsAndKeepsIt()
+    public async Task DeleteGroceryItem_AnotherUsersItem_FailsAndKeepsIt()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var otherUser = await supabase.GetOtherUserAsync();
         var others = await new GroceryItemBuilder().InsertAsync(otherUser.Client);
 
-        // Pins current behaviour, see MEA-36: RLS hides the row, the delete matches nothing, and the handler throws
-        // instead of returning a failed result.
-        await Assert.ThrowsAsync<NullReferenceException>(() => DeleteAsync(others));
+        // RLS hides the row, so the delete matches nothing
+        ResultAssert.Failed(await DeleteAsync(others), "The grocery item could not be found.");
 
         var response = await otherUser.Client.From<GroceryItemDb>().Where(x => x.Id == others.Id).Get(CancellationToken);
         Assert.Single(response.Models);
@@ -124,11 +140,13 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var monday = new DateTime(2032, 2, 2);
         await new MealPlanBuilder().ForWeekOf(monday).WithMeal(monday, meal).InsertAsync(supabase.Client);
 
-        // What AddPlanIngredientsToGroceryListDrawer does: load the week's plan, then turn every planned meal's
-        // ingredients into grocery items (none of them are already on the list here).
+        // What AddPlanIngredientsToGroceryListDrawer does: load the week's plan, then turn the planned meals'
+        // ingredients that are shown on the grocery list into grocery items (none of them are on the list here).
         var plan = ResultAssert.Ok(await new GetMealPlanByDate.Handler(supabase.Client).Handle(new GetMealPlanByDate.Query(monday), CancellationToken));
         Assert.NotNull(plan);
-        var items = plan.MealOnDate.Values.SelectMany(m => m.Ingredients).Select(i => new GroceryItem(i)).ToList();
+        var items = plan.MealOnDate.Values.SelectMany(m => m.Ingredients)
+            .Where(i => i.ShowOnGroceryList)
+            .Select(i => new GroceryItem(i)).ToList();
 
         var ids = ResultAssert.Ok(await new AddMealPlanIngredientsToGroceryList.Handler(supabase.Client)
             .Handle(new AddMealPlanIngredientsToGroceryList.Command(items), CancellationToken));
@@ -140,9 +158,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         Assert.Contains(inserted, r => r is { Name: "Flour", Amount: "500 g", IsPicked: false });
         Assert.Contains(inserted, r => r is { Name: "Yeast", Amount: "1 packet" });
         Assert.All(inserted, r => Assert.Equal(supabase.UserId, r.CreatedBy));
-
-        // Pins current behaviour, see MEA-38: nothing reads show_on_grocery_list, so the hidden ingredient is added too.
-        Assert.Contains(inserted, r => r.Name == "Water");
+        Assert.DoesNotContain(inserted, r => r.Name == "Water");
     }
 
     [Fact]
