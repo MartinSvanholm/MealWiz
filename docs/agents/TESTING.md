@@ -248,9 +248,7 @@ an UPDATE or DELETE policy may not change effective access, and `policies_are` i
 
 ### Bugs currently pinned by tests
 
-| Issue | Pinned in |
-|---|---|
-| [MEA-39](https://linear.app/mealwiz/issue/MEA-39), [MEA-40](https://linear.app/mealwiz/issue/MEA-40) | `MealWiz/tests/MealWiz.Shared.Tests/Features/Meals/IntegrationTests/MealHandlerTests.cs` |
+None.
 
 ## Adding a test suite or verify step
 

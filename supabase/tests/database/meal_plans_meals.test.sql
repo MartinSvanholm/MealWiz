@@ -1,9 +1,9 @@
 -- RLS on meal_plans-meals (a meal planned on a day of a meal plan): each user reads and writes only
--- their own rows; anon gets nothing.
+-- their own rows; anon gets nothing. Deleting a meal removes it from the plans it was on.
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(23);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -151,6 +151,28 @@ select is_empty(
     $$ select id from public."meal_plans-meals"
        where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1' and (fk_meal = 900002 or fk_meal_plan = 900002) $$,
     'user A has no planned meal pointing at user B''s meal or plan'
+);
+
+-- Deleting a planned meal removes it from its plans (MEA-39).
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+
+select lives_ok(
+    $$ delete from public.meals where id = 900001 $$,
+    'user A can delete a meal that is on their plan'
+);
+
+reset role;
+
+select is_empty(
+    $$ select id from public."meal_plans-meals" where fk_meal = 900001 $$,
+    'the deleted meal is gone from every plan'
+);
+
+select results_eq(
+    $$ select id from public."meal_plans-meals" where id = 900002 $$,
+    $$ values (900002::bigint) $$,
+    'user B''s planned meal is still there'
 );
 
 select * from finish();

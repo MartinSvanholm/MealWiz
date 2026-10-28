@@ -11,7 +11,7 @@ public class Meal
     public string Recipe { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public List<Ingredient> Ingredients { get; set; }
     public MealPlan? MealPlan { get; set; }
     public DateTime? MealDate { get; set; }

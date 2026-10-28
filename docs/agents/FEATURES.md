@@ -37,7 +37,7 @@ first saves the meal, then each pending ingredient (see Ingredients).
   |---|---|---|
   | GetAllMeals | `Query()` → `Result<List<Meal>>` | Every meal visible to the user (own + system), regular meals last, then by name |
   | SaveMeal | `Command(Meal)` → `Result<Meal>` | Insert when `Id == 0` (sets `created_by`), otherwise update |
-  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; ingredients cascade |
+  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade |
 
 - **State:** `Features/Meals/State/MealsStateContainer.cs` (`IMealsStateContainer`). It holds `Meals`, `MealToEdit`,
   and the pending ingredients; methods include `LoadMeals` and `ReloadIngredientsForMealToEdit`.
@@ -345,6 +345,6 @@ table and policy list.
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
-| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal`, `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
+| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |

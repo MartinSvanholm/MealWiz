@@ -18,7 +18,7 @@ public class DeleteMealButtonTests : ComponentTestBase
         cut.Find(TestId("delete-meal-button")).Click();
 
         Assert.True(Drawer.IsConfirmDrawerOpen);
-        Assert.Contains("Are you sure you want to delete this meal?", ConfirmDrawerHost.Find(TestId("confirm-drawer-description")).TextContent);
+        Assert.Contains("removed from any meal plans", ConfirmDrawerHost.Find(TestId("confirm-drawer-description")).TextContent);
         Assert.Empty(Sent<DeleteMeal.Command>());
     }
 

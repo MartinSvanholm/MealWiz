@@ -11,7 +11,7 @@ public class MealPlan
     public DateTime EndDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public Guid CreatedBy { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public Dictionary<DateTime, Meal> MealOnDate { get; set; }
 
     public MealPlan(DateTime targetDate)
