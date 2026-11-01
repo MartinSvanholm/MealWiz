@@ -14,28 +14,38 @@ change needs, and how to write them is in `docs/agents/TESTING.md`.
 | Level | Runs | When |
 |-------|------|------|
 | `fast` | docs check + build + unit and bUnit tests, no Docker | while iterating |
-| `smoke` | `fast` + local Supabase (started if needed) + integration tests + Smoke E2E | **before saying a change is done** |
-| `full` | `smoke` + all E2E journeys + `supabase test db` (pgTAP RLS tests) | migrations, RLS, meal import/Realtime, meal plans, before a PR |
+| `local` | `fast` + local Supabase + integration tests + `supabase test db` (pgTAP RLS tests), no browser tests | **before saying a change is done** |
+| `local --e2e <class>` | `local` + one E2E class, e.g. `MealPlanJourneyTests` | when TESTING.md names a journey for your change, or a bug is pinned by an E2E test |
+| `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | the browser smoke set, when asked |
+| `full` | `smoke` + all E2E journeys + pgTAP | what CI runs on every PR; locally only when asked |
+
+The full E2E suite is CI's job: a PR merges only on green CI, so running it locally too only repeats it, slowly.
 
 ## 2. Run it
 
 From the repo root:
 
 ```bash
-scripts/verify.ps1 smoke     # PowerShell
-scripts/verify.sh smoke      # bash
+scripts/verify.ps1 local     # PowerShell
+scripts/verify.sh local      # bash
 ```
 
-`smoke` and `full` take minutes (the E2E fixture publishes the app in Release; the first run also pulls Docker images
-and Chromium), so run them in the background and wait for the completion notice rather than polling. Run one verify at
-a time: the suites share the local Supabase stack and its sign-in rate limit.
+Every level but `fast` takes minutes, so run it in the background and wait for the completion notice rather than
+polling.
+
+All worktrees on this machine share one local Supabase stack. verify takes a machine-wide lock before it touches it,
+so if another session's verify is running, yours prints `waiting for another verify to finish with local Supabase:
+<worktree>` and starts when that one ends. That's normal; don't kill it or start a second one. Under the lock it runs
+`supabase db reset`, so your tests run against your worktree's migrations and `seed.sql`. Don't run `supabase db reset`,
+`supabase migration up` or `supabase test db` by hand: they skip the lock and change the schema under another
+session's tests. To apply a new migration and run pgTAP, run verify (`--only db` after a build).
 
 ## 3. Read the result
 
 ```
 verify smoke: FAILED in 3m02s
   build                   ok
-  supabase                running
+  supabase                running, reset
   Shared unit + bUnit     402 passed  (25s)
   ...
   E2E smoke               8 passed, 1 failed  (1m40s)
@@ -49,7 +59,7 @@ FAILED SmokeTests.Page_Renders(page: "MealsPage", path: "/meals", marker: "meal-
 Full logs: artifacts/verify/smoke/
 ```
 
-- Exit code **0** means passed, **1** means a build or test failed, and **2** means it couldn't run (unknown level, no Supabase CLI, Docker not running). Report the verdict line. Never call a change done on a non-zero exit.
+- Exit code **0** means passed, **1** means a build or test failed (or `supabase db reset` failed on a migration), and **2** means it couldn't run (unknown level, no Supabase CLI, Docker not running, or another verify held the lock for an hour). Report the verdict line. Never call a change done on a non-zero exit.
 - `artifacts/verify/<level>/` has `build.log`, `<suite>.log`, `<suite>/<suite>.trx` (every test with its full message and stack), `supabase.log` and `db.log`.
 - A failed CI run has the same folder (plus the E2E traces) in its `test-results` artifact: `gh run download <run-id> -n test-results`. CI runs `verify full` one step at a time (`--only shared-unit,shared-integration`, ...); you can rerun just those steps locally the same way (after `--only build`, or a normal run).
 
@@ -64,14 +74,15 @@ Full logs: artifacts/verify/smoke/
   throwaway user, through RLS. Functions uses the service role and a local recipe web server.
   - "REQUIRE_SUPABASE is set, but…" means the stack isn't reachable. Check `supabase status`.
   - A GoTrue `429` means the sign-in rate limit was hit by back-to-back runs. Wait a few minutes.
-  - A migration change needs `supabase db reset` to apply locally. It wipes local data and re-runs `seed.sql`.
+  - verify resets the database to your migrations on every run, so a new migration is always applied. If the reset
+    itself fails, `supabase.log` shows the failing migration or seed line.
 - **E2E** (`MauiWASM.Tests/E2ETests`): the message usually names the page and the first browser error. Then:
   1. Open `screenshot.png` from the artifacts folder with the Read tool to see what the page showed.
   2. Read `console.log` in the same folder: browser console, page errors, failed requests and Realtime frames, with timestamps.
   3. If you still need more, `pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <folder>/trace.zip` opens the step-by-step trace (needs a display, so it's for humans).
   4. Rerun a single journey: `dotnet test --project MealWiz/tests/MauiWASM.Tests --filter-class "*MealJourneyTests"`.
 - **pgTAP**: the summary shows the `not ok` lines. The files are under `supabase/tests/database/`.
-- **SKIPPED** at smoke/full shouldn't happen (REQUIRE_SUPABASE turns skips into failures). If you see it, the reason is shown.
+- **SKIPPED** at local/smoke/full shouldn't happen (REQUIRE_SUPABASE turns skips into failures). If you see it, the reason is shown.
 
 Some E2E tests pin known bugs on purpose (MEA-38, MEA-42, MEA-43; see `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`).
 If your change fixes one of those, flip the assertion as the comment there says, rather than deleting it.
@@ -80,7 +91,7 @@ If your change fixes one of those, flip the assertion as the comment there says,
 
 When a test can't tell you whether the UI looks right, open the app:
 
-1. `supabase start` (smoke/full already started it).
+1. `supabase start` (local/smoke/full already started it).
 2. In the Claude desktop app, start the `web` preview from `.claude/launch.json`. It runs `dotnet run` for MauiWASM on http://localhost:5053 in Development, pointing at local Supabase.
 3. Log in as `test@test.com` / `tester`. That user is seeded by `supabase/seed.sql` and exists only in the local stack.
 4. The `supabase-studio` entry opens Studio on http://127.0.0.1:54323 to inspect the data.

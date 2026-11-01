@@ -11,7 +11,7 @@ dotnet test --project MealWiz/tests/MauiWASM.Tests
 
 That one command runs the whole project: the unit tests plus the E2E journeys. The first run takes about two minutes longer, because it publishes the app in Release (trimmed, like the deploy) and downloads Chromium. Later runs publish incrementally.
 
-`scripts/verify.ps1 smoke` (or `verify.sh`) runs the Smoke subset together with the rest of the repo's tests and prints a short summary; `verify full` runs every journey. See "Verifying changes" in the root `CLAUDE.md`.
+`scripts/verify.ps1 local --e2e <Class>` (or `verify.sh`) runs one journey class together with the rest of the repo's non-browser tests and prints a short summary; `verify smoke` runs the Smoke subset, and `verify full` (what CI runs) every journey. See "Verifying changes" in the root `CLAUDE.md`.
 
 To pick which tests run (xunit.v3 filters on Microsoft.Testing.Platform):
 
