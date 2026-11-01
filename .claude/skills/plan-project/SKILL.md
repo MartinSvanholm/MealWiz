@@ -5,8 +5,12 @@ description: Step 2 of a MealWiz feature. Research and plan a specced Linear pro
 
 # Plan and coordinate a feature project
 
-Step 2 of 3 (spec → **plan** → implement). This session becomes the **coordinator**: it plans, starts one session per
-issue, and keeps the task graph moving. It doesn't implement issues itself.
+Step 2 of 3 (spec → **plan** → implement). This session is the project's **main session**, the **coordinator**: it
+plans, starts one session per issue, and keeps the task graph moving. It doesn't implement issues itself.
+
+Three levels: the **project** (the feature, a collection of user stories), its **issues** (one user story each, one
+session and one PR), and their **sub-issues** (`[DB]`, `[BE]`, `[FE]` layer tasks). You start sessions for issues only;
+each issue's session works its sub-issues itself or hands them to subagents.
 
 Standing rules:
 - Work only on this project's issues. A bug you or a session find goes in a new Linear issue with the **Bug** label,
@@ -32,7 +36,8 @@ Wait for both before slicing; a Research finding can change the slices.
 
 ## 3. Slice
 
-Run `mw-to-tickets` on the project, including its quiz. It publishes the issues to Linear with `blockedBy` edges.
+Run `mw-to-tickets` on the project, including its quiz. It publishes the issues and their layer sub-issues to Linear
+with `blockedBy` edges.
 
 If parallel issues share a seam, write the **Contract** document first (`save_document`, `project:`, title
 "Contract", from [references/contract-template.md](references/contract-template.md)), get the user's OK, then link it
@@ -55,7 +60,8 @@ cards, unless they say "start the next ones" when they're back.
 
 ### Start sessions
 
-The **frontier** is every Todo issue in the project whose blockers are all Done. **At most 4 sessions run at once**
+The **frontier** is every Todo top-level issue in the project (not a sub-issue) whose blockers are all Done.
+**At most 4 sessions run at once**
 (they share one local Supabase and its sign-in rate limit); the rest wait for a slot.
 
 For each issue you start:
@@ -79,7 +85,7 @@ Recompute the state; never assume it from memory:
    In Progress or In Review issue.
 2. For each session report: check it against the branch, the PR and CI yourself. A report is a claim.
    - **`MERGED <url>`**, or a PR you find merged: confirm with `gh pr view <n> --json state,mergedAt,baseRefName`,
-     set the issue to **Done** if the GitHub integration hasn't.
+     set the issue and its sub-issues to **Done** if the GitHub integration hasn't.
    - **Blocked / question**: the session has already asked the user in its own window, so don't ask again here (two
      places to answer means two answers that can disagree). Tell the user in one line which session waits for them.
      Only a contract change is yours: update the Contract document, add a line to its change log, and message every

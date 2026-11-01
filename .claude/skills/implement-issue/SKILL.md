@@ -1,6 +1,6 @@
 ---
 name: implement-issue
-description: Implement one MealWiz Linear issue (feature mode) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
+description: Implement one MealWiz Linear issue and its [DB]/[BE]/[FE] sub-issues (feature mode, inline or through subagents) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
 ---
 
 # Implement an issue
@@ -50,8 +50,9 @@ While you wait for an answer, don't build on a guess.
 
 ## 1. Set up
 
-1. `get_issue <ID>` with relations, for each issue. In feature mode also read the project description (the spec) and
-   its "Research" and "Contract" documents (`list_documents project:`, `get_document`).
+1. `get_issue <ID>` with relations, for each issue. In feature mode also read its sub-issues (`list_issues parentId:
+   <ID>`, then `get_issue` each with relations), the project description (the spec) and its "Research" and
+   "Contract" documents (`list_documents project:`, `get_document`).
 2. `git fetch origin`. If your branch has no commits of its own, bring it to `dev`'s tip:
    `git merge --ff-only origin/dev`. (Resuming? See the standing rules.)
 3. Move each issue to **In Progress**.
@@ -64,8 +65,10 @@ While you wait for an answer, don't build on a guess.
 1. **Plan.** You started in plan mode. Explore the code the issue touches (FEATURES.md first). Ask the open
    implementation questions with AskUserQuestion, in rounds, as `mw-grilling` does. Write the plan: the slices, the
    test seams (from the issue or spec; otherwise propose them), the files, the docs to update, the verify level.
-   Present it with ExitPlanMode. Code nothing before the user approves.
-2. **Build test-first** with `mw-tdd`, one slice at a time. Commit each green slice.
+   If the issue has sub-issues, the plan also says, for each one, its order and whether you work it **inline** or in
+   a **subagent** ([Sub-issues](#sub-issues)). Present it with ExitPlanMode. Code nothing before the user approves.
+2. **Build test-first** with `mw-tdd`, one slice at a time, sub-issue by sub-issue in blocking order. Commit each
+   green slice. Move each sub-issue to **In Progress** when you start it and **In Review** when its slices are green.
 3. **Docs.** Update `docs/agents/FEATURES.md` (and TESTING.md, CLAUDE.md where they describe what you changed).
 4. **Verify** at the issue's level, in the background: `scripts/verify.ps1 local`, plus `--e2e <class>` for the
    journey the issue names (TESTING.md). Don't run `smoke` or `full` locally: CI runs the full E2E suite before the
@@ -75,8 +78,31 @@ While you wait for an answer, don't build on a guess.
 7. **Hand off.** End your turn with a short report (below). From now on you're woken by CI and review events
    ([After the PR](#after-the-pr)).
 8. **Merged.** When you learn the PR merged (an event, `get_status`, or the coordinator tells you): check with
-   `gh pr view <n> --json state,mergedAt`, set the issue to **Done** if the GitHub integration hasn't, and end your
-   turn with the first line `MERGED <PR url>`. That wakes the coordinator, which starts the next issues.
+   `gh pr view <n> --json state,mergedAt`, set the issue and its sub-issues to **Done** if the GitHub integration
+   hasn't, and end your turn with the first line `MERGED <PR url>`. That wakes the coordinator, which starts the next
+   issues.
+
+### Sub-issues
+
+An issue's `[DB]`, `[BE]` and `[FE]` sub-issues are yours: they all land in your one branch and PR, and you stay
+responsible for the whole issue (its end-to-end criteria, docs, verify, review, PR).
+
+- **Inline** (the default): small sub-issues, or a chain where each needs the last (`[DB]` → `[BE]` → `[FE]`). You
+  work them yourself, in order.
+- **Subagent**: a sizeable sub-issue whose blockers are already done (or none), that edits files no other running
+  sub-issue edits, with its seam written down (the parent's Notes or a Contract item). Siblings that meet those rules
+  may run in parallel.
+
+For a subagent, use the Agent tool with `isolation: "worktree"` (each gets its own worktree from your branch, so
+builds and commits don't collide) and a brief that holds: the sub-issue (id, url, its text), the parent story in one
+line, the seam it codes against, the files it owns and the ones it mustn't touch, "build test-first with `mw-tdd` and
+commit each green slice", and "verify with `scripts/verify.ps1 fast`, or `local` if you touch the database; don't
+push, open a PR, edit Linear, or edit docs". It reports its branch, commits and verify verdict.
+
+When it returns, check its diff against the sub-issue yourself (a report is a claim), merge its branch into yours,
+and fix anything that doesn't fit before starting a sub-issue it blocks. A subagent that hits a stop case reports it;
+you ask the user as the stop rules say. Docs, the full verify, the review and the PR stay with you, once every
+sub-issue is in.
 
 ## B. Bug mode
 
@@ -138,7 +164,7 @@ only PRs you opened, based on `dev`, in this session.
    ```
 3. `get_status`; if it doesn't show the PR, `bind_pr` it. Then `set_monitor` with `auto_fix: true` and the PR url. The
    app asks the user to approve that call; it's expected.
-4. Move each issue to **In Review**.
+4. Move each issue, and any sub-issues, to **In Review**.
 
 ## After the PR
 

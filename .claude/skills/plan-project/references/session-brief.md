@@ -12,6 +12,8 @@ Run the `implement-issue` skill for Linear issue <ID> "<title>" (<url>), in feat
 It's part of the project "<project>" (<project url>). Running in parallel with you: <sibling IDs, or "none">.
 - Spec: the project description. Research: the project's "Research" document. <Contract: the project's "Contract"
   document; this issue uses <items, e.g. DB-1, API-1>. It's binding.>
+- Sub-issues: <[DB] ID, [BE] ID, [FE] ID with their blockers, or "none (one layer)">. Work them yourself or hand
+  independent ones to subagents, as the skill says; they all land in your one PR.
 - You own: <areas/paths>. Don't edit: <siblings' areas>. In shared files, only: <the specific edit>.
 - <Anything the coordinator learned that the issue doesn't say: prior art to copy, a gotcha. Omit if nothing.>
 
@@ -28,8 +30,8 @@ session that started you in one line so it knows you're waiting.
 
 ```
 MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
-a .NET 10 Azure Function for meal import. Feature "<project>" is built as one Linear issue per session, in parallel
-worktrees from dev; a coordinator session started you and starts the next issues as PRs merge. This session's piece:
+a .NET 10 Azure Function for meal import. Feature "<project>" is built as one Linear issue (user story) per session,
+in parallel worktrees from dev, each split into [DB]/[BE]/[FE] sub-issues; a coordinator session started you and starts the next issues as PRs merge. This session's piece:
 <one line>. Rules: CLAUDE.md and docs/agents/. PRs go to dev and the user merges them. Work only on <ID>; bugs you
 find go in Linear with the Bug label and no project. Windows: PowerShell 5.1, so write commit messages and PR bodies
 to a file (git commit -F, gh pr create --body-file).
