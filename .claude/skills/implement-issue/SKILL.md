@@ -50,7 +50,9 @@ While you wait for an answer, don't build on a guess.
 2. `git fetch origin`. If your branch has no commits of its own, bring it to `dev`'s tip:
    `git merge --ff-only origin/dev`. (Resuming? See the standing rules.)
 3. Move each issue to **In Progress**.
-4. For anything beyond unit tests you'll need local Supabase: `supabase start` (verify smoke also starts it).
+4. For anything beyond unit tests you'll need local Supabase: verify starts it if needed. Other sessions share that
+   stack, so apply migrations and run pgTAP through verify, never with `supabase db reset` or `supabase test db` by
+   hand (the verify skill explains the lock).
 
 ## F. Feature mode
 
@@ -60,8 +62,9 @@ While you wait for an answer, don't build on a guess.
    Present it with ExitPlanMode. Code nothing before the user approves.
 2. **Build test-first** with `mw-tdd`, one slice at a time. Commit each green slice.
 3. **Docs.** Update `docs/agents/FEATURES.md` (and TESTING.md, CLAUDE.md where they describe what you changed).
-4. **Verify** at the issue's level (at least `smoke`; `full` for migrations, RLS, meal import, meal plans), in the
-   background: `scripts/verify.ps1 <level>`. Triage with the `verify` skill. Green means exit code 0.
+4. **Verify** at the issue's level, in the background: `scripts/verify.ps1 local`, plus `--e2e <class>` for the
+   journey the issue names (TESTING.md). Don't run `smoke` or `full` locally: CI runs the full E2E suite before the
+   PR can merge. Triage with the `verify` skill. Green means exit code 0.
 5. **Self-review** with `mw-code-review` (light). Fix 🔴 and Spec gaps; rerun verify if you changed code.
 6. **Open the PR** (go to [Opening the PR](#opening-the-pr)).
 7. **Hand off.** End your turn with a short report (below). From now on you're woken by CI and review events
@@ -88,7 +91,8 @@ only PRs you opened, based on `dev`, in this session.
    Then you also don't self-merge that PR unless the user says so in this session.
 3. **Docs:** update "Bugs currently pinned by tests" in `docs/agents/TESTING.md` and any FEATURES.md lines you
    changed.
-4. **Verify** at the highest level any fixed bug needs (TESTING.md), in the background.
+4. **Verify** with `scripts/verify.ps1 local` in the background, plus `--e2e <class>` for each E2E class that pins
+   one of your bugs or that TESTING.md names for the change (one run per class). CI runs the rest.
 5. **Self-review** with `mw-code-review` (light), then **open the PR** (below), with one `Fixes MEA-xx` line per bug.
 6. **Wait for CI** with one background command: `gh pr checks <n> --watch --fail-fast` (Bash, `run_in_background`).
    You're notified when it exits. Don't check in between.

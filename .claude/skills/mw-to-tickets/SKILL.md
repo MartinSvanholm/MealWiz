@@ -64,7 +64,7 @@ Present the breakdown as a numbered list. For each issue:
 - **Title**: short and descriptive
 - **Blocked by**: which issues, if any
 - **What it delivers**: the end-to-end behaviour it makes work
-- **Verify level**: `smoke` or `full`, from "Which tests for which change" in `docs/agents/TESTING.md`
+- **Verify level**: `local`, or `local --e2e <class>` for a journey, from "Which tests for which change" in `docs/agents/TESTING.md`
 
 Then show the frontier waves: what starts first, what starts after each merge. Ask with AskUserQuestion:
 

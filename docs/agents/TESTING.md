@@ -7,50 +7,59 @@ change, and how to write a new test. To run verify and read or triage its result
 
 ## Suites at a glance
 
-`scripts/verify.ps1 <level>` (or `scripts/verify.sh <level>`) runs these steps. Each level includes the one before it.
+`scripts/verify.ps1 <level>` (or `scripts/verify.sh <level>`) runs these steps. Every level runs the `fast` steps.
+`local` adds the Supabase-backed tests but no browser tests, `smoke` adds the Smoke E2E set, and `full` (what CI runs)
+adds every E2E journey.
 
-| Step | What it runs | Covers | Level | Needs |
+| Step | What it runs | Covers | Levels | Needs |
 |---|---|---|---|---|
-| `docs` | the doc check in `scripts/verify.cs` | Feature folders, handlers and tables listed in FEATURES.md; verify steps listed here; paths in backticks in CLAUDE.md and `docs/agents/` exist | fast | nothing |
-| `build` | `dotnet build` of the three test projects | Shared, MauiWASM, Functions, tests. Not the MAUI head | fast | .NET 9 + 10 SDKs |
-| `shared-unit` | MealWiz.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | fast | — |
-| `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | fast | — |
-| `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | fast | — |
-| `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | smoke | Docker + Supabase CLI |
-| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | smoke | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (9 cases) | smoke only | Docker + Chromium |
-| `e2e` | MauiWASM.Tests, `Category=E2E` | All journeys, including meal import and meal plan | full | Docker + Chromium |
-| `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | full | Docker |
+| `docs` | the doc check in `scripts/verify.cs` | Feature folders, handlers and tables listed in FEATURES.md; verify steps listed here; paths in backticks in CLAUDE.md and `docs/agents/` exist | all | nothing |
+| `build` | `dotnet build` of the three test projects | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
+| `shared-unit` | MealWiz.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | all | — |
+| `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
+| `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
+| `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
+| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
+| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (9 cases) | smoke | Docker + Chromium |
+| `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
+| `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
 - **Logs:** under `artifacts/verify/<level>/`.
-- **Supabase:** at smoke and full, verify starts local Supabase if it isn't running and sets `REQUIRE_SUPABASE=true`,
-  so a test that can't reach the stack fails instead of skipping. Without that variable (plain `dotnet test`, or
-  `fast`), Supabase-backed tests skip with a reason.
+- **Supabase:** at local, smoke and full, verify starts local Supabase if it isn't running and sets
+  `REQUIRE_SUPABASE=true`, so a test that can't reach the stack fails instead of skipping. Without that variable (plain
+  `dotnet test`, or `fast`), Supabase-backed tests skip with a reason.
+- **One stack, taken in turns:** every worktree on the machine uses the same local Supabase. verify takes a
+  machine-wide lock (`mealwiz-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
+  end of the run, so a second verify waits and says whose run it is waiting for. Under the lock it runs
+  `supabase db reset`, so the tests see this worktree's migrations and `seed.sql`, not another branch's. That wipes
+  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
   ends with `--check-complete`, which fails if a step never ran.
 
 ## Which tests for which change
 
-Run `scripts/verify.ps1 smoke` before calling any app change done, and `full` where the table says so. While
-iterating, run just the project or class you're touching:
+Run `scripts/verify.ps1 local` before calling any app change done, with `--e2e <class>` where the table names a
+journey (one class per run; run it again for a second one). CI runs everything else (`verify full`), and a PR merges
+only on green CI. While iterating, run just the project or class you're touching:
 `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
 
 | You changed | Add or update | Run at least |
 |---|---|---|
-| A handler in `Features/` | Integration test in `Features/<F>/IntegrationTests/`. If it has pure logic, also a unit test in `Features/<F>/UnitTests/Handlers/` | smoke |
-| A page or component | bUnit test in `Features/<F>/ComponentTests/` (or `Components/ComponentTests/`, `Layout/ComponentTests/`); `data-testid`s on new elements | smoke |
-| A state container | Unit test in `Features/<F>/UnitTests/State/`, with `IMediator` mocked | fast, then smoke |
-| A model or its mapping | Unit test in `Features/<F>/UnitTests/Models/` | fast, then smoke |
-| A helper or service | Unit test in `Helpers/UnitTests/` or `Services/<Svc>/UnitTests/` | fast, then smoke |
-| DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | smoke |
-| A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | **full** |
-| Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | **full** |
-| A meal plan flow | Shared tests plus `MealPlanJourneyTests` | **full** |
-| Functions parsing or mapping | Unit tests in `MealWiz/tests/MealWiz.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then smoke |
-| Functions fetching or SSRF | `MealWiz/tests/MealWiz.Functions.Tests/Shared/UnitTests/Ssrf/` and `Shared/IntegrationTests/` | smoke |
-| The `meal_imports` shape or statuses | Both sides' models plus `MealWiz/tests/Contracts/*.json` (FN-01) | smoke |
-| A user-visible flow end to end | An E2E journey or a step in an existing one; `Smoke` only if it fits the smoke list below | full |
+| A handler in `Features/` | Integration test in `Features/<F>/IntegrationTests/`. If it has pure logic, also a unit test in `Features/<F>/UnitTests/Handlers/` | local |
+| A page or component | bUnit test in `Features/<F>/ComponentTests/` (or `Components/ComponentTests/`, `Layout/ComponentTests/`); `data-testid`s on new elements | local |
+| A state container | Unit test in `Features/<F>/UnitTests/State/`, with `IMediator` mocked | fast, then local |
+| A model or its mapping | Unit test in `Features/<F>/UnitTests/Models/` | fast, then local |
+| A helper or service | Unit test in `Helpers/UnitTests/` or `Services/<Svc>/UnitTests/` | fast, then local |
+| DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
+| A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
+| Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
+| A meal plan flow | Shared tests plus `MealPlanJourneyTests` | local `--e2e MealPlanJourneyTests` |
+| Functions parsing or mapping | Unit tests in `MealWiz/tests/MealWiz.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then local |
+| Functions fetching or SSRF | `MealWiz/tests/MealWiz.Functions.Tests/Shared/UnitTests/Ssrf/` and `Shared/IntegrationTests/` | local |
+| The `meal_imports` shape or statuses | Both sides' models plus `MealWiz/tests/Contracts/*.json` (FN-01) | local |
+| A user-visible flow end to end | An E2E journey or a step in an existing one; `Smoke` only if it fits the smoke list below | local `--e2e <that journey>` |
+| A bug pinned by an E2E test (see the table below) | Flip the pinning assertion | local `--e2e <that class>` |
 | Docs only (`docs/agents/`, `CLAUDE.md`) | — | `scripts/verify.ps1 fast --only docs` |
 
 ## Traits
