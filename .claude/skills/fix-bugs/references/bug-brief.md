@@ -13,6 +13,8 @@ Likely files (a prediction, not a limit): <files>.
 Other groups running in parallel own: <their files>. Don't edit those; if your fix needs to, stop and ask.
 <Pinned by tests: <test file>. Flip the pinning assertion as TESTING.md says.>
 
+<Known issues filed during this run: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
+
 Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
 
 Merge rule, written by the user for this flow: when CI is green on your PR to dev, merge it yourself without asking

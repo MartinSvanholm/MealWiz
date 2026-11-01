@@ -27,11 +27,17 @@ Standing rules:
 
 ## 2. Predict the files
 
-One **Explore** subagent (`model: "sonnet"`), in the foreground, gets the list (id, title, description) and this brief:
+One **Explore** subagent (`model: "sonnet"`) gets the list (id, title, description) and this brief:
 "For each issue, list the source files a fix will most likely edit (not tests), using the issue text,
 `docs/agents/FEATURES.md` and the code. Also flag, per issue, whether the fix likely needs: a migration or RLS change;
 a changed handler request/response or state container public API; the Function contract or SSRF guard; a new package
-or DI change; a user-visible behaviour change. Answer as a table: id | files | flags | confidence. Under 400 words."
+or DI change; a user-visible behaviour change; a change to what existing data does (rows written before the fix that
+would behave differently afterwards, e.g. a flag that was never set). For each flag, name the concrete change in a
+few words (the policy's new check, the new signature). Note any product decision the issue leaves open. Answer as a
+table: id | files | flags | open decision | confidence. Under 500 words."
+
+If the agent runs in the background, its report arrives as a later message. That's fine: steps 3 and 4 make sure the
+start itself happens on the user's own turn.
 
 Pinned bugs: the test files in "Bugs currently pinned by tests" (`docs/agents/TESTING.md`) count as files too, since
 the fix flips those assertions.
@@ -50,12 +56,17 @@ the fix flips those assertions.
 - Order groups: blockers first, then by priority, then by size (small first).
 
 Show the user a table (group, bugs with titles, files, flags, starts now / waits for) and the excluded bugs with the
-reason. **Wait for their OK** (AskUserQuestion: start all / adjust / cancel). Their yes is the request to start
-sessions.
+reason.
 
-Flagged bugs and bugs whose issue leaves a product decision open would each stop their session later. Offer to
-settle them now, one AskUserQuestion round, and put the answers in that group's brief ("cleared by the user: …"),
-so the session doesn't have to stop.
+Flagged bugs and bugs whose issue leaves a product decision open would each stop their session later. Settle them
+now, in one AskUserQuestion round, and put the answers in that group's brief ("cleared by the user: …"), so the
+session doesn't have to stop. Make each option say exactly what the user approves: the policy's new `WITH CHECK`, the
+new method signature, the migration and what it does to existing rows. "RLS change OK?" isn't enough to decide on.
+
+Then **end your turn** asking for the start (with `wrap_up`'s question and buttons: start / adjust / cancel), rather
+than asking it with AskUserQuestion. The app starts sessions only on the user's own turn, and a turn that a background
+report began isn't one, so a yes given inside such a turn turns every start into a card. Their reply is the request
+to start sessions.
 
 ## 4. Start the group sessions
 
@@ -70,6 +81,10 @@ so the session doesn't have to stop.
 If the app refuses a start (on a turn a session's message started), propose it instead with
 `initiation: "own_initiative"` and the same brief, and tell the user in one line.
 
+Tell the user once, with the first wave: groups that wait for a merge start later, on a turn a session's report
+began, so they arrive as cards to click. Or the user can say "start the next ones" whenever they're back, and you start
+every group that is unblocked by then directly.
+
 Tell the user once: each session will ask the app to approve `set_monitor` the first time, unless they've allowed it.
 `.claude/settings.json` pre-approves `scripts/merge-to-dev.sh` (which only merges green PRs into `dev`), `gh pr view` and
 `gh pr checks`. It deliberately doesn't pre-approve `gh pr merge`, which could merge a release PR into `main`.
@@ -79,8 +94,13 @@ Tell the user once: each session will ask the app to approve `set_monitor` the f
 1. Read the session's report. Check it: `gh pr view <n> --json state,mergedAt,baseRefName,statusCheckRollup`. A report
    is a claim.
    - `MERGED`: confirm the PR merged into `dev`, the issues are Done (set them if the integration hasn't).
-   - `BLOCKED`: ask the user, forward the answer with `SendMessage` quoting their words.
+   - `BLOCKED`: the session has already asked the user in its own window, so don't ask again here: two places to
+     answer means two answers that can disagree. Tell the user in one line which session waits for them, with a link.
+     The session sends `UNBLOCKED` once they've answered there. Only a question about the run itself (grouping,
+     another group's files) is yours to ask.
    - `STUCK`: tell the user which check fails and what was tried; ask whether to continue, hand it to them, or close.
+   - **Bugs it filed:** note each one (id and one line). Add them to the "Known issues" line of every brief you start
+     from now on, so later sessions comment on them instead of filing them again.
 2. Start waiting groups whose blockers merged, up to 4 running.
 3. Report in two or three lines: merged, running, waiting on the user.
 
