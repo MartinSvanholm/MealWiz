@@ -15,14 +15,21 @@ MAUI app (mobile and desktop) that share one UI project.
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
 ## How work is done
-Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement). Project skills in
-`.claude/skills/` run the workflow:
+Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in three levels:
+
+| Level | Is | Worked by |
+|---|---|---|
+| Project | a feature: a collection of user stories; its description is the spec | the main (coordinator) session, `/plan-project` |
+| Issue | one user story, a vertical slice: one branch, one PR to `dev` | its own session, started by the coordinator |
+| Sub-issue | one layer task of an issue: `[DB]`, `[BE]` or `[FE]` (only when the story spans layers) | the issue's session, itself or through subagents; lands in the issue's PR |
+
+Project skills in `.claude/skills/` run the workflow:
 
 | Skill | Use it to |
 |---|---|
 | `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues with blocking relations, then coordinate one session per issue (max 4 at once) |
-| `/implement-issue` | implement one issue (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
+| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, then coordinate one session per issue (max 4 at once) |
+| `/implement-issue` | implement one issue and its sub-issues (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
 | `/fix-bugs` | group the open Bug issues by the files they touch and start one bug-mode session per group |
 
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
