@@ -30,8 +30,10 @@ They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec
 
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
-- **File bugs you find, don't fix them.** Create a Linear issue in team MealWiz with the **Bug** label, status
-  Backlog and **no project**, even when you found it while working on a project. Say what you saw and where.
+- **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
+  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team MealWiz with the **Bug**
+  label, status Backlog and **no project**, even when you found it while working on a project. Say what you saw and
+  where.
 - PRs target `dev`. Feature PRs are merged by the user; only bug-mode sessions merge their own PR, and only to `dev`.
   Nothing goes to `main` (see below).
 

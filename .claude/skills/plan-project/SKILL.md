@@ -45,7 +45,11 @@ Post a project status update (`save_status_update`, `type: "project"`, health on
 - links to the Research and Contract documents;
 - the verify level per issue.
 
-Then ask the user (AskUserQuestion) whether to start the first wave now. Their yes is the request to start sessions.
+Then **end your turn** asking whether to start the first wave now (with `wrap_up`'s question and buttons), rather than
+asking with AskUserQuestion. The app starts sessions only on the user's own turn, and a turn that a background report
+(research, Explore) began isn't one, so a yes given inside it turns every start into a card. Their reply is the
+request to start sessions. Tell them then that later waves start on a turn a session's report began, so they arrive as
+cards, unless they say "start the next ones" when they're back.
 
 ## 5. Coordinate
 
@@ -76,9 +80,11 @@ Recompute the state; never assume it from memory:
 2. For each session report: check it against the branch, the PR and CI yourself. A report is a claim.
    - **`MERGED <url>`**, or a PR you find merged: confirm with `gh pr view <n> --json state,mergedAt,baseRefName`,
      set the issue to **Done** if the GitHub integration hasn't.
-   - **Blocked / question**: if it's a decision, ask the user (AskUserQuestion) and send the answer with
-     `SendMessage`, quoting the user's words. A contract change: update the Contract document, add a line to its
-     change log, and message every session that uses that item.
+   - **Blocked / question**: the session has already asked the user in its own window, so don't ask again here (two
+     places to answer means two answers that can disagree). Tell the user in one line which session waits for them.
+     Only a contract change is yours: update the Contract document, add a line to its change log, and message every
+     session that uses that item.
+   - **Bugs it filed:** add each (id and one line) to the "Known issues" line of every brief you start from now on.
    - **Stopped mid-task** (usage limit, error): it committed WIP; tell the user and offer to resume it
      (`SendMessage` "continue") or start a fresh session on the same branch.
 3. Start the new frontier, up to 4 running.

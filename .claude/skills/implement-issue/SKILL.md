@@ -14,8 +14,10 @@ You run in your own worktree, usually started by a coordinator session (`/plan-p
 
 ## Standing rules
 
-- **Only the issues you were given.** Anything else you notice: a bug goes in a new Linear issue (`save_issue`,
-  `team: "MealWiz"`, `labels: ["Bug"]`, no project, `state: "Backlog"`, with what you saw and where), then keep going.
+- **Only the issues you were given.** Anything else you notice: a bug goes in Linear, then keep going. First check it
+  isn't there already: the brief's "Known issues", then `list_issues` with `team: "MealWiz"`, `label: "Bug"` and a
+  `query` from the error text or the file name. If one matches, add a comment to it with what you saw. Otherwise create
+  one (`save_issue`, `team: "MealWiz"`, `labels: ["Bug"]`, no project, `state: "Backlog"`, with what you saw and where).
   An improvement goes in your final report as a suggestion.
 - **PRs target `dev`.** Never push to, open a PR against, or merge into `main`.
 - **Follow `docs/agents/ARCHITECTURE.md`** (every MUST rule) and `docs/agents/TESTING.md`. Update `docs/agents/` and
@@ -26,8 +28,11 @@ You run in your own worktree, usually started by a coordinator session (`/plan-p
 
 ### Stop and ask
 
-Be critical. **Stop and ask** (AskUserQuestion in this session; a one-line `SendMessage` to the session that started
-you, e.g. `BLOCKED MEA-52: <question>`; and a comment on the Linear issue) when:
+Be critical. **Stop and ask** when one of the cases below applies. Ask the user in one place only, AskUserQuestion in
+this session: you have the context, and two places to answer means two answers that can disagree. Then send the
+session that started you a one-line notice, `BLOCKED MEA-52: waiting for the user (<topic>)`, and add a comment on the
+Linear issue. When the user has answered, send `UNBLOCKED MEA-52: <the decision>`. If the coordinator sends you an
+answer too, the user's answer here wins; tell the coordinator if they differ. The cases:
 
 1. the issue or spec is unclear, or contradicts the code;
 2. a Contract item would have to change (never change it locally);

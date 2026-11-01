@@ -15,6 +15,8 @@ It's part of the project "<project>" (<project url>). Running in parallel with y
 - You own: <areas/paths>. Don't edit: <siblings' areas>. In shared files, only: <the specific edit>.
 - <Anything the coordinator learned that the issue doesn't say: prior art to copy, a gotcha. Omit if nothing.>
 
+<Known issues filed during this project: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
+
 Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
 
 You started in plan mode: explore, ask, and present your plan for the user's approval before writing code.
