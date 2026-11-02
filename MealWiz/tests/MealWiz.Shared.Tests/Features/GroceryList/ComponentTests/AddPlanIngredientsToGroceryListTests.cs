@@ -37,8 +37,28 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         Assert.Equal(2, items.Count);
         Assert.Contains("Flour", items[0].TextContent);
         Assert.Equal("200g", items[0].QuerySelector("input")!.GetAttribute("value"));
-        Assert.Contains("Plan: 3 dl", items[1].TextContent);
-        Assert.Contains("Already in list: 1 l", items[1].TextContent);
+        Assert.Empty(items[0].QuerySelectorAll(TestId("plan-ingredient-existing")));
+        Assert.Equal("Plan 3 dl · In list 1 l", items[1].QuerySelector(TestId("plan-ingredient-existing"))!.TextContent.Trim());
+    }
+
+    [Fact]
+    public void An_ingredient_already_on_the_list_gets_an_empty_highlighted_amount()
+    {
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+
+        var amounts = cut.FindAll(TestId("plan-ingredient-amount"));
+        Assert.DoesNotContain("is-duplicate", amounts[0].ClassList);
+        Assert.Contains("is-duplicate", amounts[1].ClassList);
+        Assert.Equal("", cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].GetAttribute("value") ?? "");
+    }
+
+    [Fact]
+    public void Confirm_button_says_how_many_items_it_adds()
+    {
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+
+        Assert.Equal("Add 2 to grocery list", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
+        Assert.NotNull(cut.Find($"{TestId("drawer-footer")} {TestId("plan-ingredients-confirm")}"));
     }
 
     [Fact]
@@ -72,7 +92,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     [Fact]
     public void Confirm_adds_new_items_updates_duplicates_and_closes_the_drawer()
     {
-        Drawer.OpenDrawer("Add items to grocery list", typeof(AddPlanIngredientsToGroceryListDrawer));
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
         var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
 
         cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].Input("1.3 l");
@@ -102,7 +122,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     [Fact]
     public void Enter_in_the_last_amount_confirms()
     {
-        Drawer.OpenDrawer("Add items to grocery list", typeof(AddPlanIngredientsToGroceryListDrawer));
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
         var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
 
         cut.FindAll(InputOf("plan-ingredient-amount-input"))[1].Input("1.3 l");
@@ -124,6 +144,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.True(Drawer.IsDrawerOpen));
         Assert.Single(Sent<GetMealPlanByDate.Query>());
         Assert.Equal(typeof(AddPlanIngredientsToGroceryListDrawer), Drawer.StateParameters.Content);
+        Assert.Equal("From meal plan", Drawer.StateParameters.Title);
     }
 
     [Fact]

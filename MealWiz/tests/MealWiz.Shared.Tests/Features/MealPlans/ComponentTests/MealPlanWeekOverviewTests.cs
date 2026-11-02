@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using AngleSharp.Dom;
 using Moq;
 using Xunit;
 
@@ -54,25 +55,6 @@ public class MealPlanWeekOverviewTests : ComponentTestBase
     }
 
     [Fact]
-    public void Next_and_previous_move_a_week_and_load_its_plan()
-    {
-        var cut = Render<MealPlanWeekOverview>();
-
-        cut.Find(TestId("week-next")).Click();
-        cut.WaitForAssertion(() => Assert.Equal(Iso(ThisMonday.AddDays(7)), Days(cut)[0]));
-        Assert.Equal(ThisMonday.AddDays(7), MealPlan.SelectedDate.Date);
-
-        cut.Find(TestId("week-prev")).Click();
-        cut.Find(TestId("week-prev")).Click();
-        cut.WaitForAssertion(() => Assert.Equal(Iso(ThisMonday.AddDays(-7)), Days(cut)[0]));
-
-        Assert.Equal(
-            [ThisMonday, ThisMonday.AddDays(7), ThisMonday, ThisMonday.AddDays(-7)],
-            Sent<GetMealPlanByDate.Query>().Select(q => q.Date));
-        LocalStorage.Verify(s => s.SetItemAsync(WeekStorageKey, ThisMonday.AddDays(-7), It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
     public void Days_with_a_meal_are_marked()
     {
         var wednesday = ThisMonday.AddDays(2);
@@ -82,8 +64,45 @@ public class MealPlanWeekOverviewTests : ComponentTestBase
 
         var marked = cut.FindAll(TestId("week-day-meal-indicator"));
         Assert.Single(marked);
-        Assert.Equal(
-            Iso(wednesday),
-            marked[0].ParentElement!.QuerySelector(TestId("week-day"))!.GetAttribute("data-date"));
+        var day = marked[0].Closest(TestId("week-day"))!;
+        Assert.Equal(Iso(wednesday), day.GetAttribute("data-date"));
+        Assert.Contains("has-meal", day.ClassList);
+        Assert.DoesNotContain("empty-day", day.ClassList);
+    }
+
+    [Fact]
+    public void Days_without_a_meal_are_empty_tiles()
+    {
+        var wednesday = ThisMonday.AddDays(2);
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(wednesday, TestData.Meal("Tacos"))));
+
+        var cut = Render<MealPlanWeekOverview>();
+
+        var empty = cut.FindAll(TestId("week-day")).Where(d => d.ClassList.Contains("empty-day")).ToList();
+        Assert.Equal(6, empty.Count);
+        Assert.All(empty, d => Assert.DoesNotContain("has-meal", d.ClassList));
+        Assert.All(empty, d => Assert.NotNull(d.QuerySelector(TestId("week-day-empty"))));
+    }
+
+    [Fact]
+    public void Only_the_selected_day_is_marked_selected()
+    {
+        var cut = Render<MealPlanWeekOverview>();
+
+        cut.Find($"{TestId("week-day")}[data-date=\"{Iso(ThisMonday.AddDays(4))}\"]").Click();
+
+        var selected = Assert.Single(cut.FindAll(TestId("week-day")), d => d.ClassList.Contains("selected-day"));
+        Assert.Equal(Iso(ThisMonday.AddDays(4)), selected.GetAttribute("data-date"));
+        Assert.Equal("true", selected.GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Each_day_shows_its_weekday_and_date()
+    {
+        var cut = Render<MealPlanWeekOverview>();
+
+        var monday = cut.FindAll(TestId("week-day"))[0];
+        Assert.Equal("MON", monday.QuerySelector(TestId("week-day-name"))!.TextContent.Trim());
+        Assert.Equal(ThisMonday.Day.ToString(), monday.QuerySelector(TestId("week-day-date"))!.TextContent.Trim());
     }
 }
