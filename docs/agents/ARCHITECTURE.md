@@ -499,7 +499,8 @@ icon** they need a darker shade in light mode for 4.5:1 contrast. So:
   `--mw-info-text`, `--mw-warning-text`, or the matching `.mw-text-orange|green|red|info|warning|muted` class.
 
 In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary/Tertiary/Success/Error` text, icons
-and text/outlined buttons to the `-text` shades, so `Color.Primary` on a `MudText`, `MudIcon` or text button is fine.
+(checkbox icons included), text/outlined buttons and input error text to the `-text` shades, so `Color.Primary` on a
+`MudText`, `MudIcon` or text button is fine. Switches and progress keep the fill.
 
 | Token | Use for |
 |---|---|
@@ -523,7 +524,7 @@ and text/outlined buttons to the `-text` shades, so `Color.Primary` on a `MudTex
 | `--mw-red-text` | destructive text, trash icons, red outlines |
 | `--mw-info-text`, `--mw-warning-text` | import running (info) and import failed (warning) |
 | `--mw-day-dot`, `--mw-day-dot-selected`, `--mw-day-dot-ring` | calendar day dots; the selected (orange) day's dot is white with a dark ring |
-| `--mw-scrim` | the dimmed screen behind drawers (MudBlazor overlays already use it) |
+| `--mw-scrim` | the dimmed screen behind custom overlays (MudBlazor overlays get the same value from the palette's `OverlayDark`) |
 | `--mw-menu-shadow` | floating menus and snackbars |
 | `--mw-error-alert-bg` | the error alert background (global `MudAlert` Severity.Error already uses it) |
 | `--mw-radius-s` 14 · `-m` 16 · `-l` 20 · `-xl` 24 · `-sheet` 28 · `-pill` | corners: inputs and icon buttons · buttons · cards and menus · nav bar · drawer top and hero card · pills |

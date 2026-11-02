@@ -228,10 +228,6 @@ h1:focus {
     border-width: 1.5px;
 }
 
-.mud-input.mud-input-outlined.mud-input-error .mud-input-outlined-border {
-    border-color: var(--mw-red-text);
-}
-
 .mud-input.mud-input-outlined {
     background-color: var(--mw-surface);
     border-radius: var(--mw-radius-s);
@@ -315,12 +311,6 @@ h1:focus {
     border-radius: var(--mw-radius-s);
 }
 
-/* Scrims behind drawers and other dark overlays. */
-.mud-overlay .mud-overlay-scrim.mud-overlay-dark {
-    background-color: var(--mw-scrim);
-    border-color: var(--mw-scrim);
-}
-
 /* Cards and papers. */
 .mud-card,
 .mud-paper:not(.mud-popover):not(.mud-appbar):not(.mud-drawer):not(.mud-paper-square) {
@@ -360,8 +350,15 @@ h1:focus {
     color: var(--mw-green-text) !important;
 }
 
-[data-theme="light"] .mud-error-text:not(.mud-switch-base) {
+[data-theme="light"] .mud-error-text:not(.mud-switch-base),
+[data-theme="light"] .mud-input-error,
+[data-theme="light"] .mud-input-helper-text.mud-input-error,
+[data-theme="light"] .mud-input-control .mud-input-label.mud-input-error {
     color: var(--mw-red-text) !important;
+}
+
+[data-theme="light"] .mud-input.mud-input-outlined.mud-input-error .mud-input-outlined-border {
+    border-color: var(--mw-red-text) !important;
 }
 
 [data-theme="light"] .mud-button-text.mud-button-text-primary,
