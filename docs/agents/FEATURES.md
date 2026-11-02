@@ -146,21 +146,34 @@ stored as `yyyy-MM-dd` strings.
 
 ## GroceryList
 
-A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "Add ingredients from
-plan" opens a drawer that lists the current week's plan ingredients. It matches them to existing items by name,
-ignoring case, and lets you set the final amount; matches update the existing item and the rest are inserted in bulk.
+A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "From meal plan"
+opens a drawer that lists the current week's plan ingredients. It matches them to existing items by name, ignoring
+case, and lets you set the final amount; matches update the existing item and the rest are inserted in bulk.
+
+The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
+(W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
+"X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
+item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
+confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) is shown
+but not wired (MEA-73), and swipe-to-delete is MEA-67.
 
 - **Folder:** `Features/GroceryList/`
-- **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist`.
+- **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
 - **Components:**
-  - `Features/GroceryList/AddGroceryItem/AddGroceryItemButton.razor`: opens `GroceryItemDrawer`.
-  - `Features/GroceryList/Components/GroceryItemDrawer.razor`
+  - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
+    opens `GroceryItemDrawer` with the typed name filled in.
+  - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, "Save item" in a
+    `DrawerFooter`. Focuses the amount when the name is already filled in.
   - `Features/GroceryList/Components/SaveGroceryItemButton.razor`
-  - `Features/GroceryList/UpdateGroceryItem/UpdatedGroceryItemButton.razor`
-  - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: deletes after a confirm drawer.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`
+  - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
+    drawer with `DeleteGroceryItemButton` as its header action.
+  - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
+    header; deletes after a confirm drawer ("Delete Milk?").
+  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
+    meal plan" header button; loads the meal plan if needed.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
-    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off.
+    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off. Items already on
+    the list show "Plan X · In list Y" and an empty, orange-outlined amount; the button reads "Add N to grocery list".
 - **Handlers:**
 
   | Handler | Request → result | Does |
