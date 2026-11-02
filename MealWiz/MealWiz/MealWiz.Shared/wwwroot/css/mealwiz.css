@@ -8,6 +8,7 @@
  *   5. Light mode: role-coloured text and icons use the darker text shades (fills stay bright)
  *   6. Utility classes
  *   7. Blazor error UI
+ *   8. Bottom drawer (Components/Drawers/DrawerBase.razor, ConfirmDrawer.razor, DrawerFooter.razor)
  * The token table and when to use which token: docs/agents/ARCHITECTURE.md, "Theme tokens" (UI-02). Hex values live
  * only here and in Theme/MealWizTheme.cs; keep the two in sync.
  */
@@ -436,4 +437,87 @@ h1:focus {
 
 .blazor-error-boundary::after {
     content: "An error has occurred.";
+}
+
+/* 8. Bottom drawer ---------------------------------------------------------------------------------------------- *
+ * Global because MudDrawer is the components' root element, which scoped CSS can't reach. The scrim comes from the
+ * palette's OverlayDark (70% dark, warm 45% light). */
+
+.mud-drawer.mw-sheet {
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    border-top: 1px solid var(--mw-border-strong);
+    border-radius: var(--mw-radius-sheet) var(--mw-radius-sheet) 0 0;
+    box-shadow: var(--mw-menu-shadow);
+    overflow: hidden;
+}
+
+.mw-sheet-handle {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 5px;
+    margin: 10px auto 2px;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-border-dashed);
+}
+
+.mw-sheet-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 12px;
+}
+
+.mw-sheet-header .mud-icon-button.mw-sheet-close {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+.mw-sheet-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-sheet-header-action {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-sheet-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* DrawerFooter: pushed to the bottom of the content, its button full width, 52px, orange. */
+.mw-sheet-footer {
+    margin-top: auto;
+    padding: 12px 16px 16px;
+}
+
+.mw-sheet-footer .mud-button-root.mud-button {
+    width: 100%;
+    min-height: 52px;
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    font-size: 16px;
 }
