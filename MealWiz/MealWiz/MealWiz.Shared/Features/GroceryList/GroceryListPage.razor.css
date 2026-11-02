@@ -129,7 +129,7 @@
     width: 20px;
     height: 20px;
     box-sizing: border-box;
-    border-radius: 6px;
+    border-radius: calc(var(--mw-radius-s) / 2);
     border: 2px solid var(--mw-border-dashed);
 }
 
