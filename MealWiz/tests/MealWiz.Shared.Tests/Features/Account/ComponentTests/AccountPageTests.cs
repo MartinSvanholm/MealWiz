@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Bunit;
 using MealWiz.Shared.Features.Account;
 using MealWiz.Shared.Tests.TestInfrastructure;
@@ -15,6 +16,19 @@ public class AccountPageTests : ComponentTestBase
 
         Assert.Contains("Dark mode", cut.Markup);
         Assert.NotNull(cut.Find(TestId("logout-button")));
+    }
+
+    [Fact]
+    public void Shows_who_is_signed_in_from_the_email_claim()
+    {
+        // Supabase's access token carries the address in an "email" claim; the identity has no name claim.
+        Auth.SetAuthorized("4f1c2b7e-user-id");
+        Auth.SetClaims(new Claim("email", "martin@example.com"));
+
+        var cut = Render<AccountPage>();
+
+        Assert.Equal("martin@example.com", cut.Find(TestId("account-email")).TextContent.Trim());
+        Assert.Equal("M", cut.Find(TestId("account-avatar")).TextContent.Trim());
     }
 
     [Fact]

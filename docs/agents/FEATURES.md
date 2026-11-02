@@ -254,8 +254,13 @@ Email and password sign-in through Supabase Auth. After login or logout the hand
 `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
 
 - **Folder:** `Features/Authentication/`
-- **Pages:** `Features/Authentication/Login/LoginPage.razor` at `/login`, the only page without `[Authorize]`.
-- **Components:** `Features/Authentication/Logout/LogoutButton.razor`
+- **Pages:** `Features/Authentication/Login/LoginPage.razor` at `/login`, the only page without `[Authorize]`: logo
+  tile, title and tagline, email and password fields (`login-email`, `login-password`) with labels above them, and
+  the full-width "Log in" button (`login-submit`). Styles in `Features/Authentication/Login/LoginPage.razor.css`.
+  It has no bottom nav: `Layout/MainLayout.razor` shows the nav to signed-in users only. "Forgot password?"
+  (`login-forgot-password`) and "Create one" (`login-create-account`) are shown but not wired yet (MEA-69, MEA-70).
+- **Components:** `Features/Authentication/Logout/LogoutButton.razor`, the full-width red outline "Log out" button
+  (`logout-button`) on the Account page.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -272,11 +277,15 @@ Email and password sign-in through Supabase Auth. After login or logout the hand
 
 ## Account
 
-The settings page: a dark-mode toggle (`IThemeService`, stored in local storage under `mealwiz.theme`) and logout.
-No handlers, no tables.
+The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
+`mealwiz.theme`) and logout. No handlers, no tables.
 
 - **Folder:** `Features/Account/`
-- **Pages:** `Features/Account/AccountPage.razor` at `/account`.
+- **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back
+  `account-back` to `/`), a profile card with a green avatar (`account-avatar`, the email's initial) and "Signed in as"
+  the email (`account-email`, the access token's `email` claim from the cascading `AuthenticationState`), a settings
+  group with the Dark mode row (`dark-mode-switch`) and the `LogoutButton`. Styles in
+  `Features/Account/AccountPage.razor.css`.
 - **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
 - **Tests:** bUnit: `Features/Account/ComponentTests/AccountPageTests.cs`
 
@@ -368,7 +377,8 @@ key, CORS and deployment.
   - `Components/Form/EnterKey.cs`: `EnterKey.Then(...)`, the OnKeyDown handler that makes Enter (also on a phone
     keyboard) move to a form's next field, and submit on its last single-line field. Every multi-field form uses it.
 - **`Layout/`:** `Layout/MainLayout.razor` (the `data-theme` wrapper around the theme, popover and snackbar
-  providers, drawers and the floating bottom nav) and `Layout/RedirectToLogin.razor`.
+  providers, drawers and the floating bottom nav, which it shows to signed-in users only) and
+  `Layout/RedirectToLogin.razor`.
 - **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.
 - **Tests:**

@@ -27,6 +27,35 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Shows_the_brand_and_labels_the_fields_above_them()
+    {
+        var cut = Render<LoginPage>();
+
+        Assert.Equal("MealWiz", cut.Find(TestId("login-title")).TextContent.Trim());
+        Assert.Equal("Plan the week. Shop once.", cut.Find(TestId("login-tagline")).TextContent.Trim());
+        var emailInput = cut.Find(InputOf("login-email"));
+        var passwordInput = cut.Find(InputOf("login-password"));
+        Assert.Equal(emailInput.Id, cut.Find(TestId("login-email-label")).GetAttribute("for"));
+        Assert.Equal(passwordInput.Id, cut.Find(TestId("login-password-label")).GetAttribute("for"));
+    }
+
+    // Not wired yet: password reset is MEA-69 and sign-up MEA-70.
+    [Theory]
+    [InlineData("login-forgot-password")]
+    [InlineData("login-create-account")]
+    public void Forgot_password_and_create_account_are_shown_but_do_nothing_yet(string testId)
+    {
+        var cut = Render<LoginPage>();
+
+        var link = cut.Find(TestId(testId));
+
+        // A plain button: no href to follow, doesn't submit the form, and no click handler.
+        Assert.Equal("BUTTON", link.TagName);
+        Assert.Equal("button", link.GetAttribute("type"));
+        Assert.Throws<MissingEventHandlerException>(() => link.Click());
+    }
+
+    [Fact]
     public void Valid_credentials_sign_in_and_go_to_the_meal_plan()
     {
         SetupSend<Login.Command, Result<Session?>>(Result.Ok<Session?>(new Session()));

@@ -1,37 +1,70 @@
 @attribute [Authorize]
 @page "/account"
+@using System.Security.Claims
 @using MealWiz.Shared.Theme
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IThemeService ThemeService
-@inject NavigationManager _navigationManager
 
-<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space))">
-    <MudPaper>
-        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="my-1 px-1">
-            <MudIconButton data-testid="account-back" Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => _navigationManager.NavigateTo("/"))" Color="Color.Primary" />
-            <MudText Typo="Typo.h6">Account</MudText>
-            <LogoutButton />
-        </MudStack>
-    </MudPaper>
+<div class="mw-page mw-account" data-testid="account-page">
+    <SubPageHeader Label="Profile" Title="Account" BackHref="/" BackTestId="account-back" />
 
-    <div style="height: calc(100vh - var(--mw-nav-space) - 48px)" class="overflow-y-auto">
-        <MudStack Class="pa-4" Spacing="3">
-            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Settings</MudText>
-            <MudPaper Class="pa-3" Elevation="0" Outlined>
-                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
-                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@(ThemeService.IsDarkMode ? Icons.Material.Outlined.DarkMode : Icons.Material.Outlined.LightMode)" />
-                        <MudText>Dark mode</MudText>
-                    </MudStack>
+    <div class="mw-account-body">
+        <section class="mw-account-profile" data-testid="account-profile">
+            <span class="mw-account-avatar" data-testid="account-avatar" aria-hidden="true">
+                @if (string.IsNullOrEmpty(Initial))
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" />
+                }
+                else
+                {
+                    @Initial
+                }
+            </span>
+            <div class="mw-account-profile-text">
+                <span class="mw-account-profile-caption">Signed in as</span>
+                <span class="mw-account-email" data-testid="account-email">@Email</span>
+            </div>
+        </section>
+
+        <section class="mw-account-section">
+            <h2 class="mw-account-section-title">Settings</h2>
+            <div class="mw-account-group">
+                <div class="mw-account-row">
+                    <span class="mw-account-row-icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Outlined.DarkMode" Color="Color.Inherit" />
+                    </span>
+                    <span class="mw-account-row-label">Dark mode</span>
                     <MudSwitch T="bool" data-testid="dark-mode-switch"
                                Value="ThemeService.IsDarkMode"
                                ValueChanged="OnToggleDarkMode"
-                               Color="Color.Primary" />
-                </MudStack>
-            </MudPaper>
-        </MudStack>
+                               Color="Color.Primary"
+                               aria-label="Dark mode" />
+                </div>
+            </div>
+        </section>
+
+        <div class="mw-account-logout">
+            <LogoutButton />
+        </div>
     </div>
-</MudStack>
+</div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    /// <summary>The signed-in address: Supabase's access token carries it in the "email" claim.</summary>
+    private string? Email { get; set; }
+
+    private string? Initial => string.IsNullOrEmpty(Email) ? null : char.ToUpperInvariant(Email[0]).ToString();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthenticationState is null) return;
+
+        var user = (await AuthenticationState).User;
+        Email = user.FindFirst("email")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
+    }
+
     private async Task OnToggleDarkMode(bool _) => await ThemeService.ToggleAsync();
 }
