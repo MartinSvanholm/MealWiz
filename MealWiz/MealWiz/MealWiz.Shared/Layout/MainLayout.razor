@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using MealWiz.Shared.Theme
+@using Microsoft.AspNetCore.Components.Authorization
 @inject Client _supabaseClient
 @inject IThemeService ThemeService
 
@@ -17,10 +18,15 @@
         <MudMainContent Class="pa-0">
             @Body
         </MudMainContent>
-        @* Floating bottom nav. Pages reserve its height with var(--mw-nav-space) (css/mealwiz.css). *@
-        <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="Main">
-            <NavMenu />
-        </nav>
+        @* Floating bottom nav, for signed-in users only (Login has none). Pages reserve its height with
+           var(--mw-nav-space) (css/mealwiz.css). *@
+        <AuthorizeView>
+            <Authorized>
+                <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="Main">
+                    <NavMenu />
+                </nav>
+            </Authorized>
+        </AuthorizeView>
     </MudLayout>
 </div>
 
