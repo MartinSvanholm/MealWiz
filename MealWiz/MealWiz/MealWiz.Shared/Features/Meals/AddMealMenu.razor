@@ -5,45 +5,74 @@
 
 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" AriaLabel="Add meal">
     <ActivatorContent>
-        <MudBadge Dot Overlap Bordered
-                  Visible="@(EntryState != MealImportEntryState.Default)"
-                  Color="@(EntryState == MealImportEntryState.Failed ? Color.Warning : Color.Info)">
-            <MudIconButton data-testid="add-meal-menu" Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" />
-        </MudBadge>
+        <button type="button" class="mw-add-meal-button" data-testid="add-meal-menu" aria-haspopup="menu">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Size="Size.Small" />
+            New
+            @if (EntryState != MealImportEntryState.Default)
+            {
+                <span class="mw-add-meal-dot" data-testid="add-meal-menu-dot" data-state="@DotState" aria-hidden="true"></span>
+            }
+        </button>
     </ActivatorContent>
     <ChildContent>
-        <MudMenuItem data-testid="add-meal-create-manually" Icon="@Icons.Material.Filled.Edit" OnClick="OnCreateManuallyClick">
-            Create manually
+        <MudMenuItem data-testid="add-meal-create-manually" OnClick="OnCreateManuallyClick">
+            <span class="mw-add-meal-item">
+                <span class="mw-add-meal-tile mw-add-meal-tile-orange">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Size="Size.Small" />
+                </span>
+                <span class="mw-add-meal-text">
+                    <span class="mw-add-meal-title">Create manually</span>
+                    <span class="mw-add-meal-hint">Name, recipe and ingredients</span>
+                </span>
+            </span>
         </MudMenuItem>
-        @switch (EntryState)
-        {
-            case MealImportEntryState.InProgress:
-                <MudMenuItem data-testid="add-meal-import" Icon="@SpinnerIcon" IconColor="Color.Info" OnClick="OnImportClick">
-                    Import in progress…
-                </MudMenuItem>
-                break;
-            case MealImportEntryState.Failed:
-                <MudMenuItem data-testid="add-meal-import" Icon="@Icons.Material.Filled.Warning" IconColor="Color.Warning" OnClick="OnImportClick">
-                    <span class="mud-warning-text">Last import failed – see why</span>
-                </MudMenuItem>
-                break;
-            default:
-                <MudMenuItem data-testid="add-meal-import" Icon="@Icons.Material.Filled.Link" OnClick="OnImportClick">
-                    Import from URL
-                </MudMenuItem>
-                break;
-        }
+        <MudMenuItem data-testid="add-meal-import" OnClick="OnImportClick">
+            <span class="mw-add-meal-item">
+                @switch (EntryState)
+                {
+                    case MealImportEntryState.InProgress:
+                        <span class="mw-add-meal-tile mw-text-info">
+                            <MudIcon Icon="@SpinnerIcon" Color="Color.Inherit" Size="Size.Small" />
+                        </span>
+                        <span class="mw-add-meal-text">
+                            <span class="mw-add-meal-title mw-text-info">Import in progress…</span>
+                            <span class="mw-add-meal-hint">We'll add the meal when it's ready</span>
+                        </span>
+                        break;
+                    case MealImportEntryState.Failed:
+                        <span class="mw-add-meal-tile mw-text-warning">
+                            <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Inherit" Size="Size.Small" />
+                        </span>
+                        <span class="mw-add-meal-text">
+                            <span class="mw-add-meal-title mw-text-warning">Last import failed: see why</span>
+                            <span class="mw-add-meal-hint">Paste a link to a recipe</span>
+                        </span>
+                        break;
+                    default:
+                        <span class="mw-add-meal-tile mw-text-green">
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Inherit" Size="Size.Small" />
+                        </span>
+                        <span class="mw-add-meal-text">
+                            <span class="mw-add-meal-title">Import from URL</span>
+                            <span class="mw-add-meal-hint">Paste a link to a recipe</span>
+                        </span>
+                        break;
+                }
+            </span>
+        </MudMenuItem>
     </ChildContent>
 </MudMenu>
 
 @code {
-    // A rotating arc as an icon, so it sits in the menu item's icon column (a MudProgressCircular can't go there).
+    // A rotating arc as an icon, drawn with currentColor so the tile's info colour applies.
     private const string SpinnerIcon =
         "<path d=\"M12 2a10 10 0 1 0 10 10h-2.5A7.5 7.5 0 1 1 12 4.5z\">" +
         "<animateTransform attributeName=\"transform\" type=\"rotate\" from=\"0 12 12\" to=\"360 12 12\" dur=\"1s\" repeatCount=\"indefinite\"/>" +
         "</path>";
 
     private MealImportEntryState EntryState => _mealImportStateContainer.EntryState;
+
+    private string DotState => EntryState == MealImportEntryState.Failed ? "failed" : "in-progress";
 
     protected override async Task OnInitializedAsync()
     {

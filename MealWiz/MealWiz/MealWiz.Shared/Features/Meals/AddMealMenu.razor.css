@@ -1,0 +1,75 @@
+/* The orange "New" button that opens the add menu, with a dot while an import runs (info) or has failed (warning). */
+.mw-add-meal-button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--mw-touch);
+    padding: 0 16px 0 12px;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-add-meal-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--mw-radius-pill);
+    box-shadow: 0 0 0 2px var(--mw-bg);
+}
+
+.mw-add-meal-dot[data-state="in-progress"] { background-color: var(--mw-info-text); }
+.mw-add-meal-dot[data-state="failed"] { background-color: var(--mw-warning-text); }
+
+/* Menu items: an icon tile and a title with a hint under it. These render in the popover but keep this scope. */
+.mw-add-meal-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 232px;
+    padding: 4px 0;
+}
+
+.mw-add-meal-tile {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border-strong);
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+}
+
+.mw-add-meal-tile-orange {
+    border: none;
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+}
+
+.mw-add-meal-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mw-add-meal-title {
+    color: var(--mw-text);
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.mw-add-meal-hint {
+    color: var(--mw-text-muted);
+    font-size: 12px;
+}
