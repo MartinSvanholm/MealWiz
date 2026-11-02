@@ -2,7 +2,10 @@
 @inject IMediator _mediator
 @inject IMealPlanStateContainer _mealPlanStateContainer
 
-<MudIconButton data-testid="remove-meal-button" OnClick="RemoveMealFromMealPlan" Icon="@Icons.Material.Filled.NoMeals" Color="Color.Error" />
+@* A 44px dark round button; the Meal plan puts it in the corner of the selected day's orange card. *@
+<button type="button" class="mw-remove-meal" data-testid="remove-meal-button" aria-label="Remove meal from this day" @onclick="RemoveMealFromMealPlan">
+    <MudIcon Icon="@Icons.Material.Rounded.Close" Size="Size.Small" />
+</button>
 
 @code {
     private async Task RemoveMealFromMealPlan()

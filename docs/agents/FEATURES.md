@@ -97,11 +97,30 @@ selected week is kept in local storage under `mealplan_selected_week`. Picking a
 stored as `yyyy-MM-dd` strings.
 
 - **Folder:** `Features/MealPlans/`
-- **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/`: the week overview plus the selected day's meal.
+- **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
+  `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
+  "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
+  (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (not wired, MEA-75) and
+  the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
+  day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
+  pick list for an empty day.
 - **Components:**
-  - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`
-  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`: UI only.
-  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`
+  - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
+    `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
+    day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
+    moves a week. The E2E tests rely on `selected-day` and `has-meal`.
+  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`, with `.razor.css`: UI only. "Pick a meal for
+    <Day>" (`meal-selection-heading`), search (`meal-selection-search`), shuffle (`shuffle-meals-button`, reloads and
+    reorders the list) and one compact list: rows `meal-list-item`, each with `MealTile` (Eat Out and Leftovers first,
+    neutral; the user's meals alternate orange and green), the pick button `meal-selection-pick`, the name
+    `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty: `meal-list-empty`.
+  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
+    corner of the selected day's card (`remove-meal-button`).
+  - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
+    Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
+    (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
+    (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
+    Shown but not wired: `swap-meal-button` (MEA-62), `mark-eaten-out-button` (MEA-63), `add-all-to-list` (MEA-74).
 - **Handlers:**
 
   | Handler | Request → result | Does |
