@@ -7,6 +7,7 @@ using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Moq;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.MealPlans.ComponentTests;
@@ -20,7 +21,7 @@ public class MealPlanPageTests : ComponentTestBase
     {
         var cut = Render<MealPlanPage>();
 
-        Assert.Contains($"Pick a meal for {DateTime.Today.DayOfWeek.ToString().ToLower()}", cut.Find(TestId("meal-selection-heading")).TextContent);
+        Assert.Equal($"Pick a meal for {DateTime.Today.DayOfWeek}", cut.Find(TestId("meal-selection-heading")).TextContent.Trim());
         Assert.Empty(cut.FindAll(TestId("remove-meal-button")));
     }
 
@@ -41,20 +42,74 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Shows_the_week_number_and_a_way_back_from_other_weeks()
+    public void The_header_shows_the_week_number_and_month_and_this_week()
     {
         var cut = Render<MealPlanPage>();
-        Assert.Equal($"Week {ISOWeek.GetWeekOfYear(ThisMonday)}", cut.Find(TestId("meal-plan-week-title")).TextContent);
+
+        var month = ThisMonday.ToString("MMMM", CultureInfo.InvariantCulture);
+        Assert.Equal($"Week {ISOWeek.GetWeekOfYear(ThisMonday)} · {month}", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Equal("This week", cut.Find(TestId("meal-plan-week-title")).TextContent.Trim());
         Assert.Empty(cut.FindAll(TestId("meal-plan-current-week")));
+    }
+
+    [Fact]
+    public void Other_weeks_are_named_relative_to_this_week_with_a_way_back()
+    {
+        var cut = Render<MealPlanPage>();
 
         cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.Equal("Next week", cut.Find(TestId("meal-plan-current-week")).TextContent.Trim()));
+        Assert.Contains($"Week {ISOWeek.GetWeekOfYear(ThisMonday.AddDays(7))}", cut.Find(TestId("screen-header-label")).TextContent);
 
-        cut.WaitForAssertion(() => Assert.Contains($"Week {ISOWeek.GetWeekOfYear(ThisMonday.AddDays(7))}", cut.Find(TestId("meal-plan-current-week")).TextContent));
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.Equal("In 2 weeks", cut.Find(TestId("meal-plan-current-week")).TextContent.Trim()));
 
         cut.Find(TestId("meal-plan-current-week")).Click();
-
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(TestId("meal-plan-current-week"))));
         Assert.Equal(ThisMonday, MealPlan.SelectedWeekStart);
+
+        cut.Find(TestId("week-prev")).Click();
+        cut.WaitForAssertion(() => Assert.Equal("Last week", cut.Find(TestId("meal-plan-current-week")).TextContent.Trim()));
+        cut.Find(TestId("week-prev")).Click();
+        cut.WaitForAssertion(() => Assert.Equal("2 weeks ago", cut.Find(TestId("meal-plan-current-week")).TextContent.Trim()));
+    }
+
+    [Fact]
+    public void Next_and_previous_move_a_week_and_load_its_plan()
+    {
+        var cut = Render<MealPlanPage>();
+
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.Equal(ThisMonday.AddDays(7), MealPlan.SelectedWeekStart));
+        Assert.Equal(ThisMonday.AddDays(7), MealPlan.SelectedDate.Date);
+
+        cut.Find(TestId("week-prev")).Click();
+        cut.WaitForAssertion(() => Assert.Equal(ThisMonday, MealPlan.SelectedWeekStart));
+        cut.Find(TestId("week-prev")).Click();
+        cut.WaitForAssertion(() => Assert.Equal(ThisMonday.AddDays(-7), MealPlan.SelectedWeekStart));
+
+        Assert.Equal(
+            [ThisMonday, ThisMonday.AddDays(7), ThisMonday, ThisMonday.AddDays(-7)],
+            Sent<GetMealPlanByDate.Query>().Select(q => q.Date));
+        LocalStorage.Verify(s => s.SetItemAsync("mealplan_selected_week", ThisMonday.AddDays(-7), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public void Plan_the_week_is_shown_but_not_wired_yet()
+    {
+        var cut = Render<MealPlanPage>();
+
+        Assert.True(cut.Find(TestId("plan-week-button")).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void The_avatar_shows_the_signed_in_users_initial()
+    {
+        Auth.SetAuthorized("martin@example.com");
+
+        var cut = Render<MealPlanPage>();
+
+        Assert.Equal("M", cut.Find(TestId("account-button")).TextContent.Trim());
     }
 
     [Fact]

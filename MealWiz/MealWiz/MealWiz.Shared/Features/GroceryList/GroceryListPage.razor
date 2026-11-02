@@ -3,52 +3,101 @@
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
-@inject NavigationManager _navigationManager
+@inject IMealPlanStateContainer _mealPlanStateContainer
 @implements IDisposable
 
-<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space))">
-    <MudPaper Class="rounded-t-0">
-        <MudGrid Spacing="0" Class="my-1">
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton data-testid="account-button" OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
-                <MudText Typo="Typo.h6">Grocery list</MudText>
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
-                <AddGroceryItemButton />
-                <AddIngredientsToGroceryListButton />
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+@* Dense on purpose: the shopper needs to see everything left to find, so about ten to-buy rows fit on a phone. *@
+<div class="mw-page grocery-page">
+    <ScreenHeader Label="@HeaderLabel" Title="Groceries">
+        <Actions>
+            <AddIngredientsToGroceryListButton />
+        </Actions>
+    </ScreenHeader>
 
-    <div style="height: calc(100vh - var(--mw-nav-space) - 48px)" class="overflow-y-auto">
-        <MudStack Class="ma-3" Spacing="0">
-            @foreach (var item in _groceryListStateContainer.GroceryList.Items) 
-            {
-                <MudStack data-testid="grocery-item" Row Spacing="0" Justify="Justify.SpaceBetween">
-                    <MudCheckBox T="bool" data-testid="grocery-item-checkbox"
-                    Value="@item.IsPicked"
-                    ValueChanged="() => _groceryListStateContainer.ToggleIsPicked(item)"
-                    CheckedIcon="@Icons.Material.Filled.RadioButtonChecked"
-                    UncheckedIcon="@Icons.Material.Filled.RadioButtonUnchecked"
-                    UncheckedColor="Color.Default"
-                    Color="Color.Primary"
-                    Style="@(item.IsPicked ? "text-decoration-line: line-through; color: var(--mud-palette-text-secondary);" : "")"
-                    Size="Size.Small">
-                        @GetItemDescription(item)
-                    </MudCheckBox>
-                    <MudStack Row Spacing="0">
-                        <UpdatedGroceryItemButton GroceryItem="item" />
-                        <DeleteGroceryItemButton GroceryItem="item" />
-                    </MudStack>
-                </MudStack>
-            }
-        </MudStack>
+    <div class="grocery-top">
+        <div class="grocery-progress-row">
+            <div class="grocery-progress" data-testid="grocery-progress" role="progressbar"
+                 aria-label="Items in the basket" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@ProgressPercent">
+                <div class="grocery-progress-fill" style="width: @(ProgressPercent)%"></div>
+            </div>
+            <span class="grocery-progress-count" data-testid="grocery-progress-count"><span class="grocery-progress-picked">@Picked.Count</span> of @Items.Count @ItemsWord</span>
+        </div>
+
+        <AddGroceryItemField />
     </div>
-</MudStack>
+
+    <div class="grocery-scroll">
+        @if (Items.Count == 0)
+        {
+            <div class="grocery-empty" data-testid="grocery-list-empty">
+                <span class="grocery-empty-title">Your list is empty</span>
+                <span>Add an item above, or take the week's ingredients from your meal plan.</span>
+            </div>
+        }
+
+        @if (ToBuy.Count > 0)
+        {
+            <section class="grocery-section">
+                <h2 class="grocery-section-heading" data-testid="grocery-to-buy-heading">To buy · @ToBuy.Count</h2>
+                <ul class="grocery-to-buy" data-testid="grocery-to-buy">
+                    @foreach (var item in ToBuy)
+                    {
+                        <li class="grocery-row" data-testid="grocery-item" @key="item">
+                            <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
+                                    role="checkbox" aria-checked="false" aria-label="@($"Check off {item.Name}")"
+                                    @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
+                                <span class="grocery-check-box" aria-hidden="true"></span>
+                            </button>
+                            <EditGroceryItemButton GroceryItem="item" />
+                            @if (!string.IsNullOrWhiteSpace(item.Amount))
+                            {
+                                <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+
+        @if (Picked.Count > 0)
+        {
+            <section class="grocery-section">
+                <div class="grocery-section-row">
+                    <h2 class="grocery-section-heading" data-testid="grocery-basket-heading">In the basket · @Picked.Count</h2>
+                    @* Not wired yet: nothing clears the basket in bulk (MEA-73). *@
+                    <button type="button" class="grocery-clear" data-testid="clear-basket-button">Clear</button>
+                </div>
+                <ul class="grocery-basket" data-testid="grocery-basket">
+                    @foreach (var item in Picked)
+                    {
+                        <li data-testid="grocery-item" @key="item">
+                            <button type="button" class="grocery-pill" data-testid="grocery-item-checkbox"
+                                    role="checkbox" aria-checked="true" aria-label="@($"Put {item.Name} back on the list")"
+                                    @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
+                                <MudIcon Icon="@Icons.Material.Rounded.Check" Class="grocery-pill-check" />
+                                <span class="grocery-pill-name">@item.Name</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+</div>
 
 @code {
+    private List<GroceryItem> Items => _groceryListStateContainer.GroceryList.Items;
+    private List<GroceryItem> ToBuy => Items.Where(i => !i.IsPicked).ToList();
+    private List<GroceryItem> Picked => Items.Where(i => i.IsPicked).ToList();
+
+    private string ItemsWord => Items.Count == 1 ? "item" : "items";
+
+    private int ProgressPercent => Items.Count == 0 ? 0 : (int)Math.Round(100.0 * Picked.Count / Items.Count);
+
+    // The week the "From meal plan" drawer takes its ingredients from.
+    private string HeaderLabel =>
+        $"{Items.Count} {ItemsWord} · Week {System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)}";
+
     protected override async Task OnInitializedAsync()
     {
         _groceryListStateContainer.OnStateChanged += StateHasChanged;
@@ -62,10 +111,5 @@
     {
         _groceryListStateContainer.OnStateChanged -= StateHasChanged;
         _drawerStateContainer.CloseDrawer();
-    }
-
-    private string GetItemDescription(GroceryItem groceryItem)
-    {
-        return $"{groceryItem.Name}{(string.IsNullOrWhiteSpace(groceryItem.Amount) ? string.Empty : $" ({groceryItem.Amount})")}";
     }
 }
