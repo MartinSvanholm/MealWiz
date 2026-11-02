@@ -1,0 +1,47 @@
+@* The header at the top of every screen: a small uppercase muted label above a 26px title, with optional actions on
+   the right. Same size and top spacing everywhere. SubPageHeader adds a back button through Leading. *@
+<header class="mw-screen-header" data-testid="screen-header">
+    @Leading
+    <div class="mw-screen-header-text">
+        @if (!string.IsNullOrEmpty(Label))
+        {
+            <div class="mw-screen-header-label" data-testid="screen-header-label">@Label</div>
+        }
+        <h1 class="mw-screen-header-title" data-testid="screen-header-title">
+            @if (TitleContent != null)
+            {
+                @TitleContent
+            }
+            else
+            {
+                @Title
+            }
+        </h1>
+    </div>
+    @if (Actions != null)
+    {
+        <div class="mw-screen-header-actions" data-testid="screen-header-actions">@Actions</div>
+    }
+</header>
+
+@code {
+    /// <summary>The small uppercase line above the title, e.g. "Week 45 · November". Left out when empty.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>The 26px title.</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>Markup to show as the title instead of <see cref="Title"/> (e.g. a button).</summary>
+    [Parameter]
+    public RenderFragment? TitleContent { get; set; }
+
+    /// <summary>Buttons on the right.</summary>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>Markup left of the text. SubPageHeader puts its back button here.</summary>
+    [Parameter]
+    public RenderFragment? Leading { get; set; }
+}
