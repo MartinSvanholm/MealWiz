@@ -21,8 +21,8 @@ other than `regular`, seeded by `supabase/seed.sql`. They can be planned but not
 On the Edit Meal page, ingredient changes are held in `IMealsStateContainer` as pending ingredients. Clicking save
 first saves the meal, then each pending ingredient (see Ingredients).
 
-The Meals page shows only regular meals; Eat Out and Leftovers are offered only when planning a day (the pick list,
-`MealList`). Each card's day tag comes from this calendar week's plan, which the page reads by sending the MealPlans
+The Meals page shows only regular meals; Eat Out and Leftovers are offered only when planning a day (the pick-a-meal
+list). Each card's day tag comes from this calendar week's plan, which the page reads by sending the MealPlans
 feature's `GetMealPlanByDate` query through MediatR (a failed load just leaves the tags out). Search matches meal
 names only; the This week / No recipe filter chips are shown but not wired (MEA-65), and ingredient search is MEA-66.
 
@@ -37,7 +37,6 @@ names only; the This week / No recipe filter chips are shown but not wired (MEA-
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
-  - `Features/Meals/MealList.razor`: the searchable meal list used by the meal plan's pick-a-meal drawer.
   - `Features/Meals/MealDisplayComponent.razor`: used by the Meal plan page.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
     `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
