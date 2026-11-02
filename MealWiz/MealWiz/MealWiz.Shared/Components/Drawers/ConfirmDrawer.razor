@@ -1,11 +1,21 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 @implements IDisposable
 
-<MudDrawer data-testid="confirm-drawer" data-open="@_drawerStateContainer.IsConfirmDrawerOpen" Width="100%" Elevation="4" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
-    <MudStack Class="pa-4" Style="padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important;">
-        <MudText data-testid="confirm-drawer-description" Style="@($"color:{Colors.Gray.Lighten3}")" >@_drawerStateContainer.StateParameters.Description</MudText>
-        <Button data-testid="confirm-drawer-confirm" Color="Color.Error" OnClick="OnConfirmClicked">Confirm</Button>
-    </MudStack>
+@* "Are you sure" drawer, opened with IDrawerStateContainer.OpenConfirmDrawer(title, description, onConfirm): a red
+   trash icon in a circle, the title, the warning, then Cancel (only closes) and a red Delete. *@
+<MudDrawer data-testid="confirm-drawer" data-open="@_drawerStateContainer.IsConfirmDrawerOpen" Class="mw-sheet" Width="100%" Elevation="0" @bind-Open="_drawerStateContainer.IsConfirmDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
+    <div class="mw-sheet-handle" aria-hidden="true"></div>
+    <div class="mw-confirm">
+        <div class="mw-confirm-icon" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Outlined.Delete" Color="Color.Inherit" />
+        </div>
+        <h2 data-testid="confirm-drawer-title" class="mw-sheet-title mw-confirm-title">@_drawerStateContainer.StateParameters.Title</h2>
+        <p data-testid="confirm-drawer-description" class="mw-confirm-description">@_drawerStateContainer.StateParameters.Description</p>
+        <div class="mw-confirm-buttons">
+            <MudButton data-testid="confirm-drawer-cancel" Variant="Variant.Filled" Class="mw-confirm-cancel" OnClick="Cancel">Cancel</MudButton>
+            <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">Delete</Button>
+        </div>
+    </div>
 </MudDrawer>
 
 @code {
@@ -18,6 +28,8 @@
     {
         _drawerStateContainer.OnDrawerChange -= StateHasChanged;
     }
+
+    private void Cancel() => _drawerStateContainer.IsConfirmDrawerOpen = false;
 
     public Task OnConfirmClicked() => _drawerStateContainer.NotifyConfirmClickedAsync();
 }

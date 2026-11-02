@@ -29,4 +29,27 @@ public class ConfirmDrawerTests : ComponentTestBase
 
         Assert.Equal(1, confirmed);
     }
+
+    [Fact]
+    public void Shows_the_title_it_was_opened_with()
+    {
+        var cut = Render<ConfirmDrawer>();
+
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete Lasagne?", "Are you sure?", () => Task.CompletedTask));
+
+        Assert.Equal("Delete Lasagne?", cut.Find(TestId("confirm-drawer-title")).TextContent);
+    }
+
+    [Fact]
+    public void Cancel_closes_without_running_the_callback()
+    {
+        var confirmed = 0;
+        var cut = Render<ConfirmDrawer>();
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?", () => { confirmed++; return Task.CompletedTask; }));
+
+        cut.Find(TestId("confirm-drawer-cancel")).Click();
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Equal(0, confirmed);
+    }
 }
