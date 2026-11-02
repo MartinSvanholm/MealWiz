@@ -4,20 +4,24 @@
 @inject Client _supabaseClient
 @inject IThemeService ThemeService
 
-<MudThemeProvider Theme="_theme" IsDarkMode="ThemeService.IsDarkMode" />
-<MudPopoverProvider />
-<MudSnackbarProvider />
+@* The data-theme hook the --mw-* tokens in css/mealwiz.css key off. It wraps the popover and snackbar providers
+   so menus, drawer overlays and snackbars get the tokens too. display: contents keeps it out of the layout. *@
+<div class="mw-root" data-testid="theme-root" data-theme="@MealWizTheme.ModeAttribute(ThemeService.IsDarkMode)">
+    <MudThemeProvider Theme="_theme" IsDarkMode="ThemeService.IsDarkMode" ObserveSystemThemeChange="false" />
+    <MudPopoverProvider />
+    <MudSnackbarProvider />
 
-<MudLayout data-testid="app-shell" Class="overflow-y-hidden">
-    <DrawerBase />
-    <ConfirmDrawer />
-    <MudMainContent Class="pa-0">
-        @Body
-    </MudMainContent>
-    <MudAppBar data-testid="bottom-nav" Bottom Gutters="false" Elevation="20" Fixed Style="background: var(--mud-palette-appbar-background); padding-bottom: env(safe-area-inset-bottom);">
-        <NavMenu />
-    </MudAppBar>
-</MudLayout>
+    <MudLayout data-testid="app-shell" Class="overflow-y-hidden">
+        <DrawerBase />
+        <ConfirmDrawer />
+        <MudMainContent Class="pa-0">
+            @Body
+        </MudMainContent>
+        <MudAppBar data-testid="bottom-nav" Bottom Gutters="false" Elevation="20" Fixed Style="background: var(--mud-palette-appbar-background); padding-bottom: env(safe-area-inset-bottom);">
+            <NavMenu />
+        </MudAppBar>
+    </MudLayout>
+</div>
 
 
 @code {

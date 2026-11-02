@@ -2,73 +2,138 @@ using MudBlazor;
 
 namespace MealWiz.Shared.Theme;
 
+/// <summary>
+/// The MudBlazor theme: palettes, typography and the default radius from the Visual redesign spec. MudBlazor only
+/// covers part of the design; the rest are <c>--mw-*</c> CSS variables in <c>wwwroot/css/mealwiz.css</c>, keyed off
+/// the <c>data-theme</c> attribute that <c>MainLayout</c> sets from <see cref="ModeAttribute"/>. Keep the hex values
+/// here and in that stylesheet in sync; nothing else in the app uses hex colours (UI-02).
+/// </summary>
 public static class MealWizTheme
 {
-    public static MudTheme Build() => new()
+    // Fills: the same in both themes.
+    private const string Orange = "#FF9F43";
+    private const string Green = "#8FD45A";
+    private const string Red = "#FF5C5C";
+    private const string TextOnColor = "#1A140E";
+    private const string DarkButton = "#1A140E";
+    private const string DarkButtonText = "#F5EFE6";
+
+    private static readonly string[] BodyFont = ["DM Sans", "system-ui", "sans-serif"];
+    private static readonly string[] HeadingFont = ["Bricolage Grotesque", "DM Sans", "system-ui", "sans-serif"];
+
+    /// <summary>The value of the <c>data-theme</c> attribute the custom CSS tokens key off.</summary>
+    public static string ModeAttribute(bool isDarkMode) => isDarkMode ? "dark" : "light";
+
+    public static MudTheme Build()
     {
-        PaletteLight = new PaletteLight
+        var theme = new MudTheme
         {
-            Primary = "#5678B8",
-            PrimaryLighten = "#7A98D0",
-            PrimaryDarken = "#3F5C95",
-            Secondary = "#6FB089",
-            Tertiary = "#E8A87C",
-            Success = "#6BAA75",
+            PaletteLight = new PaletteLight
+            {
+                Primary = Orange,
+                PrimaryContrastText = TextOnColor,
+                Secondary = Green,
+                SecondaryContrastText = TextOnColor,
+                Tertiary = Green,
+                TertiaryContrastText = TextOnColor,
+                Success = Green,
+                SuccessContrastText = TextOnColor,
+                Error = Red,
+                ErrorContrastText = TextOnColor,
+                Info = "#1F5FAD",
+                InfoContrastText = "#FFFFFF",
+                Warning = "#8A5A00",
+                WarningContrastText = "#FFFFFF",
+                Dark = DarkButton,
+                DarkContrastText = DarkButtonText,
 
-            Background = "#FAF8F5",
-            Surface = "#FFFFFF",
-            AppbarBackground = "#FFFFFF",
-            AppbarText = "#2C2A28",
-            DrawerBackground = "#F4F1EC",
-            DrawerText = "#2C2A28",
-            DrawerIcon = "#5C5854",
+                Background = "#FAF7F2",
+                BackgroundGray = "#F1EBE2",
+                Surface = "#FFFFFF",
+                AppbarBackground = "#FFFFFF",
+                AppbarText = "#1F1A15",
+                DrawerBackground = "#FFFFFF",
+                DrawerText = "#1F1A15",
+                DrawerIcon = "#6B6359",
 
-            TextPrimary = "#2C2A28",
-            TextSecondary = "#6B6764",
-            TextDisabled = "#A8A6A2",
-            ActionDefault = "#5C5854",
-            ActionDisabled = "#C0BFBC",
-            ActionDisabledBackground = "#EDEAE4",
-            Divider = "#E8E3DC",
-            DividerLight = "#F0EDE7",
-            LinesDefault = "#E8E3DC",
-            LinesInputs = "#D6D1C8",
-            TableLines = "#E8E3DC",
-            TableStriped = "#F4F1EC",
-        },
-        PaletteDark = new PaletteDark
+                TextPrimary = "#1F1A15",
+                TextSecondary = "#6B6359",
+                TextDisabled = "#A39A8F",
+                ActionDefault = "#6B6359",
+                ActionDisabled = "#A39A8F",
+                ActionDisabledBackground = "#F1EBE2",
+                Divider = "#F1EBE2",
+                DividerLight = "#F1EBE2",
+                LinesDefault = "#E8E0D5",
+                LinesInputs = "#E8E0D5",
+                TableLines = "#F1EBE2",
+                TableStriped = "#FAF7F2",
+                Skeleton = "#F1EBE2",
+                OverlayDark = "rgba(40,28,16,0.45)",
+            },
+            PaletteDark = new PaletteDark
+            {
+                Primary = Orange,
+                PrimaryContrastText = TextOnColor,
+                Secondary = Green,
+                SecondaryContrastText = TextOnColor,
+                Tertiary = Green,
+                TertiaryContrastText = TextOnColor,
+                Success = Green,
+                SuccessContrastText = TextOnColor,
+                Error = Red,
+                ErrorContrastText = TextOnColor,
+                Info = "#7FB8FF",
+                InfoContrastText = TextOnColor,
+                Warning = "#FFC24B",
+                WarningContrastText = TextOnColor,
+                Dark = DarkButton,
+                DarkContrastText = DarkButtonText,
+
+                Background = "#14110E",
+                BackgroundGray = "#2A2520",
+                Surface = "#1F1B17",
+                AppbarBackground = "#221E19",
+                AppbarText = "#F5EFE6",
+                DrawerBackground = "#1F1B17",
+                DrawerText = "#F5EFE6",
+                DrawerIcon = "#ABA397",
+
+                TextPrimary = "#F5EFE6",
+                TextSecondary = "#ABA397",
+                TextDisabled = "#6E665C",
+                ActionDefault = "#ABA397",
+                ActionDisabled = "#6E665C",
+                ActionDisabledBackground = "#2A2520",
+                Divider = "#2A2520",
+                DividerLight = "#2A2520",
+                LinesDefault = "#2E2924",
+                LinesInputs = "#2E2924",
+                TableLines = "#2A2520",
+                TableStriped = "#1F1B17",
+                Skeleton = "#2A2520",
+                OverlayDark = "rgba(8,6,4,0.72)",
+            },
+            LayoutProperties = new LayoutProperties
+            {
+                DefaultBorderRadius = "14px",
+            },
+        };
+
+        // Mutate MudBlazor's defaults rather than replacing them, so the sizes and line heights stay.
+        var typography = theme.Typography;
+        typography.Default.FontFamily = BodyFont;
+        BaseTypography[] headings = [typography.H1, typography.H2, typography.H3, typography.H4, typography.H5];
+        foreach (var heading in headings)
         {
-            Primary = "#7A98D0",
-            PrimaryLighten = "#9CB3DD",
-            PrimaryDarken = "#5678B8",
-            Secondary = "#8FE0B0",
-            Tertiary = "#EDB89A",
-            Success = "#7CB987",
+            heading.FontFamily = HeadingFont;
+            heading.FontWeight = "800";
+        }
+        typography.H6.FontFamily = HeadingFont;
+        typography.H6.FontWeight = "600";
+        typography.Button.FontWeight = "700";
+        typography.Button.TextTransform = "none";
 
-            Background = "#1B1D22",
-            Surface = "#24272D",
-            AppbarBackground = "#1F2127",
-            AppbarText = "#E4E4E7",
-            DrawerBackground = "#1F2127",
-            DrawerText = "#E4E4E7",
-            DrawerIcon = "#C0BFBC",
-
-            TextPrimary = "#E4E4E7",
-            TextSecondary = "#A8A6A2",
-            TextDisabled = "#6B6764",
-            ActionDefault = "#C0BFBC",
-            ActionDisabled = "#5C5854",
-            ActionDisabledBackground = "#2F3138",
-            Divider = "#2F3138",
-            DividerLight = "#272A30",
-            LinesDefault = "#2F3138",
-            LinesInputs = "#3A3D44",
-            TableLines = "#2F3138",
-            TableStriped = "#24272D",
-        },
-        LayoutProperties = new LayoutProperties
-        {
-            DefaultBorderRadius = "8px",
-        },
-    };
+        return theme;
+    }
 }
