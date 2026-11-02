@@ -1,0 +1,47 @@
+.mw-meal-tile {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mw-text-on-color);
+    font-family: var(--mw-font-heading);
+    font-weight: 800;
+    line-height: 1;
+}
+
+.mw-meal-tile[data-color="orange"] { background-color: var(--mw-orange); }
+.mw-meal-tile[data-color="green"] { background-color: var(--mw-green); }
+.mw-meal-tile[data-color="neutral"] {
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+.mw-meal-tile-small {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    font-size: 17px;
+}
+
+.mw-meal-tile-large {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--mw-radius-l);
+    font-size: 40px;
+}
+
+.mw-meal-tile-day {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 3px 8px;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-dark-button-bg);
+    color: var(--mw-dark-button-text);
+    font-family: var(--mw-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+

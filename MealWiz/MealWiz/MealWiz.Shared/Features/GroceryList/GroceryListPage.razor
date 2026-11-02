@@ -6,7 +6,7 @@
 @inject NavigationManager _navigationManager
 @implements IDisposable
 
-<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space))">
     <MudPaper Class="rounded-t-0">
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
@@ -22,7 +22,7 @@
         </MudGrid>
     </MudPaper>
 
-    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+    <div style="height: calc(100vh - var(--mw-nav-space) - 48px)" class="overflow-y-auto">
         <MudStack Class="ma-3" Spacing="0">
             @foreach (var item in _groceryListStateContainer.GroceryList.Items) 
             {

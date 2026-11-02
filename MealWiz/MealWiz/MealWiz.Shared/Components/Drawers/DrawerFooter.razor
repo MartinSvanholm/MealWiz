@@ -1,0 +1,11 @@
+@* The bottom of a drawer's content: holds its primary button, which becomes a full-width 52px orange button
+   (css/mealwiz.css, "Bottom drawer"). It stays at the bottom when the content is short and scrolls with it when the
+   content is tall. Usage, inside drawer content: <DrawerFooter><SaveIngredientButton ... /></DrawerFooter> *@
+<div class="mw-sheet-footer" data-testid="drawer-footer">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

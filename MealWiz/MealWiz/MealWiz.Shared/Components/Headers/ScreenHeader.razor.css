@@ -1,0 +1,45 @@
+.mw-screen-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 76px;
+    padding: 16px 16px 12px;
+    box-sizing: border-box;
+}
+
+.mw-screen-header-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mw-screen-header-label {
+    color: var(--mw-text-muted);
+    font-family: var(--mw-font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-screen-header-title {
+    margin: 2px 0 0;
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-screen-header-actions {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

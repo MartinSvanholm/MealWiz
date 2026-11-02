@@ -4,7 +4,7 @@
 @inject IThemeService ThemeService
 @inject NavigationManager _navigationManager
 
-<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
+<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space))">
     <MudPaper>
         <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="my-1 px-1">
             <MudIconButton data-testid="account-back" Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => _navigationManager.NavigateTo("/"))" Color="Color.Primary" />
@@ -13,7 +13,7 @@
         </MudStack>
     </MudPaper>
 
-    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+    <div style="height: calc(100vh - var(--mw-nav-space) - 48px)" class="overflow-y-auto">
         <MudStack Class="pa-4" Spacing="3">
             <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Settings</MudText>
             <MudPaper Class="pa-3" Elevation="0" Outlined>

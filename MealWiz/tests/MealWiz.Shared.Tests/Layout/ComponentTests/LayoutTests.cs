@@ -29,7 +29,7 @@ public class LayoutTests : ComponentTestBase
         var cut = Render<MainLayout>(p => p.Add(l => l.Body, body));
 
         Assert.Equal("Page body", cut.Find(TestId("page-body")).TextContent);
-        Assert.NotNull(cut.Find(TestId("nav-meals")));
+        Assert.NotNull(cut.Find($"{TestId("bottom-nav")} {TestId("nav-meals")}"));
         Theme.Verify(t => t.InitializeAsync(), Times.Once);
     }
 

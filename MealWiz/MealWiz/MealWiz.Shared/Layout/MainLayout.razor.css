@@ -1,0 +1,15 @@
+/* The floating bottom nav: --mw-nav-gap from the screen edges (plus the home indicator), on the nav-bar token. */
+.mw-bottom-nav {
+    position: fixed;
+    left: var(--mw-nav-gap);
+    right: var(--mw-nav-gap);
+    bottom: calc(var(--mw-nav-gap) + env(safe-area-inset-bottom));
+    height: var(--mw-nav-height);
+    box-sizing: border-box;
+    padding: 6px;
+    background: var(--mw-nav-bg);
+    border: 1px solid var(--mw-nav-border);
+    border-radius: var(--mw-radius-xl);
+    box-shadow: var(--mw-nav-shadow);
+    z-index: var(--mud-zindex-appbar);
+}

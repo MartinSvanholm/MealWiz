@@ -8,6 +8,7 @@
  *   5. Light mode: role-coloured text and icons use the darker text shades (fills stay bright)
  *   6. Utility classes
  *   7. Blazor error UI
+ *   8. Bottom drawer (Components/Drawers/DrawerBase.razor, ConfirmDrawer.razor, DrawerFooter.razor)
  * The token table and when to use which token: docs/agents/ARCHITECTURE.md, "Theme tokens" (UI-02). Hex values live
  * only here and in Theme/MealWizTheme.cs; keep the two in sync.
  */
@@ -61,6 +62,12 @@
     --mw-radius-sheet: 28px;  /* bottom drawer top corners, hero card */
     --mw-radius-pill: 999px;  /* pills, round buttons */
     --mw-touch: 44px;         /* minimum touch target */
+
+    /* The floating bottom nav (Layout/MainLayout.razor). A page fills the screen above it with
+       height: calc(100dvh - var(--mw-nav-space)), or the .mw-page class. */
+    --mw-nav-height: 64px;
+    --mw-nav-gap: 16px;       /* from the screen edges, and between the nav and the page above it */
+    --mw-nav-space: calc(var(--mw-nav-height) + 2 * var(--mw-nav-gap) + env(safe-area-inset-bottom));
 
     --mw-font-heading: 'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif;
     --mw-font-body: 'DM Sans', system-ui, sans-serif;
@@ -401,6 +408,12 @@ h1:focus {
 .mw-text-warning { color: var(--mw-warning-text) !important; }
 .mw-text-muted { color: var(--mw-text-muted) !important; }
 
+/* A page that fills the screen above the floating bottom nav (vh fallback for browsers without dvh). */
+.mw-page {
+    height: calc(100vh - var(--mw-nav-space));
+    height: calc(100dvh - var(--mw-nav-space));
+}
+
 .mw-heading {
     font-family: var(--mw-font-heading);
     font-weight: 800;
@@ -424,4 +437,147 @@ h1:focus {
 
 .blazor-error-boundary::after {
     content: "An error has occurred.";
+}
+
+/* 8. Bottom drawer ---------------------------------------------------------------------------------------------- *
+ * Global because MudDrawer is the components' root element, which scoped CSS can't reach. The scrim comes from the
+ * palette's OverlayDark (70% dark, warm 45% light). */
+
+.mud-drawer.mw-sheet {
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    border-radius: var(--mw-radius-sheet) var(--mw-radius-sheet) 0 0;
+    overflow: hidden;
+}
+
+/* Only while open: a closed drawer waits just below the screen, and its shadow or top edge would show above the
+   bottom of the screen (MudBlazor's measured height leaves out a border). */
+.mud-drawer.mw-sheet.mud-drawer--open {
+    box-shadow: var(--mw-menu-shadow), inset 0 1px 0 var(--mw-border-strong);
+}
+
+/* Padding, not margin: a margin on the first child collapses out of the drawer, MudBlazor then measures the drawer
+   too short, and a closed drawer peeks above the bottom of the screen. */
+.mw-sheet-handle {
+    flex: 0 0 auto;
+    padding: 10px 0 2px;
+}
+
+.mw-sheet-handle::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-border-dashed);
+}
+
+.mw-sheet-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 12px;
+}
+
+.mw-sheet-header .mud-icon-button.mw-sheet-close {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+.mw-sheet-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-sheet-header-action {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-sheet-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* DrawerFooter: pushed to the bottom of the content, its button full width, 52px, orange. */
+.mw-sheet-footer {
+    margin-top: auto;
+    padding: 12px 16px 16px;
+}
+
+.mw-sheet-footer .mud-button-root.mud-button {
+    width: 100%;
+    min-height: 52px;
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    font-size: 16px;
+}
+
+/* Confirm drawer. */
+.mw-confirm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    text-align: center;
+}
+
+.mw-confirm-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mw-radius-pill);
+    background-color: color-mix(in srgb, var(--mw-red) 16%, transparent);
+    color: var(--mw-red-text);
+}
+
+.mw-confirm-title {
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin-top: 8px;
+}
+
+.mw-confirm-description {
+    margin: 0 0 12px;
+    color: var(--mw-text-muted);
+}
+
+.mw-confirm-buttons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.mw-confirm-buttons .mud-button-root.mud-button {
+    flex: 1 1 0;
+    min-height: 52px;
+}
+
+.mw-confirm-buttons .mud-button-root.mw-confirm-cancel {
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
 }

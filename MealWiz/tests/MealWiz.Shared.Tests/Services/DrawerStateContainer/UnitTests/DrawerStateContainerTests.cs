@@ -213,4 +213,30 @@ public class DrawerStateContainerTests
     {
         await _container.NotifyConfirmClickedAsync();
     }
+
+    [Fact]
+    public void HeaderAction_is_cleared_when_the_drawer_closes()
+    {
+        _container.OpenDrawer(new DrawerStateParameters { Title = "Edit", Content = typeof(FirstPage), HeaderAction = _ => { } });
+
+        _container.CloseDrawer();
+
+        Assert.Null(_container.StateParameters.HeaderAction);
+    }
+
+    [Fact]
+    public void NavigateBack_restores_the_previous_HeaderAction()
+    {
+        RenderFragment first = _ => { };
+        RenderFragment second = _ => { };
+        _container.OpenDrawer("First", typeof(FirstPage));
+        _container.StateParameters.HeaderAction = first;
+        _container.SwitchDrawerContent(typeof(FirstPage), "First");
+        _container.StateParameters.HeaderAction = second;
+        _container.SwitchDrawerContent(typeof(SecondPage), "Second");
+
+        _container.NavigateBack();
+
+        Assert.Same(first, _container.StateParameters.HeaderAction);
+    }
 }

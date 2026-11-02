@@ -478,6 +478,11 @@ one confirmation only: Confirm awaits it, and closing the confirm drawer (confir
 is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFragment, Type)` and
 `SwitchDrawerContent` exist but nothing uses them.
 
+The drawer shell (sheet, grab handle, close/back button, 22px title) is DrawerBase's job; content only renders its
+fields. Set `HeaderAction` (a `RenderFragment`) on `DrawerStateParameters` for a button on the right of the header,
+such as a red delete. Put the content's primary button inside `<DrawerFooter>` (`Components/Drawers/DrawerFooter.razor`):
+it becomes the full-width 52px orange button at the bottom. The confirm drawer always shows Cancel and a red Delete.
+
 ### Theme tokens (UI-02)
 
 The theme has two layers. `Theme/MealWizTheme.cs` sets MudBlazor's palettes (dark and light), typography and the
@@ -529,6 +534,7 @@ In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary
 | `--mw-error-alert-bg` | the error alert background (global `MudAlert` Severity.Error already uses it) |
 | `--mw-radius-s` 14 · `-m` 16 · `-l` 20 · `-xl` 24 · `-sheet` 28 · `-pill` | corners: inputs and icon buttons · buttons · cards and menus · nav bar · drawer top and hero card · pills |
 | `--mw-touch` | 44px minimum touch target |
+| `--mw-nav-height`, `--mw-nav-gap`, `--mw-nav-space` | the floating bottom nav's height, its gap to the screen edges, and the space a page leaves for it (`calc(100dvh - var(--mw-nav-space))`, or the `.mw-page` class); never hardcode the nav height |
 | `--mw-font-heading`, `--mw-font-body` | Bricolage Grotesque (headings, 600/800) and DM Sans (body, 400/500/700); `MudText Typo.h1..h6` and `.mw-heading` already use the heading font |
 
 **Where styles go.** Global rules for MudBlazor components (buttons, inputs, menus, snackbars) and new tokens go in
