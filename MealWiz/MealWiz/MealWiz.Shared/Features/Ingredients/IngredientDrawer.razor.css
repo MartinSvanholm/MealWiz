@@ -4,10 +4,16 @@
     gap: 16px;
 }
 
+.mw-ingredient-drawer-fields,
+.mw-ingredient-drawer-switch {
+    margin: 0 16px;
+}
+
 .mw-ingredient-drawer-fields {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: 10px;
+    padding-top: 4px;
 }
 
 .mw-ingredient-drawer-switch {
