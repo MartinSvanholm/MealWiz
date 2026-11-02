@@ -290,6 +290,14 @@ key, CORS and deployment.
   - `IDrawerStateContainer.cs` and `DrawerStateContainer.cs`
   - `DrawerStateparameters.cs`, which holds the `DrawerStateParameters` class.
   - `Components/Drawers/DrawerBase.razor` and `Components/Drawers/ConfirmDrawer.razor` render it.
+    - DrawerBase is the bottom sheet: grab handle, a header row with the close (or back) button, the 22px `Title`
+      and an optional `DrawerStateParameters.HeaderAction` on the right (`drawer-header-action`), then the content,
+      which scrolls. A custom `Header` replaces the whole row.
+    - `Components/Drawers/DrawerFooter.razor`: drawer content wraps its primary button in `<DrawerFooter>` to get
+      the full-width 52px orange button at the bottom (`drawer-footer`).
+    - ConfirmDrawer shows a red trash circle, the title (`confirm-drawer-title`), the description
+      (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red Delete
+      (`confirm-drawer-confirm`, runs `onConfirm`).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
@@ -307,14 +315,28 @@ key, CORS and deployment.
   - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
 - **`Components/`:** generic UI.
-  - `Components/NavMenu.razor`, the bottom navigation, and `Components/CustomNavLink.razor`
+  - `Components/NavMenu.razor`, the three tabs (Plan, Groceries, Meals; `nav-meal-plan`, `nav-grocery-list`,
+    `nav-meals`), and `Components/CustomNavLink.razor`, one tab: icon above label, the active one an orange pill
+    with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. Pages
+    leave room for it with `var(--mw-nav-space)` or the `.mw-page` class (`wwwroot/css/mealwiz.css`).
+  - `Components/Headers/ScreenHeader.razor`: the header on top of every screen. Parameters: `Label` (small
+    uppercase muted line, left out when empty), `Title` (26px), `TitleContent` (markup instead of `Title`, e.g. a
+    button) and `Actions` (buttons on the right). Test ids `screen-header`, `screen-header-label`,
+    `screen-header-title`, `screen-header-actions`.
+  - `Components/Headers/SubPageHeader.razor`: ScreenHeader with a 44px back button on the left (Account, Import
+    meal). Same parameters plus `BackHref` (default `/`), `OnBack` (runs instead of navigating) and `BackTestId`
+    (default `sub-page-back`).
+  - `Components/MealTile.razor`: a meal's coloured initial tile. Parameters: `Name`, `Index` (position in the list:
+    even orange, odd green), `Neutral` (chip colour, for Eat Out and Leftovers), `DayTag` (e.g. "MON", left out
+    when empty) and `Size` (`MealTile.TileSize.Small` 36px for lists, `Large` fills the width for the grid). Test
+    ids `meal-tile` (with `data-color="orange|green|neutral"`), `meal-tile-initial`, `meal-tile-day`.
   - `Components/Tooltip.razor`
   - `Components/Card/BaseCard.razor`
   - `Components/Form/Button.razor`, `Components/Form/TextField.razor`, `Components/Form/CustomForm.razor`
   - `Components/Form/EnterKey.cs`: `EnterKey.Then(...)`, the OnKeyDown handler that makes Enter (also on a phone
     keyboard) move to a form's next field, and submit on its last single-line field. Every multi-field form uses it.
 - **`Layout/`:** `Layout/MainLayout.razor` (the `data-theme` wrapper around the theme, popover and snackbar
-  providers, drawers and nav menu) and `Layout/RedirectToLogin.razor`.
+  providers, drawers and the floating bottom nav) and `Layout/RedirectToLogin.razor`.
 - **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.
 - **Tests:**
