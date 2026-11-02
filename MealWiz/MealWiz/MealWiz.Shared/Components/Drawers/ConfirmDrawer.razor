@@ -9,8 +9,13 @@
         <div class="mw-confirm-icon" aria-hidden="true">
             <MudIcon Icon="@Icons.Material.Outlined.Delete" Color="Color.Inherit" />
         </div>
-        <h2 data-testid="confirm-drawer-title" class="mw-sheet-title mw-confirm-title">@_drawerStateContainer.StateParameters.Title</h2>
-        <p data-testid="confirm-drawer-description" class="mw-confirm-description">@_drawerStateContainer.StateParameters.Description</p>
+        @* Only while open: the main drawer shares StateParameters, and a closed sheet that grew to show its title would
+           peek above the bottom of the screen. *@
+        @if (_drawerStateContainer.IsConfirmDrawerOpen)
+        {
+            <h2 data-testid="confirm-drawer-title" class="mw-sheet-title mw-confirm-title">@_drawerStateContainer.StateParameters.Title</h2>
+            <p data-testid="confirm-drawer-description" class="mw-confirm-description">@_drawerStateContainer.StateParameters.Description</p>
+        }
         <div class="mw-confirm-buttons">
             <MudButton data-testid="confirm-drawer-cancel" Variant="Variant.Filled" Class="mw-confirm-cancel" OnClick="Cancel">Cancel</MudButton>
             <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">Delete</Button>

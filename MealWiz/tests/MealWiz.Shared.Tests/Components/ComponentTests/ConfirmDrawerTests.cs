@@ -52,4 +52,18 @@ public class ConfirmDrawerTests : ComponentTestBase
         Assert.False(Drawer.IsConfirmDrawerOpen);
         Assert.Equal(0, confirmed);
     }
+
+    // The main drawer shares StateParameters: while closed, the confirm drawer must not grow to show its title, or the
+    // closed sheet (measured when empty) peeks above the bottom of the screen.
+    [Fact]
+    public void Shows_no_title_or_description_while_closed()
+    {
+        var cut = Render<ConfirmDrawer>();
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(new() { Title = "Add item", Description = "not mine" }));
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Empty(cut.FindAll(TestId("confirm-drawer-title")));
+        Assert.Empty(cut.FindAll(TestId("confirm-drawer-description")));
+    }
 }
