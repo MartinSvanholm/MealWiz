@@ -1,0 +1,44 @@
+@* A coloured tile with a meal's initial and an optional day tag. Regular meals alternate orange and green by their
+   position in the list (Index); Eat Out and Leftovers pass Neutral for a chip-coloured tile. *@
+<div class="mw-meal-tile @SizeClass" data-testid="meal-tile" data-color="@ColorName" aria-hidden="true">
+    <span class="mw-meal-tile-initial" data-testid="meal-tile-initial">@Initial</span>
+    @if (!string.IsNullOrEmpty(DayTag))
+    {
+        <span class="mw-meal-tile-day" data-testid="meal-tile-day">@DayTag</span>
+    }
+</div>
+
+@code {
+    public enum TileSize
+    {
+        /// <summary>36px, for compact lists (pick a meal).</summary>
+        Small,
+        /// <summary>Fills the width of its container, for the Meals grid.</summary>
+        Large,
+    }
+
+    /// <summary>The meal's name; the tile shows its first letter.</summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The meal's position in its list: even is orange, odd is green.</summary>
+    [Parameter]
+    public int Index { get; set; }
+
+    /// <summary>A neutral (chip-coloured) tile, for Eat Out and Leftovers.</summary>
+    [Parameter]
+    public bool Neutral { get; set; }
+
+    /// <summary>A small dark tag in the corner, e.g. the planned day ("MON"). Left out when empty.</summary>
+    [Parameter]
+    public string? DayTag { get; set; }
+
+    [Parameter]
+    public TileSize Size { get; set; } = TileSize.Small;
+
+    private string Initial => Name?.Trim() is { Length: > 0 } name ? name[..1].ToUpperInvariant() : "?";
+
+    private string ColorName => Neutral ? "neutral" : Index % 2 == 0 ? "orange" : "green";
+
+    private string SizeClass => Size == TileSize.Large ? "mw-meal-tile-large" : "mw-meal-tile-small";
+}
