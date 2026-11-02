@@ -190,6 +190,18 @@ public class ImportMealPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Shows_the_sub_page_header_and_the_form_card()
+    {
+        var cut = Render<ImportMealPage>();
+
+        Assert.Equal("From a recipe link", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Equal("Import meal", cut.Find(TestId("screen-header-title")).TextContent.Trim());
+        var form = cut.Find(TestId("import-form"));
+        Assert.Contains("Paste a link to a meal", form.TextContent);
+        Assert.NotNull(form.QuerySelector(TestId("import-submit")));
+    }
+
+    [Fact]
     public void Back_returns_to_the_meals_page()
     {
         var cut = Render<ImportMealPage>();

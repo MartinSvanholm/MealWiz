@@ -24,7 +24,7 @@ public class AuthorizeRedirectTests : ComponentTestBase
     {
         { typeof(MealPlanPage), "Week" },
         { typeof(MealsPage), "Your meals" },
-        { typeof(EditMealPage), "Edit meal" },
+        { typeof(EditMealPage), "Meal name" },
         { typeof(ImportMealPage), "Import meal" },
         { typeof(GroceryListPage), "Grocery list" },
         { typeof(AccountPage), "Dark mode" },
