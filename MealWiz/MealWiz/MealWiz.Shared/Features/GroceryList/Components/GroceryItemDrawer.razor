@@ -1,15 +1,30 @@
-﻿<MudStack Class="pa-2">
-    <MudTextField data-testid="grocery-item-name-input" AutoFocus Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
+@* Add or edit a grocery item: name and amount side by side, then "Save item". When the name is already filled in
+   (from the add field), the amount gets the focus. *@
+<div class="grocery-item-fields">
+    <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
                   OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
-    <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" Label="Amount" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
+    <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" Label="Amount" Placeholder="e.g. 2" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
                   Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
-    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="GroceryItem"/>
-</MudStack>
+</div>
+<DrawerFooter>
+    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="GroceryItem" />
+</DrawerFooter>
 
 @code {
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
 
+    private MudTextField<string> _nameField = default!;
     private MudTextField<string> _amountField = default!;
     private SaveGroceryItemButton _saveButton = default!;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (string.IsNullOrWhiteSpace(GroceryItem.Name))
+            await _nameField.FocusAsync();
+        else
+            await _amountField.FocusAsync();
+    }
 }

@@ -10,7 +10,7 @@ using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.GroceryList.ComponentTests;
 
-/// <summary>The grocery item drawer and the add/edit/delete buttons, each on its own.</summary>
+/// <summary>The grocery item drawer, the add field and the edit/delete buttons, each on its own.</summary>
 public class GroceryItemComponentTests : ComponentTestBase
 {
     [Fact]
@@ -48,6 +48,14 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
+    public void Drawer_with_a_name_already_filled_in_focuses_the_amount()
+    {
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, TestData.GroceryItem("Eggs")));
+
+        AssertFocused(cut.Find(InputOf("grocery-item-amount-input")));
+    }
+
+    [Fact]
     public void Saving_a_new_item_adds_it_and_closes_the_drawer()
     {
         var saved = TestData.GroceryItem("Eggs", id: 5);
@@ -80,29 +88,46 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
-    public void Add_button_opens_the_drawer_with_a_new_item()
+    public void Add_field_opens_the_drawer_with_a_new_item_named_as_typed()
     {
-        var cut = RenderWithPopovers<AddGroceryItemButton>();
+        var cut = RenderWithPopovers<AddGroceryItemField>();
 
+        cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
         cut.Find(TestId("add-grocery-item-button")).Click();
 
         Assert.True(Drawer.IsDrawerOpen);
         Assert.Equal("Add item", Drawer.StateParameters.Title);
         Assert.Equal(typeof(GroceryItemDrawer), Drawer.StateParameters.Content);
         var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
-        Assert.Equal(0, item.Id);
+        Assert.Equal((0, "Eggs"), (item.Id, item.Name));
+        Assert.Null(Drawer.StateParameters.HeaderAction);
     }
 
     [Fact]
-    public void Edit_button_opens_the_drawer_with_that_item()
+    public void Add_field_left_empty_opens_an_empty_drawer()
+    {
+        var cut = RenderWithPopovers<AddGroceryItemField>();
+
+        cut.Find(TestId("add-grocery-item-button")).Click();
+
+        var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
+        Assert.Equal("", item.Name);
+    }
+
+    [Fact]
+    public void Tapping_the_name_opens_the_edit_drawer_with_that_item_and_a_delete_action()
     {
         var milk = TestData.GroceryItem("Milk", id: 1);
-        var cut = RenderWithPopovers<UpdatedGroceryItemButton>(p => p.Add(b => b.GroceryItem, milk));
+        RenderDrawers();
+        var cut = RenderWithPopovers<EditGroceryItemButton>(p => p.Add(b => b.GroceryItem, milk));
 
-        cut.Find(TestId("edit-grocery-item-button")).Click();
+        Assert.Equal("Milk", cut.Find(TestId("grocery-item-name")).TextContent.Trim());
+        cut.Find(TestId("grocery-item-name")).Click();
 
         Assert.Equal("Edit item", Drawer.StateParameters.Title);
         Assert.Same(milk, Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
+        DrawerHost.WaitForAssertion(() =>
+            Assert.NotNull(DrawerHost.Find($"{TestId("drawer-header-action")} {TestId("delete-grocery-item-button")}")));
     }
 
     [Fact]
@@ -116,6 +141,7 @@ public class GroceryItemComponentTests : ComponentTestBase
 
         cut.Find(TestId("delete-grocery-item-button")).Click();
 
+        Assert.Equal("Delete Milk?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
         Assert.Contains("Are you sure you want to delete this grocery item?", ConfirmDrawerHost.Find(TestId("confirm-drawer-description")).TextContent);
         Assert.Empty(Sent<DeleteGroceryItem.Command>());
 
