@@ -29,27 +29,30 @@ public class GroceryListJourneyTests : E2ETestBase
 
         // Add the plan's ingredients
         await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
-        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add items to grocery list");
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("From meal plan");
         // Only ingredients shown on the grocery list are offered, so olive oil is left out
         await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(1);
         await Expect(Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Penne" })).ToBeVisibleAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredients-confirm")).ToHaveTextAsync("Add 1 to grocery list");
 
         await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Penne (500 g)")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("500 g");
         await Expect(Row("grocery-item", "Olive oil")).ToHaveCountAsync(0);
 
-        // Add an item by hand
+        // Add an item by hand: the add field opens the drawer with the name filled in
+        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Milk");
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
         await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add item");
-        await FillAsync(Drawer.GetByTestId("grocery-item-name-input"), "Milk");
+        await Expect(Drawer.GetByTestId("grocery-item-name-input")).ToHaveValueAsync("Milk");
         await FillAsync(Drawer.GetByTestId("grocery-item-amount-input"), "1 l");
         await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Milk (1 l)")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Milk").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 l");
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Page.GetByTestId("grocery-progress-count")).ToHaveTextAsync("0 of 2 items");
 
-        // Check it off straight away, without a reload (MEA-42), and it stays checked after one
+        // Check it off straight away, without a reload (MEA-42): it moves to the basket and stays there after one
         var milkCheckbox = Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox");
         await Expect(milkCheckbox).Not.ToBeCheckedAsync();
         var saved = await Page.RunAndWaitForResponseAsync(
@@ -57,13 +60,20 @@ public class GroceryListJourneyTests : E2ETestBase
             response => response.Url.Contains("/rest/v1/grocery_items") && response.Request.Method == "PATCH");
         Assert.True(saved.Ok, $"Expected the update to succeed, got {saved.Status}.");
         await Expect(milkCheckbox).ToBeCheckedAsync();
+        await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Milk");
+        await Expect(Page.GetByTestId("grocery-progress-count")).ToHaveTextAsync("1 of 2 items");
 
         await Page.ReloadAsync();
         await Expect(Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox")).ToBeCheckedAsync();
         await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-checkbox")).Not.ToBeCheckedAsync();
 
-        // Delete it
-        await Row("grocery-item", "Milk").GetByTestId("delete-grocery-item-button").ClickAsync();
+        // Put it back on the list, then delete it from the edit drawer (tap the name, red delete in the header)
+        await Row("grocery-item", "Milk").GetByTestId("grocery-item-checkbox").ClickAsync();
+        await Expect(Page.GetByTestId("grocery-to-buy").GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Row("grocery-item", "Milk").GetByTestId("grocery-item-name").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit item");
+        await Drawer.GetByTestId("drawer-header-action").GetByTestId("delete-grocery-item-button").ClickAsync();
+        await Expect(ConfirmDrawer.GetByTestId("confirm-drawer-title")).ToHaveTextAsync("Delete Milk?");
         await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
 
