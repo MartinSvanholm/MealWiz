@@ -1,8 +1,11 @@
-﻿@inject ISender _mediator
+@inject ISender _mediator
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
 
-<MudIconButton data-testid="logout-button" OnClick="OnLogoutClick" Icon="@Icons.Material.Filled.Logout" />
+<MudButton data-testid="logout-button" OnClick="OnLogoutClick" Variant="Variant.Outlined" Color="Color.Error"
+           StartIcon="@Icons.Material.Filled.Logout" FullWidth="true">
+    Log out
+</MudButton>
 
 @code {
     private async Task OnLogoutClick()
