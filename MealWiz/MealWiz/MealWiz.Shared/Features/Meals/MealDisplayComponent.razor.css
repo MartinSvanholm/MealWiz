@@ -1,0 +1,253 @@
+/* The selected day's meal on the Meal plan. Tokens only (UI-02). */
+.mw-meal-display {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* The orange card */
+.mw-meal-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--mw-radius-sheet);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mw-meal-hero-rings {
+    position: absolute;
+    right: -48px;
+    top: -40px;
+    stroke: currentColor;
+    stroke-width: 2;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+.mw-meal-hero-top {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 28px;
+}
+
+.mw-meal-hero-day {
+    padding: 6px 10px;
+    border-radius: var(--mw-radius-pill);
+    background-color: color-mix(in srgb, var(--mw-text-on-color) 12%, transparent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* The hero action sits on the corner of the card and must not push the pill down. */
+.mw-meal-hero-top ::deep > * {
+    margin-top: -8px;
+    margin-right: -8px;
+}
+
+.mw-meal-hero-name {
+    position: relative;
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-weight: 800;
+    font-size: 46px;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
+}
+
+.mw-meal-hero-summary {
+    position: relative;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.mw-meal-hero-buttons {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mw-hero-button {
+    height: var(--mw-touch);
+    padding: 0 18px;
+    border-radius: var(--mw-radius-pill);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-hero-button:disabled {
+    cursor: default;
+}
+
+.mw-hero-button-dark {
+    border: none;
+    background-color: var(--mw-dark-button-bg);
+    color: var(--mw-dark-button-text);
+}
+
+.mw-hero-button-outline {
+    border: 2px solid var(--mw-text-on-color);
+    background-color: transparent;
+    color: var(--mw-text-on-color);
+}
+
+/* Sections below the card */
+.mw-meal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mw-meal-section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.mw-meal-section-title {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.mw-meal-link {
+    min-height: var(--mw-touch);
+    margin: -12px 0;
+    padding: 0 4px;
+    border: none;
+    background: none;
+    color: var(--mw-orange-text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-meal-link:disabled {
+    cursor: default;
+}
+
+.mw-meal-link:not(:disabled):hover {
+    color: var(--mw-orange-text-hover);
+}
+
+.mw-meal-card {
+    margin: 0;
+    background-color: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-l);
+}
+
+.mw-ingredient-list {
+    padding: 6px 0;
+    list-style: none;
+}
+
+.mw-ingredient {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    font-size: 15px;
+}
+
+.mw-ingredient + .mw-ingredient {
+    border-top: 1px solid var(--mw-chip-bg);
+}
+
+.mw-ingredient-empty {
+    color: var(--mw-text-muted);
+}
+
+.mw-ingredient-bullet {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background-color: var(--mw-green-bullet);
+}
+
+.mw-ingredient-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mw-ingredient-amount {
+    flex: 0 0 auto;
+    color: var(--mw-text-muted);
+    font-size: 13px;
+}
+
+.mw-recipe {
+    padding: 14px 16px 14px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15px;
+    line-height: 1.45;
+}
+
+/* No recipe yet */
+.mw-no-recipe {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--mw-radius-l);
+    border: 1.5px dashed var(--mw-border-dashed);
+}
+
+.mw-no-recipe-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border-radius: 12px;
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mw-no-recipe-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mw-no-recipe-title {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.mw-no-recipe-hint {
+    font-size: 13px;
+    color: var(--mw-text-muted);
+}
+
+.mw-hero-button:focus-visible,
+.mw-meal-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}

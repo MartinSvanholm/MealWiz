@@ -1,0 +1,135 @@
+/* Pick a meal for an empty day. Tokens only (UI-02). */
+.mw-pick {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mw-pick-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mw-pick-title {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-weight: 600;
+    font-size: 20px;
+}
+
+.mw-pick-hint,
+.mw-pick-empty {
+    margin: 0;
+    font-size: 13px;
+    color: var(--mw-text-muted);
+}
+
+.mw-pick-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-pick-search ::deep .mw-pick-search-field {
+    flex: 1 1 auto;
+    margin: 0;
+}
+
+.mw-pick-search ::deep .mw-pick-search-field .mud-input-control-input-container,
+.mw-pick-search ::deep .mw-pick-search-field .mud-input {
+    min-height: var(--mw-touch);
+}
+
+.mw-pick-shuffle {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.mw-pick-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background-color: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    overflow: hidden;
+}
+
+.mw-pick-row {
+    display: flex;
+    align-items: center;
+    padding-right: 4px;
+}
+
+.mw-pick-row + .mw-pick-row {
+    border-top: 1px solid var(--mw-chip-bg);
+}
+
+.mw-pick-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 52px;
+    padding: 0 0 0 12px;
+    border: none;
+    background: transparent;
+    color: var(--mw-text);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.mw-pick-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-pick-edit {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    flex: 0 0 auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background: transparent;
+    color: var(--mw-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+@media (hover: hover) {
+    .mw-pick-button:hover .mw-pick-name {
+        color: var(--mw-orange-text);
+    }
+
+    .mw-pick-edit:hover {
+        color: var(--mw-text);
+    }
+}
+
+.mw-pick-shuffle:focus-visible,
+.mw-pick-button:focus-visible,
+.mw-pick-edit:focus-visible {
+    outline: 2px solid var(--mw-orange-text);
+    outline-offset: -2px;
+}

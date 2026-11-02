@@ -32,7 +32,7 @@ public class MealSelectionListTests : ComponentTestBase
     }
 
     private List<string> Names(IRenderedComponent<MealSelectionList> cut) =>
-        cut.FindAll(TestId("meal-list-item")).Select(r => r.TextContent.Trim()).ToList();
+        cut.FindAll(TestId("meal-list-item")).Select(r => r.QuerySelector(TestId("meal-selection-name"))!.TextContent.Trim()).ToList();
 
     [Fact]
     public void Lists_system_meals_first_then_the_users_meals()
@@ -61,7 +61,7 @@ public class MealSelectionListTests : ComponentTestBase
         MealPlan.SelectedDate = date;
         var cut = Render<MealSelectionList>();
 
-        cut.FindAll(TestId("meal-list-item")).Single(r => r.TextContent.Contains("Tacos")).Click();
+        cut.FindAll(TestId("meal-list-item")).Single(r => r.TextContent.Contains("Tacos")).QuerySelector(TestId("meal-selection-pick"))!.Click();
 
         cut.WaitForAssertion(() => Assert.True(MealPlan.DateHasMeal(date)));
         Assert.Single(Sent<CreateMealPlan.Command>());
@@ -92,5 +92,47 @@ public class MealSelectionListTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.Equal(2, Sent<GetAllMeals.Query>().Count));
         Assert.Equal(4, Names(cut).Count);
+    }
+
+    [Fact]
+    public void Asks_for_a_meal_for_the_selected_day()
+    {
+        MealPlan.SelectedDate = new DateTime(2026, 11, 8);
+
+        var cut = Render<MealSelectionList>();
+
+        Assert.Equal("Pick a meal for Sunday", cut.Find(TestId("meal-selection-heading")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void System_meals_get_neutral_tiles_and_the_users_meals_alternate_orange_and_green()
+    {
+        var cut = Render<MealSelectionList>();
+
+        var colors = cut.FindAll(TestId("meal-list-item"))
+            .Select(r => r.QuerySelector(TestId("meal-tile"))!.GetAttribute("data-color"))
+            .ToList();
+        Assert.Equal(["neutral", "neutral", "orange", "green"], colors);
+    }
+
+    [Fact]
+    public void Search_filters_the_list_by_name()
+    {
+        var cut = Render<MealSelectionList>();
+
+        cut.Find(InputOf("meal-selection-search")).Input("tac");
+
+        Assert.Equal(["Tacos"], Names(cut));
+    }
+
+    [Fact]
+    public void Says_so_when_there_are_no_meals()
+    {
+        SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
+
+        var cut = Render<MealSelectionList>();
+
+        Assert.NotNull(cut.Find(TestId("meal-list-empty")));
+        Assert.Empty(cut.FindAll(TestId("meal-list-item")));
     }
 }
