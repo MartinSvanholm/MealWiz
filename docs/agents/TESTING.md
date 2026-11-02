@@ -93,7 +93,7 @@ minutes. Everything else is `E2E` only.
 Features/<Feature>/UnitTests/{Models,State,Handlers}/
 Features/<Feature>/ComponentTests/
 Features/<Feature>/IntegrationTests/<Feature>HandlerTests.cs
-Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Services/<Svc>/UnitTests/
+Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Theme/UnitTests/   Services/<Svc>/UnitTests/
 TestInfrastructure/
 ```
 

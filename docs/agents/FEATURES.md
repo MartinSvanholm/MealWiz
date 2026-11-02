@@ -292,7 +292,13 @@ key, CORS and deployment.
   - `Components/Drawers/DrawerBase.razor` and `Components/Drawers/ConfirmDrawer.razor` render it.
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
-- **`Theme/`:** `IThemeService` (dark mode) and `MealWizTheme`.
+- **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
+  typography, radius, and `ModeAttribute()` for the `data-theme` hook).
+- **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
+  tokens per theme, `@font-face`, global component styles and `.mw-text-*` classes. Tokens and when to use them:
+  [ARCHITECTURE.md](ARCHITECTURE.md#theme-tokens-ui-02) (UI-02).
+- **`wwwroot/fonts/`:** self-hosted Bricolage Grotesque and DM Sans (variable woff2, latin + latin-ext) with their
+  OFL licences.
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
     exceptions into errors.
@@ -307,12 +313,13 @@ key, CORS and deployment.
   - `Components/Form/Button.razor`, `Components/Form/TextField.razor`, `Components/Form/CustomForm.razor`
   - `Components/Form/EnterKey.cs`: `EnterKey.Then(...)`, the OnKeyDown handler that makes Enter (also on a phone
     keyboard) move to a form's next field, and submit on its last single-line field. Every multi-field form uses it.
-- **`Layout/`:** `Layout/MainLayout.razor` (theme, snackbar provider, drawers, nav menu) and `Layout/RedirectToLogin.razor`.
+- **`Layout/`:** `Layout/MainLayout.razor` (the `data-theme` wrapper around the theme, popover and snackbar
+  providers, drawers and nav menu) and `Layout/RedirectToLogin.razor`.
 - **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.
 - **Tests:**
   - `Components/ComponentTests/`, `Layout/ComponentTests/`
-  - `Helpers/UnitTests/`
+  - `Helpers/UnitTests/`, `Theme/UnitTests/`
   - `Services/DrawerStateContainer/UnitTests/`
 
 ## Hosts
