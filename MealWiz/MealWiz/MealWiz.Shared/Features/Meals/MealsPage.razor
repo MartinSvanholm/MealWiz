@@ -1,54 +1,91 @@
-﻿@attribute [Authorize]
+@attribute [Authorize]
 @page "/meals"
+@using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate
 @inject IMealsStateContainer _mealsStateContainer
 @inject ISnackbar _snackbar
-@inject Client _client;
+@inject ISender _mediator
 @inject NavigationManager _navigationManager
 @implements IDisposable
 
-<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space))">
-    <MudPaper Class="rounded-t-0">
-        <MudGrid Spacing="0" Class="my-1">
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton data-testid="account-button" OnClick="OnAccountClicked" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
-                <MudText Typo="Typo.h6">Your meals</MudText>
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
-                <AddMealMenu />
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+<div class="mw-page mw-meals-page">
+    <ScreenHeader Label="@CountLabel" Title="Your meals">
+        <Actions>
+            <AddMealMenu />
+        </Actions>
+    </ScreenHeader>
 
-    <div style="height: calc(100vh - var(--mw-nav-space) - 48px)" class="overflow-y-auto">
-        <MudStack Class="px-3 pt-3">
-            <MealList Meals="_mealsStateContainer.Meals"
-                      StripColor="Color.Tertiary"
-                      OnItemClick="EditMeal">
-                <ItemActions Context="meal">
-                    @if (meal.IsRegular)
-                    {
-                        <DeleteMealButton Meal="meal" />
-                    }
-                </ItemActions>
-            </MealList>
-        </MudStack>
+    <div class="mw-meals-content">
+        <MudTextField T="string" data-testid="meal-list-search"
+                      @bind-Value="_search"
+                      Placeholder="Search meals"
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Clearable="true" />
+
+        @* Only "All" is wired; This week and No recipe are MEA-65. *@
+        <div class="mw-meal-filters" role="group" aria-label="Filter meals">
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-all" aria-pressed="true">All</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-this-week" aria-pressed="false">This week</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-no-recipe" aria-pressed="false">No recipe</button>
+        </div>
+
+        @if (!RegularMeals.Any())
+        {
+            <p class="mw-meals-empty" data-testid="meal-list-empty">No meals yet. Create one with New, or import one from a recipe link.</p>
+        }
+        else
+        {
+            <MealGrid Meals="FilteredMeals" PlannedDates="_plannedDates" OnMealClick="EditMeal" />
+        }
+
+        <button type="button" class="mw-meals-import" data-testid="meals-import-link" @onclick="OnImportClick">
+            <span class="mw-meals-import-icon">
+                <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Inherit" Size="Size.Small" />
+            </span>
+            <span class="mw-meals-import-text">
+                <span class="mw-meals-import-title">Import from a recipe link</span>
+                <span class="mw-meals-import-hint">Paste a URL, we grab the ingredients</span>
+            </span>
+        </button>
     </div>
-
-
-</MudStack>
-
+</div>
 
 @code {
+    private string _search = string.Empty;
+    private IReadOnlyDictionary<int, DateTime> _plannedDates = new Dictionary<int, DateTime>();
+
+    // Eat Out and Leftovers can't be edited, so they're only offered when planning a day.
+    private IEnumerable<Meal> RegularMeals => _mealsStateContainer.Meals.Where(m => m.IsRegular);
+
+    private IEnumerable<Meal> FilteredMeals =>
+        string.IsNullOrWhiteSpace(_search)
+            ? RegularMeals
+            : RegularMeals.Where(m => m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
+
+    private string CountLabel => RegularMeals.Count() == 1 ? "1 meal" : $"{RegularMeals.Count()} meals";
+
     protected override async Task OnInitializedAsync()
     {
         _mealsStateContainer.CurrentSnackbar = _snackbar;
         _mealsStateContainer.OnStateChanged += StateHasChanged;
 
         await _mealsStateContainer.LoadMeals();
+        await LoadPlannedDates();
+    }
 
-        await base.OnInitializedAsync();
+    // The day tags show this calendar week, whichever week the Plan tab shows. They're a hint, so a failed load
+    // leaves them out without a toast.
+    private async Task LoadPlannedDates()
+    {
+        var result = await _mediator.Send(new GetMealPlanByDate.Query(DateTime.Now.StartOfWeek().Date));
+        if (result.IsFailed || result.Value is null) return;
+
+        _plannedDates = result.Value.MealOnDate
+            .OrderBy(entry => entry.Key)
+            .GroupBy(entry => entry.Value.Id)
+            .ToDictionary(group => group.Key, group => group.First().Key);
     }
 
     public void Dispose()
@@ -56,19 +93,11 @@
         _mealsStateContainer.OnStateChanged -= StateHasChanged;
     }
 
-    private void OnAccountClicked()
-    {
-        _navigationManager.NavigateTo("/account");
-    }
-
     private void EditMeal(Meal meal)
     {
-        if (!meal.IsRegular)
-        {
-            return;
-        }
-
         _mealsStateContainer.MealToEdit = meal;
         _navigationManager.NavigateTo("/meals/edit");
     }
+
+    private void OnImportClick() => _navigationManager.NavigateTo("/meals/import");
 }

@@ -1,0 +1,42 @@
+.mw-meal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.mw-meal-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 6px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-xl);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.mw-meal-card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 8px 8px;
+}
+
+.mw-meal-card-name {
+    min-height: 38px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mw-meal-card-meta {
+    color: var(--mw-text-muted);
+    font-size: 12px;
+}
