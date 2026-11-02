@@ -5,9 +5,9 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @implements IDisposable
 
-@* Fills the screen above the bottom nav: the visible height (dvh, with a vh fallback) minus the nav bar and the
+@* Fills the screen above the bottom nav: the visible height (dvh, with a vh fallback) minus the nav space and the
    safe areas the MAUI app draws under (status bar on top, home indicator under the nav bar). MEA-9. *@
-<MudStack Spacing="0" Style="height: calc(100vh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); height: calc(100dvh - 56px - env(safe-area-inset-top) - env(safe-area-inset-bottom));">
+<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space) - env(safe-area-inset-top)); height: calc(100dvh - var(--mw-nav-space) - env(safe-area-inset-top));">
     <MudPaper Class="rounded-t-0">
         <MudGrid Spacing="0" Class="my-1">
             <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">

@@ -62,6 +62,12 @@
     --mw-radius-pill: 999px;  /* pills, round buttons */
     --mw-touch: 44px;         /* minimum touch target */
 
+    /* The floating bottom nav (Layout/MainLayout.razor). A page fills the screen above it with
+       height: calc(100dvh - var(--mw-nav-space)), or the .mw-page class. */
+    --mw-nav-height: 64px;
+    --mw-nav-gap: 16px;       /* from the screen edges, and between the nav and the page above it */
+    --mw-nav-space: calc(var(--mw-nav-height) + 2 * var(--mw-nav-gap) + env(safe-area-inset-bottom));
+
     --mw-font-heading: 'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif;
     --mw-font-body: 'DM Sans', system-ui, sans-serif;
 
@@ -400,6 +406,12 @@ h1:focus {
 .mw-text-info { color: var(--mw-info-text) !important; }
 .mw-text-warning { color: var(--mw-warning-text) !important; }
 .mw-text-muted { color: var(--mw-text-muted) !important; }
+
+/* A page that fills the screen above the floating bottom nav (vh fallback for browsers without dvh). */
+.mw-page {
+    height: calc(100vh - var(--mw-nav-space));
+    height: calc(100dvh - var(--mw-nav-space));
+}
 
 .mw-heading {
     font-family: var(--mw-font-heading);
