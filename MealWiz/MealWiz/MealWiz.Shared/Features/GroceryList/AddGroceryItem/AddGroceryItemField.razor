@@ -29,7 +29,7 @@
         {
             Content = typeof(GroceryItemDrawer),
             Title = "Add item",
-            Height = "auto",
+            Height = GroceryItemDrawer.DrawerHeight,
             ContentParameters = new Dictionary<string, object>
                 {{ nameof(GroceryItemDrawer.GroceryItem), item }}
         });

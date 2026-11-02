@@ -1,7 +1,7 @@
 @inject IDrawerStateContainer _drawerStateContainer
 
 @* An item's name on the list. Tapping it opens the Edit item drawer, whose red header action deletes the item. *@
-<button type="button" class="grocery-item-name" data-testid="grocery-item-name" aria-label="@($"Edit {GroceryItem.Name}")" @onclick="UpdateItemClicked">@GroceryItem.Name</button>
+<button type="button" class="grocery-item-name" data-testid="grocery-item-name" aria-label="@($"Edit {GroceryItem.Name}")" @onclick="UpdateItemClicked"><span class="grocery-item-name-text">@GroceryItem.Name</span></button>
 
 @code {
     [Parameter]
@@ -14,7 +14,7 @@
         {
             Content = typeof(GroceryItemDrawer),
             Title = "Edit item",
-            Height = "auto",
+            Height = GroceryItemDrawer.DrawerHeight,
             HeaderAction = @<DeleteGroceryItemButton GroceryItem="item" />,
             ContentParameters = new Dictionary<string, object>
                 {{ nameof(GroceryItemDrawer.GroceryItem), item }}

@@ -11,6 +11,9 @@
 </DrawerFooter>
 
 @code {
+    /// <summary>Fits the header, the fields and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
+    public const string DrawerHeight = "calc(248px + env(safe-area-inset-bottom))";
+
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
 

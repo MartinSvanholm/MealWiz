@@ -20,7 +20,7 @@
                  aria-label="Items in the basket" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@ProgressPercent">
                 <div class="grocery-progress-fill" style="width: @(ProgressPercent)%"></div>
             </div>
-            <span class="grocery-progress-count" data-testid="grocery-progress-count"><span class="grocery-progress-picked">@Picked.Count</span> of @Items.Count items</span>
+            <span class="grocery-progress-count" data-testid="grocery-progress-count"><span class="grocery-progress-picked">@Picked.Count</span> of @Items.Count @ItemsWord</span>
         </div>
 
         <AddGroceryItemField />
@@ -90,11 +90,13 @@
     private List<GroceryItem> ToBuy => Items.Where(i => !i.IsPicked).ToList();
     private List<GroceryItem> Picked => Items.Where(i => i.IsPicked).ToList();
 
+    private string ItemsWord => Items.Count == 1 ? "item" : "items";
+
     private int ProgressPercent => Items.Count == 0 ? 0 : (int)Math.Round(100.0 * Picked.Count / Items.Count);
 
     // The week the "From meal plan" drawer takes its ingredients from.
     private string HeaderLabel =>
-        $"{Items.Count} {(Items.Count == 1 ? "item" : "items")} · Week {System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)}";
+        $"{Items.Count} {ItemsWord} · Week {System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)}";
 
     protected override async Task OnInitializedAsync()
     {

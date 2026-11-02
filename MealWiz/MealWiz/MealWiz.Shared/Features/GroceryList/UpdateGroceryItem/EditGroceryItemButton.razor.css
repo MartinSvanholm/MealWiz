@@ -1,3 +1,4 @@
+/* A flex button with an ellipsis span: browsers centre a button's own text, which clips long names on the left. */
 .grocery-item-name {
     flex: 1 1 auto;
     min-width: 0;
@@ -5,13 +6,20 @@
     padding: 0;
     border: none;
     background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
     color: var(--mw-text);
     font-family: var(--mw-font-body);
     font-size: 15px;
     font-weight: 500;
+    cursor: pointer;
+}
+
+.grocery-item-name-text {
+    min-width: 0;
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    cursor: pointer;
 }
