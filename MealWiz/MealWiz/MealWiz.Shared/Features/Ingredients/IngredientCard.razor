@@ -1,38 +1,43 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
-@inject IMealsStateContainer _mealsStateContainer
-@inject IMediator _mediator
-@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
 
-<BaseCard data-testid="ingredient-card" Dense CardColor="Color.Tertiary" OnClick="EditIngredient">
-    <HeaderContent>
-        <MudText  Typo="Typo.h6">@Ingredient.Name</MudText>
+@* One ingredient row on the edit meal form: drag handle (not wired yet, MEA-68), name, amount chip and trash.
+   Tapping the row or the chip opens the ingredient drawer. *@
+<div class="mw-ingredient-row" data-testid="ingredient-card" @onclick="EditIngredient">
+    <span class="mw-ingredient-handle" data-testid="ingredient-drag-handle" title="Drag to reorder (coming soon)" @onclick:stopPropagation="true">
+        <svg width="14" height="20" viewBox="0 0 14 20" fill="currentColor" aria-hidden="true">
+            <circle cx="4" cy="4" r="1.6" /><circle cx="10" cy="4" r="1.6" />
+            <circle cx="4" cy="10" r="1.6" /><circle cx="10" cy="10" r="1.6" />
+            <circle cx="4" cy="16" r="1.6" /><circle cx="10" cy="16" r="1.6" />
+        </svg>
+    </span>
+    <span class="mw-ingredient-name">@Ingredient.Name</span>
+    <button type="button" class="mw-ingredient-amount" data-testid="ingredient-amount-chip" data-empty="@(HasAmount ? "false" : "true")"
+            @onclick="EditIngredient" @onclick:stopPropagation="true">
+        @(HasAmount ? Ingredient.Amount : "+ amount")
+    </button>
+    <span class="mw-ingredient-delete" @onclick:stopPropagation="true">
         <DeleteIngredientButton Ingredient="Ingredient" />
-    </HeaderContent>
-    <Content>
-        <div class="d-flex mt-2">
-            <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.Scale" />
-            <MudText Class="mx-2">@Ingredient.Amount</MudText>
-        </div>
-    </Content>
-</BaseCard>
+    </span>
+</div>
 
 @code {
     [Parameter]
     public Ingredient Ingredient { get; set; }
 
+    private bool HasAmount => !string.IsNullOrWhiteSpace(Ingredient.Amount);
+
     public void EditIngredient()
     {
-        DrawerStateParameters drawerStateParameters = new DrawerStateParameters
+        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(IngredientDrawer),
+            Title = "Edit ingredient",
+            Height = "45%",
+            HeaderAction = @<DeleteIngredientButton Ingredient="Ingredient" TestId="drawer-delete-ingredient" />,
+            ContentParameters = new Dictionary<string, object>
             {
-                Content = typeof(IngredientDrawer),
-                Title = "Edit Ingredient",
-                Height = "45%",
-                ContentParameters = new Dictionary<string, object>
-                {
-                    { nameof(IngredientDrawer.Ingredient), Ingredient }
-                }
-            };
-
-        _drawerStateContainer.OpenDrawer(drawerStateParameters);
+                { nameof(IngredientDrawer.Ingredient), Ingredient }
+            }
+        });
     }
 }

@@ -23,7 +23,7 @@ public class DeleteMealButtonTests : ComponentTestBase
     }
 
     [Fact]
-    public void Confirming_deletes_the_meal_and_reloads_the_list()
+    public void Confirming_deletes_the_meal_and_returns_to_the_meals_page()
     {
         SetupSend<DeleteMeal.Command, Result>(Result.Ok());
         RenderDrawers();
@@ -34,7 +34,7 @@ public class DeleteMealButtonTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsConfirmDrawerOpen));
         Assert.Equal(5, Assert.Single(Sent<DeleteMeal.Command>()).MealId);
-        Assert.Single(Sent<GetAllMeals.Query>());
+        Assert.Equal("meals", CurrentPath);
         Assert.Contains("Meal deleted", SnackbarMessages);
     }
 

@@ -1,6 +1,7 @@
 using FluentResults;
 using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
 using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Features.Ingredients.SaveIngredient;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.State;
@@ -111,6 +112,47 @@ public class MealsStateContainerTests
         Assert.Same(existing, Assert.Single(_container.MealToEdit.Ingredients));
         Assert.Equal(0, _notifications);
         VerifyToast("Load failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task SaveIngredientForMealToEdit_NewMeal_KeepsItPendingWithoutARequest()
+    {
+        var eggs = new Ingredient { Name = "Eggs" };
+        _container.MealToEdit = new Meal { Id = 0 };
+
+        var result = await _container.SaveIngredientForMealToEdit(eggs);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(eggs, _container.MealToEdit.Ingredients);
+        _mediator.Verify(m => m.Send(It.IsAny<SaveIngredient.Command>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveIngredientForMealToEdit_SavedMeal_SavesThenReloads()
+    {
+        var eggs = new Ingredient { Name = "Eggs" };
+        List<Ingredient> reloaded = [new Ingredient { Id = 5, Name = "Eggs" }];
+        _container.MealToEdit = new Meal { Id = 42 };
+        _mediator.Setup(m => m.Send(It.IsAny<SaveIngredient.Command>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok());
+        _mediator.Setup(m => m.Send(It.IsAny<GetIngredientsByMealId.Query>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(reloaded));
+
+        var result = await _container.SaveIngredientForMealToEdit(eggs);
+
+        Assert.True(result.IsSuccess);
+        _mediator.Verify(m => m.Send(It.Is<SaveIngredient.Command>(c => c.Ingredient == eggs && c.MealId == 42), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Same(reloaded, _container.MealToEdit.Ingredients);
+    }
+
+    [Fact]
+    public async Task SaveIngredientForMealToEdit_FailedSave_ReturnsTheErrorWithoutReloading()
+    {
+        _container.MealToEdit = new Meal { Id = 42 };
+        _mediator.Setup(m => m.Send(It.IsAny<SaveIngredient.Command>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Fail("nope"));
+
+        var result = await _container.SaveIngredientForMealToEdit(new Ingredient { Name = "Eggs" });
+
+        Assert.True(result.IsFailed);
+        _mediator.Verify(m => m.Send(It.IsAny<GetIngredientsByMealId.Query>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

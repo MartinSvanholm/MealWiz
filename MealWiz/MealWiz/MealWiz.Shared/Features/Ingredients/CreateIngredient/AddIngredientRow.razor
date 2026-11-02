@@ -1,0 +1,50 @@
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+
+@* The add-ingredient row above the ingredient list: name, amount and an orange add button. Enter moves from the name
+   to the amount and adds from the amount. New ingredients go on the grocery list; the drawer changes that. *@
+<div class="mw-add-ingredient">
+    <div class="mw-add-ingredient-name">
+        <MudTextField T="string" @ref="_nameField" data-testid="add-ingredient-name" Placeholder="Ingredient" aria-label="Ingredient"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_name"
+                      OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    </div>
+    <div class="mw-add-ingredient-amount">
+        <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="Amount" aria-label="Amount"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount"
+                      OnKeyDown="EnterKey.Then(AddAsync)" />
+    </div>
+    <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="Add ingredient"
+            disabled="@_isAdding" @onclick="AddAsync">
+        <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" />
+    </button>
+</div>
+
+@code {
+    private string _name = string.Empty;
+    private string _amount = string.Empty;
+    private bool _isAdding;
+    private MudTextField<string> _nameField = default!;
+    private MudTextField<string> _amountField = default!;
+
+    private async Task AddAsync()
+    {
+        if (_isAdding || string.IsNullOrWhiteSpace(_name)) return;
+
+        _isAdding = true;
+        try
+        {
+            var ingredient = new Ingredient { Name = _name.Trim(), Amount = _amount?.Trim() ?? string.Empty, ShowOnGroceryList = true };
+            var result = await _mealsStateContainer.SaveIngredientForMealToEdit(ingredient);
+            if (result.Handle(_snackbar).IsFailed) return;
+
+            _name = string.Empty;
+            _amount = string.Empty;
+            await _nameField.FocusAsync();
+        }
+        finally
+        {
+            _isAdding = false;
+        }
+    }
+}
