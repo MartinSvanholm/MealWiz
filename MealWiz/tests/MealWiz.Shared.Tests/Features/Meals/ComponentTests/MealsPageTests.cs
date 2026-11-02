@@ -95,6 +95,17 @@ public class MealsPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Search_without_matches_says_so()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+
+        cut.Find(InputOf("meal-list-search")).Input("pizza");
+
+        Assert.Contains("pizza", cut.Find(TestId("meal-list-no-match")).TextContent);
+        Assert.Empty(cut.FindAll(TestId("meal-list-item")));
+    }
+
+    [Fact]
     public void Filter_chips_are_shown_with_All_selected()
     {
         var cut = RenderWithPopovers<MealsPage>();

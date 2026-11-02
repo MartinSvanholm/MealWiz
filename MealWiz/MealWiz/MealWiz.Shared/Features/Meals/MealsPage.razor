@@ -35,6 +35,10 @@
         {
             <p class="mw-meals-empty" data-testid="meal-list-empty">No meals yet. Create one with New, or import one from a recipe link.</p>
         }
+        else if (!FilteredMeals.Any())
+        {
+            <p class="mw-meals-empty" data-testid="meal-list-no-match">No meals match "@_search".</p>
+        }
         else
         {
             <MealGrid Meals="FilteredMeals" PlannedDates="_plannedDates" OnMealClick="EditMeal" />

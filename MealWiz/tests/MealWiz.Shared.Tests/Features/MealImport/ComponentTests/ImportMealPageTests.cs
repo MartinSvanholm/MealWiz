@@ -141,10 +141,12 @@ public class ImportMealPageTests : ComponentTestBase
     {
         MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Failed);
         MealImport.SetupGet(m => m.JobErrorMessage).Returns("We couldn't find a recipe on that page.");
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel { SourceUrl = Url, Status = MealImportStatus.Failed });
 
         var cut = Render<ImportMealPage>();
 
         Assert.Contains("We couldn't find a recipe on that page.", cut.Find(TestId("import-job-error")).TextContent);
+        Assert.Contains(Url, cut.Find(TestId("import-job-error")).TextContent);
         Assert.Equal("Try again", cut.Find(TestId("import-submit")).TextContent.Trim());
     }
 

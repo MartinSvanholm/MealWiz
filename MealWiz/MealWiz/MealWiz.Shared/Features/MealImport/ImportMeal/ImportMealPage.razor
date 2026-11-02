@@ -42,6 +42,10 @@
                     <span class="mw-import-alert-text">
                         <span class="mw-import-alert-title">The import failed</span>
                         <span class="mw-import-alert-reason">@_mealImportStateContainer.JobErrorMessage</span>
+                        @if (!string.IsNullOrEmpty(_mealImportStateContainer.CurrentImport?.SourceUrl))
+                        {
+                            <span class="mw-import-muted mw-import-url">@_mealImportStateContainer.CurrentImport.SourceUrl</span>
+                        }
                     </span>
                 </section>
             }
