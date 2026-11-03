@@ -53,6 +53,10 @@ public class GroceryListStateContainer(
         var result = await mediator.Send(new UpdateGroceryItem.UpdateGroceryItem.Command(groceryItem));
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
+        // The edit drawer saves a copy of the listed item, so swap the saved copy in (MEA-76)
+        var index = groceryList.Items.FindIndex(item => item.Id == groceryItem.Id);
+        if (index >= 0) groceryList.Items[index] = groceryItem;
+
         NotifyStateChanged();
     }
 

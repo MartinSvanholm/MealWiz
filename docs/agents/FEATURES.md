@@ -85,7 +85,8 @@ saved and has an id.
     when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
     (`drawer-delete-ingredient`).
   - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
-    list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens.
+    list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a
+    copy; `SaveIngredientButton` applies it to the ingredient on Save (and undoes that if the save fails).
   - `Features/Ingredients/CreateIngredient/AddIngredientRow.razor`: the add row (`add-ingredient-name`,
     `add-ingredient-amount`, `create-ingredient-button`). The button, or Enter in the amount, opens the drawer filled
     with what was typed (empty if nothing was) and clears the row; it saves nothing itself. Enter in the name moves to

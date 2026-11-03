@@ -38,6 +38,9 @@ public class GroceryItem
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
+    /// <summary>A copy to edit in the drawer, so the listed item changes only on Save (MEA-76).</summary>
+    public GroceryItem Clone() => (GroceryItem)MemberwiseClone();
+
     public GroceryItemDb MapToDb()
     {
         return new ()
