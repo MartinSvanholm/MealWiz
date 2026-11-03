@@ -91,20 +91,10 @@
     cursor: pointer;
 }
 
-.mw-hero-button:disabled {
-    cursor: default;
-}
-
 .mw-hero-button-dark {
     border: none;
     background-color: var(--mw-dark-button-bg);
     color: var(--mw-dark-button-text);
-}
-
-.mw-hero-button-outline {
-    border: 2px solid var(--mw-text-on-color);
-    background-color: transparent;
-    color: var(--mw-text-on-color);
 }
 
 /* Sections below the card */

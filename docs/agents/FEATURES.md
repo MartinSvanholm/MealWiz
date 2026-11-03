@@ -149,7 +149,7 @@ stored as `yyyy-MM-dd` strings.
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
-    card. Shown but not wired: `mark-eaten-out-button` (MEA-63), `add-all-to-list` (MEA-74).
+    card. Shown but not wired: `add-all-to-list` (MEA-74).
 - **Handlers:**
 
   | Handler | Request → result | Does |
