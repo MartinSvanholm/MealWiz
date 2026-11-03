@@ -20,6 +20,12 @@ public class DrawerStateParameters
 
     }
 
+    /// <summary>
+    /// The height of every drawer that holds input fields: the full screen minus a 64px strip at the top, so the page
+    /// behind still shows it's a sheet. The fields sit at the top and the DrawerFooter button at the bottom.
+    /// </summary>
+    public const string FormHeight = "calc(100% - 64px)";
+
     public Type Content { get; set; }
     public Dictionary<string, object> ContentParameters { get; set; }
     /// <summary>Replaces the whole header row (close button and title). Prefer <see cref="Title"/> and <see cref="HeaderAction"/>.</summary>

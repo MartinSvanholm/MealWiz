@@ -14,7 +14,7 @@
         {
             Content = typeof(GroceryItemDrawer),
             Title = "Edit item",
-            Height = GroceryItemDrawer.DrawerHeight,
+            Height = DrawerStateParameters.FormHeight,
             HeaderAction = @<DeleteGroceryItemButton GroceryItem="item" />,
             ContentParameters = new Dictionary<string, object>
                 {{ nameof(GroceryItemDrawer.GroceryItem), item }}
