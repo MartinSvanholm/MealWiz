@@ -17,7 +17,7 @@
     <div class="mw-meals-content">
         <MudTextField T="string" data-testid="meal-list-search"
                       @bind-Value="_search"
-                      Placeholder="Search meals"
+                      Placeholder="Search meals or ingredients"
                       Variant="Variant.Outlined"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
@@ -74,8 +74,14 @@
                 MealFilter.NoRecipe => string.IsNullOrWhiteSpace(m.Recipe),
                 _ => true
             })
-            .Where(m => string.IsNullOrWhiteSpace(_search)
-                        || m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
+            .Where(MatchesSearch);
+
+    private bool MatchesSearch(Meal meal) =>
+        string.IsNullOrWhiteSpace(_search)
+        || ContainsSearch(meal.Name)
+        || meal.Ingredients.Any(ingredient => ContainsSearch(ingredient.Name));
+
+    private bool ContainsSearch(string? text) => text?.Contains(_search, StringComparison.InvariantCultureIgnoreCase) == true;
 
     private string NoMatchMessage =>
         !string.IsNullOrWhiteSpace(_search) ? $"No meals match \"{_search}\"."

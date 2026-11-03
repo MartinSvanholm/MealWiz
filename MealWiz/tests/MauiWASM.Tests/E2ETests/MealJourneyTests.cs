@@ -40,6 +40,14 @@ public class MealJourneyTests : E2ETestBase
         await Page.GetByTestId("meal-filter-all").ClickAsync();
         await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
 
+        // Search finds the meal by an ingredient as well as by its name
+        await FillAsync(SearchInput(), "minced");
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+        await FillAsync(SearchInput(), "E2E no such meal");
+        await Expect(Page.GetByTestId("meal-list-no-match")).ToContainTextAsync("E2E no such meal");
+        await FillAsync(SearchInput(), "");
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+
         // Edit: rename the meal and change an ingredient's amount
         await Row("meal-list-item", name).ClickAsync();
         await Expect(Page).ToHaveURLAsync(UrlFor("meals/edit"));
@@ -127,6 +135,9 @@ public class MealJourneyTests : E2ETestBase
     }
 
     // MudTextFieldExtended may put the test id on its wrapper rather than the textarea.
+    private ILocator SearchInput() =>
+        Page.Locator("input[data-testid=meal-list-search], [data-testid=meal-list-search] input").First;
+
     private ILocator RecipeInput() =>
         Page.Locator("textarea[data-testid=meal-recipe-input], [data-testid=meal-recipe-input] textarea").First;
 }
