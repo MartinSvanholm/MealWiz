@@ -282,17 +282,31 @@ stays pending past 3 minutes. One job runs at a time.
 
 ## Authentication
 
-Email and password sign-in and self sign-up through Supabase Auth. After login, sign-up or logout the handler asks
-the `AuthenticationStateProvider` to re-read the session. Unauthenticated users hitting an `[Authorize]` page are
-sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
+Email and password sign-in, self sign-up and password reset by email through Supabase Auth. After login, sign-up,
+password reset or logout the handler asks the `AuthenticationStateProvider` to re-read the session. Unauthenticated
+users hitting an `[Authorize]` page are sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted
+per host (see [Hosts](#hosts)).
 
 - **Folder:** `Features/Authentication/`
-- **Pages:** the only pages without `[Authorize]`. Neither has the bottom nav: `Layout/MainLayout.razor` shows it to
+- **Pages:** the only pages without `[Authorize]`. None has the bottom nav: `Layout/MainLayout.razor` shows it to
   signed-in users only.
   - `Features/Authentication/Login/LoginPage.razor` at `/login`: email and password fields (`login-email`,
     `login-password`) with labels above them, the full-width "Log in" button (`login-submit`) and "No account yet?
-    Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) is shown
-    but not wired yet (MEA-69).
+    Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) links to
+    `/forgot-password`.
+  - `Features/Authentication/ForgotPassword/ForgotPasswordPage.razor` at `/forgot-password`: email (`forgot-email`)
+    and "Send reset link" (`forgot-submit`), which asks Supabase to email a reset link that lands on the app's
+    `/reset-password` (`NavigationManager` base URI). Then a check-your-email note (`forgot-check-email`), worded so
+    it doesn't say whether the account exists (Supabase answers the same either way). `forgot-login` goes back.
+  - `Features/Authentication/ResetPassword/ResetPasswordPage.razor` at `/reset-password`, where the email's link
+    lands with the recovery session in the URL fragment (implicit flow, so any browser works). It keeps the URL in
+    memory and replaces the address bar's with one without the tokens. New password and repeat (`reset-password`,
+    `reset-password-repeat`), "Set password" (`reset-submit`) sets it, signs the user in and goes to the meal plan.
+    An expired or used link, or none, shows `reset-expired` and "Send a new link" (`reset-request-again`).
+  - **Web only.** The redirect has to be on Supabase's allow list: locally `additional_redirect_urls` in
+    `supabase/config.toml` (the dev run on `localhost:5053` and the test app host on `127.0.0.1`); in production the
+    dashboard's Redirect URLs. The MAUI app's base URI (`https://0.0.0.0/`) isn't reachable from an email, so a reset
+    asked for in the MAUI app lands on the Site URL instead.
   - `Features/Authentication/SignUp/SignUpPage.razor` at `/signup`: email, password and repeat password
     (`signup-email`, `signup-password`, `signup-password-repeat`), "Create account" (`signup-submit`) and "Already
     have an account? Log in" (`signup-login`). Passwords that don't match are caught on the page. With a session
@@ -310,6 +324,8 @@ sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per
   | Login | `Command(string Email, string Password)` → `Result<Session?>` | `SignInWithPassword`, then refresh auth state |
   | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
   | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
+  | RequestPasswordReset | `Command(string Email, string RedirectTo)` → `Result` | `ResetPasswordForEmail` with the redirect (implicit flow) |
+  | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`ResetLink.Read`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password, then refresh auth state |
 
 - **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.
 - **Tests:**

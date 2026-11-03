@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MauiWASM.Tests.TestInfrastructure.E2E;
+using Microsoft.Playwright;
 using Xunit;
 
 namespace MauiWASM.Tests.E2ETests;
@@ -57,6 +58,53 @@ public class AuthJourneyTests : E2ETestBase
         await Page.ReloadAsync();
         await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
         await Expect(Page).ToHaveURLAsync(UrlFor(""));
+    }
+
+    [Fact]
+    public async Task SignedOutUser_ResetsAForgottenPasswordByEmail_AndLogsInWithTheNewOne()
+    {
+        var resetPage = new Uri(Env.App.BaseUrl, "reset-password").ToString();
+        var newPassword = Guid.NewGuid().ToString("N");
+        // Stand in for GoTrue's send, so the test sends no email and hits no email rate limit. The link it would have
+        // emailed comes from the admin API below.
+        string? sentRequest = null;
+        await Page.RouteAsync("**/auth/v1/recover**", async route =>
+        {
+            var headers = new Dictionary<string, string>
+            {
+                ["Access-Control-Allow-Origin"] = "*",
+                ["Access-Control-Allow-Headers"] = "*",
+                ["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+            };
+            if (route.Request.Method == "POST")
+                sentRequest = Uri.UnescapeDataString(route.Request.Url) + route.Request.PostData;
+            await route.FulfillAsync(new RouteFulfillOptions { Status = 200, Headers = headers, ContentType = "application/json", Body = "{}" });
+        });
+        await GoToAsync("login");
+
+        await Page.GetByTestId("login-forgot-password").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("forgot-password"));
+        await FillAsync(Page.GetByTestId("forgot-email"), User.Email);
+        await Page.GetByTestId("forgot-submit").ClickAsync();
+        await Expect(Page.GetByTestId("forgot-check-email")).ToContainTextAsync(User.Email);
+        Assert.Contains(resetPage, sentRequest);
+
+        await Page.GotoAsync(await Supabase.GenerateRecoveryLinkAsync(User, resetPage));
+        await Expect(Page.GetByTestId("reset-password")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("reset-password"));
+        await FillAsync(Page.GetByTestId("reset-password"), newPassword);
+        await FillAsync(Page.GetByTestId("reset-password-repeat"), newPassword);
+        await Page.GetByTestId("reset-submit").ClickAsync();
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor(""));
+
+        await Page.GetByTestId("account-button").ClickAsync();
+        await Page.GetByTestId("logout-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await FillAsync(Page.GetByTestId("login-email"), User.Email);
+        await FillAsync(Page.GetByTestId("login-password"), newPassword);
+        await Page.GetByTestId("login-submit").ClickAsync();
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
     }
 
     /// <summary>The new user's id is only known to the app, from the session it stored in localStorage.</summary>

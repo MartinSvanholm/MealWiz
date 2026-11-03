@@ -98,6 +98,20 @@ public sealed class E2ESupabase
         return new E2EUser(created.Id, email, password);
     }
 
+    /// <summary>
+    /// The link a password reset email would hold, made by the admin API without sending an email. Opening it in the
+    /// browser goes through GoTrue, which redirects to <paramref name="redirectTo"/> with the recovery session.
+    /// </summary>
+    public async Task<string> GenerateRecoveryLinkAsync(E2EUser user, string redirectTo)
+    {
+        using var response = await _http.PostAsJsonAsync("auth/v1/admin/generate_link", new GenerateLinkRequest("recovery", user.Email, redirectTo));
+        await EnsureSuccessAsync(response, $"Generating a reset link for {user.Email}");
+
+        var link = await response.Content.ReadFromJsonAsync<GeneratedLink>()
+            ?? throw new InvalidOperationException($"Generating a reset link for {user.Email} returned no link.");
+        return link.ActionLink;
+    }
+
     /// <summary>Deletes the user. Every row it owns goes with it, since the created_by foreign keys cascade.</summary>
     public async Task DeleteUserAsync(E2EUser user)
     {
@@ -240,6 +254,13 @@ public sealed class E2ESupabase
         [property: JsonPropertyName("email")] string Email,
         [property: JsonPropertyName("password")] string Password,
         [property: JsonPropertyName("email_confirm")] bool EmailConfirm);
+
+    private sealed record GenerateLinkRequest(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("redirect_to")] string RedirectTo);
+
+    private sealed record GeneratedLink([property: JsonPropertyName("action_link")] string ActionLink);
 
     private sealed record IdRow<T>([property: JsonPropertyName("id")] T Id);
 

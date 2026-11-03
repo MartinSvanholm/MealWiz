@@ -114,7 +114,8 @@ TestInfrastructure/
   - It creates a throwaway user (`shared-tests-<guid>@mealwiz.test`) and signs it in with the **anon key**, so every
     query goes through RLS.
   - It exposes `Client`, `UserId`, `GetOtherUserAsync()` (a second user, for cross-user checks),
-    `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `IsAvailable` and `SkipReason`.
+    `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `FollowPasswordResetLinkAsync()` (where a reset
+    email's link lands, made with the admin API so no email is sent), `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
 - `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder`. Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
@@ -197,7 +198,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
   - `E2ETestBase` gives each test its own user and browser context. Helpers: `GoToAsync`, `LoginAsync`, `FillAsync`,
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
-  - `E2ESupabase` seeds data and resolves imports with the service role.
+  - `E2ESupabase` seeds data and resolves imports with the service role, and makes password reset links
+    (`GenerateRecoveryLinkAsync`, the admin `generate_link`) so no email is sent.
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:
