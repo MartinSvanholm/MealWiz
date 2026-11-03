@@ -1,5 +1,6 @@
-/* Login (canvas: Login, LoginLight). Colours and radii from the --mw-* tokens only (UI-02). */
-.mw-login {
+/* Login and Sign up (canvas: Login, LoginLight). Colours and radii from the --mw-* tokens only (UI-02).
+   The form is the page's ChildContent, so its rules go through ::deep. */
+.mw-auth {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
@@ -16,7 +17,7 @@
     color: var(--mw-text);
 }
 
-.mw-login-rings {
+.mw-auth-rings {
     position: absolute;
     right: -150px;
     top: -120px;
@@ -27,7 +28,7 @@
     pointer-events: none;
 }
 
-.mw-login-brand {
+.mw-auth-brand {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -35,7 +36,7 @@
     gap: 14px;
 }
 
-.mw-login-logo {
+.mw-auth-logo {
     width: 64px;
     height: 64px;
     border-radius: var(--mw-radius-l);
@@ -46,11 +47,11 @@
     justify-content: center;
 }
 
-.mw-login-logo ::deep .mud-icon-root {
+.mw-auth-logo ::deep .mud-icon-root {
     font-size: 32px;
 }
 
-.mw-login-title {
+.mw-auth-title {
     margin: 0;
     font-family: var(--mw-font-heading);
     font-weight: 800;
@@ -59,56 +60,56 @@
     letter-spacing: -0.03em;
 }
 
-.mw-login-tagline {
+.mw-auth-tagline {
     margin: 4px 0 0;
     font-size: 16px;
     color: var(--mw-text-muted);
 }
 
-.mw-login ::deep .mw-login-form {
+.mw-auth ::deep .mw-auth-form {
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-.mw-login-field {
+.mw-auth ::deep .mw-auth-field {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.mw-login-label-row {
+.mw-auth ::deep .mw-auth-label-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.mw-login-label {
+.mw-auth ::deep .mw-auth-label {
     font-size: 13px;
     font-weight: 700;
     color: var(--mw-text-muted);
 }
 
 /* Fields: 50px, surface fill, no floating label (the label sits above). */
-.mw-login-field ::deep .mud-input-control {
+.mw-auth ::deep .mw-auth-field .mud-input-control {
     margin: 0;
 }
 
-.mw-login-field ::deep .mud-input.mud-input-outlined {
+.mw-auth ::deep .mw-auth-field .mud-input.mud-input-outlined {
     background: var(--mw-surface);
     border-radius: var(--mw-radius-s);
 }
 
-.mw-login-field ::deep .mud-input-slot {
+.mw-auth ::deep .mw-auth-field .mud-input-slot {
     height: 50px;
     box-sizing: border-box;
     padding: 0 16px;
     font-size: 15px;
 }
 
-/* Link-styled buttons; inline text links on the canvas, with a 44px tap area. */
-.mw-login-link {
+/* Link-styled buttons and links; inline text links on the canvas, with a 44px tap area. */
+.mw-auth ::deep .mw-auth-link {
     min-height: var(--mw-touch);
     padding: 0;
     border: 0;
@@ -117,17 +118,20 @@
     font: inherit;
     font-size: 13px;
     font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
     cursor: pointer;
 }
 
-.mw-login-link:hover {
+.mw-auth ::deep .mw-auth-link:hover {
     color: var(--mw-orange-text-hover);
 }
 
-.mw-login-signup {
+/* "No account yet? Create one" and its counterpart on Sign up. A flex row, so the 44px-tall link is centred on
+   the text line instead of sitting on its baseline and dropping below the text. */
+.mw-auth ::deep .mw-auth-switch {
     margin: 0;
-    /* A flex row, so the 44px-tall "Create one" button is centred on the text line instead of
-       sitting on its baseline and dropping below "No account yet?". */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -136,11 +140,17 @@
     color: var(--mw-text-muted);
 }
 
-.mw-login-signup .mw-login-link {
+.mw-auth ::deep .mw-auth-switch .mw-auth-link {
     font-size: 14px;
 }
 
-.mw-login ::deep .mw-login-submit {
+.mw-auth ::deep .mw-auth-note {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.mw-auth ::deep .mw-auth-submit {
     margin-top: 10px;
     height: 52px;
     font-size: 16px;
