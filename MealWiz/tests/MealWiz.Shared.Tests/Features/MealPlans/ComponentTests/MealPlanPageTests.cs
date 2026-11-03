@@ -42,6 +42,22 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Swap_meal_shows_the_pick_list_in_place_of_the_card_and_cancel_brings_it_back()
+    {
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(DateTime.Today, TestData.Meal("Tacos", id: 8))));
+        var cut = Render<MealPlanPage>();
+
+        cut.Find(TestId("swap-meal-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal($"Swap the meal for {DateTime.Today.DayOfWeek}", cut.Find(TestId("meal-selection-heading")).TextContent.Trim()));
+        Assert.Empty(cut.FindAll(TestId("meal-display-name")));
+
+        cut.Find(TestId("meal-selection-cancel")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Tacos", cut.Find(TestId("meal-display-name")).TextContent.Trim()));
+    }
+
+    [Fact]
     public void The_header_shows_the_week_number_and_month_and_this_week()
     {
         var cut = Render<MealPlanPage>();

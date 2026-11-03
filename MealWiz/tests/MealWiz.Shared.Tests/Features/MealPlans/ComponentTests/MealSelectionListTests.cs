@@ -4,6 +4,7 @@ using MealWiz.Shared.Features.MealPlans.AddMealToMealPlan;
 using MealWiz.Shared.Features.MealPlans.CreateMealPlan;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.SelectMealForDate;
+using MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
@@ -29,6 +30,13 @@ public class MealSelectionListTests : ComponentTestBase
         Mediator
             .Setup(m => m.Send(It.IsAny<AddMealToMealPlan.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IRequest<Result<Meal>> request, CancellationToken _) => Result.Ok(((AddMealToMealPlan.Command)request).Meal));
+    }
+
+    /// <summary>Plans the meal on the selected date and starts swapping it, as the card's Swap meal button does.</summary>
+    private void StartSwapping(Meal current)
+    {
+        MealPlan.MealPlan = TestData.MealPlanWith(MealPlan.SelectedDate, current);
+        MealPlan.StartSwap();
     }
 
     private List<string> Names(IRenderedComponent<MealSelectionList> cut) =>
@@ -134,6 +142,49 @@ public class MealSelectionListTests : ComponentTestBase
 
         Assert.Contains("No meals match \"zzzz\"", cut.Find(TestId("meal-list-no-match")).TextContent);
         Assert.Empty(cut.FindAll(TestId("meal-list-item")));
+    }
+
+    [Fact]
+    public void Swapping_asks_for_a_replacement_and_leaves_out_the_days_meal()
+    {
+        MealPlan.SelectedDate = new DateTime(2026, 11, 8);
+        StartSwapping(_pasta);
+
+        var cut = Render<MealSelectionList>();
+
+        Assert.Equal("Swap the meal for Sunday", cut.Find(TestId("meal-selection-heading")).TextContent.Trim());
+        Assert.Contains("Pasta", cut.Find(TestId("meal-selection-hint")).TextContent);
+        Assert.Equal(["Eat out", "Leftovers", "Tacos"], Names(cut));
+    }
+
+    [Fact]
+    public void Picking_while_swapping_replaces_the_days_meal_instead_of_adding_one()
+    {
+        var date = DateTime.Today.AddDays(1);
+        MealPlan.SelectedDate = date;
+        StartSwapping(_pasta);
+        SetupSend<SwapMealInMealPlan.Command, Result>(Result.Ok());
+        var cut = Render<MealSelectionList>();
+
+        cut.FindAll(TestId("meal-list-item")).Single(r => r.TextContent.Contains("Leftovers")).QuerySelector(TestId("meal-selection-pick"))!.Click();
+
+        cut.WaitForAssertion(() => Assert.False(MealPlan.IsSwappingMeal));
+        Assert.Equal(new SwapMealInMealPlan.Command(1, date.Date, _pasta.Id, _leftovers.Id), Assert.Single(Sent<SwapMealInMealPlan.Command>()));
+        Assert.Same(_leftovers, MealPlan.GetMealFromSelectedDate());
+        Assert.Empty(Sent<AddMealToMealPlan.Command>());
+    }
+
+    [Fact]
+    public void Cancel_ends_the_swap_and_is_only_shown_while_swapping()
+    {
+        var cut = Render<MealSelectionList>();
+        Assert.Empty(cut.FindAll(TestId("meal-selection-cancel")));
+
+        cut.InvokeAsync(() => StartSwapping(_pasta));
+        cut.Find(TestId("meal-selection-cancel")).Click();
+
+        Assert.False(MealPlan.IsSwappingMeal);
+        Assert.Empty(Sent<SwapMealInMealPlan.Command>());
     }
 
     [Fact]

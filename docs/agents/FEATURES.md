@@ -129,24 +129,27 @@ stored as `yyyy-MM-dd` strings.
   (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (not wired, MEA-75) and
   the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
-  pick list for an empty day.
+  pick list for an empty day or while swapping the day's meal.
 - **Components:**
   - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
     day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
     moves a week. The E2E tests rely on `selected-day` and `has-meal`.
   - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`, with `.razor.css`: UI only. "Pick a meal for
-    <Day>" (`meal-selection-heading`), search (`meal-selection-search`), shuffle (`shuffle-meals-button`, reloads and
-    reorders the list) and one compact list: rows `meal-list-item`, each with `MealTile` (Eat Out and Leftovers first,
-    neutral; the user's meals alternate orange and green), the pick button `meal-selection-pick`, the name
-    `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty: `meal-list-empty`.
+    <Day>" (`meal-selection-heading`, hint `meal-selection-hint`), search (`meal-selection-search`), shuffle
+    (`shuffle-meals-button`, reloads and reorders the list) and one compact list: rows `meal-list-item`, each with
+    `MealTile` (Eat Out and Leftovers first, neutral; the user's meals alternate orange and green), the pick button
+    `meal-selection-pick`, the name `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty:
+    `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
+    left out, a pick replaces it (`SwapMealOnSelectedDate`) and Cancel (`meal-selection-cancel`) returns to the card.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
     corner of the selected day's card (`remove-meal-button`).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
-    Shown but not wired: `swap-meal-button` (MEA-62), `mark-eaten-out-button` (MEA-63), `add-all-to-list` (MEA-74).
+    Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
+    card. Shown but not wired: `mark-eaten-out-button` (MEA-63), `add-all-to-list` (MEA-74).
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -155,9 +158,11 @@ stored as `yyyy-MM-dd` strings.
   | CreateMealPlan | `Command(MealPlan)` → `Result<MealPlan>` | Insert a week's plan (sets `created_by`) |
   | AddMealToMealPlan | `Command(Meal)` → `Result<Meal>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate` |
   | RemoveMealFromMealPlan | `Command(int MealId, int MealPlanId, DateTime MealDate)` → `Result` | Delete the meal's row on that date in that plan |
+  | SwapMealInMealPlan | `Command(int MealPlanId, DateTime MealDate, int CurrentMealId, int NewMealId)` → `Result` | Update that day's row to the new meal in one write; fails ("Meal not found in plan") when no row matches, including another user's |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
-  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`.
+  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
+  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
     `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`.
