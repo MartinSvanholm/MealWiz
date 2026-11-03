@@ -28,7 +28,7 @@
     font: inherit;
     font-size: 13px;
     font-weight: 500;
-    cursor: default;
+    cursor: pointer;
 }
 
 /* The chips stay 36px tall to match the canvas; an invisible 4px band above and below gives a 44px tap area. */
