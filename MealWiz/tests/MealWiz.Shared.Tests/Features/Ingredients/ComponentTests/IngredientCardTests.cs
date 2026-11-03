@@ -118,13 +118,47 @@ public class IngredientCardTests : ComponentTestBase
     [Fact]
     public void Drawer_switch_sets_whether_the_ingredient_goes_on_the_grocery_list()
     {
+        Drawer.OpenDrawer("Edit ingredient", typeof(IngredientDrawer));
         var salt = TestData.Ingredient("Salt");
         var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, salt));
 
         cut.Find(InputOf("ingredient-show-on-grocery-list-switch")).Change(false);
-        Assert.False(salt.ShowOnGroceryList);
+        cut.Find(TestId("save-ingredient-button")).Click();
 
-        cut.Find(InputOf("ingredient-show-on-grocery-list-switch")).Change(true);
-        Assert.True(salt.ShowOnGroceryList);
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.False(salt.ShowOnGroceryList);
+    }
+
+    // MEA-77: the drawer used to edit the listed ingredient itself, so closing it without saving left the change
+    // showing (and, for a new meal, saved it with the meal after all).
+    [Fact]
+    public void Editing_in_the_drawer_leaves_the_ingredient_alone_until_saved()
+    {
+        var salt = TestData.Ingredient("Salt", "1 tsp");
+        Meals.MealToEdit = TestData.Meal("Soup", id: 0, ingredients: [salt]);
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, salt));
+
+        cut.Find(InputOf("ingredient-name-input")).Change("Sea salt");
+        cut.Find(InputOf("ingredient-amount-input")).Input("2 tsp");
+        cut.Find(InputOf("ingredient-show-on-grocery-list-switch")).Change(false);
+
+        Assert.Equal(("Salt", "1 tsp", true), (salt.Name, salt.Amount, salt.ShowOnGroceryList));
+        Assert.Same(salt, Assert.Single(Meals.MealToEdit.Ingredients));
+    }
+
+    [Fact]
+    public void Saving_a_pending_ingredient_updates_it_in_place()
+    {
+        var salt = TestData.Ingredient("Salt", "1 tsp");
+        Meals.MealToEdit = TestData.Meal("Soup", id: 0, ingredients: [salt]);
+        Drawer.OpenDrawer("Edit ingredient", typeof(IngredientDrawer));
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, salt));
+
+        cut.Find(InputOf("ingredient-name-input")).Change("Sea salt");
+        cut.Find(TestId("save-ingredient-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Same(salt, Assert.Single(Meals.MealToEdit.Ingredients));
+        Assert.Equal("Sea salt", salt.Name);
     }
 }

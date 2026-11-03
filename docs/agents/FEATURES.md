@@ -187,7 +187,8 @@ but not wired (MEA-73), and swipe-to-delete is MEA-67.
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
     opens `GroceryItemDrawer` with the typed name filled in.
   - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, "Save item" in a
-    `DrawerFooter`. Focuses the amount when the name is already filled in.
+    `DrawerFooter`. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
+    `UpdateGroceryItem` swaps the saved copy into the list, so closing without saving changes nothing.
   - `Features/GroceryList/Components/SaveGroceryItemButton.razor`
   - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
     drawer with `DeleteGroceryItemButton` as its header action.

@@ -27,6 +27,17 @@ public class Ingredient
         MealId = ingredientDb.MealId;
     }
 
+    /// <summary>A copy to edit in the drawer, so the listed ingredient changes only on Save (MEA-77).</summary>
+    public Ingredient Clone() => (Ingredient)MemberwiseClone();
+
+    /// <summary>Takes over the fields the ingredient drawer edits.</summary>
+    public void CopyEditableFieldsFrom(Ingredient other)
+    {
+        Name = other.Name;
+        Amount = other.Amount;
+        ShowOnGroceryList = other.ShowOnGroceryList;
+    }
+
     public IngredientDb MapToIngredientDb()
     {
         return new IngredientDb
