@@ -300,7 +300,7 @@ sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per
   | Handler | Request → result | Does |
   |---|---|---|
   | Login | `Command(string Email, string Password)` → `Result<Session?>` | `SignInWithPassword`, then refresh auth state |
-  | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp` (null session when email confirmation is on), then refresh auth state |
+  | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
   | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
 
 - **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.

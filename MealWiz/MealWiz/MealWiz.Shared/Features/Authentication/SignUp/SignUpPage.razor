@@ -29,7 +29,7 @@
             <div class="mw-auth-field">
                 <label class="mw-auth-label" for="@PasswordInputId" data-testid="signup-password-label">Password</label>
                 <TextField @ref="PasswordField" data-testid="signup-password" @bind-Value="Password" InputId="@PasswordInputId"
-                           Placeholder="At least 6 characters" Required InputType="InputType.Password"
+                           Placeholder="Choose a password" Required InputType="InputType.Password"
                            OnKeyDown="EnterKey.Then(() => PasswordRepeatField.FocusAsync())" />
             </div>
             <div class="mw-auth-field">

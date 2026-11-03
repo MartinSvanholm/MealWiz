@@ -22,9 +22,20 @@ public static class SignUp
         {
             var result = await Result.Try(() => _supabaseClient.Auth.SignUp(request.Email, request.Password));
 
+            // gotrue-csharp only keeps a sign-up session when the user comes back with ConfirmedAt set, which an
+            // auto-confirmed sign-up doesn't, so adopt the session ourselves (this also persists it).
+            if (result.IsSuccess && result.Value?.AccessToken is { } accessToken && _supabaseClient.Auth.CurrentSession is null)
+            {
+                var refreshToken = result.Value.RefreshToken!;
+                result = await Result.Try(() => AdoptSessionAsync(accessToken, refreshToken));
+            }
+
             await authenticationStateProvider.GetAuthenticationStateAsync();
 
             return result;
         }
+
+        private async Task<Session?> AdoptSessionAsync(string accessToken, string refreshToken) =>
+            await _supabaseClient.Auth.SetSession(accessToken, refreshToken);
     }
 }
