@@ -81,8 +81,8 @@ Traits are set on the class, never on a method, and decide which suite runs a te
 Supabase, so it runs in `web-unit`.
 
 **Smoke criteria:** a journey gets `Smoke` only if it proves the app is basically usable: it boots without browser
-errors, login works, every nav page renders, meal CRUD works, and the grocery list works. Keep the smoke set to a few
-minutes. Everything else is `E2E` only.
+errors, login and sign-up work, every nav page renders, meal CRUD works, and the grocery list works. Keep the smoke
+set to a few minutes. Everything else is `E2E` only.
 
 ## The suites in detail
 
@@ -196,7 +196,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
   - `E2EEnvironment` publishes the app once per run, hosts it with `E2EAppHost` (which serves a Development
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
   - `E2ETestBase` gives each test its own user and browser context. Helpers: `GoToAsync`, `LoginAsync`, `FillAsync`,
-    `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
+    `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
   - `E2ESupabase` seeds data and resolves imports with the service role.
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
