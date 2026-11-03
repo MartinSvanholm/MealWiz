@@ -12,10 +12,14 @@ Run the `implement-issue` skill for Linear issue <ID> "<title>" (<url>), in feat
 It's part of the project "<project>" (<project url>). Running in parallel with you: <sibling IDs, or "none">.
 - Spec: the project description. Research: the project's "Research" document. <Contract: the project's "Contract"
   document; this issue uses <items, e.g. DB-1, API-1>. It's binding.>
+- Sub-issues: <[DB] ID, [BE] ID, [FE] ID with their blockers, or "none (one layer)">. Work them yourself or hand
+  independent ones to subagents, as the skill says; they all land in your one PR.
 - You own: <areas/paths>. Don't edit: <siblings' areas>. In shared files, only: <the specific edit>.
 - <Anything the coordinator learned that the issue doesn't say: prior art to copy, a gotcha. Omit if nothing.>
 
-Verify level: <smoke|full>.
+<Known issues filed during this project: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
+
+Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
 
 You started in plan mode: explore, ask, and present your plan for the user's approval before writing code.
 When you're blocked or have a question, follow the stop rules in the skill: ask the user here, and message the
@@ -26,14 +30,34 @@ session that started you in one line so it knows you're waiting.
 
 ```
 MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
-a .NET 10 Azure Function for meal import. Feature "<project>" is built as one Linear issue per session, in parallel
-worktrees from dev; a coordinator session started you and starts the next issues as PRs merge. This session's piece:
+a .NET 10 Azure Function for meal import. Feature "<project>" is built as one Linear issue (user story) per session,
+in parallel worktrees from dev, each split into [DB]/[BE]/[FE] sub-issues; a coordinator session started you and starts the next issues as PRs merge. This session's piece:
 <one line>. Rules: CLAUDE.md and docs/agents/. PRs go to dev and the user merges them. Work only on <ID>; bugs you
 find go in Linear with the Bug label and no project. Windows: PowerShell 5.1, so write commit messages and PR bodies
 to a file (git commit -F, gh pr create --body-file).
 ```
 
-## Call shape
+## Cloud mode
+
+In cloud mode ([plan-project](../SKILL.md#cloud-mode)) use the same `prompt` with these changes, and pass the
+`background` as `append_system_prompt`:
+
+- Replace the plan-mode paragraph at the end with:
+
+  ```
+  You run in your own Claude Code cloud container, in cloud mode (see the skill). Your branch is <id>-<slug>, made
+  from dev: check `git branch --show-current` first, and if it says dev, run `git checkout -b <id>-<slug>`. Never
+  commit to dev. If `dotnet` or `supabase` is missing, run `bash scripts/cloud-setup.sh` first. You have your own
+  Supabase stack, so verify with `scripts/verify.sh`.
+
+  You started in plan mode: explore, ask, and present your plan for the user's approval before writing code.
+  The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it a
+  one-line report every time you're blocked or unblocked, open your PR, merge, or get stuck, as the skill says.
+  ```
+- In `background`, replace the last sentence ("Windows: PowerShell 5.1, …") with: "Linux cloud container (bash),
+  with its own Docker and Supabase; GitHub through the GitHub MCP tools, no gh CLI."
+
+## Call shape (local mode)
 
 ```
 start_session(

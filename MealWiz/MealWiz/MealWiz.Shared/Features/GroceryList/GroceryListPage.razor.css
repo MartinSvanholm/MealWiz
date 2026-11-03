@@ -1,0 +1,209 @@
+/* Groceries: a dense list. Tokens only (UI-02). The 16px gutter matches ScreenHeader. */
+.grocery-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* The "From meal plan" header button (AddIngredientsToGroceryListButton): a 40px surface button with an icon. */
+.grocery-page ::deep .grocery-plan-button.mud-button-root.mud-button {
+    min-height: var(--mw-touch);
+    padding-inline: 12px;
+    border-radius: var(--mw-radius-s);
+    border: 1px solid var(--mw-border) !important;
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.grocery-top {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px 12px;
+}
+
+.grocery-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.grocery-progress {
+    flex: 1 1 auto;
+    height: 6px;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-chip-bg);
+    overflow: hidden;
+}
+
+.grocery-progress-fill {
+    height: 100%;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-green);
+    transition: width 0.2s ease;
+}
+
+.grocery-progress-count {
+    flex: 0 0 auto;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--mw-text-muted);
+}
+
+.grocery-progress-picked {
+    color: var(--mw-green-text);
+    font-weight: 700;
+}
+
+.grocery-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 16px var(--mw-nav-clearance);
+}
+
+.grocery-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.grocery-section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.grocery-section-heading {
+    margin: 0;
+    font-family: var(--mw-font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mw-text-muted);
+}
+
+/* To buy: one container, thin dividers, 44px rows (SwipeToDeleteGroceryItem lays out each row). */
+.grocery-to-buy {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background-color: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    overflow: hidden;
+}
+
+.grocery-row + .grocery-row {
+    border-top: 1px solid var(--mw-chip-bg);
+}
+
+.grocery-check {
+    flex: 0 0 auto;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.grocery-check-box {
+    width: 20px;
+    height: 20px;
+    box-sizing: border-box;
+    border-radius: calc(var(--mw-radius-s) / 2);
+    border: 2px solid var(--mw-border-dashed);
+}
+
+.grocery-check:hover .grocery-check-box {
+    border-color: var(--mw-green);
+}
+
+.grocery-amount {
+    flex: 0 0 auto;
+    max-width: 40%;
+    padding: 0 14px 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-green-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* In the basket: small crossed-out pills that wrap. "Clear" is styled by ClearBasketButton.razor.css. */
+.grocery-basket {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.grocery-basket > li {
+    /* Let a long name's pill shrink to the row and ellipsise instead of running off-screen. */
+    min-width: 0;
+    max-width: 100%;
+}
+
+.grocery-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    height: 28px;
+    padding: 0 10px 0 7px;
+    border: none;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text-muted);
+    font-family: var(--mw-font-body);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.grocery-pill-name {
+    min-width: 0;
+    text-decoration: line-through;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grocery-pill ::deep .grocery-pill-check {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--mw-green-text);
+}
+
+.grocery-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 16px;
+    border: 1.5px dashed var(--mw-border-dashed);
+    border-radius: var(--mw-radius-l);
+    color: var(--mw-text-muted);
+    font-size: 14px;
+    text-align: center;
+}
+
+.grocery-empty-title {
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 17px;
+    font-weight: 600;
+}

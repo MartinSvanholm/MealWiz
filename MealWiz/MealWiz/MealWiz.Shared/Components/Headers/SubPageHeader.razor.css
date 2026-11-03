@@ -1,0 +1,13 @@
+.mw-back-button {
+    flex: 0 0 auto;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-s);
+    background: var(--mw-surface);
+    color: var(--mw-text);
+    cursor: pointer;
+}

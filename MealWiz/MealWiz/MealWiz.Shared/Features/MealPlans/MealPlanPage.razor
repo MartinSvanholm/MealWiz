@@ -1,76 +1,131 @@
 @page "/"
+@using System.Globalization
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize]
 @implements IDisposable
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
 
-<MudStack Spacing="0" Style="height: calc(100vh - 56px)">
-    <MudPaper Class="rounded-t-0">
-        <MudGrid Spacing="0" Class="my-1">
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton data-testid="account-button" OnClick="@(() => _navigationManager.NavigateTo("/account"))" Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
-                @if (_mealPlanStateContainer.IsCurrentWeek())
+<div class="mw-page mw-meal-plan">
+    <ScreenHeader Label="@WeekLabel">
+        <TitleContent>
+            @if (_mealPlanStateContainer.IsCurrentWeek())
+            {
+                <span data-testid="meal-plan-week-title">@WeekTitle</span>
+            }
+            else
+            {
+                <button type="button" class="mw-week-back" data-testid="meal-plan-current-week"
+                        aria-label="@($"{WeekTitle}. Back to this week")"
+                        disabled="@_mealPlanStateContainer.IsLoadingWeek"
+                        @onclick="GoToCurrentWeek"><span data-testid="meal-plan-week-title">@WeekTitle</span></button>
+            }
+        </TitleContent>
+        <Actions>
+            <button type="button" class="mw-header-button" data-testid="week-prev" aria-label="Previous week"
+                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="PreviousWeek">
+                <MudIcon Icon="@Icons.Material.Rounded.ChevronLeft" />
+            </button>
+            <button type="button" class="mw-header-button" data-testid="week-next" aria-label="Next week"
+                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NextWeek">
+                <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
+            </button>
+            @* Unwired: planning the whole week has no behaviour yet (MEA-75). *@
+            <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="Plan the week"
+                    disabled aria-disabled="true">
+                <MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" />
+            </button>
+            <button type="button" class="mw-avatar" data-testid="account-button" aria-label="Account"
+                    @onclick="@(() => _navigationManager.NavigateTo("/account"))">
+                @if (UserInitial is { } initial)
                 {
-                    <MudText data-testid="meal-plan-week-title" Typo="Typo.h6">Week @GetWeekNumber()</MudText>
+                    @initial
                 }
                 else
                 {
-                    <MudButton data-testid="meal-plan-current-week" Variant="Variant.Text"
-                               Color="Color.Inherit"
-                               EndIcon="@Icons.Material.Filled.Refresh"
-                               Disabled="_mealPlanStateContainer.IsLoadingWeek"
-                               OnClick="GoToCurrentWeek">
-                        <MudText data-testid="meal-plan-week-title" Typo="Typo.h6">Week @GetWeekNumber()</MudText>
-                    </MudButton>
+                    <MudIcon Icon="@Icons.Material.Rounded.Person" />
                 }
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
-                @if (_mealPlanStateContainer.SelectedDateHasMeal)
-                {
-                    <RemoveMealButton />
-                }
-                <MudIconButton Icon="@Icons.Material.Filled.EditCalendar" Color="Color.Primary" />
-            </MudItem>
-        </MudGrid>
+            </button>
+        </Actions>
+    </ScreenHeader>
 
-        <MudDivider Class="mb-4" DividerType="DividerType.Middle" />
-        <MudStack Class="mb-3">
-            <MealPlanWeekOverview />
-        </MudStack>
-    </MudPaper>
+    <div class="mw-meal-plan-strip">
+        <MealPlanWeekOverview />
+    </div>
 
-    <div style="height: calc(100vh - 56px - 48px)" class="overflow-y-auto">
+    <div class="mw-meal-plan-body">
         @if (_mealPlanStateContainer.IsLoadingWeek)
         {
-            <MudProgressLinear Indeterminate Color="@Color.Primary" />
+            <MudProgressLinear Indeterminate Color="@Color.Primary" Rounded />
         }
-        else if (_mealPlanStateContainer.SelectedDateHasMeal)
+        else if (_mealPlanStateContainer.SelectedDateHasMeal && !_mealPlanStateContainer.IsSwappingMeal)
         {
-            <MealDisplayComponent />
+            <MealDisplayComponent>
+                <HeroAction>
+                    <RemoveMealButton />
+                </HeroAction>
+            </MealDisplayComponent>
         }
         else
         {
             <MealSelectionList />
         }
     </div>
-
-</MudStack>
+</div>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private string? UserInitial { get; set; }
+
     protected override void OnInitialized()
     {
         _mealPlanStateContainer.CurrentSnackbar = _snackbar;
         _mealPlanStateContainer.OnStateChanged += StateHasChanged;
     }
 
-    private int GetWeekNumber() =>
-        System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart);
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AuthenticationState is null) return;
+
+        var user = (await AuthenticationState).User;
+        var name = user.FindFirst("email")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
+        UserInitial = name?.Trim() is { Length: > 0 } n ? n[..1].ToUpperInvariant() : null;
+    }
+
+    private DateTime WeekStart => _mealPlanStateContainer.SelectedWeekStart;
+
+    private string WeekLabel =>
+        $"Week {ISOWeek.GetWeekOfYear(WeekStart)} · {WeekStart.ToString("MMMM", CultureInfo.InvariantCulture)}";
+
+    /// <summary>"This week", "Next week", "Last week", "In 3 weeks" or "3 weeks ago".</summary>
+    private string WeekTitle
+    {
+        get
+        {
+            var weeks = (int)Math.Round((WeekStart - DateTime.Now.StartOfWeek().Date).TotalDays / 7);
+            return weeks switch
+            {
+                0 => "This week",
+                1 => "Next week",
+                -1 => "Last week",
+                > 1 => $"In {weeks} weeks",
+                _ => $"{-weeks} weeks ago",
+            };
+        }
+    }
 
     private Task GoToCurrentWeek() =>
         _mealPlanStateContainer.NavigateToWeek(DateTime.Now);
+
+    private Task PreviousWeek() =>
+        _mealPlanStateContainer.NavigateToWeek(WeekStart.AddDays(-7));
+
+    private Task NextWeek() =>
+        _mealPlanStateContainer.NavigateToWeek(WeekStart.AddDays(7));
 
     public void Dispose()
     {

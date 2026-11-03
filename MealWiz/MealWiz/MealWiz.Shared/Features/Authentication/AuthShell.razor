@@ -1,0 +1,30 @@
+@* The signed-out screens' frame: background rings, logo tile, title and tagline above the page's form.
+   It also styles the form's mw-auth-* classes, so Login and Sign up look the same. *@
+<div class="mw-auth" data-testid="@TestId">
+    <svg class="mw-auth-rings" viewBox="0 0 190 190" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <circle cx="95" cy="95" r="90" /><circle cx="95" cy="95" r="62" /><circle cx="95" cy="95" r="34" />
+    </svg>
+
+    <div class="mw-auth-brand">
+        <span class="mw-auth-logo" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Filled.Restaurant" Color="Color.Inherit" />
+        </span>
+        <div>
+            <h1 class="mw-auth-title" data-testid="@($"{TestIdPrefix}-title")">MealWiz</h1>
+            <p class="mw-auth-tagline" data-testid="@($"{TestIdPrefix}-tagline")">Plan the week. Shop once.</p>
+        </div>
+    </div>
+
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Prefix for the frame's test ids: the page is <c>{prefix}-page</c>, the title <c>{prefix}-title</c>.</summary>
+    [Parameter, EditorRequired]
+    public string TestIdPrefix { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string TestId => $"{TestIdPrefix}-page";
+}

@@ -293,6 +293,20 @@ markup.
 - **Check:** new interactive Mud components in `.razor` diffs without `data-testid`, and new selectors in tests that
   aren't test ids.
 
+### UI-02 · MUST · Colours come from theme tokens
+
+Colours, shadows, scrims and corner radii in `.razor`, `.razor.css` and inline `Style` come from the theme: a
+`--mw-*` variable, a `--mud-palette-*` variable, a MudBlazor `Color`, or a `.mw-text-*` class. Raw values (`#FF9F43`,
+`rgb(…)`, `white`) live only in `Theme/MealWizTheme.cs` and the Shared `wwwroot/css/mealwiz.css`. See
+[Theme tokens](#theme-tokens-ui-02) for which token to use where.
+
+- **Why:** every colour has a value per theme. A hex value looks right in one mode and wrong (or unreadable) in the
+  other, and the redesign can only be retuned in one place if nothing else hard-codes it.
+- **Violation:** `color: #6C8FD6` in a page's `.razor.css`. `Style="color: white"` on a header over an orange fill.
+  A new `--my-orange: #FF9F43` in a component stylesheet.
+- **Check:** `#[0-9a-fA-F]{3,8}`, `rgb(`, `rgba(` or a named colour in a `.razor`/`.razor.css` diff outside the two
+  theme files.
+
 ## Docs
 
 ### DOC-01 · MUST · Docs change with the code
@@ -463,6 +477,70 @@ one confirmation only: Confirm awaits it, and closing the confirm drawer (confir
 `CloseDrawer()` at the end of `onConfirm`. `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`
 is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFragment, Type)` and
 `SwitchDrawerContent` exist but nothing uses them.
+
+The drawer shell (sheet, grab handle, close/back button, 22px title) is DrawerBase's job; content only renders its
+fields. Set `HeaderAction` (a `RenderFragment`) on `DrawerStateParameters` for a button on the right of the header,
+such as a red delete. Put the content's primary button inside `<DrawerFooter>` (`Components/Drawers/DrawerFooter.razor`):
+it becomes the full-width 52px orange button at the bottom. The confirm drawer always shows Cancel and a red Delete.
+
+### Theme tokens (UI-02)
+
+The theme has two layers. `Theme/MealWizTheme.cs` sets MudBlazor's palettes (dark and light), typography and the
+default radius. `wwwroot/css/mealwiz.css` in MealWiz.Shared adds the `--mw-*` tokens MudBlazor has no slot for, the
+fonts and the global component styles. Both heads link it after `MudBlazor.min.css`.
+
+**Mode hook.** `Layout/MainLayout.razor` wraps the theme provider, the popover and snackbar providers and the layout
+in `<div class="mw-root" data-theme="dark|light">`, from `MealWizTheme.ModeAttribute(IThemeService.IsDarkMode)`.
+The `--mw-*` tokens switch on that attribute, so the Dark mode switch flips MudBlazor and the tokens together.
+MudBlazor's own system-theme observation is off. Menus, drawer overlays and snackbars render inside the wrapper, so
+they get the tokens too.
+
+**Fill vs text.** The role colours (orange, green, red) are the same **fills** in both themes. As **text or a small
+icon** they need a darker shade in light mode for 4.5:1 contrast. So:
+
+- a filled thing (button, tile, pill, selected day, progress) uses the fill: `Color.Primary` on a filled component,
+  or `--mw-orange` / `--mw-green` / `--mw-red`, with `--mw-text-on-color` for the text on it;
+- text and small icons use the `-text` token: `--mw-orange-text`, `--mw-green-text`, `--mw-red-text`,
+  `--mw-info-text`, `--mw-warning-text`, or the matching `.mw-text-orange|green|red|info|warning|muted` class.
+
+In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary/Tertiary/Success/Error` text, icons
+(checkbox icons included), text/outlined buttons and input error text to the `-text` shades, so `Color.Primary` on a
+`MudText`, `MudIcon` or text button is fine. Switches and progress keep the fill.
+
+| Token | Use for |
+|---|---|
+| `--mw-bg` (= `--mud-palette-background`) | the page |
+| `--mw-surface` (= `--mud-palette-surface`) | cards, inputs, list containers, drawers |
+| `--mw-surface-raised` | floating menus and other raised panels |
+| `--mw-nav-bg`, `--mw-nav-border`, `--mw-nav-shadow` | the floating bottom nav (the shadow is `none` in dark mode) |
+| `--mw-chip-bg` | chips, icon tiles, list dividers, basket pills, close buttons, skeletons |
+| `--mw-border` | card and input borders |
+| `--mw-border-strong` | borders of raised panels (menus, drawer top edge) |
+| `--mw-border-dashed` | dashed borders: empty states, the empty day tile, drawer grab handle |
+| `--mw-text` (= `--mud-palette-text-primary`) | body text |
+| `--mw-text-muted` (= `--mud-palette-text-secondary`) | labels, secondary text, inactive nav tabs |
+| `--mw-text-placeholder` | input placeholders |
+| `--mw-text-on-color` | text and icons on an orange, green or red fill |
+| `--mw-dark-button-bg`, `--mw-dark-button-text` | dark buttons: Swap meal, Save, day tags on meal tiles (`Color.Dark` too) |
+| `--mw-orange`, `--mw-green`, `--mw-red` | fills (same in both themes) |
+| `--mw-orange-text`, `--mw-orange-text-hover` | orange text, icons and links (links get it globally) |
+| `--mw-green-text` | green text and small icons: quantities, checkmarks |
+| `--mw-green-bullet` | ingredient bullets |
+| `--mw-red-text` | destructive text, trash icons, red outlines |
+| `--mw-info-text`, `--mw-warning-text` | import running (info) and import failed (warning) |
+| `--mw-day-dot`, `--mw-day-dot-selected`, `--mw-day-dot-ring` | calendar day dots; the selected (orange) day's dot is white with a dark ring |
+| `--mw-scrim` | the dimmed screen behind custom overlays (MudBlazor overlays get the same value from the palette's `OverlayDark`) |
+| `--mw-menu-shadow` | floating menus and snackbars |
+| `--mw-error-alert-bg` | the error alert background (global `MudAlert` Severity.Error already uses it) |
+| `--mw-radius-s` 14 · `-m` 16 · `-l` 20 · `-xl` 24 · `-sheet` 28 · `-pill` | corners: inputs and icon buttons · buttons · cards and menus · nav bar · drawer top and hero card · pills |
+| `--mw-touch` | 44px minimum touch target |
+| `--mw-nav-height`, `--mw-nav-gap`, `--mw-nav-space`, `--mw-nav-clearance` | the floating bottom nav's height, its gap to the screen edges, and the space it takes. The nav floats over the page: a page fills the screen (the `.mw-page` class) and its scroll area ends with `padding-bottom: var(--mw-nav-clearance)`, so content scrolls behind the bar and its last item can scroll clear of it; never hardcode the nav height |
+| `--mw-font-heading`, `--mw-font-body` | Bricolage Grotesque (headings, 600/800) and DM Sans (body, 400/500/700); `MudText Typo.h1..h6` and `.mw-heading` already use the heading font |
+
+**Where styles go.** Global rules for MudBlazor components (buttons, inputs, menus, snackbars) and new tokens go in
+`mealwiz.css`. A component's own look goes in its `.razor.css`, using the tokens. Scoped CSS reaches a MudBlazor
+component only with `::deep`, under an element the component renders itself (a wrapping `div`). Popovers, menus and
+snackbars render outside the component, so style them with a global rule or the component's `PopoverClass`.
 
 ### Auth, ownership and RLS (DB-01, SEC-01)
 

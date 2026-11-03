@@ -27,6 +27,41 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Shows_the_brand_and_labels_the_fields_above_them()
+    {
+        var cut = Render<LoginPage>();
+
+        Assert.Equal("MealWiz", cut.Find(TestId("login-title")).TextContent.Trim());
+        Assert.Equal("Plan the week. Shop once.", cut.Find(TestId("login-tagline")).TextContent.Trim());
+        var emailInput = cut.Find(InputOf("login-email"));
+        var passwordInput = cut.Find(InputOf("login-password"));
+        Assert.Equal(emailInput.Id, cut.Find(TestId("login-email-label")).GetAttribute("for"));
+        Assert.Equal(passwordInput.Id, cut.Find(TestId("login-password-label")).GetAttribute("for"));
+    }
+
+    [Fact]
+    public void Create_one_links_to_sign_up()
+    {
+        var cut = Render<LoginPage>();
+
+        Assert.Equal("signup", cut.Find(TestId("login-create-account")).GetAttribute("href"));
+    }
+
+    // Not wired yet: password reset is MEA-69.
+    [Fact]
+    public void Forgot_password_is_shown_but_does_nothing_yet()
+    {
+        var cut = Render<LoginPage>();
+
+        var link = cut.Find(TestId("login-forgot-password"));
+
+        // A plain button: no href to follow, doesn't submit the form, and no click handler.
+        Assert.Equal("BUTTON", link.TagName);
+        Assert.Equal("button", link.GetAttribute("type"));
+        Assert.Throws<MissingEventHandlerException>(() => link.Click());
+    }
+
+    [Fact]
     public void Valid_credentials_sign_in_and_go_to_the_meal_plan()
     {
         SetupSend<Login.Command, Result<Session?>>(Result.Ok<Session?>(new Session()));

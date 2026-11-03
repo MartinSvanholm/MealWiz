@@ -98,6 +98,7 @@ public partial class DrawerStateContainer : IDrawerStateContainer
             StateParameters.Content = DrawerNavigationStack.Peek().Content;
             StateParameters.ContentParameters = DrawerNavigationStack.Peek().ContentParameters;
             StateParameters.Header = DrawerNavigationStack.Peek().Header;
+            StateParameters.HeaderAction = DrawerNavigationStack.Peek().HeaderAction;
             StateParameters.Title = DrawerNavigationStack.Peek().Title;
             StateParameters.Width = DrawerNavigationStack.Peek().Width;
 

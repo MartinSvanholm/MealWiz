@@ -1,0 +1,63 @@
+.mw-ingredient-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 56px;
+    padding: 0 4px 0 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-surface);
+    cursor: pointer;
+}
+
+.mw-ingredient-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.mw-ingredient-amount {
+    position: relative;
+    flex: none;
+    min-width: 44px;
+    max-width: 40%;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--mw-border-strong);
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* A long amount is cut short with "…" on the inner text, so the button itself doesn't clip its tap band. */
+.mw-ingredient-amount-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The chip stays 32px tall; an invisible band above and below gives a 44px tap area inside the 56px row. */
+.mw-ingredient-amount::after {
+    content: "";
+    position: absolute;
+    inset: -6px 0;
+}
+
+.mw-ingredient-amount[data-empty="true"] {
+    color: var(--mw-text-muted);
+}
+
+.mw-ingredient-delete {
+    flex: none;
+    display: flex;
+}

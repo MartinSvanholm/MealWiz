@@ -1,31 +1,93 @@
+/* The day strip: seven 76px tiles. Tokens only (UI-02). */
+.mw-week-strip {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
 .day-container {
-    cursor: pointer;
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    text-align: center;
-    align-items: center;
+    height: 76px;
+    min-width: 0;
+    padding: 0;
+    border-radius: 18px;
+    border: 1px solid var(--mw-border);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
     display: flex;
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    position: relative;
-    transition: background-color 120ms ease;
+    gap: 4px;
+    cursor: pointer;
+    font: inherit;
+    transition: background-color 120ms ease, border-color 120ms ease;
 }
 
-.day:hover {
-    color: #6C8FD6
+.day-container:focus-visible {
+    outline: 2px solid var(--mw-orange-text);
+    outline-offset: 2px;
 }
 
-@media (hover: none) {
-    .day:hover {
-        color: inherit
-    }
+.day-name {
+    font-family: var(--mw-font-body);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--mw-text-muted);
 }
 
-.current-day {
-    background-color: gray
+.day {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.day-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--mw-day-dot);
+}
+
+.day-plus {
+    height: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 6px;
+    color: var(--mw-text-muted);
+}
+
+.empty-day {
+    border-style: dashed;
+    border-color: var(--mw-border-dashed);
+    background-color: transparent;
+}
+
+/* Today, when it isn't the selected day: its date in the orange text shade. */
+.current-day:not(.selected-day) .day {
+    color: var(--mw-orange-text);
 }
 
 .selected-day {
-    background-color: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-text);
+    border: none;
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+}
+
+.selected-day .day-name,
+.selected-day .day-plus {
+    color: var(--mw-text-on-color);
+}
+
+.selected-day .day-dot {
+    background-color: var(--mw-day-dot-selected);
+    box-shadow: 0 0 0 1.5px var(--mw-day-dot-ring);
+}
+
+@media (hover: hover) {
+    .day-container:not(.selected-day):hover {
+        border-color: var(--mw-orange-text);
+    }
 }

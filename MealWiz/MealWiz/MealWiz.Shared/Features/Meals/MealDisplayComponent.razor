@@ -1,38 +1,117 @@
-﻿@inject IMealPlanStateContainer _mealPlanStateContainer
-@inject IMediator _mediator
-@inject ISnackbar _snackbar
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IMealsStateContainer _mealsStateContainer
+@inject NavigationManager _navigationManager
 @implements IDisposable
 
-<MudStack Class="pa-5">
-    @if (Meal != null)
-    {
-        <div class="d-flex justify-center">
-            <MudText data-testid="meal-display-name" Typo="Typo.h6">@Meal.Name</MudText>
-        </div>
+@* The selected day's meal on the Meal plan: a big orange card (name, ingredient count, recipe status), then the
+   ingredients and the recipe, or a "No recipe yet" prompt. System meals (Eat Out, Leftovers) show only the card.
+   Swap meal starts the Meal plan's swap mode (the page then shows the pick list). Add all to list (MEA-74) is shown
+   but not wired yet. *@
+@if (Meal != null)
+{
+    <div class="mw-meal-display">
+        <section class="mw-meal-hero" data-testid="meal-display-hero" aria-label="@($"{Day} dinner")">
+            <svg class="mw-meal-hero-rings" width="190" height="190" viewBox="0 0 190 190" fill="none" aria-hidden="true">
+                <circle cx="95" cy="95" r="90"></circle>
+                <circle cx="95" cy="95" r="62"></circle>
+                <circle cx="95" cy="95" r="34"></circle>
+            </svg>
+            <div class="mw-meal-hero-top">
+                <span class="mw-meal-hero-day" data-testid="meal-display-day">@Day · Dinner</span>
+                @HeroAction
+            </div>
+            <h2 class="mw-meal-hero-name" data-testid="meal-display-name">@Meal.Name</h2>
+            <p class="mw-meal-hero-summary" data-testid="meal-display-summary">@Summary</p>
+            <div class="mw-meal-hero-buttons">
+                <button type="button" class="mw-hero-button mw-hero-button-dark" data-testid="swap-meal-button"
+                        @onclick="_mealPlanStateContainer.StartSwap">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"></path>
+                    </svg>
+                    Swap meal
+                </button>
+            </div>
+        </section>
 
-        <MudText Typo="Typo.h6">Ingredients</MudText>
-        <MudDivider />
-        <MudStack Spacing="0">
-            @foreach (var ingredient in Meal.Ingredients)
+        @if (Meal.IsRegular)
+        {
+            <section class="mw-meal-section" data-testid="meal-display-ingredients">
+                <div class="mw-meal-section-header">
+                    <h3 class="mw-meal-section-title">Ingredients</h3>
+                    <button type="button" class="mw-meal-link" data-testid="add-all-to-list" disabled aria-disabled="true">
+                        Add all to list
+                    </button>
+                </div>
+                <ul class="mw-meal-card mw-ingredient-list">
+                    @if (Meal.Ingredients.Count == 0)
+                    {
+                        <li class="mw-ingredient mw-ingredient-empty" data-testid="meal-display-no-ingredients">No ingredients yet</li>
+                    }
+                    @foreach (var ingredient in Meal.Ingredients)
+                    {
+                        <li class="mw-ingredient" data-testid="meal-display-ingredient">
+                            <span class="mw-ingredient-bullet" aria-hidden="true"></span>
+                            <span class="mw-ingredient-name" data-testid="meal-display-ingredient-name">@ingredient.Name</span>
+                            <span class="mw-ingredient-amount" data-testid="meal-display-ingredient-amount">@ingredient.Amount</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+
+            @if (Meal.RecipeSteps.Count == 0)
             {
-                <MudText>@ingredient.Amount @ingredient.Name.ToLower()</MudText>
+                <section class="mw-no-recipe" data-testid="meal-display-no-recipe">
+                    <span class="mw-no-recipe-icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19V5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM8 7h8M8 11h6"></path>
+                        </svg>
+                    </span>
+                    <div class="mw-no-recipe-text">
+                        <span class="mw-no-recipe-title">No recipe yet</span>
+                        <span class="mw-no-recipe-hint">Write the steps or import from a link</span>
+                    </div>
+                    <button type="button" class="mw-meal-link" data-testid="meal-display-add-recipe" @onclick="EditMeal">Add</button>
+                </section>
             }
-        </MudStack>
-
-        <MudText Typo="Typo.h6">Recipe</MudText>
-        <MudDivider />
-
-        <MudStack Spacing="2">
-            @foreach (var step in Meal.RecipeSteps)
+            else
             {
-                <MudText>@step</MudText>
+                <section class="mw-meal-section">
+                    <h3 class="mw-meal-section-title">Recipe</h3>
+                    <ol class="mw-meal-card mw-recipe" data-testid="meal-display-recipe">
+                        @foreach (var step in Meal.RecipeSteps)
+                        {
+                            <li>@step</li>
+                        }
+                    </ol>
+                </section>
             }
-        </MudStack>
-    }
-</MudStack>
+        }
+    </div>
+}
 
 @code {
+    /// <summary>Markup in the card's top-right corner (the Meal plan puts its Remove button here).</summary>
+    [Parameter]
+    public RenderFragment? HeroAction { get; set; }
+
     public Meal? Meal { get; set; }
+
+    private string Day => _mealPlanStateContainer.SelectedDate.DayOfWeek.ToString();
+
+    private string Summary
+    {
+        get
+        {
+            if (Meal is null || !Meal.IsRegular) return "Nothing to cook";
+
+            var count = Meal.Ingredients.Count;
+            var ingredients = count == 1 ? "1 ingredient" : $"{count} ingredients";
+            var recipe = Meal.RecipeSteps.Count == 0 ? "No recipe yet" : "Recipe ready";
+            return $"{ingredients} · {recipe}";
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -51,6 +130,14 @@
     {
         Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
 
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void EditMeal()
+    {
+        if (Meal is null) return;
+
+        _mealsStateContainer.MealToEdit = Meal;
+        _navigationManager.NavigateTo("/meals/edit");
     }
 }

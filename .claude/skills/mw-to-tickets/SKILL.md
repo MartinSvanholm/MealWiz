@@ -1,6 +1,6 @@
 ---
 name: mw-to-tickets
-description: Break a spec, plan or conversation into tracer-bullet Linear issues under a project, each a vertical slice one session can finish in one PR, linked with native "blocks" relations. Use from /plan-project, or when asked to split a feature into issues or tickets.
+description: Break a spec, plan or conversation into tracer-bullet Linear issues under a project, each a user story one session can finish in one PR, split into [DB]/[BE]/[FE] sub-issues per layer, linked with native "blocks" relations. Use from /plan-project, or when asked to split a feature into issues or tickets.
 ---
 
 <!-- Adapted from mattpocock/skills `skills/engineering/to-tickets` (MIT), with the task-graph idea from
@@ -11,6 +11,12 @@ description: Break a spec, plan or conversation into tracer-bullet Linear issues
 Break the work into **issues**: tracer-bullet vertical slices, each declaring the issues that **block** it. The
 issues form a **task graph**, not a list: at any time the **frontier** is every issue whose blockers are all Done,
 and the frontier is what runs in parallel.
+
+The hierarchy:
+- **Project**: the feature, a collection of user stories. Its description is the spec.
+- **Issue**: one user story, a vertical slice. One session, one branch, one PR to `dev`.
+- **Sub-issue**: one layer task inside an issue: `[DB]`, `[BE]` or `[FE]`. Sub-issues are worked by the issue's
+  session (itself or through subagents) and land in the issue's PR. They never get a session or a PR of their own.
 
 ## 1. Gather context
 
@@ -31,12 +37,27 @@ Look for **prefactoring**: "make the change easy, then make the easy change". A 
 - Each slice cuts a narrow but COMPLETE path through every layer it needs: migration + RLS + pgTAP, handler,
   state, page, tests. Vertical, NOT one layer at a time.
 - A finished slice is demoable or verifiable on its own, and leaves `dev` green.
-- Each slice fits one fresh session and one PR to `dev`. If it doesn't, split it, or make it a parent with
-  sub-issues (the only time to use sub-issues).
+- Each slice is one user story and fits one fresh session and one PR to `dev`. If it doesn't, split it into two
+  stories.
 - Prefactoring comes first.
 - Each slice ships its tests (TEST-02) and its doc updates (DOC-01).
 
 </vertical-slice-rules>
+
+**Sub-issues.** When a story touches more than one layer, split it into one sub-issue per layer it touches:
+
+| Prefix | Layer |
+|---|---|
+| `[DB]` | migration, RLS, pgTAP (DB-01) |
+| `[BE]` | handlers, state containers, models, Function code, and their unit and integration tests |
+| `[FE]` | pages and components, and their bUnit and E2E tests |
+
+A story that touches one layer only (a UI tweak) has no sub-issues. Each sub-issue says what its layer delivers and
+its own tests; the story keeps the end-to-end acceptance criteria and the verify level. Give sub-issues `blockedBy`
+edges to their siblings where one needs the other's code (usually `[DB]` → `[BE]` → `[FE]`). Siblings with no edge
+between them may run in parallel as subagents, so give them no edge only when they edit different files and the seam
+between them (a table, a handler's request/response) is written down: in the parent's Notes, or as a Contract item if
+another story uses it too. Sub-issues never block, or are blocked by, issues outside their parent.
 
 Give each issue its **blocking edges**: the issues that must be merged before it can start. An issue with no blockers
 can start immediately. Only add an edge when one issue truly needs the other's code; issues that merely touch the
@@ -64,13 +85,15 @@ Present the breakdown as a numbered list. For each issue:
 - **Title**: short and descriptive
 - **Blocked by**: which issues, if any
 - **What it delivers**: the end-to-end behaviour it makes work
-- **Verify level**: `smoke` or `full`, from "Which tests for which change" in `docs/agents/TESTING.md`
+- **Verify level**: `local`, or `local --e2e <class>` for a journey, from "Which tests for which change" in `docs/agents/TESTING.md`
+- **Sub-issues**: indented under it, each `[DB]`/`[BE]`/`[FE]` title with its sibling blockers, or "none (one layer)"
 
-Then show the frontier waves: what starts first, what starts after each merge. Ask with AskUserQuestion:
+Then show the frontier waves: what starts first, what starts after each merge. Waves are made of issues only;
+sub-issues run inside their issue's session. Ask with AskUserQuestion:
 
 - Does the granularity feel right (too coarse / too fine)?
 - Are the blocking edges right: does each only depend on issues that really gate it?
-- Should any be merged or split?
+- Should any be merged or split, or any sub-issues added or dropped?
 
 Iterate until the user approves.
 
@@ -81,7 +104,9 @@ Create the issues in dependency order (blockers first) so edges can name real id
 - `save_issue` with `team: "MealWiz"`, `project: <project>`, `state: "Todo"`, `labels: ["Feature"]` (or
   `["Improvement"]` for a change to an existing behaviour), and `blockedBy: [<ids>]` for its edges. Linear's native
   relation is the source of truth, so don't repeat the edges in the description.
-- Sub-issues, where you decided on them: `parentId: <parent>`.
+- Then each issue's sub-issues, blockers first: `save_issue` with the same team, project, state and labels,
+  `parentId: <issue>`, `title: "[DB] …"` (or `[BE]`, `[FE]`), and `blockedBy:` its sibling sub-issues, from the
+  sub-issue template.
 - Never close or edit issues outside the project.
 
 <issue-template>
@@ -103,9 +128,27 @@ The items from the project's Contract document, e.g. `DB-1`, `API-1`. Omit if th
 
 ## Notes
 
-Shared-file ownership, prior art to copy, anything the spec leaves to this issue. Omit if empty.
+Shared-file ownership, prior art to copy, the seams between its sub-issues, anything the spec leaves to this issue.
+Omit if empty.
 
 </issue-template>
+
+<sub-issue-template>
+
+## What this layer delivers
+
+What this layer adds to the parent story, e.g. "the `favourites` table, owned by `created_by`, with RLS".
+
+## Acceptance criteria
+
+- [ ] Criterion 1
+- [ ] Tests: this layer's suites (e.g. "pgTAP for the new policies")
+
+## Seam
+
+What the next layer relies on (columns, a handler's request/response). Omit if nothing.
+
+</sub-issue-template>
 
 Avoid file paths and code in issues; they go stale. Exception: a schema or type shape that states a decision more
 exactly than prose, or a shared file whose ownership you're assigning.

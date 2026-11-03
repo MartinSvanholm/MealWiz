@@ -1,23 +1,34 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using MealWiz.Shared.Theme
+@using Microsoft.AspNetCore.Components.Authorization
 @inject Client _supabaseClient
 @inject IThemeService ThemeService
 
-<MudThemeProvider Theme="_theme" IsDarkMode="ThemeService.IsDarkMode" />
-<MudPopoverProvider />
-<MudSnackbarProvider />
+@* The data-theme hook the --mw-* tokens in css/mealwiz.css key off. It wraps the popover and snackbar providers
+   so menus, drawer overlays and snackbars get the tokens too. display: contents keeps it out of the layout. *@
+<div class="mw-root" data-testid="theme-root" data-theme="@MealWizTheme.ModeAttribute(ThemeService.IsDarkMode)">
+    <MudThemeProvider Theme="_theme" IsDarkMode="ThemeService.IsDarkMode" ObserveSystemThemeChange="false" />
+    <MudPopoverProvider />
+    <MudSnackbarProvider />
 
-<MudLayout data-testid="app-shell" Class="overflow-y-hidden">
-    <DrawerBase />
-    <ConfirmDrawer />
-    <MudMainContent Class="pa-0">
-        @Body
-    </MudMainContent>
-    <MudAppBar data-testid="bottom-nav" Bottom Gutters="false" Elevation="20" Fixed Style="background: var(--mud-palette-appbar-background); padding-bottom: env(safe-area-inset-bottom);">
-        <NavMenu />
-    </MudAppBar>
-</MudLayout>
+    <MudLayout data-testid="app-shell" Class="overflow-y-hidden">
+        <DrawerBase />
+        <ConfirmDrawer />
+        <MudMainContent Class="pa-0">
+            @Body
+        </MudMainContent>
+        @* Floating bottom nav, for signed-in users only (Login has none). It floats over the page; a page's scroll
+           area ends with padding-bottom: var(--mw-nav-clearance) (css/mealwiz.css). *@
+        <AuthorizeView>
+            <Authorized>
+                <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="Main">
+                    <NavMenu />
+                </nav>
+            </Authorized>
+        </AuthorizeView>
+    </MudLayout>
+</div>
 
 
 @code {

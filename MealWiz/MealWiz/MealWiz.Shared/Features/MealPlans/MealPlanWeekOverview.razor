@@ -1,39 +1,38 @@
+@using System.Globalization
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ILocalStorageService _localStorage
 @implements IDisposable
 
-<MudStack Row AlignItems="AlignItems.Center" Spacing="0">
-    <MudIconButton data-testid="week-prev" Icon="@Icons.Material.Filled.ChevronLeft"
-                   Size="Size.Small"
-                   Disabled="_mealPlanStateContainer.IsLoadingWeek"
-                   OnClick="PreviousWeek" />
+@* The week's seven day tiles. Week navigation (prev/next) is in MealPlanPage's header; swiping the strip moves a
+   week too. Test hooks: week-day (+ data-date, and the selected-day / has-meal / empty-day / current-day classes),
+   week-day-meal-indicator on a planned day, week-day-empty ("+") on an empty one. *@
+<MudSwipeArea OnSwipeEnd="HandleSwipe" Style="width: 100%">
+    <nav class="mw-week-strip" aria-label="Days of the week">
+        @for (int i = 0; i < 7; i++)
+        {
+            var date = GetDateForDay(i);
+            var isSelected = IsSelected(date);
+            var hasMeal = _mealPlanStateContainer.DateHasMeal(date);
 
-    <MudSwipeArea OnSwipeEnd="HandleSwipe" Class="flex-grow-1">
-        <MudStack Row Justify="Justify.SpaceEvenly">
-            @for (int i = 0; i < 7; i++)
-            {
-                var date = GetDateForDay(i);
-
-                <MudStack Spacing="1" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.body2">@date.DayOfWeek.ToString().Substring(0, 3).ToUpper()</MudText>
-                    <div data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd")" @onclick="() => _mealPlanStateContainer.SelectedDate = date" class="@GetDayContainerClass(date)">
-                        <p class="day">@date.Day</p>
-                    </div>
-                    @if (_mealPlanStateContainer.DateHasMeal(date))
-                    {
-                        <div data-testid="week-day-meal-indicator" class="mud-theme-tertiary rounded-sm mt-1" Style="@($"width: 8px; height: 8px;")">
-                        </div>
-                    }
-                </MudStack>
-            }
-        </MudStack>
-    </MudSwipeArea>
-
-    <MudIconButton data-testid="week-next" Icon="@Icons.Material.Filled.ChevronRight"
-                   Size="Size.Small"
-                   Disabled="_mealPlanStateContainer.IsLoadingWeek"
-                   OnClick="NextWeek" />
-</MudStack>
+            <button type="button" data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd")"
+                    class="@GetDayContainerClass(date, isSelected, hasMeal)"
+                    aria-pressed="@(isSelected ? "true" : "false")"
+                    aria-label="@date.ToString("dddd d MMMM", CultureInfo.InvariantCulture)"
+                    @onclick="() => _mealPlanStateContainer.SelectedDate = date">
+                <span class="day-name" data-testid="week-day-name">@date.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant()</span>
+                <span class="day" data-testid="week-day-date">@date.Day</span>
+                @if (hasMeal)
+                {
+                    <span class="day-dot" data-testid="week-day-meal-indicator"></span>
+                }
+                else
+                {
+                    <span class="day-plus" data-testid="week-day-empty" aria-hidden="true">+</span>
+                }
+            </button>
+        }
+    </nav>
+</MudSwipeArea>
 
 @code {
     private const string WeekStorageKey = "mealplan_selected_week";
@@ -54,26 +53,23 @@
     private DateTime GetDateForDay(int dayOffset) =>
         _mealPlanStateContainer.SelectedWeekStart.AddDays(dayOffset);
 
-    private Task PreviousWeek() =>
-        _mealPlanStateContainer.NavigateToWeek(_mealPlanStateContainer.SelectedWeekStart.AddDays(-7));
-
-    private Task NextWeek() =>
-        _mealPlanStateContainer.NavigateToWeek(_mealPlanStateContainer.SelectedWeekStart.AddDays(7));
+    private bool IsSelected(DateTime date) => date.Date == _mealPlanStateContainer.SelectedDate.Date;
 
     private async Task HandleSwipe(SwipeEventArgs e)
     {
         if (_mealPlanStateContainer.IsLoadingWeek) return;
-        if (e.SwipeDirection == SwipeDirection.LeftToRight) await PreviousWeek();
-        else if (e.SwipeDirection == SwipeDirection.RightToLeft) await NextWeek();
+        var start = _mealPlanStateContainer.SelectedWeekStart;
+        if (e.SwipeDirection == SwipeDirection.LeftToRight) await _mealPlanStateContainer.NavigateToWeek(start.AddDays(-7));
+        else if (e.SwipeDirection == SwipeDirection.RightToLeft) await _mealPlanStateContainer.NavigateToWeek(start.AddDays(7));
     }
 
-    private string GetDayContainerClass(DateTime date)
+    private static string GetDayContainerClass(DateTime date, bool isSelected, bool hasMeal)
     {
         string classString = "day-container";
 
-        classString += date.Date == _mealPlanStateContainer.SelectedDate.Date ? " selected-day" : string.Empty;
+        classString += isSelected ? " selected-day" : string.Empty;
         classString += date.Date == DateTime.Now.Date ? " current-day" : string.Empty;
-        classString += _mealPlanStateContainer.MealPlan?.MealOnDate.ContainsKey(date.Date) == true ? " has-meal" : string.Empty;
+        classString += hasMeal ? " has-meal" : " empty-day";
 
         return classString;
     }

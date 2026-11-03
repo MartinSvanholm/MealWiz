@@ -1,5 +1,6 @@
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
+using MealWiz.Shared.Features.GroceryList.ClearBasket;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
@@ -108,6 +109,34 @@ public class GroceryListStateContainerTests
         VerifyToast("Update failed", Severity.Error);
     }
 
+    // MEA-76: the edit drawer saves a copy of the item, so the list shows the copy once the update succeeds.
+    [Fact]
+    public async Task UpdateGroceryItem_Success_PutsTheSavedCopyInTheList()
+    {
+        var milk = Item(1, "milk");
+        var bread = Item(2, "bread");
+        _container.GroceryList.Items.AddRange([milk, bread]);
+        var edited = Item(1, "oat milk");
+        SetupUpdate(Result.Ok(1));
+
+        await _container.UpdateGroceryItem(edited);
+
+        Assert.Equal([edited, bread], _container.GroceryList.Items);
+    }
+
+    [Fact]
+    public async Task UpdateGroceryItem_Failure_KeepsTheListedItem()
+    {
+        var milk = Item(1, "milk");
+        _container.GroceryList.Items.Add(milk);
+        SetupUpdate(Result.Fail<int>("Update failed"));
+
+        await _container.UpdateGroceryItem(Item(1, "oat milk"));
+
+        Assert.Same(milk, Assert.Single(_container.GroceryList.Items));
+        Assert.Equal("milk", milk.Name);
+    }
+
     [Fact]
     public async Task ToggleIsPicked_Success_SavesTheFlippedFlagAndMovesTheItemLast()
     {
@@ -173,6 +202,36 @@ public class GroceryListStateContainerTests
         Assert.Equal(new[] { "milk" }, Names());
         Assert.Equal(0, _notifications);
         VerifyToast("Delete failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task ClearBasket_Success_DeletesThePickedItemsAndKeepsTheRest()
+    {
+        await LoadItems(Item(1, "milk"), Item(2, "bread", picked: true), Item(3, "eggs", picked: true));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<ClearBasket.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok());
+
+        await _container.ClearBasket();
+
+        _mediator.Verify(m => m.Send(It.Is<ClearBasket.Command>(c => c.GroceryItemIds.Order().SequenceEqual(new[] { 2, 3 })), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(new[] { "milk" }, Names());
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task ClearBasket_Failure_ShowsAnErrorAndKeepsTheBasket()
+    {
+        await LoadItems(Item(1, "milk"), Item(2, "bread", picked: true));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<ClearBasket.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail("Clear failed"));
+
+        await _container.ClearBasket();
+
+        Assert.Equal(new[] { "milk", "bread" }, Names());
+        Assert.Equal(0, _notifications);
+        VerifyToast("Clear failed", Severity.Error);
     }
 
     private static GroceryItem Item(int id, string name, bool picked = false) => new() { Id = id, Name = name, IsPicked = picked };

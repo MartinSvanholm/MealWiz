@@ -2,6 +2,7 @@ using System.Reflection;
 using Bunit;
 using MealWiz.Shared.Features.Account;
 using MealWiz.Shared.Features.Authentication.Login;
+using MealWiz.Shared.Features.Authentication.SignUp;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.MealImport.ImportMeal;
 using MealWiz.Shared.Features.MealPlans;
@@ -18,15 +19,15 @@ namespace MealWiz.Shared.Tests.Features.Authentication.ComponentTests;
 public class AuthorizeRedirectTests : ComponentTestBase
 {
     // Pages that don't require sign-in. Adding one here should be a deliberate decision.
-    private static readonly Type[] PublicPages = [typeof(LoginPage)];
+    private static readonly Type[] PublicPages = [typeof(LoginPage), typeof(SignUpPage)];
 
     public static TheoryData<Type, string> ProtectedPages => new()
     {
         { typeof(MealPlanPage), "Week" },
         { typeof(MealsPage), "Your meals" },
-        { typeof(EditMealPage), "Edit meal" },
+        { typeof(EditMealPage), "Meal name" },
         { typeof(ImportMealPage), "Import meal" },
-        { typeof(GroceryListPage), "Grocery list" },
+        { typeof(GroceryListPage), "Groceries" },
         { typeof(AccountPage), "Dark mode" },
     };
 

@@ -1,0 +1,119 @@
+.mw-import-page {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.mw-import-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 0 16px var(--mw-nav-clearance);
+}
+
+.mw-import-muted {
+    color: var(--mw-text-muted);
+    font-size: 13px;
+}
+
+.mw-import-url {
+    font-size: 12px;
+    word-break: break-all;
+}
+
+/* Failed: red outline on the pale (light) or dark red alert background, with a red circle icon. */
+.mw-import-alert {
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    border: 1.5px solid var(--mw-red-text);
+    border-radius: var(--mw-radius-l);
+    background-color: var(--mw-error-alert-bg);
+    color: var(--mw-text);
+}
+
+.mw-import-alert-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-red);
+    color: var(--mw-text-on-color);
+    font-weight: 800;
+}
+
+.mw-import-alert-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.mw-import-alert-title {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.mw-import-alert-reason {
+    font-size: 13px;
+}
+
+/* The form card. */
+.mw-import-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-xl);
+    background-color: var(--mw-surface);
+}
+
+.mw-import-form-intro {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.mw-import-form-intro p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.mw-import-form-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+}
+
+.mw-import-form ::deep .mud-input.mud-input-outlined {
+    background-color: var(--mw-bg);
+}
+
+/* In progress: a dashed card with an orange spinner. */
+.mw-import-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px;
+    border: 1.5px dashed var(--mw-border-dashed);
+    border-radius: var(--mw-radius-xl);
+    text-align: center;
+}
+
+.mw-import-progress-title {
+    font-size: 15px;
+    font-weight: 700;
+}

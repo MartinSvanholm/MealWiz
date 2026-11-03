@@ -1,5 +1,6 @@
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.AddMealPlanIngredientsToGroceryList;
+using MealWiz.Shared.Features.GroceryList.ClearBasket;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
@@ -142,6 +143,48 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
+    public async Task ClearBasket_DeletesTheGivenItemsAndKeepsTheOthers()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var bread = await new GroceryItemBuilder().Picked().InsertAsync(supabase.Client);
+        var eggs = await new GroceryItemBuilder().Picked().InsertAsync(supabase.Client);
+        var milk = await new GroceryItemBuilder().InsertAsync(supabase.Client);
+
+        ResultAssert.Ok(await ClearBasketAsync(bread.Id, eggs.Id));
+
+        Assert.Null(await GetRowAsync(bread.Id));
+        Assert.Null(await GetRowAsync(eggs.Id));
+        Assert.NotNull(await GetRowAsync(milk.Id));
+    }
+
+    [Fact]
+    public async Task ClearBasket_AnotherUsersItem_IsKept()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var own = await new GroceryItemBuilder().Picked().InsertAsync(supabase.Client);
+        var otherUser = await supabase.GetOtherUserAsync();
+        var others = await new GroceryItemBuilder().Picked().InsertAsync(otherUser.Client);
+
+        // RLS hides the other user's row, so only the user's own item is deleted
+        ResultAssert.Ok(await ClearBasketAsync(own.Id, others.Id));
+
+        Assert.Null(await GetRowAsync(own.Id));
+        var response = await otherUser.Client.From<GroceryItemDb>().Where(x => x.Id == others.Id).Get(CancellationToken);
+        Assert.Single(response.Models);
+    }
+
+    [Fact]
+    public async Task ClearBasket_NoItems_DeletesNothing()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var milk = await new GroceryItemBuilder().Picked().InsertAsync(supabase.Client);
+
+        ResultAssert.Ok(await ClearBasketAsync());
+
+        Assert.NotNull(await GetRowAsync(milk.Id));
+    }
+
+    [Fact]
     public async Task AddMealPlanIngredientsToGroceryList_InsertsThePlansIngredientsAndReturnsTheirIds()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
@@ -199,6 +242,9 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
 
     private Task<FluentResults.Result<int>> DeleteAsync(GroceryItem item) =>
         new DeleteGroceryItem.Handler(supabase.Client).Handle(new DeleteGroceryItem.Command(item), CancellationToken);
+
+    private Task<FluentResults.Result> ClearBasketAsync(params int[] ids) =>
+        new ClearBasket.Handler(supabase.Client).Handle(new ClearBasket.Command([.. ids]), CancellationToken);
 
     private async Task<GroceryItemDb?> GetRowAsync(int id)
     {

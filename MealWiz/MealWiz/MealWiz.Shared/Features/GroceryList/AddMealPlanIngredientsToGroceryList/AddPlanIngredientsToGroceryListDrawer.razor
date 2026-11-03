@@ -4,45 +4,48 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 
-<MudForm @ref="_form" Style="height: 100%;">
-    <MudStack Style="height: 100%;" Spacing="0">
-        <div style="flex: 1 1 0; min-height: 0; overflow-y: auto;" class="pa-3 d-flex flex-column gap-2">
-            @for (var i = 0; i < _mergeItems.Count; i++)
-            {
-                var item = _mergeItems[i];
-                var index = i;
-                <MudPaper data-testid="plan-ingredient-item" Class="pa-3" Elevation="1">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.subtitle1"><b>@item.Name</b></MudText>
-                        @if (item.IsDuplicate)
-                        {
-                            <MudStack Row Spacing="3">
-                                <MudText Typo="Typo.body2" Color="Color.Default">Plan: @item.PlanAmount</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Primary">Already in list: @item.ExistingAmount</MudText>
-                            </MudStack>
-                        }
-                        <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input" Label="Amount"
-                                      @bind-Value="item.FinalAmount"
-                                      Immediate
-                                      OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense"
-                                      Required="true"
-                                      RequiredError="Required" />
-                    </MudStack>
-                </MudPaper>
-            }
-        </div>
+@* The week's ingredients as one compact list, each with its amount on the right. Ingredients already on the list
+   show both amounts and an empty, orange-outlined field for the total. Matches update the existing item; the rest are
+   inserted in bulk. *@
+@* Flex column so DrawerFooter sits at the bottom of the drawer. *@
+<MudForm @ref="_form" Style="flex: 1 1 auto; display: flex; flex-direction: column; padding-top: 4px;">
+    <ul class="plan-ingredients">
+        @for (var i = 0; i < _mergeItems.Count; i++)
+        {
+            var item = _mergeItems[i];
+            var index = i;
+            <li class="plan-ingredient" data-testid="plan-ingredient-item">
+                <div class="plan-ingredient-text">
+                    <span class="plan-ingredient-name">@item.Name</span>
+                    @if (item.IsDuplicate)
+                    {
+                        <span class="plan-ingredient-existing" data-testid="plan-ingredient-existing">Plan @item.PlanAmount · <span class="plan-ingredient-in-list">In list @item.ExistingAmount</span></span>
+                    }
+                </div>
+                <div class="plan-ingredient-amount @(item.IsDuplicate ? "is-duplicate" : "")" data-testid="plan-ingredient-amount">
+                    <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input"
+                                  Placeholder="Total"
+                                  aria-label="@($"Amount for {item.Name}")"
+                                  @bind-Value="item.FinalAmount"
+                                  Immediate
+                                  OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Required="true"
+                                  RequiredError="Required" />
+                </div>
+            </li>
+        }
+    </ul>
 
-        <MudPaper Elevation="4" Square="true" Class="pa-3">
-            <MudButton data-testid="plan-ingredients-confirm" Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       FullWidth="true"
-                       OnClick="OnConfirmClicked">
-                Add to grocery list
-            </MudButton>
-        </MudPaper>
-    </MudStack>
+    <DrawerFooter>
+        <MudButton data-testid="plan-ingredients-confirm" Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   OnClick="OnConfirmClicked">
+            Add @_mergeItems.Count to grocery list
+        </MudButton>
+    </DrawerFooter>
 </MudForm>
 
 @code {

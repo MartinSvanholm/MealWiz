@@ -1,29 +1,37 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 
-<MudDrawer data-testid="drawer" data-open="@_drawerStateContainer.IsDrawerOpen" Width="100%" Height="@_drawerStateContainer.StateParameters.Height" Elevation="4" @bind-Open="_drawerStateContainer.IsDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
-    <MudDrawerHeader Class="pl-2" Style="@($"background: var(--mud-palette-primary); color: white;")">
-        @if (_drawerStateContainer.StateParameters.Header != null)
-        {
-            @_drawerStateContainer.StateParameters.Header
-        }
-        else
-        {
-            <MudStack Style="width: 100%;" Row=true Justify="Justify.FlexStart" AlignItems="AlignItems.Center">
-                @if (_drawerStateContainer.DrawerNavigationStack.Count > 1)
-                {
-                    <MudIconButton data-testid="drawer-back" OnClick="_drawerStateContainer.NavigateBack" Class="white-text" Icon="@Icons.Material.Filled.ArrowBack" />
-                }
-                else
-                {
-                    <MudIconButton data-testid="drawer-close" OnClick="_drawerStateContainer.CloseDrawer" Class="white-text" Icon="@Icons.Material.Filled.Close" />
-                }
-                <MudText data-testid="drawer-title" Typo="Typo.h6">@_drawerStateContainer.StateParameters.Title</MudText>
-            </MudStack>
-        }
-    </MudDrawerHeader>
+@* The bottom drawer every feature opens through IDrawerStateContainer: a sheet with rounded top corners, a grab
+   handle, a header row (close/back button, title, optional HeaderAction) and the content, which scrolls. Content puts
+   its primary button in a DrawerFooter. Styles: css/mealwiz.css ("Bottom drawer"), since MudDrawer is the root. *@
+<MudDrawer data-testid="drawer" data-open="@_drawerStateContainer.IsDrawerOpen" Class="mw-sheet" Width="100%" Height="@_drawerStateContainer.StateParameters.Height" Elevation="0" @bind-Open="_drawerStateContainer.IsDrawerOpen" Anchor="Anchor.Bottom" Variant="DrawerVariant.Temporary">
+    <div class="mw-sheet-handle" aria-hidden="true"></div>
+    @if (_drawerStateContainer.StateParameters.Header != null)
+    {
+        @_drawerStateContainer.StateParameters.Header
+    }
+    else
+    {
+        <div class="mw-sheet-header">
+            @if (_drawerStateContainer.DrawerNavigationStack.Count > 1)
+            {
+                <MudIconButton data-testid="drawer-back" aria-label="Back" OnClick="_drawerStateContainer.NavigateBack" Class="mw-sheet-close" Icon="@Icons.Material.Filled.ArrowBack" />
+            }
+            else
+            {
+                <MudIconButton data-testid="drawer-close" aria-label="Close" OnClick="_drawerStateContainer.CloseDrawer" Class="mw-sheet-close" Icon="@Icons.Material.Filled.Close" />
+            }
+            <h2 data-testid="drawer-title" class="mw-sheet-title">@_drawerStateContainer.StateParameters.Title</h2>
+            @if (_drawerStateContainer.StateParameters.HeaderAction != null)
+            {
+                <div data-testid="drawer-header-action" class="mw-sheet-header-action">
+                    @_drawerStateContainer.StateParameters.HeaderAction
+                </div>
+            }
+        </div>
+    }
     @* Scrolls when the content is taller than the drawer (short phones, open keyboard), and keeps it clear of the
        home indicator (MEA-6). *@
-    <div style="flex: 1 1 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom);">
+    <div class="mw-sheet-body">
         @if (_drawerStateContainer.StateParameters.Content != null)
         {
             <DynamicComponent Type="_drawerStateContainer.StateParameters.Content" Parameters="_drawerStateContainer.StateParameters.ContentParameters" />

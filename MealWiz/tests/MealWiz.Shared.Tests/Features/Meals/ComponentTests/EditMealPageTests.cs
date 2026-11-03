@@ -1,12 +1,11 @@
 using Bunit;
-using MealWiz.Shared.Features.Ingredients;
 using MealWiz.Shared.Features.Meals.EditMeal;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Meals.ComponentTests;
 
-/// <summary>The edit meal form, including adding and removing ingredient rows through the ingredient drawer.</summary>
+/// <summary>The edit meal form, including adding and removing ingredient rows through the add row.</summary>
 public class EditMealPageTests : ComponentTestBase
 {
     [Fact]
@@ -63,16 +62,17 @@ public class EditMealPageTests : ComponentTestBase
         RenderDrawers();
         var cut = Render<EditMealPage>();
 
-        cut.Find(TestId("create-ingredient-card")).Click();
-        Assert.Equal(typeof(IngredientDrawer), Drawer.StateParameters.Content);
-        DrawerHost.Find(InputOf("ingredient-name-input")).Change("Eggs");
-        DrawerHost.Find(InputOf("ingredient-amount-input")).Input("3");
+        cut.Find(InputOf("add-ingredient-name")).Input("Eggs");
+        cut.Find(InputOf("add-ingredient-amount")).Input("3");
+        cut.Find(TestId("create-ingredient-button")).Click();
+        // The add button opens the drawer with what was typed; saving happens there.
+        Assert.Empty(cut.FindAll(TestId("ingredient-card")));
         DrawerHost.Find(TestId("save-ingredient-button")).Click();
 
-        Assert.False(Drawer.IsDrawerOpen);
-        var card = Assert.Single(cut.FindAll(TestId("ingredient-card")));
+        var card = cut.WaitForElement(TestId("ingredient-card"));
         Assert.Contains("Eggs", card.TextContent);
         Assert.Contains("3", card.TextContent);
+        Assert.Equal("1 item", cut.Find(TestId("edit-meal-ingredient-count")).TextContent.Trim());
         Assert.Empty(SentRequests);
     }
 
@@ -90,10 +90,31 @@ public class EditMealPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void A_saved_meal_can_be_deleted_from_the_page()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 5);
+
+        var cut = Render<EditMealPage>();
+
+        Assert.NotNull(cut.Find(TestId("delete-meal-button")));
+    }
+
+    [Fact]
+    public void A_new_meal_has_no_delete_button()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+
+        var cut = Render<EditMealPage>();
+
+        Assert.Empty(cut.FindAll(TestId("delete-meal-button")));
+    }
+
+    [Fact]
     public async Task Leaving_the_page_closes_the_drawer()
     {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0, ingredients: [TestData.Ingredient("Eggs", "3")]);
         var cut = Render<EditMealPage>();
-        cut.Find(TestId("create-ingredient-card")).Click();
+        cut.Find(TestId("ingredient-card")).Click();
         Assert.True(Drawer.IsDrawerOpen);
 
         await DisposeComponentsAsync();

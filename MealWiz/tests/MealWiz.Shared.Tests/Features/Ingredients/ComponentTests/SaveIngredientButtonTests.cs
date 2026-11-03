@@ -71,4 +71,22 @@ public class SaveIngredientButtonTests : ComponentTestBase
         // MEA-33: the button used to stay loading (disabled) after a failed save.
         cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("save-ingredient-button")).HasAttribute("disabled")));
     }
+
+    // MEA-77: the drawer's changes are applied to the ingredient only for the save, and undone when it fails.
+    [Fact]
+    public void A_failed_save_of_changes_leaves_the_ingredient_as_it_was()
+    {
+        var eggs = TestData.Ingredient("Eggs", "3", id: 7);
+        var changes = TestData.Ingredient("Duck eggs", "2", id: 7);
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 42, ingredients: [eggs]);
+        SetupSend<SaveIngredient.Command, Result>(Result.Fail("Amount is too long"));
+        Drawer.OpenDrawer("Edit Ingredient", typeof(object));
+        var cut = Render<SaveIngredientButton>(p => p.Add(b => b.Ingredient, eggs).Add(b => b.Changes, changes));
+
+        cut.Find(TestId("save-ingredient-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Amount is too long", SnackbarMessages));
+        Assert.Single(Sent<SaveIngredient.Command>());
+        Assert.Equal(("Eggs", "3"), (eggs.Name, eggs.Amount));
+    }
 }

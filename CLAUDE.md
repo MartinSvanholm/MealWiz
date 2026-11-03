@@ -15,14 +15,21 @@ MAUI app (mobile and desktop) that share one UI project.
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
 ## How work is done
-Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement). Project skills in
-`.claude/skills/` run the workflow:
+Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in three levels:
+
+| Level | Is | Worked by |
+|---|---|---|
+| Project | a feature: a collection of user stories; its description is the spec | the main (coordinator) session, `/plan-project` |
+| Issue | one user story, a vertical slice: one branch, one PR to `dev` | its own session, started by the coordinator |
+| Sub-issue | one layer task of an issue: `[DB]`, `[BE]` or `[FE]` (only when the story spans layers) | the issue's session, itself or through subagents; lands in the issue's PR |
+
+Project skills in `.claude/skills/` run the workflow:
 
 | Skill | Use it to |
 |---|---|
 | `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues with blocking relations, then coordinate one session per issue (max 4 at once) |
-| `/implement-issue` | implement one issue (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
+| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, then coordinate one session per issue (max 4 at once locally; no limit in cloud mode) |
+| `/implement-issue` | implement one issue and its sub-issues (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
 | `/fix-bugs` | group the open Bug issues by the files they touch and start one bug-mode session per group |
 
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
@@ -30,8 +37,10 @@ They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec
 
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
-- **File bugs you find, don't fix them.** Create a Linear issue in team MealWiz with the **Bug** label, status
-  Backlog and **no project**, even when you found it while working on a project. Say what you saw and where.
+- **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
+  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team MealWiz with the **Bug**
+  label, status Backlog and **no project**, even when you found it while working on a project. Say what you saw and
+  where.
 - PRs target `dev`. Feature PRs are merged by the user; only bug-mode sessions merge their own PR, and only to `dev`.
   Nothing goes to `main` (see below).
 
@@ -75,23 +84,32 @@ Staging or Production.
 
 ## Verifying changes
 One command builds and tests everything relevant. **Run it before you say a change is done**, and report its verdict
-line (e.g. `verify smoke: PASSED in 3m10s`). The exit code is the verdict: 0 passed, 1 failed, 2 couldn't run. Never
+line (e.g. `verify local: PASSED in 2m10s`). The exit code is the verdict: 0 passed, 1 failed, 2 couldn't run. Never
 claim success on a non-zero exit.
 
 ```bash
-scripts/verify.ps1 smoke     # Windows (PowerShell)
-scripts/verify.sh smoke      # Linux, macOS, Git Bash
+scripts/verify.ps1 local     # Windows (PowerShell)
+scripts/verify.sh local      # Linux, macOS, Git Bash
 ```
 
 | Level | Runs | Use it for |
 |---|---|---|
 | `fast` | docs check + build + unit and bUnit tests. No Docker. ~1 min | iterating; docs-only or test-only changes |
-| `smoke` | `fast` + local Supabase (started if needed) + integration tests + Smoke E2E | **before finishing** any app, handler, page or migration change |
-| `full` | `smoke` + every E2E journey + pgTAP RLS tests | migrations and RLS, meal import/Realtime, meal plans, before a PR |
+| `local` | `fast` + local Supabase + integration tests + pgTAP RLS tests. No browser tests | **before finishing** any app, handler, page or migration change. Add `--e2e <class>` for the journey your change touches (TESTING.md) |
+| `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | when you want the browser smoke set locally |
+| `full` | `smoke` + every E2E journey + pgTAP RLS tests | what CI runs; locally only when asked |
 
-`smoke` and `full` take minutes, so run them in the background, one at a time. TESTING.md says which tests to run for
-which change; the verify skill explains how to read failures. CI (`.github/workflows/CI.yml`) runs `verify full` on
-every PR.
+In a Claude Code cloud container (Ubuntu, `CLAUDE_CODE_REMOTE=true`), `scripts/cloud-setup.sh` installs the .NET 10
+SDK and the Supabase CLI and starts Docker. Make `bash scripts/cloud-setup.sh` the environment's setup script so each
+session starts ready. Each cloud session has its own Docker and Supabase stack; the workflow skills have a cloud mode
+for that.
+
+Browser tests are slow and suffer most when several sessions run at once, so the full E2E suite runs in CI
+(`.github/workflows/CI.yml` runs `verify full` on every PR), and a PR merges only on green CI. Run verify in the
+background. All worktrees share one local Supabase stack: verify takes a machine-wide lock for it (a second run waits)
+and resets the database to your worktree's migrations and seed first. So don't run `supabase db reset` or
+`supabase migration up` by hand while sessions run in parallel; run verify instead. TESTING.md says which tests to run
+for which change; the verify skill explains how to read failures.
 
 ## Branches and deployment
 - Feature branches and PRs target **`dev`**. A push to `main` deploys to production.
@@ -104,7 +122,7 @@ every PR.
 - Migrations: `supabase/migrations/<YYYYMMDDHHMMSS>_<description>.sql`. Apply them locally with `supabase db reset`,
   which wipes local data and re-runs `supabase/seed.sql`.
 - Every table has a `created_by` owner column, RLS, and pgTAP tests (DB-01).
-- Local ports: API 54321, DB 54322, Studio 54323.
+- Local ports: API 54321, DB 54322, Studio 54323 (verify starts the stack without Studio unless you pass `--studio`).
 
 ## Configuration
 - **Web:** `MealWiz/MauiWASM/wwwroot/appsettings.{Development,Staging,Production}.json`, with a `Supabase` section

@@ -119,6 +119,22 @@ public class MealHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<Loc
         Assert.True(meals.FindLastIndex(m => !m.IsRegular) < ownIndex, "System meals should come before regular meals.");
     }
 
+    // The Meals page searches ingredient names in what this returns, so the ingredients must come with each meal.
+    [Fact]
+    public async Task GetAllMeals_OwnMeal_ComesWithItsIngredients()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var ownMeal = await new MealBuilder()
+            .WithIngredient(i => i.WithName("Penne"))
+            .WithIngredient(i => i.WithName("Basil"))
+            .InsertAsync(supabase.Client);
+
+        var meals = await GetAllMealsAsync();
+
+        var meal = Assert.Single(meals, m => m.Id == ownMeal.Id);
+        Assert.Equal(["Basil", "Penne"], meal.Ingredients.Select(i => i.Name).Order());
+    }
+
     [Fact]
     public async Task DeleteMeal_RemovesTheMealAndItsIngredients()
     {

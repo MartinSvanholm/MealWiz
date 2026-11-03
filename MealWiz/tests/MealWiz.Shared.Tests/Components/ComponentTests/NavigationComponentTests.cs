@@ -59,6 +59,29 @@ public class NavigationComponentTests : ComponentTestBase
         Assert.DoesNotContain("active", cut.Find(TestId("nav-meals")).ClassList);
     }
 
+    [Theory]
+    [InlineData("/meals/edit")]
+    [InlineData("/meals/import")]
+    public void NavMenu_keeps_the_meals_tab_active_on_its_sub_pages(string path)
+    {
+        Navigation.NavigateTo(path);
+        var cut = Render<NavMenu>();
+
+        Assert.Contains("active", cut.Find(TestId("nav-meals")).ClassList);
+        Assert.DoesNotContain("active", cut.Find(TestId("nav-meal-plan")).ClassList);
+    }
+
+    [Theory]
+    [InlineData("nav-meal-plan", "Plan")]
+    [InlineData("nav-grocery-list", "Groceries")]
+    [InlineData("nav-meals", "Meals")]
+    public void NavMenu_tabs_have_the_short_labels(string testId, string label)
+    {
+        var cut = Render<NavMenu>();
+
+        Assert.Equal(label, cut.Find(TestId(testId)).TextContent.Trim());
+    }
+
     [Fact]
     public void CustomNavLink_renders_its_content_and_navigates_on_click()
     {

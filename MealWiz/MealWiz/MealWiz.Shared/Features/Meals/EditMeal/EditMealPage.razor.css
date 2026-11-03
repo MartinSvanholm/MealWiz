@@ -1,0 +1,109 @@
+.mw-edit-meal {
+    display: flex;
+    flex-direction: column;
+}
+
+.mw-edit-meal-scroll {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* The compact orange header: back, the dark Save button and the meal name as a large field. */
+.mw-edit-meal-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 20px 16px;
+    border-radius: 0 0 var(--mw-radius-xl) var(--mw-radius-xl);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+}
+
+.mw-edit-meal-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.mw-edit-meal-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: color-mix(in srgb, var(--mw-text-on-color) 12%, transparent);
+    color: var(--mw-text-on-color);
+    cursor: pointer;
+}
+
+.mw-edit-meal-name-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.mw-edit-meal-name {
+    width: 100%;
+    height: 44px;
+    padding: 0;
+    border: none;
+    border-bottom: 2px solid color-mix(in srgb, var(--mw-text-on-color) 35%, transparent);
+    border-radius: 0;
+    background: transparent;
+    color: var(--mw-text-on-color);
+    font-family: var(--mw-font-heading);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    outline: none;
+}
+
+.mw-edit-meal-name::placeholder {
+    color: color-mix(in srgb, var(--mw-text-on-color) 55%, transparent);
+}
+
+.mw-edit-meal-name:focus-visible {
+    border-bottom-color: var(--mw-text-on-color);
+}
+
+.mw-edit-meal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px 16px var(--mw-nav-clearance);
+}
+
+.mw-edit-meal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mw-edit-meal-heading-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.mw-edit-meal-heading {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.mw-edit-meal-count {
+    color: var(--mw-text-muted);
+    font-size: 13px;
+}
+
+.mw-edit-meal-ingredients {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}

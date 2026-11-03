@@ -1,0 +1,51 @@
+@inject NavigationManager Navigation
+
+@* ScreenHeader with a 44px back button (surface tile) on the left. Used by Account and Import meal. *@
+<ScreenHeader Label="@Label" Title="@Title" TitleContent="@TitleContent" Actions="@Actions">
+    <Leading>
+        <button type="button" class="mw-back-button" data-testid="@BackTestId" aria-label="Back" @onclick="BackAsync">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" />
+        </button>
+    </Leading>
+</ScreenHeader>
+
+@code {
+    /// <inheritdoc cref="ScreenHeader.Label"/>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <inheritdoc cref="ScreenHeader.Title"/>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <inheritdoc cref="ScreenHeader.TitleContent"/>
+    [Parameter]
+    public RenderFragment? TitleContent { get; set; }
+
+    /// <inheritdoc cref="ScreenHeader.Actions"/>
+    [Parameter]
+    public RenderFragment? Actions { get; set; }
+
+    /// <summary>Where the back button goes. Ignored when <see cref="OnBack"/> is set.</summary>
+    [Parameter]
+    public string BackHref { get; set; } = "/";
+
+    /// <summary>Runs instead of navigating to <see cref="BackHref"/>.</summary>
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    /// <summary>The back button's data-testid.</summary>
+    [Parameter]
+    public string BackTestId { get; set; } = "sub-page-back";
+
+    private Task BackAsync()
+    {
+        if (OnBack.HasDelegate)
+        {
+            return OnBack.InvokeAsync();
+        }
+
+        Navigation.NavigateTo(BackHref);
+        return Task.CompletedTask;
+    }
+}

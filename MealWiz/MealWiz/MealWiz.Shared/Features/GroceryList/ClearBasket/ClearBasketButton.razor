@@ -1,0 +1,21 @@
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+
+@* The red "Clear" next to "In the basket". Deletes every picked item after the confirm drawer. Styled by the page
+   (.grocery-clear). *@
+<button type="button" class="grocery-clear" data-testid="clear-basket-button" @onclick="OnClearClick">Clear</button>
+
+@code {
+    private void OnClearClick()
+    {
+        var count = _groceryListStateContainer.GroceryList.Items.Count(item => item.IsPicked);
+        _drawerStateContainer.OpenConfirmDrawer($"Clear {count} {(count == 1 ? "item" : "items")}?",
+            "Everything in the basket is deleted from your grocery list.", OnConfirmClear);
+    }
+
+    private async Task OnConfirmClear()
+    {
+        await _groceryListStateContainer.ClearBasket();
+        _drawerStateContainer.CloseDrawer();
+    }
+}

@@ -1,0 +1,127 @@
+/* Account (canvas: Account, AccountLight). Colours and radii from the --mw-* tokens only (UI-02). */
+.mw-account {
+    display: flex;
+    flex-direction: column;
+    background: var(--mw-bg);
+    color: var(--mw-text);
+}
+
+.mw-account-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px 16px var(--mw-nav-clearance);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.mw-account-profile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    border-radius: var(--mw-radius-l);
+    background: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+}
+
+.mw-account-avatar {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--mw-radius-pill);
+    background: var(--mw-green);
+    color: var(--mw-text-on-color);
+    font-family: var(--mw-font-heading);
+    font-weight: 800;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mw-account-profile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mw-account-profile-caption {
+    font-size: 13px;
+    color: var(--mw-text-muted);
+}
+
+.mw-account-email {
+    font-size: 16px;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mw-account-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mw-account-section-title {
+    margin: 0;
+    font-family: var(--mw-font-body);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mw-text-muted);
+}
+
+.mw-account-group {
+    border-radius: var(--mw-radius-l);
+    background: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+    overflow: hidden;
+}
+
+.mw-account-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 0 8px 0 16px;
+}
+
+.mw-account-row-icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    background: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mw-account-row-icon ::deep .mud-icon-root {
+    font-size: 18px;
+}
+
+.mw-account-row-label {
+    flex: 1 1 auto;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.mw-account-row ::deep .mud-switch {
+    margin: 0;
+}
+
+/* LogoutButton: full-width red outline (light mode's darker red comes from mealwiz.css section 5). */
+.mw-account-logout ::deep .mud-button-root {
+    width: 100%;
+    height: 50px;
+    border-width: 1.5px;
+    font-size: 15px;
+}

@@ -13,7 +13,9 @@ Likely files (a prediction, not a limit): <files>.
 Other groups running in parallel own: <their files>. Don't edit those; if your fix needs to, stop and ask.
 <Pinned by tests: <test file>. Flip the pinning assertion as TESTING.md says.>
 
-Verify level: <smoke|full>.
+<Known issues filed during this run: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
+
+Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
 
 Merge rule, written by the user for this flow: when CI is green on your PR to dev, merge it yourself without asking
 (`scripts/merge-to-dev.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
@@ -30,7 +32,20 @@ only, never main. Fix only your group's bugs; file anything else in Linear with 
 Windows: PowerShell 5.1, so write commit messages and PR bodies to a file (git commit -F, gh pr create --body-file).
 ```
 
-## Call shape
+## Cloud mode
+
+For a cloud session (`create_session`, see the fix-bugs skill), pass `background` as `append_system_prompt`, replace
+its last sentence ("Windows: PowerShell 5.1, …") with "Linux cloud container (bash), with its own Docker and Supabase;
+GitHub through the GitHub MCP tools, no gh CLI.", and add to the `prompt`:
+
+```
+You run in your own Claude Code cloud container, in cloud mode (see the implement-issue skill): it says how to check
+your branch (<ids>-<slug>, never dev), set up with scripts/cloud-setup.sh, watch CI and merge without the gh CLI.
+The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it your
+BLOCKED / UNBLOCKED / MERGED / STUCK lines too.
+```
+
+## Call shape (local mode)
 
 ```
 start_session(

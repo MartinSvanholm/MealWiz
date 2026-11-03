@@ -65,5 +65,5 @@ on every edge case.
   `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`. Integration tests
   need `supabase start` first; without it they skip, which is not green.
 - **Refactoring is not part of the loop.** Tidy up once the slice is green, then rerun.
-- **Finish with verify.** `scripts/verify.ps1 smoke` (or `full`, per TESTING.md) in the background. The exit code is
-  the verdict.
+- **Finish with verify.** `scripts/verify.ps1 local` (plus `--e2e <class>` where TESTING.md names a journey) in the
+  background. The exit code is the verdict. CI runs the full E2E suite.

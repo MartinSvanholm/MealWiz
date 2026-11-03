@@ -1,0 +1,616 @@
+/*
+ * MealWiz redesign stylesheet (MEA-56). Linked by both heads AFTER MudBlazor.min.css, so equal-specificity rules here
+ * win. Sections:
+ *   1. Fonts (self-hosted, SIL OFL 1.1: see ../fonts/OFL-*.txt)
+ *   2. Tokens: --mw-* variables per theme, keyed off data-theme on .mw-root (Layout/MainLayout.razor)
+ *   3. Base: page, headings, links, focus
+ *   4. Global MudBlazor component styles
+ *   5. Light mode: role-coloured text and icons use the darker text shades (fills stay bright)
+ *   6. Utility classes
+ *   7. Blazor error UI
+ *   8. Bottom drawer (Components/Drawers/DrawerBase.razor, ConfirmDrawer.razor, DrawerFooter.razor)
+ * The token table and when to use which token: docs/agents/ARCHITECTURE.md, "Theme tokens" (UI-02). Hex values live
+ * only here and in Theme/MealWizTheme.cs; keep the two in sync.
+ */
+
+/* 1. Fonts ------------------------------------------------------------------------------------------------------ */
+
+@font-face {
+    font-family: 'Bricolage Grotesque';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url(../fonts/bricolage-grotesque-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: 'Bricolage Grotesque';
+    font-style: normal;
+    font-weight: 200 800;
+    font-display: swap;
+    src: url(../fonts/bricolage-grotesque-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'DM Sans';
+    font-style: normal;
+    font-weight: 100 1000;
+    font-display: swap;
+    src: url(../fonts/dm-sans-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+    font-family: 'DM Sans';
+    font-style: normal;
+    font-weight: 100 1000;
+    font-display: swap;
+    src: url(../fonts/dm-sans-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* 2. Tokens ----------------------------------------------------------------------------------------------------- */
+
+/* Theme-independent: shape, size, type, fills. On :root so the loading screen and error UI can use them too. */
+:root {
+    --mw-radius-s: 14px;      /* inputs, icon buttons, icon tiles */
+    --mw-radius-m: 16px;      /* buttons, snackbars, list containers */
+    --mw-radius-l: 20px;      /* cards, menus, settings groups */
+    --mw-radius-xl: 24px;     /* floating nav bar, large cards */
+    --mw-radius-sheet: 28px;  /* bottom drawer top corners, hero card */
+    --mw-radius-pill: 999px;  /* pills, round buttons */
+    --mw-touch: 44px;         /* minimum touch target */
+
+    /* The floating bottom nav (Layout/MainLayout.razor). It floats over the page: a page fills the whole screen
+       (.mw-page) and content scrolls behind and around the bar. A page's scroll area ends with
+       padding-bottom: var(--mw-nav-clearance), so its last content can scroll clear of the bar. */
+    --mw-nav-height: 64px;
+    --mw-nav-gap: 16px;       /* from the screen edges, and between the nav and the page above it */
+    --mw-nav-space: calc(var(--mw-nav-height) + 2 * var(--mw-nav-gap) + env(safe-area-inset-bottom));
+    --mw-nav-clearance: calc(var(--mw-nav-space) + 16px); /* scroll-area bottom padding: the bar plus 16px */
+
+    --mw-font-heading: 'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif;
+    --mw-font-body: 'DM Sans', system-ui, sans-serif;
+
+    /* Fills: the same in both themes. Put --mw-text-on-color on top of them. */
+    --mw-orange: #FF9F43;
+    --mw-green: #8FD45A;
+    --mw-red: #FF5C5C;
+    --mw-text-on-color: #1A140E;
+    --mw-dark-button-bg: #1A140E;
+    --mw-dark-button-text: #F5EFE6;
+}
+
+/* Dark is also the fallback for anything rendered before MainLayout sets data-theme. */
+:root,
+[data-theme="dark"] {
+    --mw-bg: #14110E;
+    --mw-surface: #1F1B17;
+    --mw-surface-raised: #26211C;
+    --mw-nav-bg: #221E19;
+    --mw-nav-border: #332D27;
+    --mw-nav-shadow: none;
+    --mw-chip-bg: #2A2520;
+    --mw-border: #2E2924;
+    --mw-border-strong: #3A342D;
+    --mw-border-dashed: #4A433B;
+
+    --mw-text: #F5EFE6;
+    --mw-text-muted: #ABA397;
+    --mw-text-placeholder: #8F877C;
+
+    --mw-orange-text: #FF9F43;
+    --mw-orange-text-hover: #FFC285;
+    --mw-green-text: #8FD45A;
+    --mw-green-bullet: #8FD45A;
+    --mw-red-text: #FF5C5C;
+    --mw-info-text: #7FB8FF;
+    --mw-warning-text: #FFC24B;
+
+    --mw-day-dot: #FFFFFF;
+    --mw-day-dot-selected: #FFFFFF;
+    --mw-day-dot-ring: #1A140E;
+
+    --mw-scrim: rgba(8, 6, 4, 0.72);
+    --mw-menu-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    --mw-error-alert-bg: #241614;
+}
+
+[data-theme="light"] {
+    --mw-bg: #FAF7F2;
+    --mw-surface: #FFFFFF;
+    --mw-surface-raised: #FFFFFF;
+    --mw-nav-bg: #FFFFFF;
+    --mw-nav-border: #E8E0D5;
+    --mw-nav-shadow: 0 6px 20px rgba(60, 40, 20, 0.10);
+    --mw-chip-bg: #F1EBE2;
+    --mw-border: #E8E0D5;
+    --mw-border-strong: #DDD4C8;
+    --mw-border-dashed: #CFC5B8;
+
+    --mw-text: #1F1A15;
+    --mw-text-muted: #6B6359;
+    --mw-text-placeholder: #786F64; /* canvas #8A8176 darkened to pass 4.5:1 on white and the page */
+
+    --mw-orange-text: #A84F00;
+    --mw-orange-text-hover: #7A3A00;
+    --mw-green-text: #3D7A12;
+    --mw-green-bullet: #5FA62B;
+    --mw-red-text: #C62828;
+    --mw-info-text: #1F5FAD;
+    --mw-warning-text: #8A5A00;
+
+    --mw-day-dot: #6B6359;
+    --mw-day-dot-selected: #FFFFFF;
+    --mw-day-dot-ring: #1A140E;
+
+    --mw-scrim: rgba(40, 28, 16, 0.45);
+    --mw-menu-shadow: 0 18px 40px rgba(60, 40, 20, 0.18);
+    --mw-error-alert-bg: #FDECEA;
+}
+
+/* The wrapper only carries the tokens; it takes no part in layout. */
+.mw-root {
+    display: contents;
+}
+
+/* 3. Base ------------------------------------------------------------------------------------------------------- */
+
+body {
+    font-family: var(--mw-font-body);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--mw-font-heading);
+}
+
+h1:focus {
+    outline: none;
+}
+
+.mw-root a:not(.mud-button-root):not(.mud-nav-link) {
+    color: var(--mw-orange-text);
+}
+
+.mw-root a:not(.mud-button-root):not(.mud-nav-link):hover {
+    color: var(--mw-orange-text-hover);
+}
+
+.mw-root ::placeholder {
+    color: var(--mw-text-placeholder);
+    opacity: 1;
+}
+
+:focus-visible {
+    outline: 2px solid var(--mw-orange);
+    outline-offset: 2px;
+}
+
+/* 4. Global MudBlazor component styles -------------------------------------------------------------------------- */
+
+/* Buttons: rounded, 44px tall, bold sentence-case labels, flat. */
+.mud-button-root.mud-button {
+    min-height: var(--mw-touch);
+    border-radius: var(--mw-radius-m);
+    padding-inline: 18px;
+    font-weight: 700;
+}
+
+.mud-button-root.mud-button.mud-button-size-small {
+    padding-inline: 12px;
+}
+
+.mud-button-filled,
+.mud-button-filled:hover,
+.mud-button-filled:active,
+.mud-button-filled:focus-visible {
+    box-shadow: none;
+}
+
+.mud-button-outlined {
+    border-width: 1.5px !important;
+}
+
+.mud-button-filled.mud-button-filled-dark {
+    background-color: var(--mw-dark-button-bg);
+    color: var(--mw-dark-button-text);
+}
+
+/* Icon buttons: 44px square tap area with rounded corners instead of a circle. */
+.mud-icon-button {
+    min-width: var(--mw-touch);
+    min-height: var(--mw-touch);
+    border-radius: var(--mw-radius-s);
+}
+
+/* Outlined inputs: rounded, token borders, orange focus. */
+.mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-radius: var(--mw-radius-s);
+    border-color: var(--mw-border);
+}
+
+.mud-input.mud-input-outlined:focus-within .mud-input-outlined-border {
+    border-color: var(--mw-orange);
+    border-width: 1.5px;
+}
+
+.mud-input.mud-input-outlined {
+    background-color: var(--mw-surface);
+    border-radius: var(--mw-radius-s);
+}
+
+.mud-input-control .mud-input-label.mud-input-label-animated.mud-focused,
+.mud-input-control .mud-input-label.mud-input-label-animated:focus-within {
+    color: var(--mw-orange-text);
+}
+
+/* A field with its label above it, as the spec asks for drawers (and as Login does): wrap a <label for> and a
+   MudTextField with a matching InputId (and no Label) in .mw-field. */
+.mw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.mw-field-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-text-muted);
+}
+
+.mw-field .mud-input-control {
+    margin: 0;
+}
+
+/* Switches: orange track, dark thumb when on (as on the canvas Account screen). */
+.mud-switch-base.mud-checked {
+    color: var(--mw-text-on-color) !important;
+}
+
+.mud-switch-base.mud-checked + .mud-switch-track {
+    opacity: 1;
+    background-color: var(--mw-orange) !important;
+}
+
+.mud-switch-span .mud-switch-track {
+    background-color: var(--mw-border-dashed);
+    opacity: 1;
+}
+
+/* Checkboxes and switches: 44px tap area. */
+.mud-checkbox .mud-icon-button,
+.mud-switch {
+    min-height: var(--mw-touch);
+}
+
+/* MudBlazor positions the switch thumb for a 38px button. Our global 44px icon-button size makes
+   it 6px larger, which pushed the thumb 3px down and 3px right of the track. Pull it back by half
+   the difference, so the thumb is centred on the track and the tap area stays 44px. */
+.mud-switch-span .mud-switch-base {
+    top: -3px;
+    left: -3px;
+}
+
+/* Menus, selects and other popovers: raised surface, strong border, soft shadow. */
+.mud-popover.mud-paper {
+    background-color: var(--mw-surface-raised);
+    border: 1px solid var(--mw-border-strong);
+    border-radius: var(--mw-radius-l);
+    box-shadow: var(--mw-menu-shadow);
+}
+
+.mud-popover .mud-list {
+    padding: 6px;
+}
+
+.mud-popover .mud-list-item,
+.mud-popover .mud-menu-item {
+    min-height: var(--mw-touch);
+    border-radius: var(--mw-radius-s);
+}
+
+/* Snackbars. */
+.mud-snackbar {
+    border-radius: var(--mw-radius-m);
+    font-weight: 500;
+    box-shadow: var(--mw-menu-shadow);
+    /* Snackbars sit 24px from the right edge. Cap the width so a long message keeps the same 24px
+       on the left instead of growing to the screen edge. */
+    max-width: min(500px, calc(100vw - 48px));
+}
+
+/* Alerts: rounded; the error alert has a pale red background and a red outline. */
+.mud-alert {
+    border-radius: var(--mw-radius-l);
+}
+
+.mud-alert.mud-alert-text-error,
+.mud-alert.mud-alert-outlined-error {
+    background-color: var(--mw-error-alert-bg);
+    border: 1.5px solid var(--mw-red-text);
+    color: var(--mw-text);
+}
+
+.mud-alert.mud-alert-text-error .mud-alert-icon,
+.mud-alert.mud-alert-outlined-error .mud-alert-icon {
+    color: var(--mw-red-text);
+}
+
+/* Skeletons: chip colour, rounded. */
+.mud-skeleton {
+    background-color: var(--mw-chip-bg);
+}
+
+.mud-skeleton.mud-skeleton-text,
+.mud-skeleton.mud-skeleton-rectangle {
+    border-radius: var(--mw-radius-s);
+}
+
+/* Cards and papers. */
+.mud-card,
+.mud-paper:not(.mud-popover):not(.mud-appbar):not(.mud-drawer):not(.mud-paper-square) {
+    border-radius: var(--mw-radius-l);
+}
+
+.mud-paper-outlined {
+    border-color: var(--mw-border);
+}
+
+/* Chips. */
+.mud-chip {
+    border-radius: var(--mw-radius-pill);
+}
+
+.mud-chip.mud-chip-filled.mud-chip-color-default {
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+/* Progress: orange spinner, green progress bar. */
+.mud-progress-linear {
+    border-radius: var(--mw-radius-pill);
+}
+
+/* 5. Light mode: role text and small icons use the darker shades for 4.5:1 on light backgrounds -------------------
+ * MudBlazor paints Color.X text, icons and text/outlined buttons with the fill colour, which fails contrast on white
+ * in light mode. Fills (filled buttons, switch tracks, chips, progress) keep the bright fill. */
+
+[data-theme="light"] .mud-primary-text:not(.mud-switch-base):not(.mud-progress-circular):not(.mud-progress-linear) {
+    color: var(--mw-orange-text) !important;
+}
+
+[data-theme="light"] .mud-secondary-text:not(.mud-switch-base):not(.mud-progress-circular):not(.mud-progress-linear),
+[data-theme="light"] .mud-tertiary-text:not(.mud-switch-base):not(.mud-progress-circular):not(.mud-progress-linear),
+[data-theme="light"] .mud-success-text:not(.mud-switch-base):not(.mud-progress-circular):not(.mud-progress-linear) {
+    color: var(--mw-green-text) !important;
+}
+
+[data-theme="light"] .mud-error-text:not(.mud-switch-base),
+[data-theme="light"] .mud-input-error,
+[data-theme="light"] .mud-input-helper-text.mud-input-error,
+[data-theme="light"] .mud-input-control .mud-input-label.mud-input-error {
+    color: var(--mw-red-text) !important;
+}
+
+[data-theme="light"] .mud-input.mud-input-outlined.mud-input-error .mud-input-outlined-border {
+    border-color: var(--mw-red-text) !important;
+}
+
+[data-theme="light"] .mud-button-text.mud-button-text-primary,
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-primary {
+    color: var(--mw-orange-text);
+    --mud-ripple-color: var(--mw-orange-text);
+}
+
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-primary {
+    border-color: var(--mw-orange-text);
+}
+
+[data-theme="light"] .mud-button-text.mud-button-text-secondary,
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-secondary,
+[data-theme="light"] .mud-button-text.mud-button-text-tertiary,
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-tertiary {
+    color: var(--mw-green-text);
+}
+
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-secondary,
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-tertiary {
+    border-color: var(--mw-green-text);
+}
+
+[data-theme="light"] .mud-button-text.mud-button-text-error,
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-error {
+    color: var(--mw-red-text);
+}
+
+[data-theme="light"] .mud-button-outlined.mud-button-outlined-error {
+    border-color: var(--mw-red-text);
+}
+
+/* 6. Utility classes: role text colours for plain elements (prefer these over Color.X where a page sets colour). */
+
+.mw-text-orange { color: var(--mw-orange-text) !important; }
+.mw-text-green { color: var(--mw-green-text) !important; }
+.mw-text-red { color: var(--mw-red-text) !important; }
+.mw-text-info { color: var(--mw-info-text) !important; }
+.mw-text-warning { color: var(--mw-warning-text) !important; }
+.mw-text-muted { color: var(--mw-text-muted) !important; }
+
+/* A page that fills the whole screen; the floating bottom nav sits over it (vh fallback for browsers without dvh).
+   Its scroll area ends with padding-bottom: var(--mw-nav-clearance). */
+.mw-page {
+    height: 100vh;
+    height: 100dvh;
+}
+
+.mw-heading {
+    font-family: var(--mw-font-heading);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* Subtle press feedback on clickable cards (Components/Card/BaseCard.razor). */
+.hover:hover {
+    filter: brightness(0.95);
+}
+
+/* 7. Blazor error UI -------------------------------------------------------------------------------------------- */
+
+.blazor-error-boundary {
+    background: var(--mw-error-alert-bg);
+    border: 1.5px solid var(--mw-red-text);
+    border-radius: var(--mw-radius-l);
+    padding: 1rem;
+    color: var(--mw-text);
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}
+
+/* 8. Bottom drawer ---------------------------------------------------------------------------------------------- *
+ * Global because MudDrawer is the components' root element, which scoped CSS can't reach. The scrim comes from the
+ * palette's OverlayDark (70% dark, warm 45% light). */
+
+.mud-drawer.mw-sheet {
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    border-radius: var(--mw-radius-sheet) var(--mw-radius-sheet) 0 0;
+    overflow: hidden;
+}
+
+/* Only while open: a closed drawer waits just below the screen, and its shadow or top edge would show above the
+   bottom of the screen (MudBlazor's measured height leaves out a border). */
+.mud-drawer.mw-sheet.mud-drawer--open {
+    box-shadow: var(--mw-menu-shadow), inset 0 1px 0 var(--mw-border-strong);
+}
+
+/* Padding, not margin: a margin on the first child collapses out of the drawer, MudBlazor then measures the drawer
+   too short, and a closed drawer peeks above the bottom of the screen. */
+.mw-sheet-handle {
+    flex: 0 0 auto;
+    padding: 10px 0 2px;
+}
+
+.mw-sheet-handle::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 5px;
+    margin: 0 auto;
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-border-dashed);
+}
+
+.mw-sheet-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 12px;
+}
+
+.mw-sheet-header .mud-icon-button.mw-sheet-close {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+.mw-sheet-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mw-sheet-header-action {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-sheet-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* DrawerFooter: pushed to the bottom of the content, its button full width, 52px, orange. */
+.mw-sheet-footer {
+    margin-top: auto;
+    padding: 12px 16px 16px;
+}
+
+.mw-sheet-footer .mud-button-root.mud-button {
+    width: 100%;
+    min-height: 52px;
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    font-size: 16px;
+}
+
+/* Confirm drawer. */
+.mw-confirm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    text-align: center;
+}
+
+.mw-confirm-icon {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mw-radius-pill);
+    background-color: color-mix(in srgb, var(--mw-red) 16%, transparent);
+    color: var(--mw-red-text);
+}
+
+.mw-confirm-title {
+    flex: 0 0 auto;
+    max-width: 100%;
+    margin-top: 8px;
+}
+
+.mw-confirm-description {
+    margin: 0 0 12px;
+    color: var(--mw-text-muted);
+}
+
+.mw-confirm-buttons {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+
+.mw-confirm-buttons .mud-button-root.mud-button {
+    flex: 1 1 0;
+    min-height: 52px;
+}
+
+.mw-confirm-buttons .mud-button-root.mw-confirm-cancel {
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}

@@ -1,5 +1,7 @@
 ﻿using MealWiz.Shared.Features.Ingredients.GetIngredientsByMealId;
+using FluentResults;
 using MealWiz.Shared.Features.Ingredients.Models;
+using MealWiz.Shared.Features.Ingredients.SaveIngredient;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -21,6 +23,12 @@ public interface IMealsStateContainer
     void RemovePendingIngredient(Ingredient ingredient);
     Task LoadMeals();
     Task ReloadIngredientsForMealToEdit();
+
+    /// <summary>
+    /// Adds or updates an ingredient of <see cref="MealToEdit"/>: kept pending while the meal is new, otherwise saved
+    /// and the ingredients reloaded. The caller reports a failure (<c>Handle</c>).
+    /// </summary>
+    Task<Result> SaveIngredientForMealToEdit(Ingredient ingredient);
 }
 
 public class MealsStateContainer(
@@ -71,5 +79,20 @@ public class MealsStateContainer(
 
         MealToEdit.Ingredients = result.Value;
         NotifyStateChanged();
+    }
+
+    public async Task<Result> SaveIngredientForMealToEdit(Ingredient ingredient)
+    {
+        if (!IsEdit)
+        {
+            AddOrUpdatePendingIngredient(ingredient);
+            return Result.Ok();
+        }
+
+        var result = await mediator.Send(new SaveIngredient.Command(ingredient, MealToEdit.Id));
+        if (result.IsFailed) return result;
+
+        await ReloadIngredientsForMealToEdit();
+        return Result.Ok();
     }
 }

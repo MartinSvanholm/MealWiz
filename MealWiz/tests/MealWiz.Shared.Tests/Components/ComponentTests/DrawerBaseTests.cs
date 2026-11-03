@@ -52,6 +52,36 @@ public class DrawerBaseTests : ComponentTestBase
         Assert.Equal("first", cut.Find(TestId("probe")).TextContent);
     }
 
+    [Fact]
+    public void HeaderAction_renders_on_the_right_of_the_header()
+    {
+        var cut = Render<DrawerBase>();
+        var parameters = ProbeDrawer("Edit Ingredient", "probe text");
+        parameters.HeaderAction = b => b.AddMarkupContent(0, "<button data-testid=\"probe-delete\">Delete</button>");
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(parameters));
+
+        Assert.NotNull(cut.Find($"{TestId("drawer-header-action")} {TestId("probe-delete")}"));
+    }
+
+    [Fact]
+    public void Header_has_no_action_slot_when_none_is_set()
+    {
+        var cut = Render<DrawerBase>();
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(ProbeDrawer("Shopping", "probe text")));
+
+        Assert.Empty(cut.FindAll(TestId("drawer-header-action")));
+    }
+
+    [Fact]
+    public void DrawerFooter_renders_its_button()
+    {
+        var cut = Render<DrawerFooter>(p => p.AddChildContent("<button data-testid=\"probe-save\">Save</button>"));
+
+        Assert.NotNull(cut.Find($"{TestId("drawer-footer")} {TestId("probe-save")}"));
+    }
+
     private static DrawerStateParameters ProbeDrawer(string title, string text) => new()
     {
         Title = title,

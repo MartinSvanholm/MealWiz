@@ -1,0 +1,47 @@
+.grocery-add {
+    display: flex;
+    gap: 8px;
+}
+
+.grocery-add-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.grocery-add-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: var(--mw-touch);
+    box-sizing: border-box;
+    padding: 0 14px;
+    border-radius: var(--mw-radius-s);
+    border: 1px solid var(--mw-border);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    font-family: var(--mw-font-body);
+    font-size: 15px;
+    outline: none;
+}
+
+.grocery-add-input:focus {
+    border-color: var(--mw-orange);
+}
+
+.grocery-add-button {
+    flex: 0 0 auto;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}

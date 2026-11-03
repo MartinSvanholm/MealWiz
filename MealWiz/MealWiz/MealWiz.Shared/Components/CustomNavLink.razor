@@ -1,14 +1,14 @@
-﻿@inject NavigationManager navigationManager
+@inject NavigationManager navigationManager
 
-<MudStack @attributes="UserAttributes" Class="@(IsActive ? "active" : "")" AlignItems="AlignItems.Center" Row=false @onclick="Navigate" Spacing="0" Justify="Justify.Center" style="cursor: pointer;">
+@* One tab of the bottom nav: icon above label; the active tab is a filled orange pill (CustomNavLink.razor.css). *@
+<button type="button" @attributes="UserAttributes" class="mw-nav-tab @(IsActive ? "active" : "")"
+        aria-current="@(IsActive ? "page" : null)" @onclick="Navigate">
     @if (Icon != null)
     {
-        <MudIcon Icon="@Icon" Color="@(IsActive ? Color.Primary : Color.Default)" />
+        <MudIcon Icon="@Icon" Size="Size.Small" Color="Color.Inherit" />
     }
-    <div>
-        @Childcontent
-    </div>
-</MudStack>
+    <span class="mw-nav-label">@Childcontent</span>
+</button>
 
 @code {
     [Parameter]

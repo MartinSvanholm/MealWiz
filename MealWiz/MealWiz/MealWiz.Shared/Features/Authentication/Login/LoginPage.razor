@@ -1,20 +1,34 @@
-﻿@page "/login"
+@page "/login"
 @inject ISender _mediator
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
 
-<CustomForm @ref="Form" Class="pa-5 d-flex flex-column" @bind-IsValid="IsValid">
-    <MudText Typo="Typo.h6">Login</MudText>
-    <TextField data-testid="login-email" @bind-Value="Email" Class="mt-4" Label="Email" Required InputType="InputType.Email"
-               OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
-    <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" Class="mt-4" Label="Password" Required InputType="InputType.Password"
-               OnKeyDown="EnterKey.Then(Login)" />
-    <MudStack Row Spacing="0" Justify="Justify.SpaceBetween">
-        <Button Variant="Variant.Text">Create account</Button>
-        <Button Variant="Variant.Text">Forgot password</Button>
-    </MudStack>
-    <Button data-testid="login-submit" OnClick="Login" Class="mt-8" IsLoading="IsLoading">Login</Button>
-</CustomForm>
+@* Login has no bottom nav: Layout/MainLayout.razor shows it to signed-in users only. *@
+<AuthShell TestIdPrefix="login">
+    <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
+        <div class="mw-auth-field">
+            <label class="mw-auth-label" for="@EmailInputId" data-testid="login-email-label">Email</label>
+            <TextField data-testid="login-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="you@example.com"
+                       Required InputType="InputType.Email"
+                       OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
+        </div>
+        <div class="mw-auth-field">
+            <div class="mw-auth-label-row">
+                <label class="mw-auth-label" for="@PasswordInputId" data-testid="login-password-label">Password</label>
+                @* Not wired yet: MEA-69. *@
+                <button type="button" class="mw-auth-link" data-testid="login-forgot-password">Forgot password?</button>
+            </div>
+            <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" InputId="@PasswordInputId"
+                       Placeholder="Your password" Required InputType="InputType.Password"
+                       OnKeyDown="EnterKey.Then(Login)" />
+        </div>
+        <Button data-testid="login-submit" OnClick="Login" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">Log in</Button>
+        <p class="mw-auth-switch">
+            No account yet?
+            <a class="mw-auth-link" href="signup" data-testid="login-create-account">Create one</a>
+        </p>
+    </CustomForm>
+</AuthShell>
 
 @code {
     private string Email { get; set; } = default!;
@@ -22,7 +36,10 @@
     private bool IsValid { get; set; }
     private CustomForm Form { get; set; } = default!;
     private TextField PasswordField { get; set; } = default!;
-    private bool IsLoading{ get; set; }
+    private bool IsLoading { get; set; }
+
+    private const string EmailInputId = "login-email-input";
+    private const string PasswordInputId = "login-password-input";
 
     private async Task Login()
     {

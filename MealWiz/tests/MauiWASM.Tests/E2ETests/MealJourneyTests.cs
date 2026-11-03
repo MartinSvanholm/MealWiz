@@ -32,6 +32,22 @@ public class MealJourneyTests : E2ETestBase
         await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
         await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
 
+        // Filters: the meal has a recipe and isn't planned, so only All shows it
+        await Page.GetByTestId("meal-filter-no-recipe").ClickAsync();
+        await Expect(Row("meal-list-item", name)).ToHaveCountAsync(0);
+        await Page.GetByTestId("meal-filter-this-week").ClickAsync();
+        await Expect(Page.GetByTestId("meal-list-no-match")).ToHaveTextAsync("No meals planned this week.");
+        await Page.GetByTestId("meal-filter-all").ClickAsync();
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+
+        // Search finds the meal by an ingredient as well as by its name
+        await FillAsync(SearchInput(), "minced");
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+        await FillAsync(SearchInput(), "E2E no such meal");
+        await Expect(Page.GetByTestId("meal-list-no-match")).ToContainTextAsync("E2E no such meal");
+        await FillAsync(SearchInput(), "");
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+
         // Edit: rename the meal and change an ingredient's amount
         await Row("meal-list-item", name).ClickAsync();
         await Expect(Page).ToHaveURLAsync(UrlFor("meals/edit"));
@@ -41,7 +57,7 @@ public class MealJourneyTests : E2ETestBase
         await FillAsync(Page.GetByTestId("meal-name-input"), renamed);
 
         await Row("ingredient-card", "Onion").ClickAsync();
-        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit Ingredient");
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit ingredient");
         await FillAsync(Drawer.GetByTestId("ingredient-amount-input"), "3");
         await Drawer.GetByTestId("save-ingredient-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
@@ -59,15 +75,15 @@ public class MealJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("meal-name-input")).ToHaveValueAsync(renamed);
         await Expect(Row("ingredient-card", "Onion")).ToContainTextAsync("3");
         await Expect(Row("ingredient-card", "Minced beef")).ToContainTextAsync("500 g");
-        await Page.GetByTestId("edit-meal-back").ClickAsync();
 
-        // Delete
-        await Row("meal-list-item", renamed).GetByTestId("delete-meal-button").ClickAsync();
+        // Delete, from the Edit meal page
+        await Page.GetByTestId("delete-meal-button").ClickAsync();
         await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
         await Expect(Row("meal-list-item", renamed)).ToHaveCountAsync(0);
 
         await Page.ReloadAsync();
-        await Expect(Row("meal-list-item", "Leftovers")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("screen-header-title")).ToHaveTextAsync("Your meals");
         await Expect(Row("meal-list-item", renamed)).ToHaveCountAsync(0);
     }
 
@@ -95,7 +111,7 @@ public class MealJourneyTests : E2ETestBase
 
         // MEA-6: a drawer whose form is taller than the drawer scrolls, so its save button can be reached.
         await last.ClickAsync();
-        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit Ingredient");
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit ingredient");
         await Expect(Drawer.GetByTestId("ingredient-name-input")).ToBeInViewportAsync(new() { Ratio = 1 });
         await Drawer.GetByTestId("ingredient-name-input").HoverAsync();
         await Page.Mouse.WheelAsync(0, 500);
@@ -104,11 +120,14 @@ public class MealJourneyTests : E2ETestBase
 
     private async Task AddIngredientAsync(string name, string amount)
     {
+        await FillAsync(Page.GetByTestId("add-ingredient-name"), name);
+        await FillAsync(Page.GetByTestId("add-ingredient-amount"), amount);
         await Page.GetByTestId("create-ingredient-button").ClickAsync();
-        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Create Ingredient");
 
-        await FillAsync(Drawer.GetByTestId("ingredient-name-input"), name);
-        await FillAsync(Drawer.GetByTestId("ingredient-amount-input"), amount);
+        // The add button opens the drawer with what was typed; the ingredient is saved from the drawer.
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add ingredient");
+        await Expect(Drawer.GetByTestId("ingredient-name-input")).ToHaveValueAsync(name);
+        await Expect(Drawer.GetByTestId("ingredient-amount-input")).ToHaveValueAsync(amount);
         await Drawer.GetByTestId("save-ingredient-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
 
@@ -116,6 +135,9 @@ public class MealJourneyTests : E2ETestBase
     }
 
     // MudTextFieldExtended may put the test id on its wrapper rather than the textarea.
+    private ILocator SearchInput() =>
+        Page.Locator("input[data-testid=meal-list-search], [data-testid=meal-list-search] input").First;
+
     private ILocator RecipeInput() =>
         Page.Locator("textarea[data-testid=meal-recipe-input], [data-testid=meal-recipe-input] textarea").First;
 }

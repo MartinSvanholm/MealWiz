@@ -25,7 +25,7 @@ public class SmokeTests : E2ETestBase
     [Theory]
     [InlineData("MealPlanPage", "/", "meal-plan-week-title")]
     [InlineData("GroceryListPage", "/grocerylist", "add-grocery-item-button")]
-    [InlineData("MealsPage", "/meals", "meal-list-item")]
+    [InlineData("MealsPage", "/meals", "meal-list-search")]
     [InlineData("AccountPage", "/account", "logout-button")]
     public async Task Page_Renders(string page, string path, string marker)
     {

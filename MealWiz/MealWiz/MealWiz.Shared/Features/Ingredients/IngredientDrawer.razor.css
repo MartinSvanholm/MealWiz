@@ -1,0 +1,65 @@
+.mw-ingredient-drawer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.mw-ingredient-drawer-fields,
+.mw-ingredient-drawer-switch {
+    margin: 0 16px;
+}
+
+.mw-ingredient-drawer-fields {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.mw-ingredient-drawer-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 0 6px 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-bg);
+}
+
+.mw-ingredient-drawer-switch-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+}
+
+/* The switch's label fills the row so the label sits next to the icon and the toggle on the right.
+   MudBlazor wraps the switch in an input container too; it has to stretch as well, or the label
+   and toggle bunch up on the right. */
+.mw-ingredient-drawer-switch ::deep .mud-input-control,
+.mw-ingredient-drawer-switch ::deep .mud-input-control-input-container,
+.mw-ingredient-drawer-switch ::deep label.mud-switch {
+    flex: 1 1 auto;
+    width: 100%;
+    margin: 0;
+}
+
+.mw-ingredient-drawer-switch ::deep label.mud-switch {
+    justify-content: space-between;
+}
+
+/* MudBlazor gives the label text the mud-switch classes too (a row-reverse flex box), which pushed the text to the
+   right; lay it out as plain left-aligned text next to the icon. */
+.mw-ingredient-drawer-switch ::deep p.mud-switch {
+    flex: 1 1 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+}

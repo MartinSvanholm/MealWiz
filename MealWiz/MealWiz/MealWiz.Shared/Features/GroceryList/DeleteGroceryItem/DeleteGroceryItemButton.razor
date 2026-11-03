@@ -1,26 +1,12 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
-@implements IDisposable
 
-<MudIconButton data-testid="delete-grocery-item-button" OnClick="OnDeleteClick" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+@* The red delete action in the Edit item drawer's header. Deletes after the confirm drawer. *@
+<MudIconButton data-testid="delete-grocery-item-button" aria-label="Delete" OnClick="OnDeleteClick" Icon="@Icons.Material.Outlined.Delete" Class="mw-text-red" />
 
 @code {
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
 
-    public void Dispose()
-    {
-        _drawerStateContainer.CloseDrawer();
-    }
-
-    private void OnDeleteClick()
-    {
-        _drawerStateContainer.OpenConfirmDrawer("Delete grocery item?", "Are you sure you want to delete this grocery item?", OnConfirmDelete);
-    }
-
-    private async Task OnConfirmDelete()
-    {
-        await _groceryListStateContainer.DeleteGroceryItem(GroceryItem);
-        _drawerStateContainer.CloseDrawer();
-    }
+    private void OnDeleteClick() => ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, GroceryItem);
 }

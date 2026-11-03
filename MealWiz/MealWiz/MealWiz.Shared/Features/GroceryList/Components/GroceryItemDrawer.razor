@@ -1,15 +1,52 @@
-﻿<MudStack Class="pa-2">
-    <MudTextField data-testid="grocery-item-name-input" AutoFocus Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
-                  OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
-    <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" Label="Amount" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
-                  Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
-    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="GroceryItem"/>
-</MudStack>
+@* Add or edit a grocery item: name and amount side by side, then "Save item". When the name is already filled in
+   (from the add field), the amount gets the focus. The fields edit a copy, so closing without saving changes nothing
+   (MEA-76). *@
+<div class="grocery-item-fields">
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-name">Name</label>
+        <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" InputId="grocery-item-name" @bind-Value="_draft.Name" Variant="Variant.Outlined"
+                      OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    </div>
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-amount">Amount</label>
+        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="e.g. 2" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
+                      Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
+    </div>
+</div>
+<DrawerFooter>
+    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="_draft" />
+</DrawerFooter>
 
 @code {
+    /// <summary>Fits the header, the labelled fields and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
+    public const string DrawerHeight = "calc(272px + env(safe-area-inset-bottom))";
+
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
 
+    private GroceryItem _draft = new();
+    private GroceryItem? _draftOf;
+
+    private MudTextField<string> _nameField = default!;
     private MudTextField<string> _amountField = default!;
     private SaveGroceryItemButton _saveButton = default!;
+
+    // Copy only when the drawer gets another item, so a re-render of the drawer host keeps what was typed
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_draftOf, GroceryItem)) return;
+
+        _draftOf = GroceryItem;
+        _draft = GroceryItem.Clone();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (string.IsNullOrWhiteSpace(_draft.Name))
+            await _nameField.FocusAsync();
+        else
+            await _amountField.FocusAsync();
+    }
 }
