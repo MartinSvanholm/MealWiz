@@ -137,6 +137,23 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         Assert.Null(client.Auth.CurrentSession);
     }
 
+    [Fact]
+    public async Task ResetPassword_NewPasswordRefused_FailsAndLeavesTheUserSignedOut()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var link = await supabase.FollowPasswordResetLinkAsync(user.Email, ResetPasswordRedirect);
+        var client = await supabase.CreateSignedOutClientAsync();
+
+        // Below the minimum of 6 in supabase/config.toml.
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+            .Handle(new ResetPassword.Command(link, "short"), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.Null(client.Auth.CurrentSession);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+    }
+
     /// <summary>On the redirect allow list in supabase/config.toml, like the E2E app host's.</summary>
     private const string ResetPasswordRedirect = "http://127.0.0.1:5053/reset-password";
 

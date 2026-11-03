@@ -1,4 +1,3 @@
-using System.Web;
 using FluentResults;
 using MediatR;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -22,46 +21,33 @@ public static class ResetPassword
 
         public async Task<Result<Session?>> Handle(Command request, CancellationToken cancellationToken)
         {
-            var link = ResetLink.Read(request.ResetLink);
-            if (link.Error is not null)
-                return Result.Fail<Session?>(link.Error);
+            var tokens = ResetLink.Read(request.ResetLink);
+            if (tokens.IsFailed)
+                return tokens.ToResult<Session?>();
 
-            // Adopting the recovery session signs the user in (and persists it), which Update needs.
-            var result = await Result.Try(() => SetNewPasswordAsync(link.AccessToken!, link.RefreshToken!, request.NewPassword));
+            var result = await Result.Try(() => SetNewPasswordAsync(tokens.Value, request.NewPassword));
 
             await authenticationStateProvider.GetAuthenticationStateAsync();
 
             return result;
         }
 
-        private async Task<Session?> SetNewPasswordAsync(string accessToken, string refreshToken, string newPassword)
+        // Update needs the recovery session, and adopting it signs the user in. If the new password is refused (too
+        // short, say), sign out again: the user is signed in only once the password is set.
+        private async Task<Session?> SetNewPasswordAsync(ResetLink.Tokens tokens, string newPassword)
         {
-            await _supabaseClient.Auth.SetSession(accessToken, refreshToken);
-            await _supabaseClient.Auth.Update(new UserAttributes { Password = newPassword });
+            await _supabaseClient.Auth.SetSession(tokens.AccessToken, tokens.RefreshToken);
+            try
+            {
+                await _supabaseClient.Auth.Update(new UserAttributes { Password = newPassword });
+            }
+            catch
+            {
+                await _supabaseClient.Auth.SignOut();
+                throw;
+            }
+
             return _supabaseClient.Auth.CurrentSession;
         }
-    }
-}
-
-/// <summary>Reads the fragment of the URL a password reset email's link landed on.</summary>
-public static class ResetLink
-{
-    public const string InvalidLinkMessage = "This reset link is invalid or has expired. Ask for a new one.";
-
-    /// <summary>Either the recovery session's tokens, or an <see cref="Error"/> to show.</summary>
-    public record Contents(string? AccessToken, string? RefreshToken, string? Error);
-
-    public static Contents Read(Uri link)
-    {
-        var fragment = HttpUtility.ParseQueryString(link.Fragment.TrimStart('#'));
-
-        if (fragment["error"] is not null || fragment["error_description"] is not null)
-            return new Contents(null, null, fragment["error_description"] ?? InvalidLinkMessage);
-
-        var accessToken = fragment["access_token"];
-        var refreshToken = fragment["refresh_token"];
-        return string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || fragment["type"] != "recovery"
-            ? new Contents(null, null, InvalidLinkMessage)
-            : new Contents(accessToken, refreshToken, null);
     }
 }

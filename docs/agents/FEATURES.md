@@ -294,7 +294,7 @@ per host (see [Hosts](#hosts)).
     `login-password`) with labels above them, the full-width "Log in" button (`login-submit`) and "No account yet?
     Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) links to
     `/forgot-password`.
-  - `Features/Authentication/ForgotPassword/ForgotPasswordPage.razor` at `/forgot-password`: email (`forgot-email`)
+  - `Features/Authentication/RequestPasswordReset/ForgotPasswordPage.razor` at `/forgot-password`: email (`forgot-email`)
     and "Send reset link" (`forgot-submit`), which asks Supabase to email a reset link that lands on the app's
     `/reset-password` (`NavigationManager` base URI). Then a check-your-email note (`forgot-check-email`), worded so
     it doesn't say whether the account exists (Supabase answers the same either way). `forgot-login` goes back.
@@ -325,7 +325,7 @@ per host (see [Hosts](#hosts)).
   | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
   | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
   | RequestPasswordReset | `Command(string Email, string RedirectTo)` → `Result` | `ResetPasswordForEmail` with the redirect (implicit flow) |
-  | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`ResetLink.Read`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password, then refresh auth state |
+  | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`Features/Authentication/ResetPassword/ResetLink.cs`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password (signs out again if it's refused), then refresh auth state |
 
 - **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.
 - **Tests:**

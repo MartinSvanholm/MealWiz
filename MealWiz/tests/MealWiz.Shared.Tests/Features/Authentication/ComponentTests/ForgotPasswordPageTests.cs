@@ -1,6 +1,6 @@
 using Bunit;
 using FluentResults;
-using MealWiz.Shared.Features.Authentication.ForgotPassword;
+using MealWiz.Shared.Features.Authentication.RequestPasswordReset;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;
 

@@ -3,7 +3,7 @@ using MediatR;
 using Supabase.Gotrue;
 using Client = Supabase.Client;
 
-namespace MealWiz.Shared.Features.Authentication.ForgotPassword;
+namespace MealWiz.Shared.Features.Authentication.RequestPasswordReset;
 
 public static class RequestPasswordReset
 {
