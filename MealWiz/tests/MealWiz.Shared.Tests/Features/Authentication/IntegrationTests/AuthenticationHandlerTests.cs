@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
 using MealWiz.Shared.Features.Authentication.Logout;
+using MealWiz.Shared.Features.Authentication.ResetPassword;
 using MealWiz.Shared.Features.Authentication.SignUp;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -96,6 +97,48 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         Assert.Null(client.Auth.CurrentSession);
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
     }
+
+    // A user of its own: the class's user keeps its password for the other tests.
+    [Fact]
+    public async Task ResetPassword_FromTheEmailLink_SetsTheNewPasswordSignsInAndRefreshesTheAuthState()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var link = await supabase.FollowPasswordResetLinkAsync(user.Email, ResetPasswordRedirect);
+        Assert.Equal(ResetPasswordRedirect, link.GetLeftPart(UriPartial.Path));
+        var client = await supabase.CreateSignedOutClientAsync();
+        var newPassword = Guid.NewGuid().ToString("N");
+
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+            .Handle(new ResetPassword.Command(link, newPassword), CancellationToken);
+
+        var session = ResultAssert.Ok(result);
+        Assert.Equal(user.Id.ToString(), session?.User?.Id);
+        Assert.Equal(user.Id.ToString(), client.Auth.CurrentUser?.Id);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+
+        var signIn = await supabase.CreateSignedOutClientAsync();
+        Assert.NotNull(await signIn.Auth.SignIn(user.Email, newPassword));
+        await Assert.ThrowsAnyAsync<Exception>(() => signIn.Auth.SignIn(user.Email, user.Password));
+    }
+
+    // What GoTrue redirects to for an expired or already used link.
+    [Fact]
+    public async Task ResetPassword_ExpiredLink_FailsWithoutSigningIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var link = new Uri($"{ResetPasswordRedirect}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
+
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+            .Handle(new ResetPassword.Command(link, Guid.NewGuid().ToString("N")), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.Null(client.Auth.CurrentSession);
+    }
+
+    /// <summary>On the redirect allow list in supabase/config.toml, like the E2E app host's.</summary>
+    private const string ResetPasswordRedirect = "http://127.0.0.1:5053/reset-password";
 
     private static Mock<AuthenticationStateProvider> CreateAuthStateProvider()
     {
