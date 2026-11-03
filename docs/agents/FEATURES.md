@@ -186,7 +186,8 @@ The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenH
 "X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
-every picked item after the confirm drawer ("Clear 2 items?"). Swipe-to-delete is MEA-67.
+every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy row left (touch or mouse) past 80px
+also deletes it after the same confirm drawer; basket pills don't swipe.
 
 - **Folder:** `Features/GroceryList/`
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
@@ -200,7 +201,11 @@ every picked item after the confirm drawer ("Clear 2 items?"). Swipe-to-delete i
   - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
     drawer with `DeleteGroceryItemButton` as its header action.
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
-    header; deletes after a confirm drawer ("Delete Milk?").
+    header; deletes after a confirm drawer ("Delete Milk?"). That confirm lives in
+    `Features/GroceryList/DeleteGroceryItem/ConfirmDeleteGroceryItem.cs`, shared with the swipe.
+  - `Features/GroceryList/DeleteGroceryItem/SwipeToDeleteGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's
+    content. Blazor pointer events (no JS) move the row over a red layer; `touch-action: pan-y` keeps vertical
+    scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
