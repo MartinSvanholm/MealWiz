@@ -1,6 +1,6 @@
 ---
 name: plan-project
-description: Step 2 of a MealWiz feature. Research and plan a specced Linear project, split it into tracer-bullet issues with blocking relations, then coordinate - start one implementation session per unblocked issue (max 4), and start the next ones as PRs merge. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
+description: Step 2 of a MealWiz feature. Research and plan a specced Linear project, split it into tracer-bullet issues with blocking relations, then coordinate - start one implementation session per unblocked issue (max 4 locally, no limit in cloud mode), and start the next ones as PRs merge. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
 ---
 
 # Plan and coordinate a feature project
@@ -17,6 +17,10 @@ Standing rules:
   team MealWiz, **no project**, status Backlog; it isn't fixed here.
 - Feature PRs target `dev` and are merged by the user. Nothing goes to `main`.
 - Never poll. You act when you're woken: by the user, or when a session you started ends a turn.
+
+**Local or cloud mode.** If `CLAUDE_CODE_REMOTE` is `true` (or you have `create_session` and no `start_session`), you
+run in a Claude Code cloud container: use **cloud mode** wherever a step has one ([Cloud mode](#cloud-mode)). Otherwise
+it's local mode: the desktop app on the user's machine, worktrees and one shared Supabase.
 
 ## 1. Read
 
@@ -61,8 +65,10 @@ cards, unless they say "start the next ones" when they're back.
 ### Start sessions
 
 The **frontier** is every Todo top-level issue in the project (not a sub-issue) whose blockers are all Done.
-**At most 4 sessions run at once**
-(they share one local Supabase and its sign-in rate limit); the rest wait for a slot.
+**At most 4 sessions run at once** in local mode
+(they share one local Supabase and its sign-in rate limit); the rest wait for a slot. Cloud mode has no limit: each
+cloud session has its own container and Supabase. Start the whole frontier, and follow [Cloud mode](#cloud-mode)
+instead of the steps below.
 
 For each issue you start:
 1. `mark_chapter` once per wave ("Wave 2: MEA-52, MEA-53").
@@ -100,6 +106,49 @@ The user may also say "next", "status" or "MEA-52 is merged"; treat that the sam
 
 Approvals don't relay: a session's own permission prompts (pushing, `set_monitor`) are answered by the user in that
 session. Never ask a session to do something your own permissions would block.
+
+### Cloud mode
+
+How each step above changes when you run in a cloud container.
+
+**Start a session** with `create_session` (claude-code-remote), one per frontier issue, using the cloud brief in
+[references/session-brief.md](references/session-brief.md):
+
+```
+create_session(
+  title: "<ID>: <short title>",
+  source_url: "https://github.com/MartinSvanholm/MealWiz",
+  source_revision: "dev",
+  outcome_branch: "<id>-<slug>",          // e.g. mea-52-fav-toggle: the session's own branch
+  permission_mode: "plan",                // the user approves its plan in that session on claude.ai/code
+  tags: ["mealwiz", "<project slug>"],
+  prompt: <cloud prompt>,
+  append_system_prompt: <background>)
+```
+
+Leave `environment_id` out: the session inherits this one's environment, whose setup script
+(`bash scripts/cloud-setup.sh`) installs the .NET 10 SDK and the Supabase CLI and starts Docker. If this session had
+to run that script by hand, tell the user once to make it the environment's setup script (environment settings, Setup
+script).
+
+**Check the record right away.** `get_session <new id>`: `session_context.sources[0].git_repository.revision` must be
+`dev` (or `refs/heads/dev`) and `session_context.outcomes[0].git_repository.git_info.branches` must be exactly
+`["<id>-<slug>"]`. If the branch shows `dev` or is missing, `archive_session` it and create it again once; if it's
+still wrong, stop and tell the user. Never let a session work on `dev`.
+
+**Being woken.** A cloud session that ends its turn cleanly doesn't wake you; only a failed turn does (a
+`<child-session-event>`). So the brief has each session `send_message` you (this session's id, from `get_session`
+with no id) when it's blocked, opens its PR, merges or is stuck. Act on those messages as on any report. When the user
+asks for status, `get_session` each running session (`status_bucket`) and `list_events` with `kinds: ["assistant",
+"result"]` for its last words.
+
+**GitHub.** There's no `gh` CLI: check PRs with the GitHub MCP tools (`list_pull_requests` with `base: "dev"`,
+`pull_request_read`). If a session reports a push refused with 403 or "GitHub access", the user must reconnect GitHub
+(`read_documentation` topic `github.access` gives the link); tell them in one line, then `send_message` the session
+"continue" once they have.
+
+**Finish.** There are no worktrees to remove. `archive_session` each merged session on the user's yes; merged
+branches are deleted when their PR merges.
 
 ## 6. Finish
 

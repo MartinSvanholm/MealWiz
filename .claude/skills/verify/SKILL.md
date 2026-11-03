@@ -30,6 +30,10 @@ scripts/verify.ps1 local     # PowerShell
 scripts/verify.sh local      # bash
 ```
 
+In a Claude Code cloud container, run `scripts/cloud-setup.sh` first if `dotnet` or `supabase` is missing (the
+environment's setup script should already have run it). verify starts `dockerd` itself there if Docker isn't running,
+and if `supabase db reset` fails for lack of the `supabase-go` binary it restarts the stack instead (MEA-72).
+
 Every level but `fast` takes minutes, so run it in the background and wait for the completion notice rather than
 polling.
 
@@ -91,7 +95,7 @@ If your change fixes one of those, flip the assertion as the comment there says,
 
 When a test can't tell you whether the UI looks right, open the app:
 
-1. `supabase start` (local/smoke/full already started it).
+1. `supabase start` (local/smoke/full already started it, without Studio; pass `--studio` to verify to keep it).
 2. In the Claude desktop app, start the `web` preview from `.claude/launch.json`. It runs `dotnet run` for MauiWASM on http://localhost:5053 in Development, pointing at local Supabase.
 3. Log in as `test@test.com` / `tester`. That user is seeded by `supabase/seed.sql` and exists only in the local stack.
 4. The `supabase-studio` entry opens Studio on http://127.0.0.1:54323 to inspect the data.

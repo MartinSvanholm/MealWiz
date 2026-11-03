@@ -70,7 +70,13 @@ to start sessions.
 
 ## 4. Start the group sessions
 
-**At most 4 run at once.** For each group that can start:
+**Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start each group with `create_session` and check its record right
+after, exactly as `plan-project` describes under "Cloud mode", but without `permission_mode` (bug sessions don't
+plan-gate) and with the cloud changes in [references/bug-brief.md](references/bug-brief.md). There is no limit of 4
+there, since each session has its own Supabase; groups that share a file still wait for each other. Being woken,
+GitHub checks and cleanup work as that section says.
+
+**At most 4 run at once** locally. For each group that can start:
 
 1. `mark_chapter` once ("Bug fixes: wave 1").
 2. A bold title line and one sentence, then `start_session` with `initiation: "user_asked"`, `context: "fresh"`,

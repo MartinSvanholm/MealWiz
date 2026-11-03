@@ -32,7 +32,20 @@ only, never main. Fix only your group's bugs; file anything else in Linear with 
 Windows: PowerShell 5.1, so write commit messages and PR bodies to a file (git commit -F, gh pr create --body-file).
 ```
 
-## Call shape
+## Cloud mode
+
+For a cloud session (`create_session`, see the fix-bugs skill), pass `background` as `append_system_prompt`, replace
+its last sentence ("Windows: PowerShell 5.1, …") with "Linux cloud container (bash), with its own Docker and Supabase;
+GitHub through the GitHub MCP tools, no gh CLI.", and add to the `prompt`:
+
+```
+You run in your own Claude Code cloud container, in cloud mode (see the implement-issue skill): it says how to check
+your branch (<ids>-<slug>, never dev), set up with scripts/cloud-setup.sh, watch CI and merge without the gh CLI.
+The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it your
+BLOCKED / UNBLOCKED / MERGED / STUCK lines too.
+```
+
+## Call shape (local mode)
 
 ```
 start_session(

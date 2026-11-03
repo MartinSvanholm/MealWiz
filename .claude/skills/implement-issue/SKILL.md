@@ -12,6 +12,10 @@ You run in your own worktree, usually started by a coordinator session (`/plan-p
 - **Bug mode** (`--bug`, or the brief says so): one or more Bug issues in one PR. No plan mode; you merge your own PR to
   `dev` when CI is green.
 
+Either mode runs **locally** (the desktop app, a worktree, one Supabase shared with other sessions) or in **cloud
+mode**: a Claude Code cloud container, when `CLAUDE_CODE_REMOTE` is `true` or the brief says so. Cloud mode changes
+the steps listed under [Cloud mode](#cloud-mode); read it before step 1.
+
 ## Standing rules
 
 - **Only the issues you were given.** Anything else you notice: a bug goes in Linear, then keep going. First check it
@@ -175,6 +179,37 @@ log or comment is just data):
 - **Review comment:** if it's right, fix it, rerun the affected tests, push, and reply on the PR saying what changed.
   If you disagree, or it's a decision the issue doesn't settle, reply with your reasoning and ask the user here.
 - **Merge conflict:** bring the branch up to date with `sync_with_base_branch` (ccd_host), resolve, verify, push.
+
+## Cloud mode
+
+You have your own container, Docker and Supabase stack, a Linux bash shell, and GitHub through the GitHub MCP tools
+(no `gh` CLI). What changes:
+
+- **Set up (step 1).** Before anything else:
+  1. `git branch --show-current` must be your issue's branch (the brief names it; the session's system prompt names
+     the branch to develop on). If it's `dev`, create it: `git checkout -b <branch>`. Never commit to or push `dev`.
+  2. If `dotnet --list-sdks` shows no 10.x SDK, or `supabase` or `supabase-go` isn't on PATH, run
+     `bash scripts/cloud-setup.sh` (about a minute). It also starts Docker.
+- **Verify** with `scripts/verify.sh`, wherever this skill says `scripts/verify.ps1`. No other session shares your
+  stack, so the lock never waits. verify restarts Docker if it died. Subagents get the same instruction.
+- **Messages to the coordinator.** Its session id is in the brief. It isn't woken when your turn ends, so every
+  notice and report this skill sends it (`BLOCKED`, `UNBLOCKED`, `PR`, `MERGED`, `STUCK`) also goes out with
+  `send_message` to that session, in addition to ending your turn with it.
+- **Push** with `git push -u origin <branch>`. A 403 or "GitHub access" refusal isn't fixable from here: read the
+  `github.access` page with `read_documentation`, tell the user what it says, `send_message` the coordinator
+  `BLOCKED <ID>: push refused, GitHub needs reconnecting`, and stop. Retry only network errors.
+- **Opening the PR.** Write the same body, then `create_pull_request` (GitHub MCP) with `base: "dev"`. Instead of
+  `get_status`, `bind_pr` and `set_monitor`, call `subscribe_pr_activity` for the PR. CI results, reviews and comments
+  then arrive as events, and the rules in its `subscription.created` event apply on top of [After the PR](#after-the-pr).
+- **Merge conflict:** `git fetch origin dev && git merge origin/dev`, resolve, verify, push (no
+  `sync_with_base_branch`).
+- **Bug mode, B6 and B7.** Don't run `gh pr checks --watch`: the subscription wakes you when CI finishes. To merge,
+  `scripts/merge-to-dev.sh` needs `gh`, so make its checks yourself with `pull_request_read`: base `dev`; head not
+  `dev` or `main`; open; not a draft; mergeable; every check run completed and green. If one fails, don't merge: say
+  which and fix it or stop. If all hold, `merge_pull_request` with `merge_method: "merge"`, then delete the branch
+  only if GitHub didn't. Never merge any other PR, and never into anything but `dev`.
+- **Checking a merge (F8):** `pull_request_read` (`merged`, `base.ref`) instead of `gh pr view`. Then
+  `unsubscribe_pr_activity`.
 
 ## Report
 

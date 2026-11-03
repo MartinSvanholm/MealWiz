@@ -28,7 +28,7 @@ Project skills in `.claude/skills/` run the workflow:
 | Skill | Use it to |
 |---|---|
 | `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, then coordinate one session per issue (max 4 at once) |
+| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, then coordinate one session per issue (max 4 at once locally; no limit in cloud mode) |
 | `/implement-issue` | implement one issue and its sub-issues (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
 | `/fix-bugs` | group the open Bug issues by the files they touch and start one bug-mode session per group |
 
@@ -99,6 +99,11 @@ scripts/verify.sh local      # Linux, macOS, Git Bash
 | `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | when you want the browser smoke set locally |
 | `full` | `smoke` + every E2E journey + pgTAP RLS tests | what CI runs; locally only when asked |
 
+In a Claude Code cloud container (Ubuntu, `CLAUDE_CODE_REMOTE=true`), `scripts/cloud-setup.sh` installs the .NET 10
+SDK and the Supabase CLI and starts Docker. Make `bash scripts/cloud-setup.sh` the environment's setup script so each
+session starts ready. Each cloud session has its own Docker and Supabase stack; the workflow skills have a cloud mode
+for that.
+
 Browser tests are slow and suffer most when several sessions run at once, so the full E2E suite runs in CI
 (`.github/workflows/CI.yml` runs `verify full` on every PR), and a PR merges only on green CI. Run verify in the
 background. All worktrees share one local Supabase stack: verify takes a machine-wide lock for it (a second run waits)
@@ -117,7 +122,7 @@ for which change; the verify skill explains how to read failures.
 - Migrations: `supabase/migrations/<YYYYMMDDHHMMSS>_<description>.sql`. Apply them locally with `supabase db reset`,
   which wipes local data and re-runs `supabase/seed.sql`.
 - Every table has a `created_by` owner column, RLS, and pgTAP tests (DB-01).
-- Local ports: API 54321, DB 54322, Studio 54323.
+- Local ports: API 54321, DB 54322, Studio 54323 (verify starts the stack without Studio unless you pass `--studio`).
 
 ## Configuration
 - **Web:** `MealWiz/MauiWASM/wwwroot/appsettings.{Development,Staging,Production}.json`, with a `Supabase` section

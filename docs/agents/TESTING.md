@@ -33,7 +33,11 @@ adds every E2E journey.
   machine-wide lock (`mealwiz-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
   end of the run, so a second verify waits and says whose run it is waiting for. Under the lock it runs
   `supabase db reset`, so the tests see this worktree's migrations and `seed.sql`, not another branch's. That wipes
-  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset.
+  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails because
+  the CLI lacks its `supabase-go` binary (MEA-72), verify restarts the stack instead.
+- **Starting the stack:** verify starts it without Studio and postgres-meta, as CI does (`--studio` keeps them). On
+  Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
+  .NET 10 SDK and the Supabase CLI there.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
   ends with `--check-complete`, which fails if a step never ran.
 

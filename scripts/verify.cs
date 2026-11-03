@@ -15,7 +15,8 @@
 // Every level that uses Supabase takes a machine-wide lock first, so parallel worktrees (agent sessions) take turns
 // on the one local stack instead of slowing each other down and changing its schema under each other's tests. Under
 // the lock it resets the database to this worktree's migrations and seed.sql (`supabase db reset`), unless the stack
-// was just started, CI is set, or --no-reset is passed.
+// was just started, CI is set, or --no-reset is passed. It starts the stack without Studio (--studio adds it) and, on
+// Linux as root (a cloud container), starts dockerd if Docker isn't running.
 //
 // The exit code is the verdict: 0 all passed, 1 something failed, 2 couldn't run (bad arguments, no Docker...).
 // Only a short summary is printed. Full build and test logs, and a TRX per suite, go to artifacts/verify/<level>/.
@@ -53,6 +54,7 @@ if (level is null or "-h" or "--help" or "help")
 
           --e2e <class>      local only: also run this E2E class, e.g. --e2e GroceryListJourneyTests
           --no-reset         don't reset the local database to this worktree's migrations and seed first
+          --studio           also start Supabase Studio (http://127.0.0.1:54323) when verify starts the stack
 
         For CI (see the top of scripts/verify.cs):
           --only <steps>     comma list of steps to run: docs, build, shared-unit, functions-unit, web-unit,
@@ -73,6 +75,7 @@ HashSet<string>? only = null;
 var coverage = false;
 var checkComplete = false;
 var noReset = false;
+var studio = false;
 string? e2eClass = null;
 for (var i = 1; i < args.Length; i++)
 {
@@ -89,6 +92,9 @@ for (var i = 1; i < args.Length; i++)
             break;
         case "--no-reset":
             noReset = true;
+            break;
+        case "--studio":
+            studio = true;
             break;
         case "--e2e" when i + 1 < args.Length && level is "local":
             e2eClass = args[++i];
@@ -474,17 +480,43 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
     if (Run("supabase", ["status", "-o", "env"], log) == 0 && File.ReadAllText(log).Contains("API_URL="))
         return ("running", null);
 
-    if (Run("docker", ["info"], log) != 0)
+    if (Run("docker", ["info"], log) != 0 && !StartDockerDaemon(log))
         return ("no Docker", "Docker isn't running, and local, smoke and full need the local Supabase stack. Start Docker Desktop, or run `verify fast`.");
 
-    // The same services as CI leaves out, except Studio (and postgres-meta, which Studio needs), so a developer
-    // can still look at the data.
+    // The same services CI leaves out. Studio (and postgres-meta, which it needs) only with --studio: no test uses
+    // them, and they're a large part of the first image pull.
     Progress("supabase start (first start pulls images and can take a few minutes)");
-    if (Run("supabase", ["start", "-x", "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor,mailpit"], log) == 0)
+    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor,mailpit" + (studio ? "" : ",studio,postgres-meta");
+    if (Run("supabase", ["start", "-x", excluded], log) == 0)
         return ("started", null);
 
     return ("couldn't start", $"`supabase start` failed (a broken migration or seed fails here too). Last lines of {Relative(log)}:\n"
         + string.Join('\n', Tail(log, 15).Select(l => "  " + l)));
+}
+
+// On Linux (a cloud container, where nothing restarts the daemon if it dies), starts dockerd when it's installed and
+// this runs as root. Returns whether Docker answers. Elsewhere it's Docker Desktop's job, so it returns false.
+bool StartDockerDaemon(string log)
+{
+    if (!OperatingSystem.IsLinux() || Environment.UserName != "root" || Environment.GetEnvironmentVariable("CI") is { Length: > 0 })
+        return false;
+    Progress("docker isn't running: starting dockerd");
+    try
+    {
+        var daemonLog = Path.Combine(Path.GetTempPath(), "mealwiz-dockerd.log");
+        Process.Start(new ProcessStartInfo("bash", ["-c", $"nohup dockerd > '{daemonLog}' 2>&1 &"]) { UseShellExecute = false })?.WaitForExit();
+    }
+    catch (Exception e)
+    {
+        File.AppendAllText(log, $"Couldn't start dockerd: {e.Message}\n");
+        return false;
+    }
+    for (var i = 0; i < 30; i++)
+    {
+        if (Run("docker", ["info"], log) == 0) return true;
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+    }
+    return false;
 }
 
 // Waits (up to lockTimeout) for the lock on local Supabase and sets supabaseLock. FileShare.None is an exclusive
@@ -526,6 +558,15 @@ string LockOwner()
     var log = Path.Combine(outDir, "supabase.log");
     if (Run("supabase", ["db", "reset"], log) == 0)
         return ("running, reset", null);
+    // A CLI installed without its supabase-go binary can start a stack but not reset it (MEA-72; scripts/cloud-setup.sh
+    // installs both). A fresh start applies the migrations and seed too, so restart instead.
+    if (File.ReadAllText(log).Contains("supabase-go"))
+    {
+        Progress("supabase db reset needs supabase-go, which isn't installed: restarting the stack instead");
+        Run("supabase", ["stop", "--no-backup"], log);
+        var (state, problem) = EnsureSupabase();
+        return (state == "started" ? "restarted (no supabase-go)" : state, problem);
+    }
     return ("reset failed", $"`supabase db reset` failed (a broken migration or seed fails here). Last lines of {Relative(log)}:\n"
         + string.Join('\n', Tail(log, 15).Select(l => "  " + l)));
 }
