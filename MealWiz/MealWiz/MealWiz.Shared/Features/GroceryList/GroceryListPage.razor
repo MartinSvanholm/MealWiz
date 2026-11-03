@@ -44,16 +44,18 @@
                     @foreach (var item in ToBuy)
                     {
                         <li class="grocery-row" data-testid="grocery-item" @key="item">
-                            <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
-                                    role="checkbox" aria-checked="false" aria-label="@($"Check off {item.Name}")"
-                                    @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
-                                <span class="grocery-check-box" aria-hidden="true"></span>
-                            </button>
-                            <EditGroceryItemButton GroceryItem="item" />
-                            @if (!string.IsNullOrWhiteSpace(item.Amount))
-                            {
-                                <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
-                            }
+                            <SwipeToDeleteGroceryItem GroceryItem="item">
+                                <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
+                                        role="checkbox" aria-checked="false" aria-label="@($"Check off {item.Name}")"
+                                        @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
+                                    <span class="grocery-check-box" aria-hidden="true"></span>
+                                </button>
+                                <EditGroceryItemButton GroceryItem="item" />
+                                @if (!string.IsNullOrWhiteSpace(item.Amount))
+                                {
+                                    <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
+                                }
+                            </SwipeToDeleteGroceryItem>
                         </li>
                     }
                 </ul>

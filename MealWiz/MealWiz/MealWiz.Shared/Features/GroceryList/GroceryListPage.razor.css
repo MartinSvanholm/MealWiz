@@ -90,7 +90,7 @@
     color: var(--mw-text-muted);
 }
 
-/* To buy: one container, thin dividers, 44px rows. */
+/* To buy: one container, thin dividers, 44px rows (SwipeToDeleteGroceryItem lays out each row). */
 .grocery-to-buy {
     margin: 0;
     padding: 0;
@@ -99,13 +99,6 @@
     border: 1px solid var(--mw-border);
     border-radius: var(--mw-radius-m);
     overflow: hidden;
-}
-
-.grocery-row {
-    display: flex;
-    align-items: center;
-    height: var(--mw-touch);
-    padding-left: 2px;
 }
 
 .grocery-row + .grocery-row {
