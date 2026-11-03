@@ -32,22 +32,21 @@
         Ingredient.CopyEditableFieldsFrom(edited);
         Ingredient.Name = Ingredient.Name.Trim();
         IsLoading = true;
+        var isSaved = false;
 
         try
         {
             var wasSaved = _mealsStateContainer.IsEdit;
             var result = await _mealsStateContainer.SaveIngredientForMealToEdit(Ingredient);
-            if (result.Handle(_snackbar).IsFailed)
-            {
-                Ingredient.CopyEditableFieldsFrom(before);
-                return;
-            }
+            if (result.Handle(_snackbar).IsFailed) return;
 
+            isSaved = true;
             _drawerStateContainer.CloseDrawer();
             if (wasSaved) _snackbar.Add("Ingredient saved.", Severity.Success);
         }
         finally
         {
+            if (!isSaved) Ingredient.CopyEditableFieldsFrom(before);
             IsLoading = false;
         }
     }
