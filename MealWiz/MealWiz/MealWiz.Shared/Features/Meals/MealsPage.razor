@@ -78,10 +78,10 @@
 
     private bool MatchesSearch(Meal meal) =>
         string.IsNullOrWhiteSpace(_search)
-        || Contains(meal.Name)
-        || meal.Ingredients.Any(ingredient => Contains(ingredient.Name));
+        || ContainsSearch(meal.Name)
+        || meal.Ingredients.Any(ingredient => ContainsSearch(ingredient.Name));
 
-    private bool Contains(string? text) => text?.Contains(_search, StringComparison.InvariantCultureIgnoreCase) == true;
+    private bool ContainsSearch(string? text) => text?.Contains(_search, StringComparison.InvariantCultureIgnoreCase) == true;
 
     private string NoMatchMessage =>
         !string.IsNullOrWhiteSpace(_search) ? $"No meals match \"{_search}\"."
