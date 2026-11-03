@@ -15,8 +15,7 @@
         <div class="mw-auth-field">
             <div class="mw-auth-label-row">
                 <label class="mw-auth-label" for="@PasswordInputId" data-testid="login-password-label">Password</label>
-                @* Not wired yet: MEA-69. *@
-                <button type="button" class="mw-auth-link" data-testid="login-forgot-password">Forgot password?</button>
+                <a class="mw-auth-link" href="forgot-password" data-testid="login-forgot-password">Forgot password?</a>
             </div>
             <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" InputId="@PasswordInputId"
                        Placeholder="Your password" Required InputType="InputType.Password"
