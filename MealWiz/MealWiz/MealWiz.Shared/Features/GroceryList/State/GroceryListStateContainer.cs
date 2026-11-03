@@ -18,6 +18,8 @@ public interface IGroceryListStateContainer
     Task UpdateGroceryItem(GroceryItem groceryItem);
     Task ToggleIsPicked(GroceryItem item);
     Task DeleteGroceryItem(GroceryItem groceryItem);
+    /// <summary>Deletes every picked item ("Clear" next to "In the basket").</summary>
+    Task ClearBasket();
 }
 
 public class GroceryListStateContainer(
@@ -82,6 +84,17 @@ public class GroceryListStateContainer(
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
         GroceryList.Items.Remove(groceryItem);
+        NotifyStateChanged();
+    }
+
+    public async Task ClearBasket()
+    {
+        var picked = GroceryList.Items.Where(item => item.IsPicked).ToList();
+
+        var result = await mediator.Send(new ClearBasket.ClearBasket.Command(picked.ConvertAll(item => item.Id)));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        GroceryList.Items.RemoveAll(picked.Contains);
         NotifyStateChanged();
     }
 }
