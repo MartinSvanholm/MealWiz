@@ -21,16 +21,29 @@ other than `regular`, seeded by `supabase/seed.sql`. They can be planned but not
 On the Edit Meal page, ingredient changes are held in `IMealsStateContainer` as pending ingredients. Clicking save
 first saves the meal, then each pending ingredient (see Ingredients).
 
+The Meals page shows only regular meals; Eat Out and Leftovers are offered only when planning a day (the pick-a-meal
+list). Each card's day tag comes from this calendar week's plan, which the page reads by sending the MealPlans
+feature's `GetMealPlanByDate` query through MediatR (a failed load just leaves the tags out). Search matches meal
+names only; the This week / No recipe filter chips are shown but not wired (MEA-65), and ingredient search is MEA-66.
+
 - **Folder:** `Features/Meals/`
 - **Pages:**
-  - `Features/Meals/MealsPage.razor` at `/meals`: the meal list plus the add menu.
-  - `Features/Meals/EditMeal/EditMealPage.razor` at `/meals/edit`: create or edit the meal in `MealToEdit`, including its ingredients.
+  - `Features/Meals/MealsPage.razor` at `/meals`: header ("N meals", add menu), search, filter chips
+    (`meal-filter-all|this-week|no-recipe`), the meal grid and the "Import from a recipe link" entry
+    (`meals-import-link`). Empty state `meal-list-empty`.
+  - `Features/Meals/EditMeal/EditMealPage.razor` at `/meals/edit`: create or edit the meal in `MealToEdit`, including
+    its ingredients. Orange header with back (`edit-meal-back`), Save and the name field (`meal-name-input`); then the
+    recipe, the add-ingredient row, the ingredient rows and, for a saved meal, Delete meal.
 - **Components:**
-  - `Features/Meals/MealList.razor`
-  - `Features/Meals/MealDisplayComponent.razor`
-  - `Features/Meals/AddMealMenu.razor`: "new meal" or "import from URL", and shows the import status.
-  - `Features/Meals/SaveMeal/SaveMealButton.razor`
-  - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: deletes after a confirm drawer.
+  - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
+    `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
+  - `Features/Meals/MealDisplayComponent.razor`: used by the Meal plan page.
+  - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
+    `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
+    (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
+  - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header.
+  - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: "Delete meal" on the Edit meal page; deletes after a confirm
+    drawer, then returns to `/meals`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -40,7 +53,8 @@ first saves the meal, then each pending ingredient (see Ingredients).
   | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade |
 
 - **State:** `Features/Meals/State/MealsStateContainer.cs` (`IMealsStateContainer`). It holds `Meals`, `MealToEdit`,
-  and the pending ingredients; methods include `LoadMeals` and `ReloadIngredientsForMealToEdit`.
+  and the pending ingredients; methods include `LoadMeals`, `ReloadIngredientsForMealToEdit` and
+  `SaveIngredientForMealToEdit` (pending while the meal is new, otherwise `SaveIngredient` and a reload).
 - **Models:**
   - `Features/Meals/Models/Meal.cs` ↔ `Features/Meals/Models/MealDb.cs`, table `meals`. `MealDb` references `IngredientDb`.
   - `Features/Meals/Models/MealType.cs`: `regular`, `leftover`, `eat_out`, mapped with `ToDbValue`/`FromDbValue`.
@@ -59,15 +73,20 @@ first saves the meal, then each pending ingredient (see Ingredients).
 
 A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch in the drawer, on by default;
 ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
-Edit Meal page, in a drawer. A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
+Edit Meal page: added in the inline row, changed in a drawer. A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
 saved and has an id.
 
 - **Folder:** `Features/Ingredients/`
 - **Pages:** none. The Edit Meal page hosts this feature.
 - **Components:**
-  - `Features/Ingredients/IngredientCard.razor`
-  - `Features/Ingredients/IngredientDrawer.razor`: drawer content.
-  - `Features/Ingredients/CreateIngredient/CreateIngredientCard.razor`: UI only.
+  - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): drag handle
+    (`ingredient-drag-handle`, not wired, MEA-68), name, amount chip (`ingredient-amount-chip`, `data-empty`; "+ amount"
+    when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
+    (`drawer-delete-ingredient`).
+  - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
+    list" switch row, and Save ingredient in a `DrawerFooter`.
+  - `Features/Ingredients/CreateIngredient/AddIngredientRow.razor`: the add row (`add-ingredient-name`,
+    `add-ingredient-amount`, `create-ingredient-button`); Enter moves name → amount → add.
   - `Features/Ingredients/SaveIngredient/SaveIngredientButton.razor`
   - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`
 - **Handlers:**
@@ -78,7 +97,8 @@ saved and has an id.
   | SaveIngredient | `Command(Ingredient, int MealId)` → `Result` | Insert when `Id == 0` (sets `created_by`, `fk_meal`), otherwise update |
   | DeleteIngredient | `Command(Ingredient)` → `Result` | Delete one ingredient |
 
-- **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `ReloadIngredientsForMealToEdit`).
+- **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `SaveIngredientForMealToEdit`,
+  `ReloadIngredientsForMealToEdit`).
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
@@ -211,7 +231,9 @@ toast if it fails. The client fails the row itself (`MarkMealImportFailed`) if t
 stays pending past 3 minutes. One job runs at a time.
 
 - **Folder:** `Features/MealImport/`
-- **Pages:** `Features/MealImport/ImportMeal/ImportMealPage.razor` at `/meals/import`. `AddMealMenu` on the Meals
+- **Pages:** `Features/MealImport/ImportMeal/ImportMealPage.razor` at `/meals/import`: sub-page header, the failed
+  alert (`import-job-error` or `import-latest-failed`), the form card (`import-form`, `import-url-input`,
+  `import-submit`) and the progress card (`import-progress`). `AddMealMenu` on the Meals
   page is the entry point and shows the latest import's status.
 - **Handlers:**
 

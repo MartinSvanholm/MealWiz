@@ -1,4 +1,4 @@
-﻿@page "/meals/edit"
+@page "/meals/edit"
 @attribute [Authorize]
 @inject IMealsStateContainer _mealsStateContainer
 @inject NavigationManager _navigationManager
@@ -7,43 +7,64 @@
 
 @* Fills the screen above the bottom nav: the visible height (dvh, with a vh fallback) minus the nav space and the
    safe areas the MAUI app draws under (status bar on top, home indicator under the nav bar). MEA-9. *@
-<MudStack Spacing="0" Style="height: calc(100vh - var(--mw-nav-space) - env(safe-area-inset-top)); height: calc(100dvh - var(--mw-nav-space) - env(safe-area-inset-top));">
-    <MudPaper Class="rounded-t-0">
-        <MudGrid Spacing="0" Class="my-1">
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-start pl-1">
-                <MudIconButton data-testid="edit-meal-back" Icon="@Icons.Material.Filled.ArrowBack" OnClick="OnBackClick" Color="Color.Primary" />
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-center">
-                <MudText Typo="Typo.h6">Edit meal</MudText>
-            </MudItem>
-            <MudItem xs="4" Class="d-flex align-center flex-row justify-end pr-1">
+<div class="mw-edit-meal" style="height: calc(100vh - var(--mw-nav-space) - env(safe-area-inset-top)); height: calc(100dvh - var(--mw-nav-space) - env(safe-area-inset-top));">
+    <div class="mw-edit-meal-scroll">
+        <section class="mw-edit-meal-header">
+            <div class="mw-edit-meal-header-row">
+                <button type="button" class="mw-edit-meal-back" data-testid="edit-meal-back" aria-label="Back to meals" @onclick="OnBackClick">
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" />
+                </button>
                 <SaveMealButton />
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
+            </div>
+            <label class="mw-edit-meal-name-label" for="meal-name-input">Meal name</label>
+            <input id="meal-name-input" class="mw-edit-meal-name" data-testid="meal-name-input" placeholder="Name your meal"
+                   autocomplete="off" enterkeyhint="next"
+                   @bind="_mealsStateContainer.MealToEdit.Name"
+                   @onkeydown="EnterKey.Then(() => _recipeField.FocusAsync())" />
+        </section>
 
-    <div style="flex: 1 1 0; min-height: 0;" class="overflow-y-auto">
+        <div class="mw-edit-meal-body">
+            <div class="mw-edit-meal-section">
+                <h2 class="mw-edit-meal-heading">Recipe</h2>
+                <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Lines="4" Placeholder="Steps, oven temperature, little tricks…"
+                                      @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
+            </div>
 
-        <MudStack Class="pa-4">
-            <MudTextField data-testid="meal-name-input" Class="flex-grow-0" Label="Name" @bind-Value="_mealsStateContainer.MealToEdit.Name" Variant="Variant.Outlined"
-                          OnKeyDown="EnterKey.Then(() => _recipeField.FocusAsync())" />
-            <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Class="flex-grow-0" Clearable Lines="4" Label="Recipe" @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
+            <div class="mw-edit-meal-section">
+                <div class="mw-edit-meal-heading-row">
+                    <h2 class="mw-edit-meal-heading">Ingredients</h2>
+                    <span class="mw-edit-meal-count" data-testid="edit-meal-ingredient-count">@ItemCount</span>
+                </div>
 
-            <CreateIngredientCard />
+                <AddIngredientRow />
 
-            <MudStack>
-                @foreach (Ingredient ingredient in _mealsStateContainer.MealToEdit.Ingredients)
-                {
-                    <IngredientCard Ingredient="ingredient" />
-                }
-            </MudStack>
+                <div class="mw-edit-meal-ingredients">
+                    @foreach (Ingredient ingredient in _mealsStateContainer.MealToEdit.Ingredients)
+                    {
+                        <IngredientCard Ingredient="ingredient" />
+                    }
+                </div>
+            </div>
 
-        </MudStack>
+            @if (_mealsStateContainer.IsEdit && _mealsStateContainer.MealToEdit.IsRegular)
+            {
+                <DeleteMealButton Meal="_mealsStateContainer.MealToEdit" />
+            }
+        </div>
     </div>
-</MudStack>
+</div>
 
 @code {
     private MudTextFieldExtended<string> _recipeField = default!;
+
+    private string ItemCount
+    {
+        get
+        {
+            var count = _mealsStateContainer.MealToEdit.Ingredients.Count;
+            return count == 1 ? "1 item" : $"{count} items";
+        }
+    }
 
     protected override void OnInitialized()
     {

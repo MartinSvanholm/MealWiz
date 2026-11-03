@@ -1,16 +1,16 @@
 ﻿@inject IDrawerStateContainer _drawerStateContainer
-@inject IMealsStateContainer _mealsStateContainer
 @inject ISender _mediator
 @inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
 
 <MudLoadingButton
 data-testid="delete-meal-button"
 OnClick="OnDeleteClick"
-ButtonVariant="@ButtonVariant.IconButton"
-Icon="@Icons.Material.Filled.Delete"
+ButtonVariant="ButtonVariant.Button"
+Variant="Variant.Outlined"
 Color="Color.Error"
-Size="Size.Medium"
-Class="pa-1" />
+StartIcon="@Icons.Material.Outlined.Delete"
+FullWidth>Delete meal</MudLoadingButton>
 
 @code {
     [Parameter]
@@ -26,9 +26,10 @@ Class="pa-1" />
         var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
         if (result.Handle(_snackbar).IsFailed) return;
 
-        await _mealsStateContainer.LoadMeals();
-
         _drawerStateContainer.CloseDrawer();
         _snackbar.Add("Meal deleted", Severity.Success);
+
+        // The Meals page reloads the list when it opens.
+        _navigationManager.NavigateTo("/meals");
     }
 }

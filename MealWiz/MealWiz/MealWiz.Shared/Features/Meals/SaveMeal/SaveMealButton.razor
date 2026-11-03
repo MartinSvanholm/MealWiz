@@ -4,12 +4,13 @@
 @inject ISender _mediator
 
 <MudLoadingButton
-data-testid="save-meal-button" 
-@bind-Loading="IsSaving" 
-ButtonVariant="@ButtonVariant.IconButton" 
-Icon="@Icons.Material.Filled.Save"
-Color="Color.Secondary"
-OnClick="SaveMeal" />
+data-testid="save-meal-button"
+@bind-Loading="IsSaving"
+ButtonVariant="ButtonVariant.Button"
+Variant="Variant.Filled"
+Color="Color.Dark"
+StartIcon="@Icons.Material.Filled.Check"
+OnClick="SaveMeal">Save</MudLoadingButton>
 
 @code {
     private bool IsSaving { get; set; }

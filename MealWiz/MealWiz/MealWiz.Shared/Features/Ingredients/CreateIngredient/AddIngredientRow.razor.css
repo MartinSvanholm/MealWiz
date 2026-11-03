@@ -1,0 +1,33 @@
+.mw-add-ingredient {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-add-ingredient-name {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mw-add-ingredient-amount {
+    flex: 0 0 96px;
+    width: 96px;
+}
+
+.mw-add-ingredient ::deep .mud-input-control {
+    margin: 0;
+}
+
+.mw-add-ingredient-button {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+    cursor: pointer;
+}

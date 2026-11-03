@@ -1,0 +1,36 @@
+@* The Meals page's two-column grid: a card per meal with its coloured initial tile (alternating orange and green by
+   position, with the day it's planned this week), its name and ingredient count. *@
+<div class="mw-meal-grid" data-testid="meal-grid">
+    @{ var index = 0; }
+    @foreach (var meal in Meals)
+    {
+        var position = index++;
+        <button type="button" class="mw-meal-card" data-testid="meal-list-item" @onclick="() => OnMealClick.InvokeAsync(meal)">
+            <MealTile Name="@meal.Name" Index="position" DayTag="@DayTagFor(meal)" Size="MealTile.TileSize.Large" />
+            <span class="mw-meal-card-text">
+                <span class="mw-meal-card-name" data-testid="meal-card-name">@meal.Name</span>
+                <span class="mw-meal-card-meta" data-testid="meal-card-meta">@IngredientCount(meal)</span>
+            </span>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<Meal> Meals { get; set; } = [];
+
+    /// <summary>The date each meal is planned on this week, by meal id. Meals that aren't planned are left out.</summary>
+    [Parameter]
+    public IReadOnlyDictionary<int, DateTime> PlannedDates { get; set; } = new Dictionary<int, DateTime>();
+
+    [Parameter]
+    public EventCallback<Meal> OnMealClick { get; set; }
+
+    private string? DayTagFor(Meal meal) =>
+        PlannedDates.TryGetValue(meal.Id, out var date)
+            ? date.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture).ToUpperInvariant()
+            : null;
+
+    private static string IngredientCount(Meal meal) =>
+        meal.Ingredients.Count == 1 ? "1 ingredient" : $"{meal.Ingredients.Count} ingredients";
+}

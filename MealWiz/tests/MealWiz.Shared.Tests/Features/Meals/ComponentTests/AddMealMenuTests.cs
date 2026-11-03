@@ -20,7 +20,7 @@ public class AddMealMenuTests : ComponentTestBase
     [Theory]
     [InlineData(MealImportEntryState.Default, "Import from URL")]
     [InlineData(MealImportEntryState.InProgress, "Import in progress")]
-    [InlineData(MealImportEntryState.Failed, "Last import failed")]
+    [InlineData(MealImportEntryState.Failed, "Last import failed: see why")]
     public void Import_item_reflects_the_import_state(MealImportEntryState state, string expectedText)
     {
         MealImport.SetupGet(m => m.EntryState).Returns(state);
@@ -29,6 +29,38 @@ public class AddMealMenuTests : ComponentTestBase
         cut.Find(TestId("add-meal-menu")).Click();
 
         Assert.Contains(expectedText, Popovers.WaitForElement(TestId("add-meal-import")).TextContent);
+    }
+
+    [Theory]
+    [InlineData(MealImportEntryState.InProgress, "in-progress")]
+    [InlineData(MealImportEntryState.Failed, "failed")]
+    public void New_button_shows_a_dot_while_an_import_runs_or_has_failed(MealImportEntryState state, string expected)
+    {
+        MealImport.SetupGet(m => m.EntryState).Returns(state);
+
+        var cut = RenderWithPopovers<AddMealMenu>();
+
+        Assert.Equal(expected, cut.Find(TestId("add-meal-menu-dot")).GetAttribute("data-state"));
+    }
+
+    [Fact]
+    public void New_button_has_no_dot_without_an_import()
+    {
+        var cut = RenderWithPopovers<AddMealMenu>();
+
+        Assert.Contains("New", cut.Find(TestId("add-meal-menu")).TextContent);
+        Assert.Empty(cut.FindAll(TestId("add-meal-menu-dot")));
+    }
+
+    [Fact]
+    public void Menu_items_have_hints()
+    {
+        var cut = RenderWithPopovers<AddMealMenu>();
+
+        cut.Find(TestId("add-meal-menu")).Click();
+
+        Assert.Contains("Name, recipe and ingredients", Popovers.WaitForElement(TestId("add-meal-create-manually")).TextContent);
+        Assert.Contains("Paste a link to a recipe", Popovers.Find(TestId("add-meal-import")).TextContent);
     }
 
     [Fact]

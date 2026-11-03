@@ -1,9 +1,8 @@
-﻿@inject ISender _mediator
-@inject ISnackbar _snackbar
+﻿@inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
 
-<MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveAsync" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Success" ButtonVariant="ButtonVariant.Button">Save</MudLoadingButton>
+<MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveAsync" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Primary" ButtonVariant="ButtonVariant.Button" FullWidth>Save ingredient</MudLoadingButton>
 
 @code {
     [Parameter]
@@ -17,20 +16,12 @@
 
         try
         {
-            if (!_mealsStateContainer.IsEdit)
-            {
-                _mealsStateContainer.AddOrUpdatePendingIngredient(Ingredient);
-                _drawerStateContainer.CloseDrawer();
-            }
-            else
-            {
-                var result = await _mediator.Send(new SaveIngredient.Command(Ingredient, _mealsStateContainer.MealToEdit.Id));
-                if (result.Handle(_snackbar).IsFailed) return;
+            var wasSaved = _mealsStateContainer.IsEdit;
+            var result = await _mealsStateContainer.SaveIngredientForMealToEdit(Ingredient);
+            if (result.Handle(_snackbar).IsFailed) return;
 
-                await _mealsStateContainer.ReloadIngredientsForMealToEdit();
-                _drawerStateContainer.CloseDrawer();
-                _snackbar.Add("Ingredient saved.", Severity.Success);
-            }
+            _drawerStateContainer.CloseDrawer();
+            if (wasSaved) _snackbar.Add("Ingredient saved.", Severity.Success);
         }
         finally
         {

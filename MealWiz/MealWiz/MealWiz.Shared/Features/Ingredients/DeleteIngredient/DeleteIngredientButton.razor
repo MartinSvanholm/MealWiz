@@ -5,17 +5,21 @@
 @implements IDisposable
 
 <MudLoadingButton
-data-testid="delete-ingredient-button"
+data-testid="@TestId"
 OnClick="OnDeleteClick"
 ButtonVariant="@ButtonVariant.IconButton"
 Icon="@Icons.Material.Filled.Delete"
 Color="Color.Error"
 Size="Size.Medium"
-Class="pa-1" />
+aria-label="@($"Delete {Ingredient.Name}")" />
 
 @code {
     [Parameter]
     public Ingredient Ingredient { get; set; }
+
+    /// <summary>The button's data-testid; the drawer header uses its own.</summary>
+    [Parameter]
+    public string TestId { get; set; } = "delete-ingredient-button";
 
     public void Dispose()
     {
