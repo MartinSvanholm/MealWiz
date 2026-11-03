@@ -60,7 +60,7 @@
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" Rounded />
         }
-        else if (_mealPlanStateContainer.SelectedDateHasMeal)
+        else if (_mealPlanStateContainer.SelectedDateHasMeal && !_mealPlanStateContainer.IsSwappingMeal)
         {
             <MealDisplayComponent>
                 <HeroAction>
