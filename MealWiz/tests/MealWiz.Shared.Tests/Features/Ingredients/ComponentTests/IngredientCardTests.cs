@@ -82,11 +82,12 @@ public class IngredientCardTests : ComponentTestBase
     }
 
     [Fact]
-    public void Drawer_focuses_the_name_field_when_it_opens()
+    public void Drawer_does_not_focus_a_field_when_it_opens()
     {
-        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
+        // No autofocus: on a phone a focused field opens the keyboard over the drawer straight away.
+        Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
 
-        AssertFocused(cut.Find(InputOf("ingredient-name-input")));
+        Assert.DoesNotContain(JSInterop.Invocations, i => i.Identifier == "Blazor._internal.domWrapper.focus");
     }
 
     [Fact]

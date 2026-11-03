@@ -1,8 +1,9 @@
-@inject IMealsStateContainer _mealsStateContainer
-@inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
 
-@* The add-ingredient row above the ingredient list: name, amount and an orange add button. Enter moves from the name
-   to the amount and adds from the amount. New ingredients go on the grocery list; the drawer changes that. *@
+@* The add-ingredient row above the ingredient list: name, amount and an orange add button. The button (or Enter in the
+   amount) opens the ingredient drawer, filled in with whatever was typed here and empty otherwise; the ingredient is
+   saved only from the drawer. Enter moves from the name to the amount. New ingredients go on the grocery list; the
+   drawer's switch changes that. *@
 <div class="mw-add-ingredient">
     <div class="mw-add-ingredient-name">
         <MudTextField T="string" @ref="_nameField" data-testid="add-ingredient-name" Placeholder="Ingredient" aria-label="Ingredient"
@@ -12,10 +13,10 @@
     <div class="mw-add-ingredient-amount">
         <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="Amount" aria-label="Amount"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount"
-                      OnKeyDown="EnterKey.Then(AddAsync)" />
+                      OnKeyDown="EnterKey.Then(OpenDrawer)" />
     </div>
     <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="Add ingredient"
-            disabled="@_isAdding" @onclick="AddAsync">
+            @onclick="OpenDrawer">
         <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" />
     </button>
 </div>
@@ -23,28 +24,35 @@
 @code {
     private string _name = string.Empty;
     private string _amount = string.Empty;
-    private bool _isAdding;
     private MudTextField<string> _nameField = default!;
     private MudTextField<string> _amountField = default!;
 
-    private async Task AddAsync()
+    /// <summary>
+    /// Opens the drawer for a new ingredient with what was typed here, and clears the row: from here on the drawer
+    /// holds the values, and its Save button adds the ingredient.
+    /// </summary>
+    private Task OpenDrawer()
     {
-        if (_isAdding || string.IsNullOrWhiteSpace(_name)) return;
-
-        _isAdding = true;
-        try
+        var ingredient = new Ingredient
         {
-            var ingredient = new Ingredient { Name = _name.Trim(), Amount = _amount?.Trim() ?? string.Empty, ShowOnGroceryList = true };
-            var result = await _mealsStateContainer.SaveIngredientForMealToEdit(ingredient);
-            if (result.Handle(_snackbar).IsFailed) return;
+            Name = _name?.Trim() ?? string.Empty,
+            Amount = _amount?.Trim() ?? string.Empty,
+            ShowOnGroceryList = true
+        };
 
-            _name = string.Empty;
-            _amount = string.Empty;
-            await _nameField.FocusAsync();
-        }
-        finally
+        _name = string.Empty;
+        _amount = string.Empty;
+
+        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
-            _isAdding = false;
-        }
+            Content = typeof(IngredientDrawer),
+            Title = "Add ingredient",
+            Height = "45%",
+            ContentParameters = new Dictionary<string, object>
+            {
+                { nameof(IngredientDrawer.Ingredient), ingredient }
+            }
+        });
+        return Task.CompletedTask;
     }
 }

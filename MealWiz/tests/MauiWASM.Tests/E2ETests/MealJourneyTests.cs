@@ -108,6 +108,13 @@ public class MealJourneyTests : E2ETestBase
         await FillAsync(Page.GetByTestId("add-ingredient-amount"), amount);
         await Page.GetByTestId("create-ingredient-button").ClickAsync();
 
+        // The add button opens the drawer with what was typed; the ingredient is saved from the drawer.
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add ingredient");
+        await Expect(Drawer.GetByTestId("ingredient-name-input")).ToHaveValueAsync(name);
+        await Expect(Drawer.GetByTestId("ingredient-amount-input")).ToHaveValueAsync(amount);
+        await Drawer.GetByTestId("save-ingredient-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
         await Expect(Row("ingredient-card", name)).ToContainTextAsync(amount);
     }
 

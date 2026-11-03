@@ -12,6 +12,14 @@
 
     public async Task SaveAsync()
     {
+        // An ingredient needs a name (the add row used to check this before the drawer took over saving).
+        if (string.IsNullOrWhiteSpace(Ingredient.Name))
+        {
+            _snackbar.Add("Give the ingredient a name.", Severity.Warning);
+            return;
+        }
+
+        Ingredient.Name = Ingredient.Name.Trim();
         IsLoading = true;
 
         try

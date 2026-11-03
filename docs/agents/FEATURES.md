@@ -73,7 +73,8 @@ names only; the This week / No recipe filter chips are shown but not wired (MEA-
 
 A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch in the drawer, on by default;
 ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
-Edit Meal page: added in the inline row, changed in a drawer. A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
+Edit Meal page, always saved from the ingredient drawer: the add row opens it ("Add ingredient") and an ingredient row
+opens it to edit ("Edit ingredient"). A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
 saved and has an id.
 
 - **Folder:** `Features/Ingredients/`
@@ -84,10 +85,12 @@ saved and has an id.
     when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
     (`drawer-delete-ingredient`).
   - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
-    list" switch row, and Save ingredient in a `DrawerFooter`.
+    list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens.
   - `Features/Ingredients/CreateIngredient/AddIngredientRow.razor`: the add row (`add-ingredient-name`,
-    `add-ingredient-amount`, `create-ingredient-button`); Enter moves name → amount → add.
-  - `Features/Ingredients/SaveIngredient/SaveIngredientButton.razor`
+    `add-ingredient-amount`, `create-ingredient-button`). The button, or Enter in the amount, opens the drawer filled
+    with what was typed (empty if nothing was) and clears the row; it saves nothing itself. Enter in the name moves to
+    the amount.
+  - `Features/Ingredients/SaveIngredient/SaveIngredientButton.razor`: refuses an ingredient without a name.
   - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`
 - **Handlers:**
 

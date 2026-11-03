@@ -59,11 +59,15 @@ public class EditMealPageTests : ComponentTestBase
     public void Adding_an_ingredient_to_a_new_meal_adds_a_pending_row_without_saving()
     {
         Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        RenderDrawers();
         var cut = Render<EditMealPage>();
 
         cut.Find(InputOf("add-ingredient-name")).Input("Eggs");
         cut.Find(InputOf("add-ingredient-amount")).Input("3");
         cut.Find(TestId("create-ingredient-button")).Click();
+        // The add button opens the drawer with what was typed; saving happens there.
+        Assert.Empty(cut.FindAll(TestId("ingredient-card")));
+        DrawerHost.Find(TestId("save-ingredient-button")).Click();
 
         var card = cut.WaitForElement(TestId("ingredient-card"));
         Assert.Contains("Eggs", card.TextContent);
