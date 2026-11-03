@@ -7,12 +7,10 @@
    DeleteDistance opens the same confirm drawer as the edit drawer's delete. Plain pointer events, so touch and mouse
    both work; touch-action: pan-y leaves vertical scrolling to the browser. *@
 <div class="grocery-swipe">
-    @if (_offset < 0)
-    {
-        <div class="grocery-swipe-delete" data-testid="grocery-item-swipe-delete" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Outlined.Delete" Class="grocery-swipe-delete-icon" />
-        </div>
-    }
+    @* Always there, so it stays visible while the row snaps back; the row's surface covers it at rest. *@
+    <div class="grocery-swipe-delete" data-testid="grocery-item-swipe-delete" aria-hidden="true">
+        <MudIcon Icon="@Icons.Material.Outlined.Delete" Class="grocery-swipe-delete-icon" />
+    </div>
     <div class="grocery-swipe-row @(_swiping ? "swiping" : null)" data-testid="grocery-item-swipe" style="@RowStyle"
          @onpointerdown="OnPointerDown" @onpointermove="OnPointerMove" @onpointerup="OnPointerUp"
          @onpointerleave="OnPointerUp" @onpointercancel="OnPointerCancel">
