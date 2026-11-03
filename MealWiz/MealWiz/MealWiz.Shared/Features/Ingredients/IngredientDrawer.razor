@@ -1,15 +1,16 @@
 @* The ingredient drawer's content: name and amount side by side, the "Add to grocery list" switch row, and the Save
-   button in the footer. The drawer header's delete action comes from IngredientCard (HeaderAction). *@
+   button in the footer. The drawer header's delete action comes from IngredientCard (HeaderAction). The fields edit a
+   copy that Save applies, so closing without saving changes nothing (MEA-77). *@
 <div class="mw-ingredient-drawer">
     <div class="mw-ingredient-drawer-fields">
         <div class="mw-field">
             <label class="mw-field-label" for="ingredient-name">Name</label>
-            <MudTextField data-testid="ingredient-name-input" InputId="ingredient-name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined"
+            <MudTextField data-testid="ingredient-name-input" InputId="ingredient-name" @bind-Value="_draft.Name" Variant="Variant.Outlined"
                           OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
         </div>
         <div class="mw-field">
             <label class="mw-field-label" for="ingredient-amount">Amount</label>
-            <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined"
+            <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
                           Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
         </div>
     </div>
@@ -17,11 +18,11 @@
         <span class="mw-ingredient-drawer-switch-icon">
             <MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" />
         </span>
-        <MudSwitch T="bool" data-testid="ingredient-show-on-grocery-list-switch" @bind-Value="Ingredient.ShowOnGroceryList"
+        <MudSwitch T="bool" data-testid="ingredient-show-on-grocery-list-switch" @bind-Value="_draft.ShowOnGroceryList"
                    Label="Add to grocery list" LabelPlacement="Placement.Start" Color="Color.Primary" />
     </div>
     <DrawerFooter>
-        <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" />
+        <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" Changes="_draft" />
     </DrawerFooter>
 </div>
 
@@ -29,6 +30,18 @@
     [Parameter]
     public Ingredient Ingredient { get; set; }
 
+    private Ingredient _draft = new();
+    private Ingredient? _draftOf;
+
     private MudTextField<string> _amountField = default!;
     private SaveIngredientButton _saveButton = default!;
+
+    // Copy only when the drawer gets another ingredient, so a re-render of the drawer host keeps what was typed
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_draftOf, Ingredient)) return;
+
+        _draftOf = Ingredient;
+        _draft = Ingredient.Clone();
+    }
 }

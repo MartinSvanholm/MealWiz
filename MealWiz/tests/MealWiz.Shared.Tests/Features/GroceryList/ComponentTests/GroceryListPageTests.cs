@@ -158,7 +158,9 @@ public class GroceryListPageTests : ComponentTestBase
         DrawerHost.Find(TestId("save-grocery-item-button")).Click();
 
         cut.WaitForAssertion(() => Assert.Equal("2 l", cut.FindAll(TestId("grocery-item-amount"))[0].TextContent.Trim()));
-        Assert.Same(_milk, Assert.Single(Sent<UpdateGroceryItem.Command>()).GroceryItem);
+        // The drawer saves a copy of the item (MEA-76)
+        var sent = Assert.Single(Sent<UpdateGroceryItem.Command>()).GroceryItem;
+        Assert.Equal((_milk.Id, "2 l"), (sent.Id, sent.Amount));
         Assert.Empty(Sent<AddGroceryItem.Command>());
         Assert.False(Drawer.IsDrawerOpen);
     }

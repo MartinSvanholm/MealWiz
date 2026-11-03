@@ -22,6 +22,28 @@ public class GroceryItemComponentTests : ComponentTestBase
         Assert.Equal("1 l", cut.Find(InputOf("grocery-item-amount-input")).GetAttribute("value"));
     }
 
+    // MEA-76: the drawer used to edit the listed item itself, so closing it without saving left the change showing.
+    [Fact]
+    public void Editing_in_the_drawer_leaves_the_listed_item_alone_until_saved()
+    {
+        SetupSend<UpdateGroceryItem.Command, Result<int>>(Result.Ok(1));
+        var milk = TestData.GroceryItem("Milk", "1 l", id: 1);
+        GroceryList.GroceryList.Items.Add(milk);
+        Drawer.OpenDrawer("Edit item", typeof(GroceryItemDrawer));
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, milk));
+
+        cut.Find(InputOf("grocery-item-name-input")).Change("Oat milk");
+        cut.Find(InputOf("grocery-item-amount-input")).Input("2 l");
+
+        Assert.Equal(("Milk", "1 l"), (milk.Name, milk.Amount));
+
+        cut.Find(TestId("save-grocery-item-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        var listed = Assert.Single(GroceryList.GroceryList.Items);
+        Assert.Equal((1, "Oat milk", "2 l"), (listed.Id, listed.Name, listed.Amount));
+    }
+
     [Fact]
     public void Enter_in_the_drawers_name_moves_to_the_amount()
     {

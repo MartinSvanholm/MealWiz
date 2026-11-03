@@ -8,19 +8,31 @@
     [Parameter]
     public Ingredient Ingredient { get; set; }
 
+    /// <summary>
+    /// The drawer's edited copy of <see cref="Ingredient"/>. Its fields are applied to the ingredient for the save and
+    /// undone if the save fails (MEA-77). Without it, the ingredient is saved as it is.
+    /// </summary>
+    [Parameter]
+    public Ingredient? Changes { get; set; }
+
     private bool IsLoading { get; set; }
 
     public async Task SaveAsync()
     {
+        var edited = Changes ?? Ingredient;
+
         // An ingredient needs a name (the add row used to check this before the drawer took over saving).
-        if (string.IsNullOrWhiteSpace(Ingredient.Name))
+        if (string.IsNullOrWhiteSpace(edited.Name))
         {
             _snackbar.Add("Give the ingredient a name.", Severity.Warning);
             return;
         }
 
+        var before = Ingredient.Clone();
+        Ingredient.CopyEditableFieldsFrom(edited);
         Ingredient.Name = Ingredient.Name.Trim();
         IsLoading = true;
+        var isSaved = false;
 
         try
         {
@@ -28,11 +40,13 @@
             var result = await _mealsStateContainer.SaveIngredientForMealToEdit(Ingredient);
             if (result.Handle(_snackbar).IsFailed) return;
 
+            isSaved = true;
             _drawerStateContainer.CloseDrawer();
             if (wasSaved) _snackbar.Add("Ingredient saved.", Severity.Success);
         }
         finally
         {
+            if (!isSaved) Ingredient.CopyEditableFieldsFrom(before);
             IsLoading = false;
         }
     }

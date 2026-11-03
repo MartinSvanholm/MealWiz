@@ -108,6 +108,34 @@ public class GroceryListStateContainerTests
         VerifyToast("Update failed", Severity.Error);
     }
 
+    // MEA-76: the edit drawer saves a copy of the item, so the list shows the copy once the update succeeds.
+    [Fact]
+    public async Task UpdateGroceryItem_Success_PutsTheSavedCopyInTheList()
+    {
+        var milk = Item(1, "milk");
+        var bread = Item(2, "bread");
+        _container.GroceryList.Items.AddRange([milk, bread]);
+        var edited = Item(1, "oat milk");
+        SetupUpdate(Result.Ok(1));
+
+        await _container.UpdateGroceryItem(edited);
+
+        Assert.Equal([edited, bread], _container.GroceryList.Items);
+    }
+
+    [Fact]
+    public async Task UpdateGroceryItem_Failure_KeepsTheListedItem()
+    {
+        var milk = Item(1, "milk");
+        _container.GroceryList.Items.Add(milk);
+        SetupUpdate(Result.Fail<int>("Update failed"));
+
+        await _container.UpdateGroceryItem(Item(1, "oat milk"));
+
+        Assert.Same(milk, Assert.Single(_container.GroceryList.Items));
+        Assert.Equal("milk", milk.Name);
+    }
+
     [Fact]
     public async Task ToggleIsPicked_Success_SavesTheFlippedFlagAndMovesTheItemLast()
     {
