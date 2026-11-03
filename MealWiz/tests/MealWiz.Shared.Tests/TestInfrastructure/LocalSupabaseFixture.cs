@@ -101,6 +101,9 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Deletes a user the test created itself (e.g. through sign-up) together with the fixture's own.</summary>
+    public void DeleteOnDispose(Guid userId) => _createdUserIds.Add(userId);
+
     /// <summary>
     /// A client with the anon key and no session, like the app before sign-in. Use it for the signed-out paths and
     /// for signing in through a handler.

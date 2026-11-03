@@ -283,23 +283,33 @@ stays pending past 3 minutes. One job runs at a time.
 
 ## Authentication
 
-Email and password sign-in through Supabase Auth. After login or logout the handler asks the
-`AuthenticationStateProvider` to re-read the session. Unauthenticated users hitting an `[Authorize]` page are sent to
-`/login` by `Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
+Email and password sign-in and self sign-up through Supabase Auth. After login, sign-up or logout the handler asks
+the `AuthenticationStateProvider` to re-read the session. Unauthenticated users hitting an `[Authorize]` page are
+sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
 
 - **Folder:** `Features/Authentication/`
-- **Pages:** `Features/Authentication/Login/LoginPage.razor` at `/login`, the only page without `[Authorize]`: logo
-  tile, title and tagline, email and password fields (`login-email`, `login-password`) with labels above them, and
-  the full-width "Log in" button (`login-submit`). Styles in `Features/Authentication/Login/LoginPage.razor.css`.
-  It has no bottom nav: `Layout/MainLayout.razor` shows the nav to signed-in users only. "Forgot password?"
-  (`login-forgot-password`) and "Create one" (`login-create-account`) are shown but not wired yet (MEA-69, MEA-70).
-- **Components:** `Features/Authentication/Logout/LogoutButton.razor`, the full-width red outline "Log out" button
+- **Pages:** the only pages without `[Authorize]`. Neither has the bottom nav: `Layout/MainLayout.razor` shows it to
+  signed-in users only.
+  - `Features/Authentication/Login/LoginPage.razor` at `/login`: email and password fields (`login-email`,
+    `login-password`) with labels above them, the full-width "Log in" button (`login-submit`) and "No account yet?
+    Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) is shown
+    but not wired yet (MEA-69).
+  - `Features/Authentication/SignUp/SignUpPage.razor` at `/signup`: email, password and repeat password
+    (`signup-email`, `signup-password`, `signup-password-repeat`), "Create account" (`signup-submit`) and "Already
+    have an account? Log in" (`signup-login`). Passwords that don't match are caught on the page. With a session
+    back it goes to the meal plan; without one (the Supabase project requires email confirmation) it shows a
+    check-your-email note (`signup-check-email`). Supabase enforces the password minimum (6 locally).
+- **Components:** `Features/Authentication/AuthShell.razor`, the signed-out screens' frame (rings, logo tile, title
+  and tagline; test ids `<prefix>-page`, `<prefix>-title`, `<prefix>-tagline`). Its
+  `Features/Authentication/AuthShell.razor.css` also styles the pages' `mw-auth-*` form classes.
+  `Features/Authentication/Logout/LogoutButton.razor`, the full-width red outline "Log out" button
   (`logout-button`) on the Account page.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | Login | `Command(string Email, string Password)` → `Result<Session?>` | `SignInWithPassword`, then refresh auth state |
+  | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
   | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
 
 - **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.

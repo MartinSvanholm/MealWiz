@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
 using MealWiz.Shared.Features.Authentication.Logout;
+using MealWiz.Shared.Features.Authentication.SignUp;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
 using Moq;
@@ -60,6 +61,38 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var result = await new Logout.Handler(client, _authStateProvider.Object).Handle(new Logout.Command(), CancellationToken);
 
         ResultAssert.Ok(result);
+        Assert.Null(client.Auth.CurrentSession);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task SignUp_NewEmail_CreatesTheUserSignsInAndRefreshesTheAuthState()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var email = $"signup-{Guid.NewGuid():N}@mealwiz.test";
+
+        var result = await new SignUp.Handler(client, _authStateProvider.Object)
+            .Handle(new SignUp.Command(email, Guid.NewGuid().ToString("N")), CancellationToken);
+
+        var session = ResultAssert.Ok(result);
+        Assert.NotNull(session?.User?.Id);
+        supabase.DeleteOnDispose(Guid.Parse(session.User.Id));
+        Assert.Equal(email, session.User.Email);
+        Assert.Equal(session.User.Id, client.Auth.CurrentUser?.Id);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task SignUp_EmailAlreadyRegistered_FailsWithoutSigningIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+
+        var result = await new SignUp.Handler(client, _authStateProvider.Object)
+            .Handle(new SignUp.Command(supabase.User.Email, Guid.NewGuid().ToString("N")), CancellationToken);
+
+        ResultAssert.Failed(result);
         Assert.Null(client.Auth.CurrentSession);
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
     }

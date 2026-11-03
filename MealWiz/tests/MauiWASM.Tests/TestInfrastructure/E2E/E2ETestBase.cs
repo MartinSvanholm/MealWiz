@@ -30,6 +30,8 @@ public abstract class E2ETestBase : IAsyncLifetime
     protected E2EUser User { get; private set; } = null!;
     protected IPage Page { get; private set; } = null!;
 
+    private readonly List<E2EUser> _usersToDelete = [];
+
     public async ValueTask InitializeAsync()
     {
         Env = await E2EEnvironment.GetAsync();
@@ -83,7 +85,13 @@ public abstract class E2ETestBase : IAsyncLifetime
 
         if (User is not null)
             await Supabase.DeleteUserAsync(User);
+
+        foreach (var user in _usersToDelete)
+            await Supabase.DeleteUserAsync(user);
     }
+
+    /// <summary>Deletes a user the test created through the app (e.g. by signing up) once the test is done.</summary>
+    protected void DeleteAfterTheTest(E2EUser user) => _usersToDelete.Add(user);
 
     protected static ILocatorAssertions Expect(ILocator locator) => Assertions.Expect(locator);
 

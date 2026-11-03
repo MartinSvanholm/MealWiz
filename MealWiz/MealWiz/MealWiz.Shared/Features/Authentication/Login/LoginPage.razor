@@ -4,46 +4,31 @@
 @inject NavigationManager _navigationManager
 
 @* Login has no bottom nav: Layout/MainLayout.razor shows it to signed-in users only. *@
-<div class="mw-login" data-testid="login-page">
-    <svg class="mw-login-rings" viewBox="0 0 190 190" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <circle cx="95" cy="95" r="90" /><circle cx="95" cy="95" r="62" /><circle cx="95" cy="95" r="34" />
-    </svg>
-
-    <div class="mw-login-brand">
-        <span class="mw-login-logo" aria-hidden="true">
-            <MudIcon Icon="@Icons.Material.Filled.Restaurant" Color="Color.Inherit" />
-        </span>
-        <div>
-            <h1 class="mw-login-title" data-testid="login-title">MealWiz</h1>
-            <p class="mw-login-tagline" data-testid="login-tagline">Plan the week. Shop once.</p>
-        </div>
-    </div>
-
-    <CustomForm @ref="Form" Class="mw-login-form" @bind-IsValid="IsValid">
-        <div class="mw-login-field">
-            <label class="mw-login-label" for="@EmailInputId" data-testid="login-email-label">Email</label>
+<AuthShell TestIdPrefix="login">
+    <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
+        <div class="mw-auth-field">
+            <label class="mw-auth-label" for="@EmailInputId" data-testid="login-email-label">Email</label>
             <TextField data-testid="login-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="you@example.com"
                        Required InputType="InputType.Email"
                        OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
         </div>
-        <div class="mw-login-field">
-            <div class="mw-login-label-row">
-                <label class="mw-login-label" for="@PasswordInputId" data-testid="login-password-label">Password</label>
+        <div class="mw-auth-field">
+            <div class="mw-auth-label-row">
+                <label class="mw-auth-label" for="@PasswordInputId" data-testid="login-password-label">Password</label>
                 @* Not wired yet: MEA-69. *@
-                <button type="button" class="mw-login-link" data-testid="login-forgot-password">Forgot password?</button>
+                <button type="button" class="mw-auth-link" data-testid="login-forgot-password">Forgot password?</button>
             </div>
             <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" InputId="@PasswordInputId"
                        Placeholder="Your password" Required InputType="InputType.Password"
                        OnKeyDown="EnterKey.Then(Login)" />
         </div>
-        <Button data-testid="login-submit" OnClick="Login" Class="mw-login-submit" FullWidth="@true" IsLoading="IsLoading">Log in</Button>
-        <p class="mw-login-signup">
+        <Button data-testid="login-submit" OnClick="Login" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">Log in</Button>
+        <p class="mw-auth-switch">
             No account yet?
-            @* Not wired yet: MEA-70. *@
-            <button type="button" class="mw-login-link" data-testid="login-create-account">Create one</button>
+            <a class="mw-auth-link" href="signup" data-testid="login-create-account">Create one</a>
         </p>
     </CustomForm>
-</div>
+</AuthShell>
 
 @code {
     private string Email { get; set; } = default!;

@@ -1,0 +1,97 @@
+@page "/signup"
+@inject ISender _mediator
+@inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
+
+@* Like Login, no bottom nav: Layout/MainLayout.razor shows it to signed-in users only. *@
+<AuthShell TestIdPrefix="signup">
+    @if (ConfirmationEmail is not null)
+    {
+        <div class="mw-auth-form">
+            <p class="mw-auth-note" data-testid="signup-check-email">
+                Check your email: we sent a link to @ConfirmationEmail to confirm your account.
+            </p>
+            <p class="mw-auth-switch">
+                Confirmed?
+                <a class="mw-auth-link" href="login" data-testid="signup-login">Log in</a>
+            </p>
+        </div>
+    }
+    else
+    {
+        <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
+            <div class="mw-auth-field">
+                <label class="mw-auth-label" for="@EmailInputId" data-testid="signup-email-label">Email</label>
+                <TextField data-testid="signup-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="you@example.com"
+                           Required InputType="InputType.Email"
+                           OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
+            </div>
+            <div class="mw-auth-field">
+                <label class="mw-auth-label" for="@PasswordInputId" data-testid="signup-password-label">Password</label>
+                <TextField @ref="PasswordField" data-testid="signup-password" @bind-Value="Password" InputId="@PasswordInputId"
+                           Placeholder="Choose a password" Required InputType="InputType.Password"
+                           OnKeyDown="EnterKey.Then(() => PasswordRepeatField.FocusAsync())" />
+            </div>
+            <div class="mw-auth-field">
+                <label class="mw-auth-label" for="@PasswordRepeatInputId" data-testid="signup-password-repeat-label">Repeat password</label>
+                <TextField @ref="PasswordRepeatField" data-testid="signup-password-repeat" @bind-Value="PasswordRepeat"
+                           InputId="@PasswordRepeatInputId" Placeholder="The same password again" Required
+                           InputType="InputType.Password" OnKeyDown="EnterKey.Then(SignUp)" />
+            </div>
+            <Button data-testid="signup-submit" OnClick="SignUp" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">Create account</Button>
+            <p class="mw-auth-switch">
+                Already have an account?
+                <a class="mw-auth-link" href="login" data-testid="signup-login">Log in</a>
+            </p>
+        </CustomForm>
+    }
+</AuthShell>
+
+@code {
+    private string Email { get; set; } = default!;
+    private string Password { get; set; } = default!;
+    private string PasswordRepeat { get; set; } = default!;
+    private bool IsValid { get; set; }
+    private CustomForm Form { get; set; } = default!;
+    private TextField PasswordField { get; set; } = default!;
+    private TextField PasswordRepeatField { get; set; } = default!;
+    private bool IsLoading { get; set; }
+
+    /// <summary>Set when the account was created but needs email confirmation before the user can sign in.</summary>
+    private string? ConfirmationEmail { get; set; }
+
+    private const string EmailInputId = "signup-email-input";
+    private const string PasswordInputId = "signup-password-input";
+    private const string PasswordRepeatInputId = "signup-password-repeat-input";
+
+    private async Task SignUp()
+    {
+        IsLoading = true;
+
+        try
+        {
+            await Form.Validate();
+            if (!IsValid) return;
+
+            if (Password != PasswordRepeat)
+            {
+                _snackbar.Add("Passwords don't match", Severity.Error);
+                return;
+            }
+
+            var result = await _mediator.Send(new SignUp.Command(Email, Password));
+            result.Handle(_snackbar);
+
+            if (result.IsFailed) return;
+
+            if (result.Value is null)
+                ConfirmationEmail = Email;
+            else
+                _navigationManager.NavigateTo("/");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}
