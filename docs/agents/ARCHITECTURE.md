@@ -467,13 +467,10 @@ _drawerStateContainer.OpenDrawer(new DrawerStateParameters
 {
     Content = typeof(GroceryItemDrawer),
     Title = "Add item",
-    Height = DrawerStateParameters.FormHeight,
+    Height = "38%",
     ContentParameters = new() { { nameof(GroceryItemDrawer.GroceryItem), new GroceryItem() } }
 });
 ```
-
-Every drawer with input fields uses `DrawerStateParameters.FormHeight` (the full screen minus a 64px strip at the
-top): its fields sit at the top and its `DrawerFooter` button at the bottom. The confirm drawer keeps its own size.
 
 For a confirmation, call `OpenConfirmDrawer(title, description, onConfirm)`. The container keeps `onConfirm` for that
 one confirmation only: Confirm awaits it, and closing the confirm drawer (confirmed or dismissed) drops it. Call
