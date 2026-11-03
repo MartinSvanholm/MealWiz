@@ -81,6 +81,30 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(1);
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
 
+        // Add another item and delete it by swiping its row left with the mouse (MEA-67)
+        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Eggs");
+        await Page.GetByTestId("add-grocery-item-button").ClickAsync();
+        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+
+        var eggs = await Row("grocery-item", "Eggs").GetByTestId("grocery-item-swipe").BoundingBoxAsync();
+        Assert.NotNull(eggs);
+        var y = eggs.Y + eggs.Height / 2;
+        await Page.Mouse.MoveAsync(eggs.X + eggs.Width / 2, y);
+        await Page.Mouse.DownAsync();
+        await Page.Mouse.MoveAsync(eggs.X + eggs.Width / 2 - 150, y, new() { Steps = 10 });
+        await Page.Mouse.UpAsync();
+        // Letting go doesn't also tap the name, so only the confirm drawer opens
+        await Expect(ConfirmDrawer.GetByTestId("confirm-drawer-title")).ToHaveTextAsync("Delete Eggs?");
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
+        await Expect(Row("grocery-item", "Eggs")).ToHaveCountAsync(0);
+
+        await Page.ReloadAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(1);
+        await Expect(Row("grocery-item", "Eggs")).ToHaveCountAsync(0);
+
         // Check off the last item, then clear the basket (MEA-73): it's deleted, also after a reload
         await Row("grocery-item", "Penne").GetByTestId("grocery-item-checkbox").ClickAsync();
         await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Penne");
