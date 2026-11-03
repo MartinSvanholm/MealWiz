@@ -149,21 +149,7 @@
     text-overflow: ellipsis;
 }
 
-/* In the basket: small crossed-out pills that wrap. */
-.grocery-clear {
-    /* 44px tap area; the negative margin keeps the row as tight as the 28px design. */
-    height: var(--mw-touch);
-    margin: -8px -4px -8px 0;
-    padding: 0 8px;
-    border: none;
-    background: transparent;
-    color: var(--mw-red-text);
-    font-family: var(--mw-font-body);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
+/* In the basket: small crossed-out pills that wrap. "Clear" is styled by ClearBasketButton.razor.css. */
 .grocery-basket {
     margin: 0;
     padding: 0;

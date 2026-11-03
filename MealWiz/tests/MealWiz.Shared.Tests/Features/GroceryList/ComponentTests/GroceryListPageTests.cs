@@ -3,6 +3,7 @@ using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
+using MealWiz.Shared.Features.GroceryList.ClearBasket;
 using MealWiz.Shared.Features.GroceryList.Components;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
@@ -184,18 +185,56 @@ public class GroceryListPageTests : ComponentTestBase
         Assert.False(Drawer.IsDrawerOpen);
     }
 
-    // Clear has no behaviour yet (MEA-73): it's shown as designed but does nothing.
     [Fact]
-    public void Clear_in_the_basket_is_shown_but_not_wired()
+    public void Clear_after_confirmation_deletes_every_item_in_the_basket()
     {
+        var eggs = TestData.GroceryItem("Eggs", id: 3);
+        eggs.IsPicked = true;
         _milk.IsPicked = true;
+        SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread, eggs }));
+        SetupSend<ClearBasket.Command, Result>(Result.Ok());
+        RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();
 
         var clear = cut.Find(TestId("clear-basket-button"));
         Assert.Equal("Clear", clear.TextContent.Trim());
-        Assert.Throws<MissingEventHandlerException>(() => clear.Click());
+        clear.Click();
+        Assert.True(Drawer.IsConfirmDrawerOpen);
+        Assert.Equal("Clear 2 items?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
+        Assert.Empty(Sent<ClearBasket.Command>());
+        Confirm();
 
-        Assert.Empty(Sent<DeleteGroceryItem.Command>());
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(TestId("grocery-basket"))));
+        Assert.Equal([_milk.Id, eggs.Id], Assert.Single(Sent<ClearBasket.Command>()).GroceryItemIds.Order());
+        Assert.Equal(["Bread"], ToBuy(cut));
+        Assert.Equal("0 of 1 item", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+    }
+
+    [Fact]
+    public void Clear_with_one_item_in_the_basket_asks_about_one_item()
+    {
+        _milk.IsPicked = true;
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        cut.Find(TestId("clear-basket-button")).Click();
+
+        Assert.Equal("Clear 1 item?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Cancelling_clear_keeps_the_basket()
+    {
+        _milk.IsPicked = true;
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        cut.Find(TestId("clear-basket-button")).Click();
+        ConfirmDrawerHost.Find(TestId("confirm-drawer-cancel")).Click();
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Empty(Sent<ClearBasket.Command>());
         Assert.Equal(["Milk"], Basket(cut));
     }
 
