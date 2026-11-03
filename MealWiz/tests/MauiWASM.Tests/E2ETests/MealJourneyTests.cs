@@ -32,6 +32,14 @@ public class MealJourneyTests : E2ETestBase
         await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
         await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
 
+        // Filters: the meal has a recipe and isn't planned, so only All shows it
+        await Page.GetByTestId("meal-filter-no-recipe").ClickAsync();
+        await Expect(Row("meal-list-item", name)).ToHaveCountAsync(0);
+        await Page.GetByTestId("meal-filter-this-week").ClickAsync();
+        await Expect(Page.GetByTestId("meal-list-no-match")).ToHaveTextAsync("No meals planned this week.");
+        await Page.GetByTestId("meal-filter-all").ClickAsync();
+        await Expect(Row("meal-list-item", name)).ToBeVisibleAsync();
+
         // Edit: rename the meal and change an ingredient's amount
         await Row("meal-list-item", name).ClickAsync();
         await Expect(Page).ToHaveURLAsync(UrlFor("meals/edit"));

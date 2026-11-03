@@ -24,11 +24,10 @@
                       Immediate="true"
                       Clearable="true" />
 
-        @* Only "All" is wired; This week and No recipe are MEA-65. *@
         <div class="mw-meal-filters" role="group" aria-label="Filter meals">
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-all" aria-pressed="true">All</button>
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-this-week" aria-pressed="false">This week</button>
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-no-recipe" aria-pressed="false">No recipe</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-all" aria-pressed="@IsPressed(MealFilter.All)" @onclick="() => _filter = MealFilter.All">All</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-this-week" aria-pressed="@IsPressed(MealFilter.ThisWeek)" @onclick="() => _filter = MealFilter.ThisWeek">This week</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-no-recipe" aria-pressed="@IsPressed(MealFilter.NoRecipe)" @onclick="() => _filter = MealFilter.NoRecipe">No recipe</button>
         </div>
 
         @if (!RegularMeals.Any())
@@ -37,7 +36,7 @@
         }
         else if (!FilteredMeals.Any())
         {
-            <p class="mw-meals-empty" data-testid="meal-list-no-match">No meals match "@_search".</p>
+            <p class="mw-meals-empty" data-testid="meal-list-no-match">@NoMatchMessage</p>
         }
         else
         {
@@ -57,16 +56,33 @@
 </div>
 
 @code {
+    private enum MealFilter { All, ThisWeek, NoRecipe }
+
     private string _search = string.Empty;
+    private MealFilter _filter = MealFilter.All;
     private IReadOnlyDictionary<int, DateTime> _plannedDates = new Dictionary<int, DateTime>();
 
     // Eat Out and Leftovers can't be edited, so they're only offered when planning a day.
     private IEnumerable<Meal> RegularMeals => _mealsStateContainer.Meals.Where(m => m.IsRegular);
 
+    // This week uses the same plan as the day tags, so a meal is in it exactly when its card shows a day.
     private IEnumerable<Meal> FilteredMeals =>
-        string.IsNullOrWhiteSpace(_search)
-            ? RegularMeals
-            : RegularMeals.Where(m => m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
+        RegularMeals
+            .Where(m => _filter switch
+            {
+                MealFilter.ThisWeek => _plannedDates.ContainsKey(m.Id),
+                MealFilter.NoRecipe => string.IsNullOrWhiteSpace(m.Recipe),
+                _ => true
+            })
+            .Where(m => string.IsNullOrWhiteSpace(_search)
+                        || m.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase));
+
+    private string NoMatchMessage =>
+        !string.IsNullOrWhiteSpace(_search) ? $"No meals match \"{_search}\"."
+        : _filter == MealFilter.ThisWeek ? "No meals planned this week."
+        : "Every meal has a recipe.";
+
+    private string IsPressed(MealFilter filter) => filter == _filter ? "true" : "false";
 
     private string CountLabel => RegularMeals.Count() == 1 ? "1 meal" : $"{RegularMeals.Count()} meals";
 

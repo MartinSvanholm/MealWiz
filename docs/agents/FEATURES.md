@@ -24,7 +24,10 @@ first saves the meal, then each pending ingredient (see Ingredients).
 The Meals page shows only regular meals; Eat Out and Leftovers are offered only when planning a day (the pick-a-meal
 list). Each card's day tag comes from this calendar week's plan, which the page reads by sending the MealPlans
 feature's `GetMealPlanByDate` query through MediatR (a failed load just leaves the tags out). Search matches meal
-names only; the This week / No recipe filter chips are shown but not wired (MEA-65), and ingredient search is MEA-66.
+names only (ingredient search is MEA-66). The single-select filter chips narrow the grid together with the search:
+This week to the meals with a day tag (same plan, so a failed load shows none), No recipe to meals whose recipe is
+blank. The header count stays the total. When nothing matches, `meal-list-no-match` names the search, or says no
+meals are planned this week, or that every meal has a recipe.
 
 - **Folder:** `Features/Meals/`
 - **Pages:**
