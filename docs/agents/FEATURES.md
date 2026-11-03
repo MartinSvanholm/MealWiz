@@ -367,7 +367,9 @@ key, CORS and deployment.
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
   tokens per theme, `@font-face`, global component styles and `.mw-text-*` classes. Tokens and when to use them:
-  [ARCHITECTURE.md](ARCHITECTURE.md#theme-tokens-ui-02) (UI-02).
+  [ARCHITECTURE.md](ARCHITECTURE.md#theme-tokens-ui-02) (UI-02). A drawer field with its label above it is a
+  `.mw-field` wrapping a `<label class="mw-field-label" for="x">` and a `MudTextField` with `InputId="x"` and no
+  `Label` (the grocery item and ingredient drawers).
 - **`wwwroot/fonts/`:** self-hosted Bricolage Grotesque and DM Sans (variable woff2, latin + latin-ext) with their
   OFL licences.
 - **`Helpers/`:**

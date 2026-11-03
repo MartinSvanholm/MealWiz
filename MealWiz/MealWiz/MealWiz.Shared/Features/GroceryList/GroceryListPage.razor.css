@@ -7,7 +7,7 @@
 
 /* The "From meal plan" header button (AddIngredientsToGroceryListButton): a 40px surface button with an icon. */
 .grocery-page ::deep .grocery-plan-button.mud-button-root.mud-button {
-    min-height: 40px;
+    min-height: var(--mw-touch);
     padding-inline: 12px;
     border-radius: var(--mw-radius-s);
     border: 1px solid var(--mw-border) !important;
@@ -151,8 +151,10 @@
 
 /* In the basket: small crossed-out pills that wrap. */
 .grocery-clear {
-    height: 28px;
-    padding: 0 4px;
+    /* 44px tap area; the negative margin keeps the row as tight as the 28px design. */
+    height: var(--mw-touch);
+    margin: -8px -4px -8px 0;
+    padding: 0 8px;
     border: none;
     background: transparent;
     color: var(--mw-red-text);
@@ -169,6 +171,12 @@
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+}
+
+.grocery-basket > li {
+    /* Let a long name's pill shrink to the row and ellipsise instead of running off-screen. */
+    min-width: 0;
+    max-width: 100%;
 }
 
 .grocery-pill {

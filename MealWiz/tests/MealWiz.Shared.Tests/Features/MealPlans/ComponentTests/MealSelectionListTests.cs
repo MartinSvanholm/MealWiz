@@ -126,6 +126,17 @@ public class MealSelectionListTests : ComponentTestBase
     }
 
     [Fact]
+    public void A_search_with_no_matches_says_so_instead_of_showing_an_empty_list()
+    {
+        var cut = Render<MealSelectionList>();
+
+        cut.Find(InputOf("meal-selection-search")).Input("zzzz");
+
+        Assert.Contains("No meals match \"zzzz\"", cut.Find(TestId("meal-list-no-match")).TextContent);
+        Assert.Empty(cut.FindAll(TestId("meal-list-item")));
+    }
+
+    [Fact]
     public void Says_so_when_there_are_no_meals()
     {
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));

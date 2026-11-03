@@ -2,10 +2,16 @@
    button in the footer. The drawer header's delete action comes from IngredientCard (HeaderAction). *@
 <div class="mw-ingredient-drawer">
     <div class="mw-ingredient-drawer-fields">
-        <MudTextField data-testid="ingredient-name-input" AutoFocus Label="Name" @bind-Value="Ingredient.Name" Variant="Variant.Outlined"
-                      OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
-        <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" Label="Amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined"
-                      Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
+        <div class="mw-field">
+            <label class="mw-field-label" for="ingredient-name">Name</label>
+            <MudTextField data-testid="ingredient-name-input" InputId="ingredient-name" AutoFocus @bind-Value="Ingredient.Name" Variant="Variant.Outlined"
+                          OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+        </div>
+        <div class="mw-field">
+            <label class="mw-field-label" for="ingredient-amount">Amount</label>
+            <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="Ingredient.Amount" Variant="Variant.Outlined"
+                          Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
+        </div>
     </div>
     <div class="mw-ingredient-drawer-switch">
         <span class="mw-ingredient-drawer-switch-icon">

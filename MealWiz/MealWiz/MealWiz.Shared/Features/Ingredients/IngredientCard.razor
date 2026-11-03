@@ -13,7 +13,7 @@
     <span class="mw-ingredient-name">@Ingredient.Name</span>
     <button type="button" class="mw-ingredient-amount" data-testid="ingredient-amount-chip" data-empty="@(HasAmount ? "false" : "true")"
             @onclick="EditIngredient" @onclick:stopPropagation="true">
-        @(HasAmount ? Ingredient.Amount : "+ amount")
+        <span class="mw-ingredient-amount-text">@(HasAmount ? Ingredient.Amount : "+ amount")</span>
     </button>
     <span class="mw-ingredient-delete" @onclick:stopPropagation="true">
         <DeleteIngredientButton Ingredient="Ingredient" />

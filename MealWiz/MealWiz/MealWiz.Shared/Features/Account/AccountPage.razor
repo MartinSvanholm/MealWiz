@@ -4,6 +4,7 @@
 @using MealWiz.Shared.Theme
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IThemeService ThemeService
+@implements IDisposable
 
 <div class="mw-page mw-account" data-testid="account-page">
     <SubPageHeader Label="Profile" Title="Account" BackHref="/" BackTestId="account-back" />
@@ -65,6 +66,14 @@
         var user = (await AuthenticationState).User;
         Email = user.FindFirst("email")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
     }
+
+    // The theme is read from local storage after the first render, so on a direct load of /account the switch has to
+    // follow ThemeService.OnChange (MEA-71).
+    protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
+
+    private void OnThemeChanged() => InvokeAsync(StateHasChanged);
 
     private async Task OnToggleDarkMode(bool _) => await ThemeService.ToggleAsync();
 }

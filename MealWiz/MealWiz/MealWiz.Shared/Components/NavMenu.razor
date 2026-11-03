@@ -1,13 +1,14 @@
 @inject NavigationManager navigationManager
 @implements IDisposable
 
-@* The three tabs inside the floating bottom nav (the bar itself is in Layout/MainLayout.razor). *@
+@* The three tabs inside the floating bottom nav (the bar itself is in Layout/MainLayout.razor). The Meals tab stays
+   active on its sub-pages (Edit meal, Import meal). *@
 <div class="mw-nav-tabs">
     <CustomNavLink data-testid="nav-meal-plan" IsActive="@(location == "")" Href="/" Icon="@Icons.Material.Filled.CalendarMonth">Plan</CustomNavLink>
 
     <CustomNavLink data-testid="nav-grocery-list" IsActive="@(location == "grocerylist")" Href="/grocerylist" Icon="@Icons.Material.Outlined.ShoppingCart">Groceries</CustomNavLink>
 
-    <CustomNavLink data-testid="nav-meals" IsActive="@(location == "meals")" Href="/meals" Icon="@Icons.Material.Filled.Restaurant">Meals</CustomNavLink>
+    <CustomNavLink data-testid="nav-meals" IsActive="@(location == "meals" || location.StartsWith("meals/"))" Href="/meals" Icon="@Icons.Material.Filled.Restaurant">Meals</CustomNavLink>
 </div>
 
 @code {

@@ -42,6 +42,21 @@ public class AccountPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void The_dark_mode_switch_follows_the_theme_once_it_has_loaded()
+    {
+        // MEA-71: on a direct load of /account the page renders before ThemeService has read the stored theme,
+        // so the switch must update when the theme service raises OnChange.
+        Theme.SetupGet(t => t.IsDarkMode).Returns(false);
+        var cut = Render<AccountPage>();
+        Assert.False(cut.Find(InputOf("dark-mode-switch")).HasAttribute("checked"));
+
+        Theme.SetupGet(t => t.IsDarkMode).Returns(true);
+        cut.InvokeAsync(() => Theme.Raise(t => t.OnChange += null));
+
+        cut.WaitForAssertion(() => Assert.True(cut.Find(InputOf("dark-mode-switch")).HasAttribute("checked")));
+    }
+
+    [Fact]
     public void Back_returns_to_the_meal_plan()
     {
         Navigation.NavigateTo("/account");

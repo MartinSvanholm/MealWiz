@@ -126,7 +126,12 @@
 
 .mw-login-signup {
     margin: 0;
-    text-align: center;
+    /* A flex row, so the 44px-tall "Create one" button is centred on the text line instead of
+       sitting on its baseline and dropping below "No account yet?". */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     font-size: 14px;
     color: var(--mw-text-muted);
 }

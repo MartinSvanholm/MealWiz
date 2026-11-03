@@ -40,13 +40,26 @@
     color: var(--mw-green-text);
 }
 
-/* The switch's label fills the row so the toggle sits on the right. */
+/* The switch's label fills the row so the label sits next to the icon and the toggle on the right.
+   MudBlazor wraps the switch in an input container too; it has to stretch as well, or the label
+   and toggle bunch up on the right. */
 .mw-ingredient-drawer-switch ::deep .mud-input-control,
-.mw-ingredient-drawer-switch ::deep .mud-switch {
+.mw-ingredient-drawer-switch ::deep .mud-input-control-input-container,
+.mw-ingredient-drawer-switch ::deep label.mud-switch {
     flex: 1 1 auto;
+    width: 100%;
     margin: 0;
 }
 
-.mw-ingredient-drawer-switch ::deep .mud-switch {
+.mw-ingredient-drawer-switch ::deep label.mud-switch {
     justify-content: space-between;
+}
+
+/* MudBlazor gives the label text the mud-switch classes too (a row-reverse flex box), which pushed the text to the
+   right; lay it out as plain left-aligned text next to the icon. */
+.mw-ingredient-drawer-switch ::deep p.mud-switch {
+    flex: 1 1 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
 }

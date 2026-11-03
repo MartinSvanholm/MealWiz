@@ -1,18 +1,24 @@
 @* Add or edit a grocery item: name and amount side by side, then "Save item". When the name is already filled in
    (from the add field), the amount gets the focus. *@
 <div class="grocery-item-fields">
-    <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" Label="Name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
-                  OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
-    <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" Label="Amount" Placeholder="e.g. 2" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
-                  Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-name">Name</label>
+        <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" InputId="grocery-item-name" @bind-Value="GroceryItem.Name" Variant="Variant.Outlined"
+                      OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    </div>
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-amount">Amount</label>
+        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="e.g. 2" @bind-Value="GroceryItem.Amount" Variant="Variant.Outlined"
+                      Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
+    </div>
 </div>
 <DrawerFooter>
     <SaveGroceryItemButton @ref="_saveButton" GroceryItem="GroceryItem" />
 </DrawerFooter>
 
 @code {
-    /// <summary>Fits the header, the fields and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
-    public const string DrawerHeight = "calc(248px + env(safe-area-inset-bottom))";
+    /// <summary>Fits the header, the labelled fields and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
+    public const string DrawerHeight = "calc(272px + env(safe-area-inset-bottom))";
 
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();

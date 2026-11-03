@@ -198,12 +198,28 @@
 }
 
 .mw-recipe {
-    padding: 14px 16px 14px 36px;
+    padding: 14px 16px;
+    list-style: none;
+    counter-reset: mw-step;
     display: flex;
     flex-direction: column;
     gap: 8px;
     font-size: 15px;
     line-height: 1.45;
+}
+
+/* Our own step numbers, left-aligned in a fixed column: the browser's markers are right-aligned, and DM Sans's "1" is
+   narrower than the other digits, so "1." sat further right than "2.". */
+.mw-recipe li {
+    position: relative;
+    padding-left: 20px;
+    counter-increment: mw-step;
+}
+
+.mw-recipe li::before {
+    content: counter(mw-step) ".";
+    position: absolute;
+    left: 0;
 }
 
 /* No recipe yet */

@@ -25,6 +25,16 @@
     color: var(--mw-text-muted);
 }
 
+/* A search with no matches: the same dashed box as the Meals page, instead of an empty list. */
+.mw-pick-no-match {
+    margin: 0;
+    padding: 20px 16px;
+    border: 1.5px dashed var(--mw-border-dashed);
+    border-radius: var(--mw-radius-l);
+    color: var(--mw-text-muted);
+    text-align: center;
+}
+
 .mw-pick-search {
     display: flex;
     align-items: center;
