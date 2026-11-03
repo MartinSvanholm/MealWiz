@@ -1,5 +1,6 @@
 ﻿@page "/grocerylist"
 @attribute [Authorize]
+@using MealWiz.Shared.Features.GroceryList.ClearBasket
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
@@ -64,8 +65,7 @@
             <section class="grocery-section">
                 <div class="grocery-section-row">
                     <h2 class="grocery-section-heading" data-testid="grocery-basket-heading">In the basket · @Picked.Count</h2>
-                    @* Not wired yet: nothing clears the basket in bulk (MEA-73). *@
-                    <button type="button" class="grocery-clear" data-testid="clear-basket-button">Clear</button>
+                    <ClearBasketButton />
                 </div>
                 <ul class="grocery-basket" data-testid="grocery-basket">
                     @foreach (var item in Picked)

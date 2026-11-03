@@ -181,8 +181,8 @@ The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenH
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
 "X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
-confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) is shown
-but not wired (MEA-73), and swipe-to-delete is MEA-67.
+confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
+every picked item after the confirm drawer ("Clear 2 items?"). Swipe-to-delete is MEA-67.
 
 - **Folder:** `Features/GroceryList/`
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
@@ -197,6 +197,8 @@ but not wired (MEA-73), and swipe-to-delete is MEA-67.
     drawer with `DeleteGroceryItemButton` as its header action.
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
     header; deletes after a confirm drawer ("Delete Milk?").
+  - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
+    basket"; after a confirm drawer it calls `ClearBasket` on the state container.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
     meal plan" header button; loads the meal plan if needed.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
@@ -211,9 +213,11 @@ but not wired (MEA-73), and swipe-to-delete is MEA-67.
   | AddMealPlanIngredientsToGroceryList | `Command(List<GroceryItem>)` → `Result<List<int>>` | Bulk insert; `created_by` comes from each ingredient |
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
+  | ClearBasket | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request (the picked ones the user saw); ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
-  `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`.
+  `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
+  `ClearBasket`.
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.

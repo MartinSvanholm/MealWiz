@@ -80,5 +80,18 @@ public class GroceryListJourneyTests : E2ETestBase
         await Page.ReloadAsync();
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(1);
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
+
+        // Check off the last item, then clear the basket (MEA-73): it's deleted, also after a reload
+        await Row("grocery-item", "Penne").GetByTestId("grocery-item-checkbox").ClickAsync();
+        await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Penne");
+        await Page.GetByTestId("clear-basket-button").ClickAsync();
+        await Expect(ConfirmDrawer.GetByTestId("confirm-drawer-title")).ToHaveTextAsync("Clear 1 item?");
+        await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
+        await Expect(Page.GetByTestId("grocery-basket")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("grocery-list-empty")).ToBeVisibleAsync();
+
+        await Page.ReloadAsync();
+        await Expect(Page.GetByTestId("grocery-list-empty")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(0);
     }
 }
