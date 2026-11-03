@@ -11,13 +11,6 @@
     cursor: pointer;
 }
 
-.mw-ingredient-handle {
-    flex: none;
-    display: flex;
-    color: var(--mw-border-dashed);
-    cursor: default;
-}
-
 .mw-ingredient-name {
     flex: 1 1 auto;
     min-width: 0;

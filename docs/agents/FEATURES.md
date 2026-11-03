@@ -83,9 +83,8 @@ saved and has an id.
 - **Folder:** `Features/Ingredients/`
 - **Pages:** none. The Edit Meal page hosts this feature.
 - **Components:**
-  - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): drag handle
-    (`ingredient-drag-handle`, not wired, MEA-68), name, amount chip (`ingredient-amount-chip`, `data-empty`; "+ amount"
-    when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
+  - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): name, amount
+    chip (`ingredient-amount-chip`, `data-empty`; "+ amount" when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
     (`drawer-delete-ingredient`).
   - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
     list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a

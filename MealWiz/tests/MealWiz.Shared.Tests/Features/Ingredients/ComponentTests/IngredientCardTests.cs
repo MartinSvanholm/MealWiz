@@ -17,7 +17,7 @@ public class IngredientCardTests : ComponentTestBase
         var chip = cut.Find(TestId("ingredient-amount-chip"));
         Assert.Equal("200g", chip.TextContent.Trim());
         Assert.Equal("false", chip.GetAttribute("data-empty"));
-        Assert.NotNull(cut.Find(TestId("ingredient-drag-handle")));
+        Assert.Empty(cut.FindAll(TestId("ingredient-drag-handle")));
         Assert.NotNull(cut.Find(TestId("delete-ingredient-button")));
     }
 
