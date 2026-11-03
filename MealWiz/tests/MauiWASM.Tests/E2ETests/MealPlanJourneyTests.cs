@@ -29,6 +29,16 @@ public class MealPlanJourneyTests : E2ETestBase
         await AssignAsync(day: 2, "Eat Out");
         await Expect(Page.GetByTestId("week-day-meal-indicator")).ToHaveCountAsync(3);
 
+        // Swap: the pick list replaces the card, without the day's own meal, and a pick replaces the meal
+        await Day(0).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(chili);
+        await Page.GetByTestId("swap-meal-button").ClickAsync();
+        await Expect(Page.GetByTestId("meal-selection-heading")).ToContainTextAsync("Swap the meal for");
+        await Expect(Row("meal-list-item", "Leftovers")).ToBeVisibleAsync(); // the list has loaded
+        await Expect(Row("meal-list-item", chili)).ToHaveCountAsync(0);
+        await Row("meal-list-item", "Leftovers").ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Leftovers");
+
         // Next week
         var thisWeek = await Page.GetByTestId("meal-plan-week-title").InnerTextAsync();
         await Page.GetByTestId("week-next").ClickAsync();
@@ -59,6 +69,11 @@ public class MealPlanJourneyTests : E2ETestBase
         await Expect(Day(1)).Not.ToHaveClassAsync(HasMeal);
         await Expect(Day(2)).ToHaveClassAsync(HasMeal);
         await Expect(Page.GetByTestId("week-day-meal-indicator")).ToHaveCountAsync(2);
+
+        // The swap was saved too
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Leftovers");
     }
 
     private ILocator Day(int index) => Page.GetByTestId("week-day").Nth(index);
