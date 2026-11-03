@@ -78,13 +78,13 @@ public class MealDisplayComponentTests : ComponentTestBase
     }
 
     [Fact]
-    public void Eaten_out_and_add_all_to_list_are_shown_but_not_wired_yet()
+    public void Add_all_to_list_is_shown_but_not_wired_yet_and_there_is_no_eaten_out_button()
     {
         Plan(TestData.Meal("Lasagne", ingredients: [TestData.Ingredient("Pasta sheets", "1 pk")]));
 
         var cut = Render<MealDisplayComponent>();
 
-        Assert.True(cut.Find(TestId("mark-eaten-out-button")).HasAttribute("disabled"));
+        Assert.Empty(cut.FindAll(TestId("mark-eaten-out-button")));
         Assert.True(cut.Find(TestId("add-all-to-list")).HasAttribute("disabled"));
     }
 
