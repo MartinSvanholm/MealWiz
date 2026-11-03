@@ -4,6 +4,7 @@ using MealWiz.Shared.Features.MealPlans.CreateMealPlan;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
+using MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
@@ -221,6 +222,59 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         Assert.Single(await GetPlanRowsAsync(nextWeek.Id));
     }
 
+    [Fact]
+    public async Task SwapMealInMealPlan_ReplacesTheMealOnlyOnTheGivenDate()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+        var other = await new MealBuilder().InsertAsync(supabase.Client);
+        var eatOut = await GetSystemMealAsync(MealTypeExtensions.EatOutValue);
+        var plan = await new MealPlanBuilder()
+            .ForWeekOf(Week(20))
+            .WithMeal(Week(20), meal)
+            .WithMeal(Week(20).AddDays(1), meal)
+            .InsertAsync(supabase.Client);
+
+        ResultAssert.Ok(await SwapAsync(plan.Id, Week(20), meal.Id, other.Id));
+        ResultAssert.Ok(await SwapAsync(plan.Id, Week(20).AddDays(1), meal.Id, eatOut.Id));
+
+        var rows = await GetPlanRowsAsync(plan.Id);
+        Assert.Equal(2, rows.Count);
+        Assert.Contains(rows, r => r.MealId == other.Id && r.MealDate == Iso(Week(20)));
+        Assert.Contains(rows, r => r.MealId == eatOut.Id && r.MealDate == Iso(Week(20).AddDays(1)));
+    }
+
+    [Fact]
+    public async Task SwapMealInMealPlan_NoMatchingRow_FailsWithoutChangingAnything()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+        var other = await new MealBuilder().InsertAsync(supabase.Client);
+        var plan = await new MealPlanBuilder().ForWeekOf(Week(22)).WithMeal(Week(22), meal).InsertAsync(supabase.Client);
+
+        // Wrong current meal, and a date with nothing planned.
+        ResultAssert.Failed(await SwapAsync(plan.Id, Week(22), other.Id, meal.Id), "Meal not found in plan");
+        ResultAssert.Failed(await SwapAsync(plan.Id, Week(22).AddDays(1), meal.Id, other.Id), "Meal not found in plan");
+
+        Assert.Equal(meal.Id, Assert.Single(await GetPlanRowsAsync(plan.Id)).MealId);
+    }
+
+    [Fact]
+    public async Task SwapMealInMealPlan_AnotherUsersPlan_FailsWithoutChangingIt()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+        var leftovers = await GetSystemMealAsync(MealTypeExtensions.LeftoverValue);
+        var plan = await new MealPlanBuilder().ForWeekOf(Week(24)).WithMeal(Week(24), meal).InsertAsync(supabase.Client);
+        var otherUser = await supabase.GetOtherUserAsync();
+
+        var result = await new SwapMealInMealPlan.Handler(otherUser.Client).Handle(
+            new SwapMealInMealPlan.Command(plan.Id, Week(24), meal.Id, leftovers.Id), CancellationToken);
+
+        ResultAssert.Failed(result, "Meal not found in plan");
+        Assert.Equal(meal.Id, Assert.Single(await GetPlanRowsAsync(plan.Id)).MealId);
+    }
+
     private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private static CultureInfo ThaiCultureOrSkip()
@@ -255,6 +309,9 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
 
     private Task<FluentResults.Result> RemoveAsync(int mealId, int mealPlanId, DateTime mealDate) =>
         new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId, mealPlanId, mealDate), CancellationToken);
+
+    private Task<FluentResults.Result> SwapAsync(int mealPlanId, DateTime mealDate, int currentMealId, int newMealId) =>
+        new SwapMealInMealPlan.Handler(supabase.Client).Handle(new SwapMealInMealPlan.Command(mealPlanId, mealDate, currentMealId, newMealId), CancellationToken);
 
     private async Task<List<MealPlanMealDb>> GetPlanRowsAsync(int mealPlanId)
     {
