@@ -18,8 +18,8 @@
         <MudMainContent Class="pa-0">
             @Body
         </MudMainContent>
-        @* Floating bottom nav, for signed-in users only (Login has none). Pages reserve its height with
-           var(--mw-nav-space) (css/mealwiz.css). *@
+        @* Floating bottom nav, for signed-in users only (Login has none). It floats over the page; a page's scroll
+           area ends with padding-bottom: var(--mw-nav-clearance) (css/mealwiz.css). *@
         <AuthorizeView>
             <Authorized>
                 <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="Main">

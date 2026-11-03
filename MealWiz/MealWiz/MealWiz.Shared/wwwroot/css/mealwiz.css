@@ -63,11 +63,13 @@
     --mw-radius-pill: 999px;  /* pills, round buttons */
     --mw-touch: 44px;         /* minimum touch target */
 
-    /* The floating bottom nav (Layout/MainLayout.razor). A page fills the screen above it with
-       height: calc(100dvh - var(--mw-nav-space)), or the .mw-page class. */
+    /* The floating bottom nav (Layout/MainLayout.razor). It floats over the page: a page fills the whole screen
+       (.mw-page) and content scrolls behind and around the bar. A page's scroll area ends with
+       padding-bottom: var(--mw-nav-clearance), so its last content can scroll clear of the bar. */
     --mw-nav-height: 64px;
     --mw-nav-gap: 16px;       /* from the screen edges, and between the nav and the page above it */
     --mw-nav-space: calc(var(--mw-nav-height) + 2 * var(--mw-nav-gap) + env(safe-area-inset-bottom));
+    --mw-nav-clearance: calc(var(--mw-nav-space) + 16px); /* scroll-area bottom padding: the bar plus 16px */
 
     --mw-font-heading: 'Bricolage Grotesque', 'DM Sans', system-ui, sans-serif;
     --mw-font-body: 'DM Sans', system-ui, sans-serif;
@@ -438,10 +440,11 @@ h1:focus {
 .mw-text-warning { color: var(--mw-warning-text) !important; }
 .mw-text-muted { color: var(--mw-text-muted) !important; }
 
-/* A page that fills the screen above the floating bottom nav (vh fallback for browsers without dvh). */
+/* A page that fills the whole screen; the floating bottom nav sits over it (vh fallback for browsers without dvh).
+   Its scroll area ends with padding-bottom: var(--mw-nav-clearance). */
 .mw-page {
-    height: calc(100vh - var(--mw-nav-space));
-    height: calc(100dvh - var(--mw-nav-space));
+    height: 100vh;
+    height: 100dvh;
 }
 
 .mw-heading {

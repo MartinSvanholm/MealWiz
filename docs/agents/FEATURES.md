@@ -382,8 +382,9 @@ key, CORS and deployment.
 - **`Components/`:** generic UI.
   - `Components/NavMenu.razor`, the three tabs (Plan, Groceries, Meals; `nav-meal-plan`, `nav-grocery-list`,
     `nav-meals`), and `Components/CustomNavLink.razor`, one tab: icon above label, the active one an orange pill
-    with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. Pages
-    leave room for it with `var(--mw-nav-space)` or the `.mw-page` class (`wwwroot/css/mealwiz.css`).
+    with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. It
+    floats over the page: pages fill the screen (the `.mw-page` class) and end their scroll area with
+    `padding-bottom: var(--mw-nav-clearance)` (`wwwroot/css/mealwiz.css`), so content scrolls behind the bar.
   - `Components/Headers/ScreenHeader.razor`: the header on top of every screen. Parameters: `Label` (small
     uppercase muted line, left out when empty), `Title` (26px), `TitleContent` (markup instead of `Title`, e.g. a
     button) and `Actions` (buttons on the right). Test ids `screen-header`, `screen-header-label`,

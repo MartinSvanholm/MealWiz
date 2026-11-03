@@ -65,7 +65,7 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    padding: 0 16px 16px;
+    padding: 0 16px var(--mw-nav-clearance);
 }
 
 .grocery-section {

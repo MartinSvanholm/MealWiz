@@ -534,7 +534,7 @@ In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary
 | `--mw-error-alert-bg` | the error alert background (global `MudAlert` Severity.Error already uses it) |
 | `--mw-radius-s` 14 · `-m` 16 · `-l` 20 · `-xl` 24 · `-sheet` 28 · `-pill` | corners: inputs and icon buttons · buttons · cards and menus · nav bar · drawer top and hero card · pills |
 | `--mw-touch` | 44px minimum touch target |
-| `--mw-nav-height`, `--mw-nav-gap`, `--mw-nav-space` | the floating bottom nav's height, its gap to the screen edges, and the space a page leaves for it (`calc(100dvh - var(--mw-nav-space))`, or the `.mw-page` class); never hardcode the nav height |
+| `--mw-nav-height`, `--mw-nav-gap`, `--mw-nav-space`, `--mw-nav-clearance` | the floating bottom nav's height, its gap to the screen edges, and the space it takes. The nav floats over the page: a page fills the screen (the `.mw-page` class) and its scroll area ends with `padding-bottom: var(--mw-nav-clearance)`, so content scrolls behind the bar and its last item can scroll clear of it; never hardcode the nav height |
 | `--mw-font-heading`, `--mw-font-body` | Bricolage Grotesque (headings, 600/800) and DM Sans (body, 400/500/700); `MudText Typo.h1..h6` and `.mw-heading` already use the heading font |
 
 **Where styles go.** Global rules for MudBlazor components (buttons, inputs, menus, snackbars) and new tokens go in
