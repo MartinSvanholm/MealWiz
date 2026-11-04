@@ -1,0 +1,258 @@
+/* The Plan week page: header, then a scrolling body of settings, Generate, the week preview and Save. Tokens only (UI-02). */
+.mw-plan-week {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ScreenHeader renders the actions row, so it is addressed through ::deep. */
+.mw-plan-week ::deep .mw-screen-header-actions {
+    gap: 6px;
+}
+
+.mw-plan-week ::deep .mw-screen-header-title {
+    overflow: visible;
+}
+
+.mw-header-button {
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    flex: 0 0 auto;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font: inherit;
+    border-radius: var(--mw-radius-s);
+    border: 1px solid var(--mw-border);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+}
+
+.mw-header-button:disabled {
+    cursor: default;
+}
+
+.mw-header-button:focus-visible,
+.mw-plan-week-step:focus-visible,
+.mw-plan-week-lock:focus-visible {
+    outline: 2px solid var(--mw-orange-text);
+    outline-offset: 2px;
+}
+
+.mw-plan-week-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 6px 16px var(--mw-nav-clearance);
+}
+
+/* Settings: two rows styled like the ingredient drawer's switch row. */
+.mw-plan-week-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mw-plan-week-setting {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 0 10px 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-bg);
+}
+
+.mw-plan-week-setting-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+}
+
+.mw-plan-week-setting-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--mw-text);
+    font-size: 15px;
+}
+
+.mw-plan-week-stepper {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mw-plan-week-step {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+}
+
+.mw-plan-week-step:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.mw-plan-week-weeks-back {
+    min-width: 64px;
+    text-align: center;
+    color: var(--mw-text);
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* The switch's label fills the row so the label sits next to the icon and the toggle on the right. */
+.mw-plan-week-switch ::deep .mud-input-control,
+.mw-plan-week-switch ::deep .mud-input-control-input-container,
+.mw-plan-week-switch ::deep label.mud-switch {
+    flex: 1 1 auto;
+    width: 100%;
+    margin: 0;
+}
+
+.mw-plan-week-switch ::deep label.mud-switch {
+    justify-content: space-between;
+}
+
+.mw-plan-week-switch ::deep p.mud-switch {
+    flex: 1 1 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.mw-plan-week-note {
+    margin: 0;
+    color: var(--mw-text-muted);
+    font-size: 13px;
+}
+
+/* The preview days. */
+.mw-plan-week-days {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mw-plan-week-day {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: var(--mw-touch);
+    padding: 6px 10px 6px 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-l);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+}
+
+.mw-plan-week-day.is-locked {
+    background-color: var(--mw-chip-bg);
+}
+
+.mw-plan-week-day.is-empty {
+    border-style: dashed;
+    border-color: var(--mw-border-dashed);
+    background-color: transparent;
+    color: var(--mw-text-muted);
+}
+
+.mw-plan-week-day-date {
+    flex: none;
+    width: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+}
+
+.mw-plan-week-day-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--mw-text-muted);
+}
+
+.mw-plan-week-day-number {
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.mw-plan-week-day-meal {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.mw-plan-day-empty {
+    font-weight: 400;
+}
+
+.mw-plan-week-lock {
+    flex: none;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--mw-text-muted);
+}
+
+.mw-plan-week-day.is-locked .mw-plan-week-lock {
+    color: var(--mw-orange-text);
+}
+
+/* No meals to plan with. */
+.mw-plan-week-empty-pool {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.mw-plan-week-empty-title {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-size: 20px;
+    color: var(--mw-text);
+}
+
+.mw-plan-week-empty-body {
+    margin: 0 0 8px;
+    color: var(--mw-text-muted);
+}

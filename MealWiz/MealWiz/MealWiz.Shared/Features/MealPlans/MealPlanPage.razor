@@ -32,9 +32,8 @@
                     disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NextWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
             </button>
-            @* Unwired: planning the whole week has no behaviour yet (MEA-75). *@
             <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="Plan the week"
-                    disabled aria-disabled="true">
+                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="PlanWeek">
                 <MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" />
             </button>
             <button type="button" class="mw-avatar" data-testid="account-button" aria-label="Account"
@@ -101,6 +100,9 @@
     private string WeekLabel => WeekStart.ToWeekLabel();
 
     private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now);
+
+    private void PlanWeek() =>
+        _navigationManager.NavigateTo($"/plan-week?week={WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
     private Task GoToCurrentWeek() =>
         _mealPlanStateContainer.NavigateToWeek(DateTime.Now);
