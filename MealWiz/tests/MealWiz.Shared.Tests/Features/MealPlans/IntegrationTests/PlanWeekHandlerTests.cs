@@ -219,7 +219,8 @@ public class PlanWeekHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
 
     private async Task<List<MealPlanDb>> GetPlansAsync(DateTime monday)
     {
-        var response = await supabase.Client.From<MealPlanDb>().Where(x => x.StartDate == Iso(monday)).Get(CancellationToken);
+        var start = Iso(monday);
+        var response = await supabase.Client.From<MealPlanDb>().Where(x => x.StartDate == start).Get(CancellationToken);
         return response.Models;
     }
 
