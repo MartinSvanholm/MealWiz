@@ -20,7 +20,7 @@ Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, I
 | Level | Is | Worked by |
 |---|---|---|
 | Project | a feature: a collection of user stories; its description is the spec | the main (coordinator) session, `/plan-project` |
-| Issue | one user story, a vertical slice: one branch, one PR to `dev` | its own session, started by the coordinator |
+| Issue | one user story, a vertical slice: one branch, one PR to `dev`; the coordinator writes its implementation plan into the description | its own session (Sonnet, medium effort), started by the coordinator |
 | Sub-issue | one layer task of an issue: `[DB]`, `[BE]` or `[FE]` (only when the story spans layers) | the issue's session, itself or through subagents; lands in the issue's PR |
 
 Project skills in `.claude/skills/` run the workflow:
@@ -28,9 +28,9 @@ Project skills in `.claude/skills/` run the workflow:
 | Skill | Use it to |
 |---|---|
 | `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, then coordinate one session per issue (max 4 at once locally; no limit in cloud mode) |
-| `/implement-issue` | implement one issue and its sub-issues (feature mode, plan-gated, the user merges) or a group of bugs (bug mode, merges itself on green) |
-| `/fix-bugs` | group the open Bug issues by the files they touch and start one bug-mode session per group |
+| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, write a full implementation plan into each issue for the user to approve, then coordinate one Sonnet session per issue that executes its plan (max 4 at once locally; no limit in cloud mode) |
+| `/implement-issue` | implement one issue and its sub-issues by executing the approved plan in the issue (feature mode, the user merges) or a group of bugs (bug mode, merges itself on green) |
+| `/fix-bugs` | diagnose the open Bug issues and write a fix plan into each one that needs it for the user to approve, group them by the files they touch, and start one Sonnet bug-mode session per group that executes the plans |
 
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
 `mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
