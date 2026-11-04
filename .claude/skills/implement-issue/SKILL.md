@@ -1,14 +1,14 @@
 ---
 name: implement-issue
-description: Implement one MealWiz Linear issue and its [DB]/[BE]/[FE] sub-issues (feature mode, inline or through subagents) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
+description: Implement one MealWiz Linear issue and its [DB]/[BE]/[FE] sub-issues by executing the approved Implementation plan in the issue (feature mode, inline or through subagents) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
 ---
 
 # Implement an issue
 
 You run in your own worktree, usually started by a coordinator session (`/plan-project` or `/fix-bugs`). Two modes:
 
-- **Feature mode** (default): one issue from a project. You start in plan mode; the user approves your plan, reviews
-  your PR and merges it.
+- **Feature mode** (default): one issue from a project. The coordinator wrote its `## Implementation plan` into the
+  issue and the user approved it there; you execute it. The user reviews your PR and merges it.
 - **Bug mode** (`--bug`, or the brief says so): one or more Bug issues in one PR. No plan mode; you merge your own PR to
   `dev` when CI is green.
 
@@ -45,10 +45,16 @@ answer too, the user's answer here wins; tell the coordinator if they differ. Th
 4. the work grows beyond the issue;
 5. it needs a migration or RLS change the issue doesn't mention;
 6. verify is red and you can't explain why after 2 attempts;
-7. it touches secrets, deployment, workflows or `main`.
+7. it touches secrets, deployment, workflows or `main`;
+8. the plan in the issue (an Implementation plan, or a bug's Fix plan) doesn't fit the code: a file, member or
+   behaviour it relies on is missing or different, a red test doesn't fail as it says, a step can't go green as
+   written, or a step needs a design decision the plan doesn't settle. Don't redesign or re-diagnose around it. Send the coordinator `PLAN MEA-52: <what doesn't fit, with file and line>`, comment on the issue, and wait: the
+   coordinator owns the plan, fixes it and tells you what changed. If there's no coordinator (you were started by
+   hand), ask the user here.
 
-**Decide yourself**, and note it in the PR: names (S-01), test placement and naming (TESTING.md), refactors inside the
-files you own, SHOULD-rule trade-offs.
+**Decide yourself**, and note it in the PR: what the plan leaves to the implementation (private helpers, test data,
+the order of small edits inside a step), refactors inside the files you own, SHOULD-rule trade-offs. Everything the
+plan names (names, shapes, data-testids, UI text, tests) stays as written.
 
 While you wait for an answer, don't build on a guess.
 
@@ -66,18 +72,24 @@ While you wait for an answer, don't build on a guess.
 
 ## F. Feature mode
 
-1. **Plan.** You started in plan mode. Explore the code the issue touches (FEATURES.md first). Ask the open
-   implementation questions with AskUserQuestion, in rounds, as `mw-grilling` does. Write the plan: the slices, the
-   test seams (from the issue or spec; otherwise propose them), the files, the docs to update, the verify level.
-   If the issue has sub-issues, the plan also says, for each one, its order and whether you work it **inline** or in
-   a **subagent** ([Sub-issues](#sub-issues)). Present it with ExitPlanMode. Code nothing before the user approves.
-2. **Build test-first** with `mw-tdd`, one slice at a time, sub-issue by sub-issue in blocking order. Commit each
-   green slice. Move each sub-issue to **In Progress** when you start it and **In Review** when its slices are green.
-3. **Docs.** Update `docs/agents/FEATURES.md` (and TESTING.md, CLAUDE.md where they describe what you changed).
-4. **Verify** at the issue's level, in the background: `scripts/verify.ps1 local`, plus `--e2e <class>` for the
-   journey the issue names (TESTING.md). Don't run `smoke` or `full` locally: CI runs the full E2E suite before the
+1. **Read the plan.** Read the issue's `## Implementation plan` end to end, including any `Revised` lines, then the
+   files its steps name and the prior art it points to. That's all the exploring you do: the plan is approved, so
+   don't look for alternatives, re-plan, or ask about what it settles. Check that the files and members it relies on
+   exist as described; if not, stop rule 8.
+   - **No plan in the issue** (you were started by hand on an unplanned issue): plan it yourself first. Explore
+     (FEATURES.md first), ask the open questions with AskUserQuestion in rounds as `mw-grilling` does, write the plan
+     from `.claude/skills/plan-project/references/implementation-plan-template.md`, and present it with
+     ExitPlanMode. Code nothing before the user approves.
+2. **Build test-first** with `mw-tdd`, following the plan's Steps in order: each step's red tests, then its green, then
+   one commit. Work the sub-issues inline or in subagents as the plan's Sub-issues section says. Move each sub-issue to
+   **In Progress** when you start it and **In Review** when its steps are green.
+3. **Docs.** Make the plan's Docs edits (and any other line in `docs/agents/` or CLAUDE.md that describes what you
+   changed).
+4. **Verify** at the plan's level, in the background: `scripts/verify.ps1 local`, plus `--e2e <class>` for the
+   journey it names (TESTING.md). Don't run `smoke` or `full` locally: CI runs the full E2E suite before the
    PR can merge. Triage with the `verify` skill. Green means exit code 0.
-5. **Self-review** with `mw-code-review` (light). Fix 🔴 and Spec gaps; rerun verify if you changed code.
+5. **Self-review** with `mw-code-review` (light), with the plan as part of the Spec axis: every step done, nothing
+   built that the plan doesn't ask for. Fix 🔴 and Spec gaps; rerun verify if you changed code.
 6. **Open the PR** (go to [Opening the PR](#opening-the-pr)).
 7. **Hand off.** End your turn with a short report (below). From now on you're woken by CI and review events
    ([After the PR](#after-the-pr)).
@@ -97,9 +109,14 @@ responsible for the whole issue (its end-to-end criteria, docs, verify, review, 
   sub-issue edits, with its seam written down (the parent's Notes or a Contract item). Siblings that meet those rules
   may run in parallel.
 
+The plan's Sub-issues section says which mode each sub-issue gets. Follow it; if the plan predates these rules or
+doesn't say, use the rules above.
+
 For a subagent, use the Agent tool with `isolation: "worktree"` (each gets its own worktree from your branch, so
 builds and commits don't collide) and a brief that holds: the sub-issue (id, url, its text), the parent story in one
-line, the seam it codes against, the files it owns and the ones it mustn't touch, "build test-first with `mw-tdd` and
+line, the plan's Decisions, Shapes and the Steps for this sub-issue (copied in full), the seam it codes against, the
+files it owns and the ones it mustn't touch, "execute the steps as written; if one doesn't fit the code, stop and
+report it instead of redesigning", "build test-first with `mw-tdd` and
 commit each green slice", and "verify with `scripts/verify.ps1 fast`, or `local` if you touch the database; don't
 push, open a PR, edit Linear, or edit docs". It reports its branch, commits and verify verdict.
 
@@ -113,8 +130,11 @@ sub-issue is in.
 The user wrote this rule for bug sessions: **merge your bug PR to `dev` without asking once CI is green.** It covers
 only PRs you opened, based on `dev`, in this session.
 
-1. **Each bug, one at a time,** with `mw-diagnosing-bugs`: a red test first (or flip the test that pins it), then the
-   fix. Commit each fixed bug separately (`Fix MEA-35: …`).
+1. **Each bug, one at a time.** Commit each fixed bug separately (`Fix MEA-35: …`).
+   - **With a `## Fix plan`** in the issue (approved in the coordinator): execute it. Write its red test (or flip the
+     pinning assertion), run it and check it fails for the reason the plan gives, then make the fix it describes.
+     Don't diagnose again. A red test that passes today or fails for another reason is stop rule 8.
+   - **Without one:** use `mw-diagnosing-bugs`: a red test first (or flip the test that pins it), then the fix.
 2. **Ask before fixing** (stop as above) if the fix would:
    - add or edit a migration or an RLS policy (DB-01, DB-02);
    - change a handler's request or response, or a state container's public members;
@@ -123,7 +143,9 @@ only PRs you opened, based on `dev`, in this session.
    - change behaviour a user would notice beyond the bug itself;
    - be more than about 150 changed lines outside tests.
 
-   Then you also don't self-merge that PR unless the user says so in this session.
+   Then you also don't self-merge that PR unless the user says so in this session. A part the Fix plan's "Cleared by
+   the user" section (or the brief's "Cleared by the user before start") already approves, exactly as you'll do it,
+   counts as asked and answered, for fixing and for merging.
 3. **Docs:** update "Bugs currently pinned by tests" in `docs/agents/TESTING.md` and any FEATURES.md lines you
    changed.
 4. **Verify** with `scripts/verify.ps1 local` in the background, plus `--e2e <class>` for each E2E class that pins
@@ -193,7 +215,7 @@ You have your own container, Docker and Supabase stack, a Linux bash shell, and 
 - **Verify** with `scripts/verify.sh`, wherever this skill says `scripts/verify.ps1`. No other session shares your
   stack, so the lock never waits. verify restarts Docker if it died. Subagents get the same instruction.
 - **Messages to the coordinator.** Its session id is in the brief. It isn't woken when your turn ends, so every
-  notice and report this skill sends it (`BLOCKED`, `UNBLOCKED`, `PR`, `MERGED`, `STUCK`) also goes out with
+  notice and report this skill sends it (`BLOCKED`, `UNBLOCKED`, `PLAN`, `PR`, `MERGED`, `STUCK`) also goes out with
   `send_message` to that session, in addition to ending your turn with it.
 - **Push** with `git push -u origin <branch>`. A 403 or "GitHub access" refusal isn't fixable from here: read the
   `github.access` page with `read_documentation`, tell the user what it says, `send_message` the coordinator
@@ -214,5 +236,5 @@ You have your own container, Docker and Supabase stack, a Linux bash shell, and 
 ## Report
 
 Your last message is relayed to the coordinator; its first 400 characters matter most. Lead with:
-`PR <url> (<ID>)` or `MERGED <url>` or `BLOCKED <ID>: …` or `STUCK <url>`, then the verify verdict line, then
-anything the user must do (approve a plan, review, answer a question).
+`PR <url> (<ID>)` or `MERGED <url>` or `BLOCKED <ID>: …` or `PLAN <ID>: …` or `STUCK <url>`, then the verify verdict
+line, then anything the user must do (review, answer a question).

@@ -1,12 +1,16 @@
 ---
 name: fix-bugs
-description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, groups those that touch the same files, shows the groups, then starts one session per group (max 4) that fixes its bugs test-first, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
+description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
 ---
 
 # Fix bugs
 
-This session is the **coordinator**: it picks and groups bugs, starts one session per group, and reports. It fixes
-nothing itself. Each group session runs `implement-issue` in bug mode.
+This session is the **coordinator**: it picks bugs, diagnoses and plans the ones that need it, groups them, starts one
+session per group, and reports. It fixes nothing itself. Each group session runs `implement-issue` in bug mode.
+
+**The diagnosis happens here.** Every bug that isn't obvious gets a `## Fix plan` in its issue, approved by the user
+here. Group sessions run on Sonnet at medium effort and execute the plans: they don't diagnose again or ask about
+what a plan settles.
 
 Standing rules:
 - PRs target `dev` only. There is no hotfix path to `main`.
@@ -33,16 +37,38 @@ One **Explore** subagent (`model: "sonnet"`) gets the list (id, title, descripti
 a changed handler request/response or state container public API; the Function contract or SSRF guard; a new package
 or DI change; a user-visible behaviour change; a change to what existing data does (rows written before the fix that
 would behave differently afterwards, e.g. a flag that was never set). For each flag, name the concrete change in a
-few words (the policy's new check, the new signature). Note any product decision the issue leaves open. Answer as a
-table: id | files | flags | open decision | confidence. Under 500 words."
+few words (the policy's new check, the new signature). Note any product decision the issue leaves open. Say whether
+the bug needs a fix plan: **no** only when the issue or the code makes the cause and the one small fix obvious (one
+file, no flags, high confidence); otherwise **yes**, with the reason. Answer as a table: id | files | flags | open
+decision | confidence | needs plan. Under 600 words."
 
-If the agent runs in the background, its report arrives as a later message. That's fine: steps 3 and 4 make sure the
-start itself happens on the user's own turn.
+If the agent runs in the background, its report arrives as a later message. That's fine: step 4 makes sure the start
+itself happens on the user's own turn.
 
 Pinned bugs: the test files in "Bugs currently pinned by tests" (`docs/agents/TESTING.md`) count as files too, since
 the fix flips those assertions.
 
-## 3. Group
+## 3. Diagnose and plan
+
+For every bug marked **needs plan** (and any you doubt), write a fix plan from
+[references/fix-plan-template.md](references/fix-plan-template.md). Meet its bar: the session makes no diagnostic
+or design decision.
+
+1. **Diagnose in parallel.** Start one **Plan** subagent per bug, all in one message (bugs the triage expects to share
+   files may share one agent), each with the issue (id, url, text, comments), the triage row, the template, and:
+   "Find the root cause by reading the code path end to end (FEATURES.md first; the real files, not summaries), the
+   way `mw-diagnosing-bugs` ranks hypotheses. Write the fix plan: root cause with file and line, the red test that
+   fails today and why, the exact fix, other call sites with the same flaw. Return the plan, the files the fix edits,
+   and a separate list of questions only the user can decide, each with a recommended answer. Don't write to Linear,
+   edit files, or run anything that changes state."
+2. **Review the plans** yourself; a plan is a claim. Read the code at each root cause and check that the red test
+   would really fail for the stated reason and pass after the fix. A plan whose cause is only "likely" says so, and
+   says what the session does if the red test passes today (stop rule 8).
+3. Use the plans' file lists, not the triage's, for grouping below.
+
+Bugs marked **no** get no plan; their session diagnoses them with `mw-diagnosing-bugs` as before.
+
+## 4. Group
 
 - Bugs that share a **source** file or a **pinning test** go in the same group (follow chains: A shares with B, B with
   C → one group). Other shared test files (`MealHandlerTests.cs`, a journey) don't link bugs: new test methods in the
@@ -55,24 +81,27 @@ the fix flips those assertions.
   B2).
 - Order groups: blockers first, then by priority, then by size (small first).
 
-Show the user a table (group, bugs with titles, files, flags, starts now / waits for) and the excluded bugs with the
-reason.
+Show the user a table (group, bugs with titles, root cause in a few words or "no plan", files, flags, starts now /
+waits for) and the excluded bugs with the reason.
 
-Flagged bugs and bugs whose issue leaves a product decision open would each stop their session later. Settle them
-now, in one AskUserQuestion round, and put the answers in that group's brief ("cleared by the user: …"), so the
-session doesn't have to stop. Make each option say exactly what the user approves: the policy's new `WITH CHECK`, the
-new method signature, the migration and what it does to existing rows. "RLS change OK?" isn't enough to decide on.
+Flagged bugs, bugs whose issue leaves a product decision open, and the plans' questions would each stop a session
+later. Settle them now, in one AskUserQuestion round, and put the answers in the bug's Fix plan ("Cleared by the
+user") or, for an unplanned bug, in that group's brief ("cleared by the user: …"), so the session doesn't have to
+stop. Make each option say exactly what the user approves: the policy's new `WITH CHECK`, the new method signature,
+the migration and what it does to existing rows. "RLS change OK?" isn't enough to decide on.
+
+Then **publish** each plan: append it to its bug's description (`save_issue` with `patch`, `append`).
 
 Then **end your turn** asking for the start (with `wrap_up`'s question and buttons: start / adjust / cancel), rather
-than asking it with AskUserQuestion. The app starts sessions only on the user's own turn, and a turn that a background
-report began isn't one, so a yes given inside such a turn turns every start into a card. Their reply is the request
-to start sessions.
+than asking it with AskUserQuestion. The yes also approves the fix plans. The app starts sessions only on the user's
+own turn, and a turn that a background report began isn't one, so a yes given inside such a turn turns every start
+into a card. Their reply is the request to start sessions.
 
-## 4. Start the group sessions
+## 5. Start the group sessions
 
 **Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start each group with `create_session` and check its record right
-after, exactly as `plan-project` describes under "Cloud mode", but without `permission_mode` (bug sessions don't
-plan-gate) and with the cloud changes in [references/bug-brief.md](references/bug-brief.md). There is no limit of 4
+after, exactly as `plan-project` describes under "Cloud mode" (Sonnet and medium if `create_session` takes them),
+with the cloud changes in [references/bug-brief.md](references/bug-brief.md). There is no limit of 4
 there, since each session has its own Supabase; groups that share a file still wait for each other. Being woken,
 GitHub checks and cleanup work as that section says.
 
@@ -80,8 +109,9 @@ GitHub checks and cleanup work as that section says.
 
 1. `mark_chapter` once ("Bug fixes: wave 1").
 2. A bold title line and one sentence, then `start_session` with `initiation: "user_asked"`, `context: "fresh"`,
-   `use_worktree: true`, `source_branch: "dev"`, no `permission_mode` (they inherit; bug sessions don't plan-gate),
-   and the brief from [references/bug-brief.md](references/bug-brief.md).
+   `use_worktree: true`, `source_branch: "dev"`, `model`: the current Sonnet id (e.g. `claude-sonnet-5-5`),
+   `effort: "medium"`, no `permission_mode` (they inherit; bug sessions don't plan-gate), and the brief from
+   [references/bug-brief.md](references/bug-brief.md).
 3. Move the group's issues to **In Progress**.
 
 If the app refuses a start (on a turn a session's message started), propose it instead with
@@ -95,7 +125,7 @@ Tell the user once: each session will ask the app to approve `set_monitor` the f
 `.claude/settings.json` pre-approves `scripts/merge-to-dev.sh` (which only merges green PRs into `dev`), `gh pr view` and
 `gh pr checks`. It deliberately doesn't pre-approve `gh pr merge`, which could merge a release PR into `main`.
 
-## 5. Every time you're woken
+## 6. Every time you're woken
 
 1. Read the session's report. Check it: `gh pr view <n> --json state,mergedAt,baseRefName,statusCheckRollup`. A report
    is a claim.
@@ -104,14 +134,18 @@ Tell the user once: each session will ask the app to approve `set_monitor` the f
      answer means two answers that can disagree. Tell the user in one line which session waits for them, with a link.
      The session sends `UNBLOCKED` once they've answered there. Only a question about the run itself (grouping,
      another group's files) is yours to ask.
+   - `PLAN`: a fix plan doesn't fit (the red test passes today, fails for another reason, or the fix doesn't fit the
+     code). The plan is yours: check the finding against the code, revise the plan in the issue (a
+     `Revised <date>: …` line), and `SendMessage` the session what changed. If it needs a user decision, ask the user
+     here and tell the session it waits on you.
    - `STUCK`: tell the user which check fails and what was tried; ask whether to continue, hand it to them, or close.
    - **Bugs it filed:** note each one (id and one line). Add them to the "Known issues" line of every brief you start
      from now on, so later sessions comment on them instead of filing them again.
 2. Start waiting groups whose blockers merged, up to 4 running.
 3. Report in two or three lines: merged, running, waiting on the user.
 
-## 6. Finish
+## 7. Finish
 
 When every group is merged, stuck or cancelled: summarise (bug → PR → result), list the bugs filed along the way,
-and offer cleanup as in `plan-project` step 6 (archive merged sessions on the user's yes, then remove their
+and offer cleanup as in `plan-project` step 7 (archive merged sessions on the user's yes, then remove their
 worktrees, then `git branch -d` merged branches).

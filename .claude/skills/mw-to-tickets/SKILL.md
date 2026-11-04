@@ -150,5 +150,6 @@ What the next layer relies on (columns, a handler's request/response). Omit if n
 
 </sub-issue-template>
 
-Avoid file paths and code in issues; they go stale. Exception: a schema or type shape that states a decision more
-exactly than prose, or a shared file whose ownership you're assigning.
+Avoid file paths and code in issues; they go stale. Exceptions: a schema or type shape that states a decision more
+exactly than prose, a shared file whose ownership you're assigning, and the `## Implementation plan` section that
+`/plan-project` appends to each issue afterwards (it is revised when blockers merge).
