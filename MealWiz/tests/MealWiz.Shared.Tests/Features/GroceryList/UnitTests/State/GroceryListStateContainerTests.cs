@@ -1,7 +1,8 @@
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
-using MealWiz.Shared.Features.GroceryList.ClearBasket;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
@@ -9,6 +10,7 @@ using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MediatR;
 using Moq;
 using MudBlazor;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.GroceryList.UnitTests.State;
@@ -209,12 +211,12 @@ public class GroceryListStateContainerTests
     {
         await LoadItems(Item(1, "milk"), Item(2, "bread", picked: true), Item(3, "eggs", picked: true));
         _mediator
-            .Setup(m => m.Send(It.IsAny<ClearBasket.Command>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok());
 
         await _container.ClearBasket();
 
-        _mediator.Verify(m => m.Send(It.Is<ClearBasket.Command>(c => c.GroceryItemIds.Order().SequenceEqual(new[] { 2, 3 })), It.IsAny<CancellationToken>()), Times.Once);
+        _mediator.Verify(m => m.Send(It.Is<DeleteGroceryItems.Command>(c => c.GroceryItemIds.Order().SequenceEqual(new[] { 2, 3 })), It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(new[] { "milk" }, Names());
         Assert.Equal(1, _notifications);
     }
@@ -224,7 +226,7 @@ public class GroceryListStateContainerTests
     {
         await LoadItems(Item(1, "milk"), Item(2, "bread", picked: true));
         _mediator
-            .Setup(m => m.Send(It.IsAny<ClearBasket.Command>(), It.IsAny<CancellationToken>()))
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Fail("Clear failed"));
 
         await _container.ClearBasket();
@@ -232,6 +234,67 @@ public class GroceryListStateContainerTests
         Assert.Equal(new[] { "milk", "bread" }, Names());
         Assert.Equal(0, _notifications);
         VerifyToast("Clear failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task ClearBasket_Success_AlsoDropsTheItemsSources()
+    {
+        await LoadItems(Item(1, "milk"), Item(2, "bread", picked: true));
+        await LoadSourcesAsync(TestData.Source(1, 10, 20), TestData.Source(2, 10, 21));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok());
+
+        await _container.ClearBasket();
+
+        Assert.Equal([1], _container.Sources.Select(s => s.GroceryItemId));
+    }
+
+    [Fact]
+    public async Task DeleteGroceryItem_Success_AlsoDropsItsSources()
+    {
+        var milk = Item(1, "milk");
+        await LoadItems(milk, Item(2, "bread"));
+        await LoadSourcesAsync(TestData.Source(1, 10, 20), TestData.Source(2, 10, 21));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItem.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(1));
+
+        await _container.DeleteGroceryItem(milk);
+
+        Assert.Equal([2], _container.Sources.Select(s => s.GroceryItemId));
+    }
+
+    [Fact]
+    public async Task LoadSources_Success_StoresThemAndNotifies()
+    {
+        await LoadSourcesAsync(TestData.Source(1, 10, 20));
+
+        Assert.Single(_container.Sources);
+    }
+
+    [Fact]
+    public async Task LoadSources_Failure_ShowsTheErrorAndKeepsTheSources()
+    {
+        await LoadSourcesAsync(TestData.Source(1, 10, 20));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetGroceryItemSources.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<List<GroceryItemSource>>("Load failed"));
+
+        await _container.LoadSources();
+
+        Assert.Single(_container.Sources);
+        Assert.Equal(0, _notifications);
+        VerifyToast("Load failed", Severity.Error);
+    }
+
+    private async Task LoadSourcesAsync(params GroceryItemSource[] sources)
+    {
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetGroceryItemSources.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(sources.ToList()));
+        await _container.LoadSources();
+        _notifications = 0;
     }
 
     private static GroceryItem Item(int id, string name, bool picked = false) => new() { Id = id, Name = name, IsPicked = picked };
