@@ -15,6 +15,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<IMealsStateContainer, MealsStateContainer>();
         services.AddScoped<IDrawerStateContainer, DrawerStateContainer>();
         services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
+        services.AddScoped<IPlanWeekStateContainer, PlanWeekStateContainer>();
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
         services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();

@@ -9,6 +9,7 @@ using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
+using MealWiz.Shared.Features.MealPlans.GetMealPlannedDates;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
@@ -20,6 +21,7 @@ using MediatR;
 using AngleSharp.Dom;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using MudBlazor;
@@ -45,6 +47,12 @@ public abstract class ComponentTestBase : BunitContext
     protected MealsStateContainer Meals { get; }
     protected GroceryListStateContainer GroceryList { get; }
     protected MealPlanStateContainer MealPlan { get; }
+
+    /// <summary>The real Plan week container, on the mocked MediatR and <see cref="Time"/>, with a seeded Random.</summary>
+    protected PlanWeekStateContainer PlanWeek => (PlanWeekStateContainer)Services.GetRequiredService<IPlanWeekStateContainer>();
+
+    /// <summary>The clock: Wednesday 2026-11-04 12:00 UTC, so this week starts Monday 2026-11-02.</summary>
+    protected FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 11, 4, 12, 0, 0, TimeSpan.Zero));
 
     /// <summary>bUnit's fake authentication; see <see cref="AuthTestHelper"/>.</summary>
     protected BunitAuthorizationContext Auth { get; }
@@ -72,6 +80,13 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<IMealsStateContainer>(Meals);
         Services.AddSingleton<IGroceryListStateContainer>(GroceryList);
         Services.AddSingleton<IMealPlanStateContainer>(MealPlan);
+        Time.SetLocalTimeZone(TimeZoneInfo.Utc);
+        Services.AddSingleton<TimeProvider>(Time);
+        Services.AddSingleton<IPlanWeekStateContainer>(sp =>
+            new PlanWeekStateContainer(Mediator.Object, LocalStorage.Object, Time, MealPlan, sp.GetRequiredService<NavigationManager>())
+            {
+                Random = new Random(1)
+            });
         Services.AddSingleton(_ => new Supabase.Client("http://localhost", "test-key"));
 
         // Registered up front because bUnit allows no registrations once a service has been resolved (below).
@@ -87,6 +102,7 @@ public abstract class ComponentTestBase : BunitContext
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(null));
+        SetupSend<GetMealPlannedDates.Query, Result<List<PlannedMealDate>>>(Result.Ok(new List<PlannedMealDate>()));
         MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Idle);
         MealImport.SetupGet(m => m.EntryState).Returns(MealImportEntryState.Default);
     }

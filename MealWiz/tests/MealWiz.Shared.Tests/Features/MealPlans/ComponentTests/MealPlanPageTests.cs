@@ -111,11 +111,15 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Plan_the_week_is_shown_but_not_wired_yet()
+    public void Plan_the_week_opens_the_plan_week_page_on_the_viewed_week()
     {
         var cut = Render<MealPlanPage>();
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("plan-week-button")).HasAttribute("disabled")));
 
-        Assert.True(cut.Find(TestId("plan-week-button")).HasAttribute("disabled"));
+        cut.Find(TestId("plan-week-button")).Click();
+
+        Assert.EndsWith($"plan-week?week={ThisMonday.AddDays(7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", Navigation.Uri);
     }
 
     [Fact]

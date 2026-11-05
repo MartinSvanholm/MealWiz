@@ -16,6 +16,7 @@ public class DependencyInjectionHelperTests
     [InlineData(typeof(IMealsStateContainer), typeof(MealsStateContainer))]
     [InlineData(typeof(IDrawerStateContainer), typeof(DrawerStateContainerService))]
     [InlineData(typeof(IMealPlanStateContainer), typeof(MealPlanStateContainer))]
+    [InlineData(typeof(IPlanWeekStateContainer), typeof(PlanWeekStateContainer))]
     [InlineData(typeof(IGroceryListStateContainer), typeof(GroceryListStateContainer))]
     [InlineData(typeof(IMealImportRealtimeSubscriber), typeof(MealImportRealtimeSubscriber))]
     [InlineData(typeof(IMealImportStateContainer), typeof(MealImportStateContainer))]
