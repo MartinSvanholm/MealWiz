@@ -33,7 +33,7 @@
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
             </button>
             <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="Plan the week"
-                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="PlanWeek">
+                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NavigateToPlanWeek">
                 <MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" />
             </button>
             <button type="button" class="mw-avatar" data-testid="account-button" aria-label="Account"
@@ -101,7 +101,7 @@
 
     private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now);
 
-    private void PlanWeek() =>
+    private void NavigateToPlanWeek() =>
         _navigationManager.NavigateTo($"/plan-week?week={WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
     private Task GoToCurrentWeek() =>

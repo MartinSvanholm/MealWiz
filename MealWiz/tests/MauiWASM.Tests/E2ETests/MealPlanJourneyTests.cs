@@ -79,11 +79,10 @@ public class MealPlanJourneyTests : E2ETestBase
     [Fact]
     public async Task PlanWeek_GeneratesWithLeftoversAroundALockedDay_AndSaves()
     {
-        var chili = await Supabase.InsertMealAsync(User, "E2E Chili");
+        await Supabase.InsertMealAsync(User, "E2E Chili");
         await Supabase.InsertMealAsync(User, "E2E Curry");
         await Supabase.InsertMealAsync(User, "E2E Pasta");
         var stew = await Supabase.InsertMealAsync(User, "E2E Stew");
-        _ = chili;
 
         await LoginAsync();
         await Page.GetByTestId("week-next").ClickAsync();
