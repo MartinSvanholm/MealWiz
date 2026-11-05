@@ -52,6 +52,26 @@ public class ResultHelperTests
     }
 
     [Fact]
+    public void MapException_UniqueViolation_SaysItChangedOnAnotherDevice()
+    {
+        var exception = new PostgrestException("""{"code":"23505","message":"duplicate key value violates unique constraint"}""");
+
+        var error = ResultHelper.MapException(exception);
+
+        Assert.Equal(ErrorMessages.ChangedOnAnotherDevice, error.Message);
+        Assert.Equal("This was just changed on another device. Reload to see it.", error.Message);
+        Assert.Same(exception, CauseOf(error));
+    }
+
+    [Fact]
+    public void MapException_OtherPostgrestError_IsUnchanged()
+    {
+        var error = ResultHelper.MapException(new PostgrestException(SupabaseJson));
+
+        Assert.NotEqual(ErrorMessages.ChangedOnAnotherDevice, error.Message);
+    }
+
+    [Fact]
     public void MapException_SupabaseExceptionWithNonJsonMessage_DoesNotThrow()
     {
         var postgrest = new PostgrestException("No such host is known.");
