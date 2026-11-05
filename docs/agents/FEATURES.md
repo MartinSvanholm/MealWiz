@@ -126,10 +126,11 @@ stored as `yyyy-MM-dd` strings.
 - **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
   `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
   "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
-  (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (not wired, MEA-75) and
+  (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (opens `/plan-week?week=` on the viewed week) and
   the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
   pick list for an empty day or while swapping the day's meal.
+- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate`, `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`) and `plan-week-save`. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week.
 - **Components:**
   - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
@@ -150,6 +151,7 @@ stored as `yyyy-MM-dd` strings.
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
     card. Shown but not wired: `add-all-to-list` (MEA-74).
+  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -159,19 +161,23 @@ stored as `yyyy-MM-dd` strings.
   | AddMealToMealPlan | `Command(Meal)` → `Result<Meal>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate` |
   | RemoveMealFromMealPlan | `Command(int MealId, int MealPlanId, DateTime MealDate)` → `Result` | Delete the meal's row on that date in that plan |
   | SwapMealInMealPlan | `Command(int MealPlanId, DateTime MealDate, int CurrentMealId, int NewMealId)` → `Result` | Update that day's row to the new meal in one write; fails ("Meal not found in plan") when no row matches, including another user's |
+  | GetMealPlannedDates | `Query(DateTime From, DateTime To)` → `Result<List<PlannedMealDate>>` | Each planned meal and date in the range (own rows) |
+  | SaveGeneratedWeek | `Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days)` → `Result` | Creates the plan if missing, updates days that have a row (in place), bulk-inserts the rest |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
   `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
   `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
+  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
     `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`.
   - `Features/MealPlans/Models/MealPlanMealDb.cs`, table `meal_plans-meals` (`fk_meal_plan`, `fk_meal`, `meal_date`).
     It is the join table and has no domain model.
+  - `Features/MealPlans/Models/PlannedMealDate.cs` ↔ `PlannedMealDateDb.cs` (slim read of `meal_plans-meals`), `PlanWeekSettings.cs`, `PlanWeekDay.cs`.
 - **Tests:**
-  - unit: `Features/MealPlans/UnitTests/` (Models, State)
+  - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
-  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`
+  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`
 
@@ -408,10 +414,10 @@ key, CORS and deployment.
     exceptions into errors.
   - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
-  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`), `DictionaryExtensions.cs`.
+  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`, `ToWeekLabel`, `ToRelativeWeekTitle`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
 - **`Components/`:** generic UI.
-  - `Components/NavMenu.razor`, the three tabs (Plan, Groceries, Meals; `nav-meal-plan`, `nav-grocery-list`,
+  - `Components/NavMenu.razor`, the three tabs (Plan, also active on `/plan-week`; Groceries; Meals; `nav-meal-plan`, `nav-grocery-list`,
     `nav-meals`), and `Components/CustomNavLink.razor`, one tab: icon above label, the active one an orange pill
     with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. It
     floats over the page: pages fill the screen (the `.mw-page` class) and end their scroll area with

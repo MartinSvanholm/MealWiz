@@ -135,6 +135,41 @@ public sealed class E2ESupabase
     }
 
     /// <summary>
+    /// Plans <paramref name="mealId"/> on <paramref name="date"/> (yyyy-MM-dd) in <paramref name="owner"/>'s plan for that
+    /// week, creating the plan the first time. Only plan days that are still empty: a week has one meal per day and one
+    /// plan. Returns the new meal_plans-meals row id.
+    /// </summary>
+    public async Task<long> InsertPlannedMealAsync(E2EUser owner, long mealId, string date)
+    {
+        var day = DateTime.ParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var monday = day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
+        var startDate = monday.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var now = DateTimeOffset.UtcNow;
+
+        var plans = await _http.GetFromJsonAsync<IdRow<long>[]>(
+            $"rest/v1/meal_plans?created_by=eq.{owner.Id}&start_date=eq.{startDate}&select=id") ?? [];
+        var planId = plans.Length > 0
+            ? plans[0].Id
+            : (await InsertAsync<IdRow<long>>("meal_plans", new
+            {
+                start_date = startDate,
+                end_date = monday.AddDays(6).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+                created_by = owner.Id,
+                created_at = now
+            })).Single().Id;
+
+        var rows = await InsertAsync<IdRow<long>>("meal_plans-meals", new
+        {
+            meal_date = date,
+            fk_meal = mealId,
+            fk_meal_plan = planId,
+            created_by = owner.Id,
+            created_at = now
+        });
+        return rows.Single().Id;
+    }
+
+    /// <summary>
     /// Resolves a pending meal_imports row the way MealWiz.Functions' ScrapeRecipeHandler does: a service-role
     /// update that only applies while the row is still pending. Realtime then pushes it to the app.
     /// </summary>

@@ -106,7 +106,7 @@ TestInfrastructure/
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
     `ILocalStorageService`, `IMealImportStateContainer` and `IThemeService`.
-  - It uses the real Meals, GroceryList, MealPlan and Drawer containers, running on the mocked mediator.
+  - It uses the real Meals, GroceryList, MealPlan, PlanWeek and Drawer containers, running on the mocked mediator. `Time` is a `FakeTimeProvider` at Wednesday 2026-11-04 12:00 UTC; `PlanWeek` has a seeded `Random`.
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
     `SnackbarMessages`, `CurrentPath`.
@@ -197,7 +197,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
   - `E2ETestBase` gives each test its own user and browser context. Helpers: `GoToAsync`, `LoginAsync`, `FillAsync`,
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
-  - `E2ESupabase` seeds data and resolves imports with the service role.
+  - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan) and resolves imports with the service role.
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:

@@ -59,6 +59,15 @@ public class NavigationComponentTests : ComponentTestBase
         Assert.DoesNotContain("active", cut.Find(TestId("nav-meals")).ClassList);
     }
 
+    [Fact]
+    public void NavMenu_keeps_the_plan_tab_active_on_plan_week()
+    {
+        Navigation.NavigateTo("/plan-week?week=2026-11-09");
+        var cut = Render<NavMenu>();
+
+        Assert.Contains("active", cut.Find(TestId("nav-meal-plan")).ClassList);
+    }
+
     [Theory]
     [InlineData("/meals/edit")]
     [InlineData("/meals/import")]
