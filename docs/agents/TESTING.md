@@ -230,6 +230,10 @@ rollback;
 Postgres applies a table's SELECT policy to UPDATE and DELETE statements that have a WHERE clause. So loosening only
 an UPDATE or DELETE policy may not change effective access, and `policies_are` is what catches the change.
 
+`meal_plans_duplicates_cleanup.test.sql` tests a migration's one-off data clean-up rather than a table. It drops the
+constraints inside its transaction, recreates duplicates, runs the migration's statements (copied verbatim, since
+migrations never change after merging) and checks what is left.
+
 ## Writing a new test
 
 1. **Pick the project and folder.** Use the table under TEST-01 in [ARCHITECTURE.md](ARCHITECTURE.md), then mirror
