@@ -47,18 +47,12 @@ public class LoginPageTests : ComponentTestBase
         Assert.Equal("signup", cut.Find(TestId("login-create-account")).GetAttribute("href"));
     }
 
-    // Not wired yet: password reset is MEA-69.
     [Fact]
-    public void Forgot_password_is_shown_but_does_nothing_yet()
+    public void Forgot_password_links_to_the_reset_request()
     {
         var cut = Render<LoginPage>();
 
-        var link = cut.Find(TestId("login-forgot-password"));
-
-        // A plain button: no href to follow, doesn't submit the form, and no click handler.
-        Assert.Equal("BUTTON", link.TagName);
-        Assert.Equal("button", link.GetAttribute("type"));
-        Assert.Throws<MissingEventHandlerException>(() => link.Click());
+        Assert.Equal("forgot-password", cut.Find(TestId("login-forgot-password")).GetAttribute("href"));
     }
 
     [Fact]
