@@ -38,8 +38,30 @@ public static partial class AmountHelper
         if (parsed.Any(p => !string.Equals(p.Unit.TrimEnd('.'), unit.TrimEnd('.'), StringComparison.OrdinalIgnoreCase)))
             return null;
 
-        var number = parsed.Sum(p => p.Quantity).ToString("0.##", CultureInfo.InvariantCulture);
-        if (parsed.FirstOrDefault(p => p.Separator != null)?.Separator == ',')
+        return Format(parsed.Sum(p => p.Quantity), parsed, unit);
+    }
+
+    /// <summary>item − old + new when all three share a unit and the result is above zero, else null.</summary>
+    public static string? Adjust(string? itemAmount, string? oldAmount, string? newAmount)
+    {
+        var item = Parse(itemAmount);
+        var old = Parse(oldAmount);
+        var current = Parse(newAmount);
+        if (item == null || old == null || current == null) return null;
+
+        var unit = item.Unit.TrimEnd('.');
+        if (!string.Equals(old.Unit.TrimEnd('.'), unit, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(current.Unit.TrimEnd('.'), unit, StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var result = item.Quantity - old.Quantity + current.Quantity;
+        return result > 0 ? Format(result, [item, old, current], item.Unit) : null;
+    }
+
+    private static string Format(decimal value, IReadOnlyList<Parsed> inputs, string unit)
+    {
+        var number = value.ToString("0.##", CultureInfo.InvariantCulture);
+        if (inputs.FirstOrDefault(p => p.Separator != null)?.Separator == ',')
             number = number.Replace('.', ',');
 
         return unit.Length == 0 ? number : $"{number} {unit}";
