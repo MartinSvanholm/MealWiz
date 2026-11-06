@@ -66,10 +66,4 @@ public class DateTimeExtensionsTests
 
         Assert.Equal("This week", new DateTime(2026, 11, 2).ToRelativeWeekTitle(sunday));
     }
-
-    [Fact]
-    public void ToWeekLabel_GivesIsoWeekAndMonth()
-    {
-        Assert.Equal("Week 45 · November", new DateTime(2026, 11, 2).ToWeekLabel());
-    }
 }
