@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
 
@@ -23,6 +24,6 @@ public sealed class MealWizMudLocalizer(IStringLocalizer<SharedResource> localiz
 
     public override LocalizedString this[string key, params object[] arguments] =>
         SharedKeys.ContainsKey(key)
-            ? new LocalizedString(key, string.Format(this[key].Value, arguments))
+            ? new LocalizedString(key, string.Format(CultureInfo.CurrentCulture, this[key].Value, arguments))
             : new LocalizedString(key, key, resourceNotFound: true);
 }

@@ -30,8 +30,10 @@ static async Task<string?> ReadStoredLanguageAsync(IServiceProvider services)
     {
         return await services.GetRequiredService<IJSRuntime>().InvokeAsync<string?>("localStorage.getItem", SupportedLanguages.StorageKey);
     }
-    catch (JSException)
+    catch (Exception)
     {
-        return null; // storage blocked (private mode, disabled site data): follow the browser
+        // Storage blocked (private mode, disabled site data) or interop not ready: follow the browser rather than
+        // fail to start.
+        return null;
     }
 }
