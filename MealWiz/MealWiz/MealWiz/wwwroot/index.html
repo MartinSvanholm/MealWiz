@@ -18,6 +18,14 @@
 
     <div id="app">Loading...</div>
 
+    <script>
+        // <html lang> before Blazor boots, from the device language (any "da*" means Danish). The stored choice lives
+        // in MAUI Preferences, which this page can't read, so MainLayout sets lang again from the C# culture.
+        (function () {
+            var device = (navigator.language || 'en').toLowerCase();
+            document.documentElement.lang = device === 'da' || device.indexOf('da-') === 0 ? 'da' : 'en';
+        })();
+    </script>
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 

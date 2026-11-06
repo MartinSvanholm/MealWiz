@@ -21,6 +21,8 @@
     <PackageReference Include="MediatR" Version="13.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.6" />
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.6" />
+    <!-- IStringLocalizer and .resx resources (en neutral, da satellite); see ARCHITECTURE.md "Localization". -->
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.1" />
     <PackageReference Include="MudBlazor" Version="8.9.0" />
     <PackageReference Include="Supabase" Version="1.1.1" />
     <!-- Supabase 1.1.1 pulls in Supabase.Realtime 7.0.2, whose socket calls ClientWebSocketOptions.SetRequestHeader

@@ -34,5 +34,14 @@
     </array>
     <key>XSAppIconAssets</key>
     <string>Assets.xcassets/appicon.appiconset</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <!-- The languages the app is translated into (MealWiz.Shared/Localization/SupportedLanguages.cs). iOS only reports a
+         Danish device language to the app if da is listed here. -->
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>da</string>
+    </array>
 </dict>
 </plist>

@@ -15,7 +15,7 @@ change. [FEATURES.md](FEATURES.md) says where code lives; [TESTING.md](TESTING.m
   **Check** (how to spot it in a diff).
 - **Changing a rule:** do it in its own PR, and say why.
 
-Paths: `Features/…`, `Helpers/…` and `Services/…` are under `MealWiz/MealWiz/MealWiz.Shared/`.
+Paths: `Features/…`, `Helpers/…`, `Localization/…` and `Services/…` are under `MealWiz/MealWiz/MealWiz.Shared/`.
 
 ---
 
@@ -140,7 +140,7 @@ Every Shared service or state container is registered in
 `DependencyInjectionHelper.RegisterScopedServices()` (`Helpers/DependencyInjectionHelper.cs`). Host-specific
 services, such as the Supabase client, configuration options and the session provider, go in
 `MealWiz/MauiWASM/ServiceCollectionExtensions.cs`. Handlers need no registration because MediatR scans the Shared
-assembly.
+assembly. Localization (`AddLocalization()` and the `MudLocalizer`) is in the shared list too, so both hosts get it.
 
 `MealWiz/tests/MauiWASM.Tests/IntegrationTests/DependencyInjection/ServiceRegistrationTests.cs` builds the web
 container and resolves every handler and every component's `[Inject]` properties, so `verify fast` catches a missing
@@ -306,6 +306,24 @@ Colours, shadows, scrims and corner radii in `.razor`, `.razor.css` and inline `
   A new `--my-orange: #FF9F43` in a component stylesheet.
 - **Check:** `#[0-9a-fA-F]{3,8}`, `rgb(`, `rgba(` or a named colour in a `.razor`/`.razor.css` diff outside the two
   theme files.
+
+### UI-03 · MUST · User-visible text comes from resources
+
+Every text a user sees or hears comes from a `.resx` resource with an English value (the neutral `X.resx`) and a
+Danish value (`X.da.resx`): labels, button texts, placeholders, helper and validation text, `aria-label`s, toasts,
+drawer titles and texts, handler messages that reach `Handle` (ARCH-06), and dates shown in the UI. Components read
+it through `IStringLocalizer<T>`, static code through `SharedTexts`, and dates through `DisplayDates`. See
+[Localization](#localization-ui-03) for the layout and naming. User content (meal names, recipes, ingredients,
+amounts) is shown as typed.
+
+- **Why:** the app runs in Danish and English. A literal string is English on a Danish device, and nothing catches it
+  but a user.
+- **Violation:** `<MudButton>Save</MudButton>`. `aria-label="Close"`. `Result.Fail("Meal not found")`.
+  `date.ToString("dddd", CultureInfo.InvariantCulture)` or `DayOfWeek.ToString()` in markup. `$"{n} items"` built in
+  code instead of a plural pair. A key in `X.resx` without its `X.da.resx` value (`ResourceCompletenessTests` fails).
+- **Check:** text between tags, or in `Label`/`Placeholder`/`HelperText`/`Title`/`aria-label`/`Text` attributes, in a
+  `.razor` diff that isn't an `@L[...]` lookup; string literals passed to `Result.Fail`, `WithSuccess` or
+  `snackbar.Add`; `CultureInfo.InvariantCulture` in display code.
 
 ## Docs
 
@@ -541,6 +559,54 @@ In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary
 `mealwiz.css`. A component's own look goes in its `.razor.css`, using the tokens. Scoped CSS reaches a MudBlazor
 component only with `::deep`, under an element the component renders itself (a wrapping `div`). Popovers, menus and
 snackbars render outside the component, so style them with a global rule or the component's `PopoverClass`.
+
+### Localization (UI-03)
+
+The app is English and Danish (`Localization/SupportedLanguages.cs`). Built on `Microsoft.Extensions.Localization`
+and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is the `da` satellite.
+
+- **Resource layout:** one resource per feature folder, plus one shared resource. A feature's resource is an empty
+  marker class `Features/<F>/<F>Resource.cs` (`public sealed class <F>Resource;`, namespace of the folder) with
+  `<F>Resource.resx` and `<F>Resource.da.resx` beside it. The .resx is named after the marker type because it sits
+  beside it, so there's no global `ResourcesPath` (it would break that) and no Designer files.
+  `Localization/SharedResource.cs` holds common words (`Common_Save`, `Common_Cancel`, `Common_Delete`,
+  `Common_Back`, `Common_Close`, `Common_Required`, `Common_Clear`), shared messages (`Error_*`, read through
+  `Helpers/ErrorMessages.cs`) and the app shell's texts. A feature adds its keys to its own resource, never to the
+  shared one.
+- **Injecting:** components `@inject IStringLocalizer<MealsResource> L` and write `@L["Meals_Title"]`; shared texts
+  `@inject IStringLocalizer<SharedResource> S`. Handlers take `IStringLocalizer<<F>Resource>` in their constructor.
+  Static code without DI uses `SharedTexts.Get("Key")`. `_Imports.razor` already has `MealWiz.Shared.Localization`
+  and `Microsoft.Extensions.Localization`.
+- **Keys:** PascalCase `Area_Thing`, the area being the screen, component or kind of text: `Nav_Plan`,
+  `Error_Generic`, `MealPlan_EmptyDay`. Placeholders are `{0}`, `{1}` and must match between English and Danish.
+  Use a `<comment>` in the English .resx when a key's context isn't obvious.
+- **Plurals:** two keys, `<Key>_One` (exactly 1) and `<Key>_Other` (everything else, including 0), both with `{0}`
+  for the count: `Items_One` = "{0} item", `Items_Other` = "{0} items". Read them with
+  `localizer.Plural("Items", count)` (`Localization/StringLocalizerExtensions.cs`). Never glue words to numbers in code.
+- **Dates** (`Localization/DisplayDates.cs`, current culture, ISO weeks starting Monday computed by hand):
+  `date.ToDayTag()` "MON"/"MAN"; `weekStart.ToWeekLabel()` "Week 45 · November"/"Uge 45 · november";
+  `date.ToFullDate()` "Monday 3 November"/"mandag 3. november"; `day.ToWeekdayName()` "Monday"/"mandag".
+  Dates stored in or sent to the database stay invariant `yyyy-MM-dd`.
+- **Choosing the language:** once, at startup, before the first render. `CultureResolver.Resolve(stored, device)`
+  takes the stored choice if it's a supported code, otherwise the device culture's language if supported (any `da-*`
+  is Danish), otherwise English; `CultureResolver.Apply` sets `CultureInfo.DefaultThreadCurrentCulture` and
+  `DefaultThreadCurrentUICulture` (plus the current thread's). Web: `MealWiz/MauiWASM/Program.cs`, between `Build()`
+  and `RunAsync()`; it needs `BlazorWebAssemblyLoadAllGlobalizationData` (`MauiWASM.csproj`). MAUI:
+  `MealWiz/MealWiz/MealWiz/MauiProgram.cs`, first thing.
+- **The stored choice:** key `SupportedLanguages.StorageKey` = `mealwiz.language`; value a bare supported code,
+  `en` or `da`, as a **plain string, not JSON**. No key means "Device default"; any other value is ignored. Web: local
+  storage, written with Blazored `SetItemAsStringAsync` (not `SetItemAsync`, which JSON-encodes it to `"da"`) and
+  removed with `RemoveItemAsync`; `Program.cs` and `MealWiz/MauiWASM/wwwroot/index.html` read it raw. MAUI:
+  `Preferences.Default` string under the same key. A change saves the choice, calls `CultureResolver.Apply` and
+  reloads with `NavigateTo(Navigation.Uri, forceLoad: true)`: the web app loads the Danish satellite only at startup.
+- **`<html lang>`:** the web `index.html` sets it before Blazor boots, from the stored choice or the browser
+  language; the MAUI `index.html` from the device language. `Layout/MainLayout.razor` sets it from the UI culture
+  after its first render, so the C# culture always wins.
+- **MudBlazor:** `Localization/MealWizMudLocalizer.cs` translates the built-in texts the app shows (`MudInput_Clear`,
+  `MudSnackbar_Close`) from the shared resource and returns "not found" for the rest, so MudBlazor keeps its English.
+  Add a key there when the app starts showing another built-in text.
+- **Another language** later: a `.xx.resx` beside every resource, one entry in `SupportedLanguages.All`, and the
+  language in the two `index.html` scripts and the MAUI platform files (`CFBundleLocalizations`, `<Resource Language>`).
 
 ### Auth, ownership and RLS (DB-01, SEC-01)
 

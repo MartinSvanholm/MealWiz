@@ -26,6 +26,21 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+    <script>
+        // <html lang> before Blazor boots, picked the way Program.cs picks the culture: the stored choice
+        // (MealWiz.Shared/Localization/SupportedLanguages.cs: key "mealwiz.language", a bare "en" or "da"), else the
+        // browser's language, where any "da*" means Danish. MainLayout sets it again from the C# culture.
+        (function () {
+            var supported = ['en', 'da'];
+            var lang = null;
+            try { lang = localStorage.getItem('mealwiz.language'); } catch (e) { }
+            if (supported.indexOf(lang) < 0) {
+                var browser = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase();
+                lang = browser === 'da' || browser.indexOf('da-') === 0 ? 'da' : 'en';
+            }
+            document.documentElement.lang = lang;
+        })();
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 </body>

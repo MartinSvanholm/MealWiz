@@ -22,7 +22,9 @@
   </Dependencies>
 
   <Resources>
-    <Resource Language="x-generate" />
+    <!-- The languages the app is translated into (MealWiz.Shared/Localization/SupportedLanguages.cs). -->
+    <Resource Language="en-US" />
+    <Resource Language="da" />
   </Resources>
 
   <Applications>

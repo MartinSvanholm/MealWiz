@@ -51,6 +51,8 @@ Rules for every session:
 - **Data:** PostgreSQL through Supabase, using the C# SDK directly from the client. There's no API layer, so RLS
   does all authorization. Realtime is used for meal imports.
 - **Patterns:** vertical slices, CQRS with MediatR 13, FluentResults 4 for errors, and scoped state containers.
+- **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
+  picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
 - **Server:** one Azure Functions app (`ScrapeRecipe`, isolated worker, net10.0) for meal import.
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
