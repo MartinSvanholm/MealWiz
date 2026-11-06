@@ -30,12 +30,15 @@ public class MealPlanPageTests : ComponentTestBase
     {
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(DateTime.Today, TestData.Meal("Tacos", id: 8))));
         SetupSend<RemoveMealFromMealPlan.Command, Result>(Result.Ok());
+        RenderDrawers();
         var cut = Render<MealPlanPage>();
 
         Assert.Contains("Tacos", cut.Markup);
         Assert.Empty(cut.FindAll(TestId("meal-selection-heading")));
 
         cut.Find(TestId("remove-meal-button")).Click();
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading"))));
         Assert.Equal(new RemoveMealFromMealPlan.Command(8, 1, DateTime.Today), Assert.Single(Sent<RemoveMealFromMealPlan.Command>()));

@@ -61,6 +61,10 @@ public class MealPlanJourneyTests : E2ETestBase
 
         // Remove one
         await Page.GetByTestId("remove-meal-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Remove Leftovers?");
+        await Expect(Drawer.GetByTestId("remove-meal-grocery-row")).ToHaveCountAsync(0);
+        await Drawer.GetByTestId("remove-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("meal-selection-heading")).ToBeVisibleAsync();
         await Expect(Day(1)).Not.ToHaveClassAsync(HasMeal);
 
