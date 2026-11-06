@@ -16,6 +16,7 @@ using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
 using MediatR;
@@ -24,6 +25,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
@@ -67,6 +69,9 @@ public abstract class ComponentTestBase : BunitContext
         DefaultWaitTimeout = TimeSpan.FromSeconds(5);
 
         Services.AddMudServices();
+        // The real .resx resources, as the hosts register them; the run is pinned to en-US (xunit.runner.json).
+        Services.AddLocalization();
+        Services.Replace(ServiceDescriptor.Transient<MudLocalizer, MealWizMudLocalizer>());
 
         Meals = new MealsStateContainer(Mediator.Object);
         GroceryList = new GroceryListStateContainer(Mediator.Object);
