@@ -1,3 +1,5 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
@@ -6,7 +8,7 @@
 <MudButton data-testid="add-plan-ingredients-button" Variant="Variant.Outlined" Size="Size.Small"
            Class="grocery-plan-button" StartIcon="@Icons.Material.Outlined.EventNote"
            Disabled="_loading" OnClick="OnAddIngredientsToGroceryListCliked">
-    From meal plan
+    @L["GroceryList_FromMealPlan"]
 </MudButton>
 
 @code {
@@ -22,6 +24,6 @@
             _loading = false;
         }
 
-        AddPlanIngredientsToGroceryListDrawer.Open(_drawerStateContainer, "From meal plan");
+        AddPlanIngredientsToGroceryListDrawer.Open(_drawerStateContainer, L["GroceryList_FromMealPlan"]);
     }
 }

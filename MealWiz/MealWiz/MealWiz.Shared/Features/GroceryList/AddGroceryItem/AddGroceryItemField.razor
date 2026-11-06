@@ -1,13 +1,15 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 
 @* The 44px "Add an item" field and orange + button. + or Enter opens the Add item drawer with the typed name filled
    in, so the amount can be added before saving. *@
 <div class="grocery-add">
-    <label for="add-grocery-item-input" class="grocery-add-label">Add an item</label>
+    <label for="add-grocery-item-input" class="grocery-add-label">@L["GroceryList_AddItemLabel"]</label>
     <input id="add-grocery-item-input" class="grocery-add-input" data-testid="add-grocery-item-input"
-           placeholder="Add an item" autocomplete="off" enterkeyhint="next"
+           placeholder="@L["GroceryList_AddItemPlaceholder"]" autocomplete="off" enterkeyhint="next"
            value="@_name" @oninput="e => _name = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyDown" />
-    <button type="button" class="grocery-add-button" data-testid="add-grocery-item-button" aria-label="Add item" @onclick="AddItemClicked">
+    <button type="button" class="grocery-add-button" data-testid="add-grocery-item-button" aria-label="@L["GroceryList_AddItemAria"]" @onclick="AddItemClicked">
         <MudIcon Icon="@Icons.Material.Rounded.Add" />
     </button>
 </div>
@@ -28,7 +30,7 @@
         _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(GroceryItemDrawer),
-            Title = "Add item",
+            Title = L["GroceryItem_AddTitle"],
             Height = GroceryItemDrawer.DrawerHeight,
             ContentParameters = new Dictionary<string, object>
                 {{ nameof(GroceryItemDrawer.GroceryItem), item }}
