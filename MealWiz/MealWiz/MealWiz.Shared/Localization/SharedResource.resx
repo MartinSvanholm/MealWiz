@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Nav_Main" xml:space="preserve">
+    <value>Main</value>
+    <comment>aria-label of the bottom navigation bar</comment>
+  </data>
+  <data name="Nav_Plan" xml:space="preserve">
+    <value>Plan</value>
+    <comment>Bottom nav tab: the meal plan</comment>
+  </data>
+  <data name="Nav_Groceries" xml:space="preserve">
+    <value>Groceries</value>
+    <comment>Bottom nav tab: the grocery list</comment>
+  </data>
+  <data name="Nav_Meals" xml:space="preserve">
+    <value>Meals</value>
+    <comment>Bottom nav tab: the meals list</comment>
+  </data>
+  <data name="Common_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Common_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common_Required" xml:space="preserve">
+    <value>Required</value>
+    <comment>Validation message for a required field</comment>
+  </data>
+  <data name="Common_Clear" xml:space="preserve">
+    <value>Clear</value>
+    <comment>Clears a search field (MudBlazor aria-label)</comment>
+  </data>
+  <data name="Route_Authorizing" xml:space="preserve">
+    <value>Authorizing...</value>
+    <comment>Shown while the sign-in state loads</comment>
+  </data>
+  <data name="Route_NotFoundTitle" xml:space="preserve">
+    <value>Not found</value>
+    <comment>Page title for an unknown address</comment>
+  </data>
+  <data name="Route_NotFoundMessage" xml:space="preserve">
+    <value>Sorry, there's nothing at this address.</value>
+  </data>
+  <data name="Error_Generic" xml:space="preserve">
+    <value>An error has occurred, please try again.</value>
+  </data>
+  <data name="Error_ChangedOnAnotherDevice" xml:space="preserve">
+    <value>This was just changed on another device. Reload to see it.</value>
+  </data>
+  <data name="Error_NotSignedIn" xml:space="preserve">
+    <value>You need to be signed in to do that.</value>
+  </data>
+  <data name="Error_NoResponse" xml:space="preserve">
+    <value>No response from server</value>
+  </data>
+  <data name="Date_WeekLabel" xml:space="preserve">
+    <value>Week {0} · {1}</value>
+    <comment>{0} = ISO week number, {1} = month name of the week's Monday</comment>
+  </data>
+  <data name="Date_FullDateFormat" xml:space="preserve">
+    <value>dddd d MMMM</value>
+    <comment>.NET date format for a full date, e.g. Monday 3 November</comment>
+  </data>
+</root>
