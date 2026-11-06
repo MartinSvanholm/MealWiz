@@ -2,6 +2,7 @@ using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 using static Supabase.Postgrest.Constants;
@@ -15,21 +16,21 @@ namespace MealWiz.Shared.Features.GroceryList.UpdateLinkedGroceryAmounts;
 /// </summary>
 public static class UpdateLinkedGroceryAmounts
 {
-    private const string ItemNotFound = "The grocery item could not be found.";
-    private const string LinkNotFound = "The grocery item's link could not be found.";
-
     public record Command(List<LinkedAmountUpdate> Updates) : IRequest<Result>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
+            string ItemNotFound() => localizer["LinkedAmounts_ItemNotFound"];
+            string LinkNotFound() => localizer["LinkedAmounts_LinkNotFound"];
+
             if (request.Updates.Count == 0) return Result.Ok();
 
             if (supabaseClient.Auth.CurrentSession?.User?.Id is null) return Result.Fail(ErrorMessages.NotSignedIn);
 
             if (request.Updates.Any(u => u.SourceId <= 0 || u.GroceryItemId <= 0))
-                return Result.Fail("Only linked grocery items can be updated.");
+                return Result.Fail(localizer["LinkedAmounts_OnlyLinked"].Value);
 
             var itemIds = request.Updates.Select(u => u.GroceryItemId).Distinct().ToList();
             var itemsResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
@@ -39,8 +40,8 @@ public static class UpdateLinkedGroceryAmounts
             if (itemsResult.IsFailed) return itemsResult.ToResult();
 
             var items = itemsResult.Value.Models;
-            if (itemIds.Any(id => items.All(item => item.Id != id))) return Result.Fail(ItemNotFound);
-            if (items.Any(item => item.IsPicked)) return Result.Fail("The grocery item is already in the basket.");
+            if (itemIds.Any(id => items.All(item => item.Id != id))) return Result.Fail(ItemNotFound());
+            if (items.Any(item => item.IsPicked)) return Result.Fail(localizer["LinkedAmounts_InBasket"].Value);
 
             var sourceIds = request.Updates.Select(u => u.SourceId).Distinct().ToList();
             var sourcesResult = await Result.Try(async Task<ModeledResponse<GroceryItemSourceDb>> () => await supabaseClient
@@ -51,7 +52,7 @@ public static class UpdateLinkedGroceryAmounts
 
             var sources = sourcesResult.Value.Models;
             if (request.Updates.Any(u => !sources.Any(s => s.Id == u.SourceId && s.GroceryItemId == u.GroceryItemId)))
-                return Result.Fail(LinkNotFound);
+                return Result.Fail(LinkNotFound());
 
             foreach (var group in request.Updates.GroupBy(u => u.GroceryItemId))
             {
@@ -65,7 +66,7 @@ public static class UpdateLinkedGroceryAmounts
                     .Set(x => x.UpdatedAt!, DateTime.UtcNow)
                     .Update(cancellationToken: cancellationToken));
                 if (updateResult.IsFailed) return updateResult.ToResult();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail(ItemNotFound);
+                if (updateResult.Value.Models.Count == 0) return Result.Fail(ItemNotFound());
             }
 
             foreach (var update in request.Updates)
@@ -78,7 +79,7 @@ public static class UpdateLinkedGroceryAmounts
                     .Set(x => x.Amount, sourceAmount)
                     .Update(cancellationToken: cancellationToken));
                 if (updateResult.IsFailed) return updateResult.ToResult();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail(LinkNotFound);
+                if (updateResult.Value.Models.Count == 0) return Result.Fail(LinkNotFound());
             }
 
             return Result.Ok();

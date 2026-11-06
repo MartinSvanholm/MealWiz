@@ -1,4 +1,7 @@
+using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateLinkedGroceryAmounts;
@@ -20,6 +23,10 @@ namespace MealWiz.Shared.Tests.Features.GroceryList.IntegrationTests;
 public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IClassFixture<LocalSupabaseFixture>
 {
     private static CancellationToken CancellationToken => TestContext.Current.CancellationToken;
+
+    /// <summary>The real English resources (the run is pinned to en-US).</summary>
+    private static IStringLocalizer<GroceryListResource> Localizer { get; } = new ServiceCollection()
+        .AddLogging().AddLocalization().BuildServiceProvider().GetRequiredService<IStringLocalizer<GroceryListResource>>();
 
     [Fact]
     public async Task GetGroceryItemSources_HasTheIngredientsCurrentAmount()
@@ -97,7 +104,7 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
         var signedOut = await supabase.CreateSignedOutClientAsync();
 
         // No request is made, so not even a signed-out client fails
-        ResultAssert.Ok(await new UpdateLinkedGroceryAmounts.Handler(signedOut).Handle(new UpdateLinkedGroceryAmounts.Command([]), CancellationToken));
+        ResultAssert.Ok(await new UpdateLinkedGroceryAmounts.Handler(signedOut, Localizer).Handle(new UpdateLinkedGroceryAmounts.Command([]), CancellationToken));
     }
 
     [Fact]
@@ -106,7 +113,7 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var signedOut = await supabase.CreateSignedOutClientAsync();
 
-        var result = await new UpdateLinkedGroceryAmounts.Handler(signedOut)
+        var result = await new UpdateLinkedGroceryAmounts.Handler(signedOut, Localizer)
             .Handle(new UpdateLinkedGroceryAmounts.Command([new LinkedAmountUpdate(1, 1, "1", "2")]), CancellationToken);
 
         ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
@@ -130,7 +137,8 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
         var (meal, _, items) = await PlanAndAddAsync(supabase.Client, Week(5), ("Basil", "1 bunch"));
         await ChangeAmountAsync(meal.Ingredients[0], meal.Id, "2 bunch");
         var source = Assert.Single(await SourcesOfAsync(items[0].Id));
-        await supabase.Client.From<GroceryItemDb>().Where(x => x.Id == items[0].Id).Set(x => x.IsPicked, true).Update(cancellationToken: CancellationToken);
+        var itemId = items[0].Id;
+        await supabase.Client.From<GroceryItemDb>().Where(x => x.Id == itemId).Set(x => x.IsPicked, true).Update(cancellationToken: CancellationToken);
 
         ResultAssert.Failed(await UpdateAsync(new LinkedAmountUpdate(source.Id, items[0].Id, "2 bunch", "2 bunch")), "The grocery item is already in the basket.");
 
@@ -158,12 +166,13 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var otherUser = await supabase.GetOtherUserAsync();
         var (_, _, items) = await PlanAndAddAsync(otherUser.Client, Week(7), ("Beans", "1 can"));
-        var others = Assert.Single((await otherUser.Client.From<GroceryItemSourceDb>().Where(x => x.GroceryItemId == items[0].Id).Get(CancellationToken)).Models);
+        var itemId = items[0].Id;
+        var others = Assert.Single((await otherUser.Client.From<GroceryItemSourceDb>().Where(x => x.GroceryItemId == itemId).Get(CancellationToken)).Models);
 
         // RLS hides the other user's rows, so they can't be found
         ResultAssert.Failed(await UpdateAsync(new LinkedAmountUpdate(others.Id, items[0].Id, "2 can", "2 can")), "The grocery item could not be found.");
 
-        var row = (await otherUser.Client.From<GroceryItemDb>().Where(x => x.Id == items[0].Id).Get(CancellationToken)).Models.Single();
+        var row = (await otherUser.Client.From<GroceryItemDb>().Where(x => x.Id == itemId).Get(CancellationToken)).Models.Single();
         Assert.Equal("1 can", row.Amount);
     }
 
@@ -196,7 +205,7 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
             .Where(s => s.GroceryItemId == itemId).OrderBy(s => s.Id).ToList();
 
     private Task<FluentResults.Result> UpdateAsync(params LinkedAmountUpdate[] updates) =>
-        new UpdateLinkedGroceryAmounts.Handler(supabase.Client).Handle(new UpdateLinkedGroceryAmounts.Command([.. updates]), CancellationToken);
+        new UpdateLinkedGroceryAmounts.Handler(supabase.Client, Localizer).Handle(new UpdateLinkedGroceryAmounts.Command([.. updates]), CancellationToken);
 
     private async Task<GroceryItemDb?> GetItemRowAsync(int id) =>
         (await supabase.Client.From<GroceryItemDb>().Where(x => x.Id == id).Get(CancellationToken)).Models.SingleOrDefault();

@@ -5,6 +5,7 @@
 @inject IMediator _mediator
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
+@inject IStringLocalizer<GroceryListResource> L
 
 @* The planned ingredients that are not linked from their planned day yet, as one compact list with each amount on the
    right. A name already on the list (or shared by several planned days) shows every amount and a suggested total in an
@@ -64,7 +65,7 @@ else
                        FullWidth="true"
                        Disabled="_saving"
                        OnClick="OnConfirmClicked">
-                @(_rows.All(row => row.IsChangeOnly) ? $"Update {_rows.Count} on grocery list" : $"Add {_rows.Count} to grocery list")
+                @(L[_rows.All(row => row.IsChangeOnly) ? "MergeDrawer_Update" : "MergeDrawer_Add", _rows.Count])
             </MudButton>
         </DrawerFooter>
     </MudForm>
@@ -174,7 +175,7 @@ else
         return candidates;
     }
 
-    private static MergeRow BuildRow(List<Entry> entries)
+    private MergeRow BuildRow(List<Entry> entries)
     {
         var existing = entries.Select(e => e.Existing).FirstOrDefault(item => item != null);
         var candidates = entries.Where(e => e.Change == null).Select(e => e.Candidate).ToList();
@@ -190,14 +191,14 @@ else
         };
 
         if (candidates.Count > 0)
-            row.Parts.Add(new Part("Plan " + string.Join(" + ", planAmounts.Select(AmountText)), null));
+            row.Parts.Add(new Part(L["MergeDrawer_Plan", string.Join(" + ", planAmounts.Select(AmountText))], null));
         if (changes.Count > 0)
         {
-            row.Parts.Add(new Part("Was " + string.Join(" + ", changes.Select(c => AmountText(c.Amount))), null));
-            row.Parts.Add(new Part("Now " + string.Join(" + ", changes.Select(c => AmountText(c.IngredientAmount))), "plan-ingredient-now"));
+            row.Parts.Add(new Part(L["MergeDrawer_Was", string.Join(" + ", changes.Select(c => AmountText(c.Amount)))], null));
+            row.Parts.Add(new Part(L["MergeDrawer_Now", string.Join(" + ", changes.Select(c => AmountText(c.IngredientAmount)))], "plan-ingredient-now"));
         }
         if (existing != null)
-            row.Parts.Add(new Part("In list " + AmountText(existing.Amount), "plan-ingredient-in-list"));
+            row.Parts.Add(new Part(L["MergeDrawer_InList", AmountText(existing.Amount)], "plan-ingredient-in-list"));
 
         if (changes.Count == 0)
         {
@@ -272,7 +273,7 @@ else
         await _groceryListStateContainer.LoadGroceryItems();
         await _groceryListStateContainer.LoadSources();
         _drawerStateContainer.CloseDrawer();
-        _snackbar.Add(items.Count > 0 ? "Ingredients added to list" : "Grocery list updated");
+        _snackbar.Add(L[items.Count > 0 ? "MergeDrawer_Added" : "MergeDrawer_Updated"].Value);
     }
 
     private record Candidate(DateTime Date, int PlannedMealId, string MealName, Ingredient Ingredient);

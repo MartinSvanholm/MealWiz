@@ -272,6 +272,33 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
 
     // ---- Changed amounts (Was / Now) ----
 
+    [Fact]
+    public void The_changed_row_texts_come_from_the_resource()
+    {
+        using var echo = new EchoedDrawerTests();
+        echo.AssertChangedRowTextsAreKeys();
+    }
+
+    /// <summary>A second test base with resource keys echoed instead of the English texts.</summary>
+    private sealed class EchoedDrawerTests : ComponentTestBase
+    {
+        public EchoedDrawerTests() : base(echoResourceKeys: true)
+        {
+            SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { TestData.GroceryItem("Flour", "300 g", id: 2) }));
+            SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource> { TestData.ChangedSource(2, 101, 11, "200 g", "250 g", id: 1), TestData.Source(2, 101, 12, "3 dl") }));
+            MealPlan.MealPlan = TestData.MealPlanWith(Day, Pancakes(), plannedMealId: 101);
+        }
+
+        public void AssertChangedRowTextsAreKeys()
+        {
+            var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
+            cut.WaitForAssertion(() => Assert.Single(cut.FindAll(TestId("plan-ingredient-item"))));
+
+            Assert.Contains("[MergeDrawer_Was]", cut.Find(TestId("plan-ingredient-existing")).TextContent);
+            Assert.Equal("[MergeDrawer_Update]", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
+        }
+    }
+
     /// <summary>Flour on the list as 300 g, linked from Pancakes' Flour, which went from 200 g to 250 g.</summary>
     private void SetupChangedFlour(string flourInList = "300 g", bool isPicked = false)
     {

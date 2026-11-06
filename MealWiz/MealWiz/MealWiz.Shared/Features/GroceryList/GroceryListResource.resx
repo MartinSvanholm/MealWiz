@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MergeDrawer_Plan" xml:space="preserve">
+    <value>Plan {0}</value>
+    <comment>Merge drawer subline: the planned amounts, {0} = amounts joined with " + "</comment>
+  </data>
+  <data name="MergeDrawer_Was" xml:space="preserve">
+    <value>Was {0}</value>
+    <comment>Merge drawer subline: the amounts when the ingredients were added, {0} = amounts joined with " + "</comment>
+  </data>
+  <data name="MergeDrawer_Now" xml:space="preserve">
+    <value>Now {0}</value>
+    <comment>Merge drawer subline: the ingredients' amounts now, {0} = amounts joined with " + "</comment>
+  </data>
+  <data name="MergeDrawer_InList" xml:space="preserve">
+    <value>In list {0}</value>
+    <comment>Merge drawer subline: the amount already on the grocery list</comment>
+  </data>
+  <data name="MergeDrawer_Add" xml:space="preserve">
+    <value>Add {0} to grocery list</value>
+    <comment>Merge drawer confirm button, {0} = number of rows</comment>
+  </data>
+  <data name="MergeDrawer_Update" xml:space="preserve">
+    <value>Update {0} on grocery list</value>
+    <comment>Merge drawer confirm button when every row is an amount change, {0} = number of rows</comment>
+  </data>
+  <data name="MergeDrawer_Added" xml:space="preserve">
+    <value>Ingredients added to list</value>
+    <comment>Snackbar after the merge drawer added ingredients</comment>
+  </data>
+  <data name="MergeDrawer_Updated" xml:space="preserve">
+    <value>Grocery list updated</value>
+    <comment>Snackbar after the merge drawer only updated changed amounts</comment>
+  </data>
+  <data name="LinkedAmounts_OnlyLinked" xml:space="preserve">
+    <value>Only linked grocery items can be updated.</value>
+  </data>
+  <data name="LinkedAmounts_ItemNotFound" xml:space="preserve">
+    <value>The grocery item could not be found.</value>
+  </data>
+  <data name="LinkedAmounts_InBasket" xml:space="preserve">
+    <value>The grocery item is already in the basket.</value>
+  </data>
+  <data name="LinkedAmounts_LinkNotFound" xml:space="preserve">
+    <value>The grocery item's link could not be found.</value>
+  </data>
+</root>
