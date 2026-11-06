@@ -499,7 +499,7 @@ is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFr
 The drawer shell (sheet, grab handle, close/back button, 22px title) is DrawerBase's job; content only renders its
 fields. Set `HeaderAction` (a `RenderFragment`) on `DrawerStateParameters` for a button on the right of the header,
 such as a red delete. Put the content's primary button inside `<DrawerFooter>` (`Components/Drawers/DrawerFooter.razor`):
-it becomes the full-width 52px orange button at the bottom. The confirm drawer always shows Cancel and a red Delete.
+it becomes the full-width 52px orange button at the bottom. Two buttons go in `<div class="mw-sheet-footer-pair">`; `.mw-sheet-footer-cancel` is grey and `.mw-sheet-footer-danger` is red. The confirm drawer always shows Cancel and a red Delete.
 
 ### Theme tokens (UI-02)
 
