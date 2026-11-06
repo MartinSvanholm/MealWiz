@@ -306,9 +306,6 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         SetupSources(TestData.ChangedSource(2, 101, 11, "200 g", "250 g", id: 1), TestData.Source(1, 101, 12, "3 dl"));
     }
 
-    private static IEnumerable<string> RowTexts(IRenderedComponent<AddPlanIngredientsToGroceryListDrawer> cut) =>
-        cut.FindAll(TestId("plan-ingredient-existing")).Select(e => e.TextContent.Trim());
-
     [Fact]
     public void A_linked_ingredient_whose_amount_changed_is_offered_with_old_new_and_the_adjusted_total()
     {
