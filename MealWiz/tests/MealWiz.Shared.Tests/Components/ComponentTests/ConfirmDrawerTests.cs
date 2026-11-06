@@ -31,6 +31,30 @@ public class ConfirmDrawerTests : ComponentTestBase
     }
 
     [Fact]
+    public void Confirm_reads_Delete_by_default()
+    {
+        var cut = Render<ConfirmDrawer>();
+
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?", () => Task.CompletedTask));
+
+        Assert.Equal("Delete", cut.Find(TestId("confirm-drawer-confirm")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Confirm_reads_the_label_it_was_opened_with()
+    {
+        var confirmed = 0;
+        var cut = Render<ConfirmDrawer>();
+
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Discard this plan?", "Unsaved.", () => { confirmed++; return Task.CompletedTask; }, "Discard"));
+
+        var confirm = cut.Find(TestId("confirm-drawer-confirm"));
+        Assert.Equal("Discard", confirm.TextContent.Trim());
+        confirm.Click();
+        Assert.Equal(1, confirmed);
+    }
+
+    [Fact]
     public void Shows_the_title_it_was_opened_with()
     {
         var cut = Render<ConfirmDrawer>();
