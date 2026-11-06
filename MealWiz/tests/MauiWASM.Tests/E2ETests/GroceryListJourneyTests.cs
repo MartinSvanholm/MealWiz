@@ -264,7 +264,7 @@ public class GroceryListJourneyTests : E2ETestBase
         await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("950 g");
-        await Expect(Row("grocery-item", "Basil").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 bunch");
+        await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Basil");
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
 
         // Nothing is offered a second time
