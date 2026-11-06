@@ -189,6 +189,10 @@ from their planned day yet; with everything linked it says "Everything is alread
 same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
 empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
+A banner at the top of the list ("N items are from meals no longer in your plan", `stale-items-banner`) appears when
+plan-added items come from meals that were swapped out or removed from the plan with the switch off (every source
+stale; basket and manual items never count). Review opens a drawer of those items grouped by their old meal, all
+ticked; Remove deletes the ticked items and unlinks the rest, which become manual items, so the banner goes away.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
@@ -224,6 +228,9 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     off, groups same names into one row (subline "Plan X + Y · In list Z", orange field for merged rows) and shows
     `plan-ingredients-loading`, `plan-ingredients-empty` or `plan-ingredients-all-on-list`; the button reads "Add N to
     grocery list"; row names carry `plan-ingredient-name`.
+  - `Features/GroceryList/Components/ReviewGroceryItemsDrawer.razor`, with `.razor.css`: the review drawer, opened with
+    `ReviewGroceryItemsDrawer.Open(drawer, title, groups, afterRemove)` (deleting a meal or ingredient reuses it). Its
+    button reads "Remove N items" or "Keep all" and calls `DeleteAndUnlinkGroceryItems`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -235,16 +242,19 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
+  | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true; ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
-  `ClearBasket`, `Sources` and `LoadSources`.
+  `ClearBasket`, `Sources`, `LoadSources`, `StaleItems` and `DeleteAndUnlinkGroceryItems`.
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
   - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
+  - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs` (a null `Heading` is "Other items", resolved in the drawer).
+  - `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` and `.da.resx`: the banner and review drawer texts (UI-03).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
