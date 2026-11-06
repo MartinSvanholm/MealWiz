@@ -253,7 +253,8 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `GroceryItem.IsManual` (`is_manual`).
   - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
-  - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs`.
+  - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs` (a null `Heading` is "Other items", resolved in the drawer).
+  - `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` and `.da.resx`: the banner and review drawer texts (UI-03).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`

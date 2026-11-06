@@ -5,8 +5,6 @@ namespace MealWiz.Shared.Features.GroceryList.Models;
 /// </summary>
 public static class StaleGroceryItems
 {
-    public const string OtherItemsHeading = "Other items";
-
     /// <summary>The stale items, in the order given.</summary>
     public static List<GroceryItem> Find(IEnumerable<GroceryItem> items, IEnumerable<GroceryItemSource> sources)
     {
@@ -17,8 +15,8 @@ public static class StaleGroceryItems
     }
 
     /// <summary>
-    /// Groups the items by the meal name of their lowest-id stale source that has one; none means "Other items".
-    /// Groups sort by heading with "Other items" last; items by name then id.
+    /// Groups the items by the meal name of their lowest-id stale source that has one; none means a null heading ("Other items" in the UI).
+    /// Groups sort by heading with the null heading last; items by name then id.
     /// </summary>
     public static List<GroceryItemGroup> GroupByMeal(IEnumerable<GroceryItem> staleItems, IEnumerable<GroceryItemSource> sources)
     {
@@ -29,8 +27,8 @@ public static class StaleGroceryItems
                 .Where(s => s.MealName is not null)
                 .OrderBy(s => s.Id)
                 .Select(s => s.MealName)
-                .FirstOrDefault() ?? OtherItemsHeading)
-            .OrderBy(g => g.Key == OtherItemsHeading)
+                .FirstOrDefault())
+            .OrderBy(g => g.Key is null)
             .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
             .Select(g => new GroceryItemGroup(
                 g.Key,

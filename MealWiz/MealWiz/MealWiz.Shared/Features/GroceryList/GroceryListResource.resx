@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StaleBanner_Text_One" xml:space="preserve">
+    <value>{0} item is from a meal no longer in your plan</value>
+    <comment>Groceries banner, singular: items from a meal that left the plan</comment>
+  </data>
+  <data name="StaleBanner_Text_Other" xml:space="preserve">
+    <value>{0} items are from meals no longer in your plan</value>
+    <comment>Groceries banner, plural</comment>
+  </data>
+  <data name="StaleBanner_Review" xml:space="preserve">
+    <value>Review</value>
+    <comment>Banner button that opens the review drawer</comment>
+  </data>
+  <data name="ReviewItems_Title" xml:space="preserve">
+    <value>Review items</value>
+    <comment>Review drawer title</comment>
+  </data>
+  <data name="ReviewItems_Hint" xml:space="preserve">
+    <value>Ticked items are removed from your list. Unticked items stay as your own items.</value>
+    <comment>Review drawer hint</comment>
+  </data>
+  <data name="ReviewItems_OtherItems" xml:space="preserve">
+    <value>Other items</value>
+    <comment>Review drawer heading for items whose meal is unknown</comment>
+  </data>
+  <data name="ReviewItems_RemoveFor" xml:space="preserve">
+    <value>Remove {0}</value>
+    <comment>aria-label of an item's checkbox in the review drawer</comment>
+  </data>
+  <data name="ReviewItems_Remove_One" xml:space="preserve">
+    <value>Remove {0} item</value>
+    <comment>Review drawer button, singular</comment>
+  </data>
+  <data name="ReviewItems_Remove_Other" xml:space="preserve">
+    <value>Remove {0} items</value>
+    <comment>Review drawer button, plural</comment>
+  </data>
+  <data name="ReviewItems_KeepAll" xml:space="preserve">
+    <value>Keep all</value>
+    <comment>Review drawer button when nothing is ticked</comment>
+  </data>
+  <data name="ReviewItems_Removed_One" xml:space="preserve">
+    <value>Removed {0} item</value>
+    <comment>Toast after removing, singular</comment>
+  </data>
+  <data name="ReviewItems_Removed_Other" xml:space="preserve">
+    <value>Removed {0} items</value>
+    <comment>Toast after removing, plural</comment>
+  </data>
+  <data name="ReviewItems_Kept_One" xml:space="preserve">
+    <value>Kept {0} item</value>
+    <comment>Toast after keeping all, singular</comment>
+  </data>
+  <data name="ReviewItems_Kept_Other" xml:space="preserve">
+    <value>Kept {0} items</value>
+    <comment>Toast after keeping all, plural</comment>
+  </data>
+  <data name="ReviewItems_Empty" xml:space="preserve">
+    <value>Nothing to review</value>
+    <comment>Review drawer without items</comment>
+  </data>
+</root>

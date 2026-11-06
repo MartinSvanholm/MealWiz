@@ -5,6 +5,7 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IStringLocalizer<GroceryListResource> L
 @implements IDisposable
 
 @* Dense on purpose: the shopper needs to see everything left to find, so about ten to-buy rows fit on a phone. *@
@@ -33,7 +34,7 @@
             <section class="grocery-stale" role="status" data-testid="stale-items-banner">
                 <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Class="grocery-stale-icon" />
                 <span class="grocery-stale-text" data-testid="stale-items-text">@StaleText</span>
-                <button type="button" class="grocery-stale-review" data-testid="stale-items-review" @onclick="OpenReview">Review</button>
+                <button type="button" class="grocery-stale-review" data-testid="stale-items-review" @onclick="OpenReview">@L["StaleBanner_Review"]</button>
             </section>
         }
 
@@ -112,14 +113,12 @@
     // Items from meals no longer in the plan (swapped, or removed from the plan with the switch off).
     private int StaleCount => _groceryListStateContainer.StaleItems.Count;
 
-    private string StaleText => StaleCount == 1
-        ? "1 item is from a meal no longer in your plan"
-        : $"{StaleCount} items are from meals no longer in your plan";
+    private string StaleText => L.Plural("StaleBanner_Text", StaleCount);
 
     private void OpenReview() =>
         ReviewGroceryItemsDrawer.Open(
             _drawerStateContainer,
-            "Review items",
+            L["ReviewItems_Title"],
             StaleGroceryItems.GroupByMeal(_groceryListStateContainer.StaleItems, _groceryListStateContainer.Sources));
 
     protected override async Task OnInitializedAsync()

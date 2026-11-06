@@ -1,29 +1,30 @@
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
+@inject IStringLocalizer<GroceryListResource> L
 
 @* Items from meals no longer in the plan, one section per old meal and every item ticked. Remove deletes the ticked
    items; the unticked ones stay and become the user's own items (unlinked). Opened from Groceries, and meant to be
    reused wherever a meal's grocery items need a decision. *@
 @if (Groups.Sum(g => g.Items.Count) == 0)
 {
-    <div class="review-items-empty" data-testid="review-items-empty">Nothing to review</div>
+    <div class="review-items-empty" data-testid="review-items-empty">@L["ReviewItems_Empty"]</div>
 }
 else
 {
-    <p class="review-items-hint" data-testid="review-items-hint">Ticked items are removed from your list. Unticked items stay as your own items.</p>
+    <p class="review-items-hint" data-testid="review-items-hint">@L["ReviewItems_Hint"]</p>
 
     @foreach (var group in Groups)
     {
         <section class="review-group" data-testid="review-group">
-            <h3 class="review-group-heading" data-testid="review-group-heading">@group.Heading</h3>
+            <h3 class="review-group-heading" data-testid="review-group-heading">@(group.Heading ?? L["ReviewItems_OtherItems"].Value)</h3>
             <ul class="review-items">
                 @foreach (var item in group.Items)
                 {
                     var ticked = _ticked.Contains(item.Id);
                     <li data-testid="review-item" @key="item.Id">
                         <button type="button" class="review-item" data-testid="review-item-checkbox"
-                                role="checkbox" aria-checked="@(ticked ? "true" : "false")" aria-label="@($"Remove {item.Name}")"
+                                role="checkbox" aria-checked="@(ticked ? "true" : "false")" aria-label="@L["ReviewItems_RemoveFor", item.Name]"
                                 @onclick="() => Toggle(item.Id)">
                             <span class="review-item-box @(ticked ? "is-ticked" : "")" aria-hidden="true">
                                 @if (ticked)
@@ -79,12 +80,7 @@ else
 
     private IEnumerable<GroceryItem> AllItems => Groups.SelectMany(g => g.Items);
 
-    private string ConfirmLabel => _ticked.Count switch
-    {
-        0 => "Keep all",
-        1 => "Remove 1 item",
-        var n => $"Remove {n} items"
-    };
+    private string ConfirmLabel => _ticked.Count == 0 ? L["ReviewItems_KeepAll"].Value : L.Plural("ReviewItems_Remove", _ticked.Count);
 
     protected override void OnInitialized()
     {
@@ -113,8 +109,8 @@ else
 
         _drawerStateContainer.CloseDrawer();
         _snackbar.Add(deleteIds.Count > 0
-            ? $"Removed {deleteIds.Count} {(deleteIds.Count == 1 ? "item" : "items")}"
-            : $"Kept {unlinkIds.Count} {(unlinkIds.Count == 1 ? "item" : "items")}", Severity.Success);
+            ? L.Plural("ReviewItems_Removed", deleteIds.Count)
+            : L.Plural("ReviewItems_Kept", unlinkIds.Count), Severity.Success);
 
         if (AfterRemove is not null) await AfterRemove();
     }

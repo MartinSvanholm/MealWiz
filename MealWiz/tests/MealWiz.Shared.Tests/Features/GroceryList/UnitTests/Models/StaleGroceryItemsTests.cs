@@ -119,8 +119,7 @@ public class StaleGroceryItemsTests
 
         var groups = StaleGroceryItems.GroupByMeal(items, sources);
 
-        Assert.Equal(["Zebra stew", StaleGroceryItems.OtherItemsHeading], groups.Select(g => g.Heading));
-        Assert.Equal("Other items", StaleGroceryItems.OtherItemsHeading);
+        Assert.Equal(["Zebra stew", null], groups.Select(g => g.Heading));
     }
 
     [Fact]

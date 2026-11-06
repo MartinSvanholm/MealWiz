@@ -194,3 +194,27 @@ public class ReviewGroceryItemsDrawerTests : ComponentTestBase
         Assert.Empty(host.FindAll(TestId("review-items-confirm")));
     }
 }
+
+/// <summary>The review drawer's texts come from <c>GroceryListResource</c> (UI-03), not from literals.</summary>
+public class ReviewGroceryItemsDrawerTextTests() : ComponentTestBase(echoResourceKeys: true)
+{
+    [Fact]
+    public void The_texts_come_from_the_resource()
+    {
+        var tortillas = TestData.LinkedGroceryItem("Tortillas", 1, "8");
+        var salsa = TestData.LinkedGroceryItem("Salsa", 2);
+        RenderDrawers();
+
+        DrawerHost.InvokeAsync(() => ReviewGroceryItemsDrawer.Open(Drawer, "Title", [
+            new GroceryItemGroup("Tacos", [tortillas]),
+            new GroceryItemGroup(null, [salsa])]));
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("review-items-hint"))));
+
+        Assert.Equal("[ReviewItems_Hint]", DrawerHost.Find(TestId("review-items-hint")).TextContent.Trim());
+        Assert.Equal("[ReviewItems_OtherItems]", DrawerHost.FindAll(TestId("review-group-heading"))[1].TextContent.Trim());
+        Assert.Equal("[ReviewItems_Remove_Other]", DrawerHost.Find(TestId("review-items-confirm")).TextContent.Trim());
+        DrawerHost.Find(TestId("review-item-checkbox")).Click();
+        DrawerHost.FindAll(TestId("review-item-checkbox"))[1].Click();
+        Assert.Equal("[ReviewItems_KeepAll]", DrawerHost.Find(TestId("review-items-confirm")).TextContent.Trim());
+    }
+}
