@@ -43,7 +43,9 @@ public abstract class E2ETestBase : IAsyncLifetime
         {
             BaseURL = Env.App.BaseUrl.ToString(),
             // The app is built for phones: bottom navigation bar, bottom drawers.
-            ViewportSize = new ViewportSize { Width = 412, Height = 915 }
+            ViewportSize = new ViewportSize { Width = 412, Height = 915 },
+            // English, whatever the machine's locale: the app picks its language from the browser's (MEA-105).
+            Locale = "en-US"
         });
         _context.SetDefaultTimeout(15_000);
 

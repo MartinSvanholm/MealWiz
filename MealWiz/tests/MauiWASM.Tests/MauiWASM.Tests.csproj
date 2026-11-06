@@ -33,5 +33,10 @@
     <!-- The real config files the web app ships, read by AppSettingsTests. -->
     <None Include="..\..\MauiWASM\wwwroot\appsettings.*.json" LinkBase="appsettings" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Pins the run to en-US (CurrentCulture and CurrentUICulture), so English assertions hold on any machine.
+         A test that needs Danish sets the culture itself. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>
