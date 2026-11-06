@@ -1,0 +1,28 @@
+@inject IPlanWeekStateContainer _state
+@inject IDrawerStateContainer _drawer
+
+@* The global drawer's content for picking a meal for one Plan week day: the shared pick list without edit buttons and
+   without the day's current meal. Picking puts the meal on the day, locks it and closes the drawer. *@
+<MealPickList ExcludedMealId="@CurrentMealId" ShowEdit="false" OnPick="Pick" />
+
+@code {
+    [Parameter] public DateTime Date { get; set; }
+
+    private int? CurrentMealId => _state.Days.FirstOrDefault(d => d.Date == Date.Date)?.Meal?.Id;
+
+    /// <summary>Opens the drawer titled for the day.</summary>
+    public static void Open(IDrawerStateContainer drawer, DateTime date) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Title = $"Pick a meal for {date.DayOfWeek}",
+            Content = typeof(PlanWeekPickMealDrawer),
+            Height = "85%",
+            ContentParameters = new() { { nameof(Date), date } }
+        });
+
+    private void Pick(Meal meal)
+    {
+        _state.PickMeal(Date, meal);
+        _drawer.CloseDrawer();
+    }
+}
