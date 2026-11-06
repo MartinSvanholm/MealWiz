@@ -20,7 +20,7 @@ adds every E2E journey.
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
 | `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (9 cases) | smoke | Docker + Chromium |
+| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (10 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
@@ -106,7 +106,7 @@ TestInfrastructure/
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
     `ILocalStorageService`, `IMealImportStateContainer` and `IThemeService`.
-  - It uses the real Meals, GroceryList, MealPlan and Drawer containers, running on the mocked mediator.
+  - It uses the real Meals, GroceryList, MealPlan, PlanWeek and Drawer containers, running on the mocked mediator. `Time` is a `FakeTimeProvider` at Wednesday 2026-11-04 12:00 UTC; `PlanWeek` has a seeded `Random`.
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
     `SnackbarMessages`, `CurrentPath`.
@@ -117,7 +117,7 @@ TestInfrastructure/
     `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `FollowPasswordResetLinkAsync()` (where a reset
     email's link lands, made with the admin API so no email is sent), `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
-- `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder`. Each has fluent
+- `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder` (whose `InsertAsync` fills `PlannedMealIdOnDate`). Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
   `ClientExtensions` adds `CurrentUserId()` and `UniqueSuffix()`.
 - `TestData.cs` provides in-memory models for unit and bUnit tests.
@@ -198,8 +198,9 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
   - `E2ETestBase` gives each test its own user and browser context. Helpers: `GoToAsync`, `LoginAsync`, `FillAsync`,
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
-  - `E2ESupabase` seeds data and resolves imports with the service role, and makes password reset links
-    (`GenerateRecoveryLinkAsync`, the admin `generate_link`) so no email is sent.
+  - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan)
+    and resolves imports with the service role, and makes password reset links (`GenerateRecoveryLinkAsync`, the
+    admin `generate_link`) so no email is sent.
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:
@@ -214,7 +215,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 ### pgTAP: `supabase/tests/database/`
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
-`meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+`grocery_item_sources`, `meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
 names. Each file follows the same pattern:
 
 ```sql
@@ -231,6 +232,10 @@ rollback;
 
 Postgres applies a table's SELECT policy to UPDATE and DELETE statements that have a WHERE clause. So loosening only
 an UPDATE or DELETE policy may not change effective access, and `policies_are` is what catches the change.
+
+`meal_plans_duplicates_cleanup.test.sql` tests a migration's one-off data clean-up rather than a table. It drops the
+constraints inside its transaction, recreates duplicates, runs the migration's statements (copied verbatim, since
+migrations never change after merging) and checks what is left.
 
 ## Writing a new test
 

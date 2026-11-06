@@ -13,12 +13,15 @@ public class MealPlan
     public Guid CreatedBy { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public Dictionary<DateTime, Meal> MealOnDate { get; set; }
+    /// <summary>The meal_plans-meals row id of each planned day, keyed like <see cref="MealOnDate"/>. A swap keeps it.</summary>
+    public Dictionary<DateTime, int> PlannedMealIdOnDate { get; set; } = [];
 
     public MealPlan(DateTime targetDate)
     {
         StartDate = targetDate.StartOfWeek().Date;
         EndDate = targetDate.EndOfWeek().Date;
         MealOnDate = [];
+        PlannedMealIdOnDate = [];
     }
 
     public MealPlan(MealPlanDb mealPlanDb)
@@ -31,6 +34,9 @@ public class MealPlan
         UpdatedAt = mealPlanDb.UpdatedAt;
         MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Count > 0 ?
             mealPlanDb.MealPlanMeals.ToDictionary(x => DateTime.Parse(x.MealDate, CultureInfo.InvariantCulture), x => new Meal(x.Meal, this, x.MealDate))
+            : [];
+        PlannedMealIdOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Count > 0 ?
+            mealPlanDb.MealPlanMeals.ToDictionary(x => DateTime.Parse(x.MealDate, CultureInfo.InvariantCulture), x => x.Id)
             : [];
     }
 

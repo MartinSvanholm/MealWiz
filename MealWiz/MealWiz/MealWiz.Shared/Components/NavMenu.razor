@@ -4,7 +4,7 @@
 @* The three tabs inside the floating bottom nav (the bar itself is in Layout/MainLayout.razor). The Meals tab stays
    active on its sub-pages (Edit meal, Import meal). *@
 <div class="mw-nav-tabs">
-    <CustomNavLink data-testid="nav-meal-plan" IsActive="@(location == "")" Href="/" Icon="@Icons.Material.Filled.CalendarMonth">Plan</CustomNavLink>
+    <CustomNavLink data-testid="nav-meal-plan" IsActive="@(location == "" || location == "plan-week")" Href="/" Icon="@Icons.Material.Filled.CalendarMonth">Plan</CustomNavLink>
 
     <CustomNavLink data-testid="nav-grocery-list" IsActive="@(location == "grocerylist")" Href="/grocerylist" Icon="@Icons.Material.Outlined.ShoppingCart">Groceries</CustomNavLink>
 

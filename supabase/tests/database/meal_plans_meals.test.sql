@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(23);
+select plan(27);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -21,6 +21,8 @@ insert into public.meal_plans (id, start_date, end_date, created_by, created_at)
 insert into public."meal_plans-meals" (id, meal_date, fk_meal, fk_meal_plan, created_by, created_at) values
     (900001, '2026-01-05', 900001, 900001, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()),
     (900002, '2026-01-05', 900002, 900002, 'bbbbbbbb-0000-0000-0000-0000000000b2', now());
+
+select col_is_unique('public', 'meal_plans-meals', array['fk_meal_plan', 'meal_date'], 'a plan has at most one planned meal per date');
 
 -- As user A.
 set local role authenticated;
@@ -50,6 +52,19 @@ select lives_ok(
        select 900004, '2026-01-08', id, 900001, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()
        from public.meals where meal_type = 'leftover' and created_by is null $$,
     'user A can plan a system meal in their own plan'
+);
+
+select throws_ok(
+    $$ insert into public."meal_plans-meals" (meal_date, fk_meal, fk_meal_plan, created_by, created_at)
+       values ('2026-01-06', 900001, 900001, 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '23505', null,
+    'user A cannot plan a second meal on a date that already has one'
+);
+
+select throws_ok(
+    $$ update public."meal_plans-meals" set meal_date = '2026-01-05' where id = 900003 $$,
+    '23505', null,
+    'user A cannot move a planned meal onto a date that already has one'
 );
 
 select throws_ok(
@@ -151,6 +166,12 @@ select is_empty(
     $$ select id from public."meal_plans-meals"
        where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1' and (fk_meal = 900002 or fk_meal_plan = 900002) $$,
     'user A has no planned meal pointing at user B''s meal or plan'
+);
+
+select lives_ok(
+    $$ insert into public."meal_plans-meals" (id, meal_date, fk_meal, fk_meal_plan, created_by, created_at)
+       values (900005, '2026-01-07', 900002, 900002, 'bbbbbbbb-0000-0000-0000-0000000000b2', now()) $$,
+    'another plan can have a meal on the same date'
 );
 
 -- Deleting a planned meal removes it from its plans (MEA-39).

@@ -95,6 +95,36 @@ public class MealsPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Search_matches_meals_by_ingredient_name_ignoring_case()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+
+        cut.Find(InputOf("meal-list-search")).Input("PENN");
+
+        Assert.Equal(["Pasta"], Names(cut));
+    }
+
+    [Fact]
+    public void Search_by_ingredient_combines_with_a_filter()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+        cut.Find(TestId("meal-filter-no-recipe")).Click();
+
+        cut.Find(InputOf("meal-list-search")).Input("penn");
+
+        Assert.Empty(cut.FindAll(TestId("meal-list-item")));
+        Assert.Contains("penn", cut.Find(TestId("meal-list-no-match")).TextContent);
+    }
+
+    [Fact]
+    public void Search_field_says_it_searches_ingredients_too()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+
+        Assert.Equal("Search meals or ingredients", cut.Find(InputOf("meal-list-search")).GetAttribute("placeholder"));
+    }
+
+    [Fact]
     public void Search_without_matches_says_so()
     {
         var cut = RenderWithPopovers<MealsPage>();

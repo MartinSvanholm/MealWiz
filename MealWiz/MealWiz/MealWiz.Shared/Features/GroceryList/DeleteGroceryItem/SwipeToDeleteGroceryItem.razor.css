@@ -1,0 +1,40 @@
+/* A to-buy row over a red delete layer. The row's own content (checkbox, name, amount) is styled by the page. */
+.grocery-swipe {
+    position: relative;
+    overflow: hidden;
+}
+
+.grocery-swipe-delete {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 14px;
+    background-color: var(--mw-red);
+}
+
+.grocery-swipe-delete ::deep .grocery-swipe-delete-icon {
+    color: var(--mw-text-on-color);
+}
+
+.grocery-swipe-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: var(--mw-touch);
+    padding-left: 2px;
+    background-color: var(--mw-surface);
+    touch-action: pan-y;
+    user-select: none;
+    transition: transform 0.2s ease;
+}
+
+/* Follow the pointer without lag, and keep the release from clicking the name under it (which opens the edit drawer). */
+.grocery-swipe-row.swiping {
+    transition: none;
+}
+
+.grocery-swipe-row.swiping ::deep * {
+    pointer-events: none;
+}

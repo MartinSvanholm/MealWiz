@@ -24,7 +24,7 @@ first saves the meal, then each pending ingredient (see Ingredients).
 The Meals page shows only regular meals; Eat Out and Leftovers are offered only when planning a day (the pick-a-meal
 list). Each card's day tag comes from this calendar week's plan, which the page reads by sending the MealPlans
 feature's `GetMealPlanByDate` query through MediatR (a failed load just leaves the tags out). Search matches meal
-names only (ingredient search is MEA-66). The single-select filter chips narrow the grid together with the search:
+names and ingredient names (case-insensitive). The single-select filter chips narrow the grid together with the search:
 This week to the meals with a day tag (same plan, so a failed load shows none), No recipe to meals whose recipe is
 blank. The header count stays the total. When nothing matches, `meal-list-no-match` names the search, or says no
 meals are planned this week, or that every meal has a recipe.
@@ -126,62 +126,77 @@ stored as `yyyy-MM-dd` strings.
 - **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
   `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
   "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
-  (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (not wired, MEA-75) and
+  (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (opens `/plan-week?week=` on the viewed week) and
   the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
-  pick list for an empty day.
+  pick list for an empty day or while swapping the day's meal.
+- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate`, `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`) and `plan-week-save`. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week.
 - **Components:**
   - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
     day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
     moves a week. The E2E tests rely on `selected-day` and `has-meal`.
   - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`, with `.razor.css`: UI only. "Pick a meal for
-    <Day>" (`meal-selection-heading`), search (`meal-selection-search`), shuffle (`shuffle-meals-button`, reloads and
-    reorders the list) and one compact list: rows `meal-list-item`, each with `MealTile` (Eat Out and Leftovers first,
-    neutral; the user's meals alternate orange and green), the pick button `meal-selection-pick`, the name
-    `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty: `meal-list-empty`.
+    <Day>" (`meal-selection-heading`, hint `meal-selection-hint`), search (`meal-selection-search`), shuffle
+    (`shuffle-meals-button`, reloads and reorders the list) and one compact list: rows `meal-list-item`, each with
+    `MealTile` (Eat Out and Leftovers first, neutral; the user's meals alternate orange and green), the pick button
+    `meal-selection-pick`, the name `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty:
+    `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
+    left out, a pick replaces it (`SwapMealOnSelectedDate`) and Cancel (`meal-selection-cancel`) returns to the card.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
     corner of the selected day's card (`remove-meal-button`).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
-    Shown but not wired: `swap-meal-button` (MEA-62), `mark-eaten-out-button` (MEA-63), `add-all-to-list` (MEA-74).
+    Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
+    card. Shown but not wired: `add-all-to-list` (MEA-74).
+  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetMealPlanByDate | `Query(DateTime Date)` → `Result<MealPlan?>` | The plan whose `start_date..end_date` contains the date, with its meals; `null` if none |
   | CreateMealPlan | `Command(MealPlan)` → `Result<MealPlan>` | Insert a week's plan (sets `created_by`) |
-  | AddMealToMealPlan | `Command(Meal)` → `Result<Meal>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate` |
+  | AddMealToMealPlan | `Command(Meal)` → `Result<int>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate`; returns the planned day's id |
   | RemoveMealFromMealPlan | `Command(int MealId, int MealPlanId, DateTime MealDate)` → `Result` | Delete the meal's row on that date in that plan |
+  | SwapMealInMealPlan | `Command(int MealPlanId, DateTime MealDate, int CurrentMealId, int NewMealId)` → `Result` | Update that day's row to the new meal in one write; fails ("Meal not found in plan") when no row matches, including another user's |
+  | GetMealPlannedDates | `Query(DateTime From, DateTime To)` → `Result<List<PlannedMealDate>>` | Each planned meal and date in the range (own rows) |
+  | SaveGeneratedWeek | `Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days)` → `Result` | Creates the plan if missing, updates days that have a row (in place), bulk-inserts the rest |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
-  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`.
+  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
+  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
+  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
-    `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`.
+    `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`. `MealPlan.PlannedMealIdOnDate` is a `Dictionary<DateTime, int>` of `meal_plans-meals` ids (a swap keeps the id); `AddMealToPlan` records the id and `RemoveMealButton` drops the date's id.
   - `Features/MealPlans/Models/MealPlanMealDb.cs`, table `meal_plans-meals` (`fk_meal_plan`, `fk_meal`, `meal_date`).
     It is the join table and has no domain model.
+  - `Features/MealPlans/Models/PlannedMealDate.cs` ↔ `PlannedMealDateDb.cs` (slim read of `meal_plans-meals`), `PlanWeekSettings.cs`, `PlanWeekDay.cs`.
 - **Tests:**
-  - unit: `Features/MealPlans/UnitTests/` (Models, State)
+  - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
-  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`
+  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`
+  - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
 ## GroceryList
 
 A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "From meal plan"
-opens a drawer that lists the current week's plan ingredients. It matches them to existing items by name, ignoring
-case, and lets you set the final amount; matches update the existing item and the rest are inserted in bulk.
+opens a merge drawer (reusable for one planned day or a whole week) that lists the planned ingredients not linked
+from their planned day yet; with everything linked it says "Everything is already on your list". A to-buy item with the
+same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
+empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
+added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
 "X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
-every picked item after the confirm drawer ("Clear 2 items?"). Swipe-to-delete is MEA-67.
+every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy row left (touch or mouse) past 80px
+also deletes it after the same confirm drawer; basket pills don't swipe.
 
 - **Folder:** `Features/GroceryList/`
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
@@ -195,38 +210,48 @@ every picked item after the confirm drawer ("Clear 2 items?"). Swipe-to-delete i
   - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
     drawer with `DeleteGroceryItemButton` as its header action.
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
-    header; deletes after a confirm drawer ("Delete Milk?").
+    header; deletes after a confirm drawer ("Delete Milk?"). That confirm lives in
+    `Features/GroceryList/DeleteGroceryItem/ConfirmDeleteGroceryItem.cs`, shared with the swipe.
+  - `Features/GroceryList/DeleteGroceryItem/SwipeToDeleteGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's
+    content. Blazor pointer events (no JS) move the row over a red layer; `touch-action: pan-y` keeps vertical
+    scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
-    basket"; after a confirm drawer it calls `ClearBasket` on the state container.
+    basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
-    meal plan" header button; loads the meal plan if needed.
+    meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
-    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off. Items already on
-    the list show "Plan X · In list Y" and an empty, orange-outlined amount; the button reads "Add N to grocery list".
+    drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
+    off, groups same names into one row (subline "Plan X + Y · In list Z", orange field for merged rows) and shows
+    `plan-ingredients-loading`, `plan-ingredients-empty` or `plan-ingredients-all-on-list`; the button reads "Add N to
+    grocery list"; row names carry `plan-ingredient-name`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllGroceryItems | `Query()` → `Result<List<GroceryItem>>` | All of the user's items |
   | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
-  | AddMealPlanIngredientsToGroceryList | `Command(List<GroceryItem>)` → `Result<List<int>>` | Bulk insert; `created_by` comes from each ingredient |
+  | GetGroceryItemSources | `Query()` → `Result<List<GroceryItemSource>>` | Every source of the user's items, with the planned day's meal and date and the ingredient's meal and name |
+  | AddPlanIngredientsToGroceryList | `Command(List<PlanIngredientToAdd> Items)` → `Result<List<GroceryItem>>` | Skips already-linked pairs, updates merged items' amount, inserts new items (is_manual false, one per name), adds a source per ingredient |
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
-  | ClearBasket | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request (the picked ones the user saw); ids RLS hides are skipped |
+  | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
-  `ClearBasket`.
+  `ClearBasket`, `Sources` and `LoadSources`.
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
+  - `GroceryItem.IsManual` (`is_manual`).
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/grocery_items.test.sql`
+  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
 
 ## MealImport
 
@@ -411,13 +436,13 @@ key, CORS and deployment.
   OFL licences.
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
-    exceptions into errors.
+    exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
   - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
-  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`), `DictionaryExtensions.cs`.
+  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`, `ToWeekLabel`, `ToRelativeWeekTitle`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
 - **`Components/`:** generic UI.
-  - `Components/NavMenu.razor`, the three tabs (Plan, Groceries, Meals; `nav-meal-plan`, `nav-grocery-list`,
+  - `Components/NavMenu.razor`, the three tabs (Plan, also active on `/plan-week`; Groceries; Meals; `nav-meal-plan`, `nav-grocery-list`,
     `nav-meals`), and `Components/CustomNavLink.razor`, one tab: icon above label, the active one an orange pill
     with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. It
     floats over the page: pages fill the screen (the `.mw-page` class) and end their scroll area with
@@ -477,7 +502,8 @@ table and policy list.
 |---|---|---|---|
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
-| `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date` |
-| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal |
-| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
+| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
+| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
+| `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
+| `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |

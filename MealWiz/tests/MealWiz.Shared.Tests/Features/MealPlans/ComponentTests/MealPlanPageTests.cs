@@ -42,6 +42,22 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Swap_meal_shows_the_pick_list_in_place_of_the_card_and_cancel_brings_it_back()
+    {
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(DateTime.Today, TestData.Meal("Tacos", id: 8))));
+        var cut = Render<MealPlanPage>();
+
+        cut.Find(TestId("swap-meal-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal($"Swap the meal for {DateTime.Today.DayOfWeek}", cut.Find(TestId("meal-selection-heading")).TextContent.Trim()));
+        Assert.Empty(cut.FindAll(TestId("meal-display-name")));
+
+        cut.Find(TestId("meal-selection-cancel")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("Tacos", cut.Find(TestId("meal-display-name")).TextContent.Trim()));
+    }
+
+    [Fact]
     public void The_header_shows_the_week_number_and_month_and_this_week()
     {
         var cut = Render<MealPlanPage>();
@@ -95,11 +111,15 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Plan_the_week_is_shown_but_not_wired_yet()
+    public void Plan_the_week_opens_the_plan_week_page_on_the_viewed_week()
     {
         var cut = Render<MealPlanPage>();
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("plan-week-button")).HasAttribute("disabled")));
 
-        Assert.True(cut.Find(TestId("plan-week-button")).HasAttribute("disabled"));
+        cut.Find(TestId("plan-week-button")).Click();
+
+        Assert.EndsWith($"plan-week?week={ThisMonday.AddDays(7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", Navigation.Uri);
     }
 
     [Fact]

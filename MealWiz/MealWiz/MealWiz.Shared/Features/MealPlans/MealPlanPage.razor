@@ -32,9 +32,8 @@
                     disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NextWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
             </button>
-            @* Unwired: planning the whole week has no behaviour yet (MEA-75). *@
             <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="Plan the week"
-                    disabled aria-disabled="true">
+                    disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NavigateToPlanWeek">
                 <MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" />
             </button>
             <button type="button" class="mw-avatar" data-testid="account-button" aria-label="Account"
@@ -60,7 +59,7 @@
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" Rounded />
         }
-        else if (_mealPlanStateContainer.SelectedDateHasMeal)
+        else if (_mealPlanStateContainer.SelectedDateHasMeal && !_mealPlanStateContainer.IsSwappingMeal)
         {
             <MealDisplayComponent>
                 <HeroAction>
@@ -98,25 +97,12 @@
 
     private DateTime WeekStart => _mealPlanStateContainer.SelectedWeekStart;
 
-    private string WeekLabel =>
-        $"Week {ISOWeek.GetWeekOfYear(WeekStart)} · {WeekStart.ToString("MMMM", CultureInfo.InvariantCulture)}";
+    private string WeekLabel => WeekStart.ToWeekLabel();
 
-    /// <summary>"This week", "Next week", "Last week", "In 3 weeks" or "3 weeks ago".</summary>
-    private string WeekTitle
-    {
-        get
-        {
-            var weeks = (int)Math.Round((WeekStart - DateTime.Now.StartOfWeek().Date).TotalDays / 7);
-            return weeks switch
-            {
-                0 => "This week",
-                1 => "Next week",
-                -1 => "Last week",
-                > 1 => $"In {weeks} weeks",
-                _ => $"{-weeks} weeks ago",
-            };
-        }
-    }
+    private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now);
+
+    private void NavigateToPlanWeek() =>
+        _navigationManager.NavigateTo($"/plan-week?week={WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
     private Task GoToCurrentWeek() =>
         _mealPlanStateContainer.NavigateToWeek(DateTime.Now);

@@ -78,15 +78,29 @@ public class MealDisplayComponentTests : ComponentTestBase
     }
 
     [Fact]
-    public void Swap_eaten_out_and_add_all_to_list_are_shown_but_not_wired_yet()
+    public void Add_all_to_list_is_shown_but_not_wired_yet_and_there_is_no_eaten_out_button()
     {
         Plan(TestData.Meal("Lasagne", ingredients: [TestData.Ingredient("Pasta sheets", "1 pk")]));
 
         var cut = Render<MealDisplayComponent>();
 
-        Assert.True(cut.Find(TestId("swap-meal-button")).HasAttribute("disabled"));
-        Assert.True(cut.Find(TestId("mark-eaten-out-button")).HasAttribute("disabled"));
+        Assert.Empty(cut.FindAll(TestId("mark-eaten-out-button")));
         Assert.True(cut.Find(TestId("add-all-to-list")).HasAttribute("disabled"));
+    }
+
+    [Theory]
+    [InlineData(MealType.Regular)]
+    [InlineData(MealType.EatOut)]
+    public void Swap_meal_starts_picking_a_replacement(MealType type)
+    {
+        Plan(TestData.Meal("Lasagne", type: type));
+        var cut = Render<MealDisplayComponent>();
+
+        var swap = cut.Find(TestId("swap-meal-button"));
+        Assert.False(swap.HasAttribute("disabled"));
+        swap.Click();
+
+        Assert.True(MealPlan.IsSwappingMeal);
     }
 
     [Fact]

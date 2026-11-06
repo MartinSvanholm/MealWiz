@@ -1,15 +1,17 @@
 using System.Globalization;
+using AngleSharp.Dom;
 using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
-using MealWiz.Shared.Features.GroceryList.ClearBasket;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Components;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components.Web;
 using Moq;
 using Xunit;
 
@@ -185,6 +187,109 @@ public class GroceryListPageTests : ComponentTestBase
         Assert.False(Drawer.IsDrawerOpen);
     }
 
+    // Drags the first to-buy row by (dx, dy) in two moves, then lets go (MEA-67). Re-finds the row each time
+    // because every move re-renders it.
+    private static void SwipeFirstRow(IRenderedComponent<GroceryListPage> cut, double dx, double dy = 0, string pointerType = "touch")
+    {
+        IElement Row() => cut.FindAll(TestId("grocery-item-swipe"))[0];
+        PointerEventArgs At(double x, double y) => new() { PointerId = 1, PointerType = pointerType, IsPrimary = true, ClientX = 200 + x, ClientY = 100 + y };
+
+        Row().PointerDown(At(0, 0));
+        Row().PointerMove(At(dx / 2, dy / 2));
+        Row().PointerMove(At(dx, dy));
+        Row().PointerUp(At(dx, dy));
+    }
+
+    private static string? FirstRowStyle(IRenderedComponent<GroceryListPage> cut) =>
+        cut.FindAll(TestId("grocery-item-swipe"))[0].GetAttribute("style");
+
+    [Theory]
+    [InlineData("touch")]
+    [InlineData("mouse")]
+    public void Swiping_a_row_left_deletes_it_after_confirmation(string pointerType)
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        SwipeFirstRow(cut, dx: -120, pointerType: pointerType);
+
+        Assert.True(Drawer.IsConfirmDrawerOpen);
+        Assert.False(Drawer.IsDrawerOpen);
+        Assert.Equal("Delete Milk?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
+        Assert.Empty(Sent<DeleteGroceryItem.Command>());
+        Confirm();
+
+        cut.WaitForAssertion(() => Assert.Equal(["Bread"], ToBuy(cut)));
+        Assert.Same(_milk, Assert.Single(Sent<DeleteGroceryItem.Command>()).GroceryItem);
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+    }
+
+    [Theory]
+    [InlineData(-40, 0)]   // too short
+    [InlineData(120, 0)]   // to the right
+    [InlineData(-30, 120)] // mostly vertical: the page scrolls
+    public void A_short_right_or_vertical_swipe_does_not_delete(double dx, double dy)
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        SwipeFirstRow(cut, dx, dy);
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.False(Drawer.IsDrawerOpen);
+        Assert.Equal(["Milk", "Bread"], ToBuy(cut));
+        Assert.DoesNotContain("translateX(-", FirstRowStyle(cut) ?? "");
+    }
+
+    [Fact]
+    public void The_row_follows_the_finger_while_swiping()
+    {
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        cut.FindAll(TestId("grocery-item-swipe"))[0].PointerDown(new PointerEventArgs { PointerId = 1, PointerType = "touch", ClientX = 200, ClientY = 100 });
+        cut.FindAll(TestId("grocery-item-swipe"))[0].PointerMove(new PointerEventArgs { PointerId = 1, PointerType = "touch", ClientX = 150, ClientY = 102 });
+
+        Assert.Contains("translateX(-50px)", FirstRowStyle(cut));
+    }
+
+    [Fact]
+    public void Cancelling_a_swipe_delete_keeps_the_item_and_puts_the_row_back()
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        SwipeFirstRow(cut, dx: -120);
+        ConfirmDrawerHost.Find(TestId("confirm-drawer-cancel")).Click();
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Empty(Sent<DeleteGroceryItem.Command>());
+        Assert.Equal(["Milk", "Bread"], ToBuy(cut));
+        Assert.DoesNotContain("translateX(-", FirstRowStyle(cut) ?? "");
+    }
+
+    [Fact]
+    public void A_tap_without_moving_still_opens_the_edit_drawer()
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        SwipeFirstRow(cut, dx: 0);
+        cut.FindAll(TestId("grocery-item-name"))[0].Click();
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Equal("Edit item", Drawer.StateParameters.Title);
+    }
+
+    [Fact]
+    public void Basket_pills_cannot_be_swiped()
+    {
+        _milk.IsPicked = true;
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        Assert.Single(cut.FindAll(TestId("grocery-item-swipe")));
+        Assert.Empty(cut.FindAll($"{TestId("grocery-basket")} {TestId("grocery-item-swipe")}"));
+    }
+
     [Fact]
     public void Clear_after_confirmation_deletes_every_item_in_the_basket()
     {
@@ -192,7 +297,7 @@ public class GroceryListPageTests : ComponentTestBase
         eggs.IsPicked = true;
         _milk.IsPicked = true;
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread, eggs }));
-        SetupSend<ClearBasket.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
         RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();
 
@@ -201,11 +306,11 @@ public class GroceryListPageTests : ComponentTestBase
         clear.Click();
         Assert.True(Drawer.IsConfirmDrawerOpen);
         Assert.Equal("Clear 2 items?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
-        Assert.Empty(Sent<ClearBasket.Command>());
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
         Confirm();
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(TestId("grocery-basket"))));
-        Assert.Equal([_milk.Id, eggs.Id], Assert.Single(Sent<ClearBasket.Command>()).GroceryItemIds.Order());
+        Assert.Equal([_milk.Id, eggs.Id], Assert.Single(Sent<DeleteGroceryItems.Command>()).GroceryItemIds.Order());
         Assert.Equal(["Bread"], ToBuy(cut));
         Assert.Equal("0 of 1 item", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
         Assert.False(Drawer.IsConfirmDrawerOpen);
@@ -234,7 +339,7 @@ public class GroceryListPageTests : ComponentTestBase
         ConfirmDrawerHost.Find(TestId("confirm-drawer-cancel")).Click();
 
         Assert.False(Drawer.IsConfirmDrawerOpen);
-        Assert.Empty(Sent<ClearBasket.Command>());
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
         Assert.Equal(["Milk"], Basket(cut));
     }
 

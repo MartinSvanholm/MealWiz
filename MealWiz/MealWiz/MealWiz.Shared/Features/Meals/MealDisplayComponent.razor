@@ -5,7 +5,8 @@
 
 @* The selected day's meal on the Meal plan: a big orange card (name, ingredient count, recipe status), then the
    ingredients and the recipe, or a "No recipe yet" prompt. System meals (Eat Out, Leftovers) show only the card.
-   Swap meal (MEA-62), Mark as eaten out (MEA-63) and Add all to list (MEA-74) are shown but not wired yet. *@
+   Swap meal starts the Meal plan's swap mode (the page then shows the pick list). Add all to list (MEA-74) is shown
+   but not wired yet. *@
 @if (Meal != null)
 {
     <div class="mw-meal-display">
@@ -23,16 +24,12 @@
             <p class="mw-meal-hero-summary" data-testid="meal-display-summary">@Summary</p>
             <div class="mw-meal-hero-buttons">
                 <button type="button" class="mw-hero-button mw-hero-button-dark" data-testid="swap-meal-button"
-                        disabled aria-disabled="true">
+                        @onclick="_mealPlanStateContainer.StartSwap">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"></path>
                     </svg>
                     Swap meal
-                </button>
-                <button type="button" class="mw-hero-button mw-hero-button-outline" data-testid="mark-eaten-out-button"
-                        disabled aria-disabled="true">
-                    Mark as eaten out
                 </button>
             </div>
         </section>

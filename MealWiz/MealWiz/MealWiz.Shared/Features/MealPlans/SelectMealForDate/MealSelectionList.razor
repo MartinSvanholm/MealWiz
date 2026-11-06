@@ -6,11 +6,27 @@
 
 @* The pick-a-meal state of the Meal plan, for a day with no meal: search, shuffle, and one compact list with Eat Out
    and Leftovers first. Each row (meal-list-item) holds the pick button (meal-selection-pick) and, for the user's own
-   meals, an edit button (meal-selection-edit). *@
+   meals, an edit button (meal-selection-edit). While swapping (IsSwappingMeal) it replaces the day's meal instead:
+   the day's meal is left out of the list and Cancel (meal-selection-cancel) goes back to the card. *@
 <section class="mw-pick">
-    <div class="mw-pick-heading">
-        <h2 class="mw-pick-title" data-testid="meal-selection-heading">Pick a meal for @_mealPlanStateContainer.SelectedDate.DayOfWeek</h2>
-        <span class="mw-pick-hint">Nothing planned yet. Tap a meal to add it.</span>
+    <div class="mw-pick-top">
+        <div class="mw-pick-heading">
+            @if (CurrentMeal is { } current)
+            {
+                <h2 class="mw-pick-title" data-testid="meal-selection-heading">Swap the meal for @Day</h2>
+                <span class="mw-pick-hint" data-testid="meal-selection-hint">Tap a meal to replace @current.Name.</span>
+            }
+            else
+            {
+                <h2 class="mw-pick-title" data-testid="meal-selection-heading">Pick a meal for @Day</h2>
+                <span class="mw-pick-hint" data-testid="meal-selection-hint">Nothing planned yet. Tap a meal to add it.</span>
+            }
+        </div>
+        @if (CurrentMeal is not null)
+        {
+            <button type="button" class="mw-pick-cancel" data-testid="meal-selection-cancel"
+                    @onclick="_mealPlanStateContainer.CancelSwap">Cancel</button>
+        }
     </div>
 
     <div class="mw-pick-search">
@@ -73,16 +89,23 @@
     private bool _isShuffling;
     private string _search = string.Empty;
 
+    private DayOfWeek Day => _mealPlanStateContainer.SelectedDate.DayOfWeek;
+
+    /// <summary>The meal being swapped out, or null when picking a meal for an empty day.</summary>
+    private Meal? CurrentMeal =>
+        _mealPlanStateContainer.IsSwappingMeal ? _mealPlanStateContainer.GetMealFromSelectedDate() : null;
+
     /// <summary>
     /// The meals matching the search, each with its tile index: regular meals count from 0 so their tiles alternate
-    /// orange and green; system meals are neutral and don't count.
+    /// orange and green; system meals are neutral and don't count. The meal being swapped out is left out.
     /// </summary>
     private IEnumerable<(Meal Meal, int Index)> FilteredMeals
     {
         get
         {
+            var currentId = CurrentMeal?.Id;
             var regularIndex = 0;
-            foreach (var meal in _shuffled)
+            foreach (var meal in _shuffled.Where(m => m.Id != currentId))
             {
                 var index = meal.IsRegular ? regularIndex++ : 0;
                 if (string.IsNullOrWhiteSpace(_search) || meal.Name.Contains(_search, StringComparison.InvariantCultureIgnoreCase))
@@ -132,7 +155,14 @@
     private async Task AssignMeal(Meal meal)
     {
         _mealPlanStateContainer.CurrentSnackbar = _snackbar;
-        await _mealPlanStateContainer.AddMealToPlan(meal);
+        if (CurrentMeal is not null)
+        {
+            await _mealPlanStateContainer.SwapMealOnSelectedDate(meal);
+        }
+        else
+        {
+            await _mealPlanStateContainer.AddMealToPlan(meal);
+        }
     }
 
     private void EditMeal(Meal meal)

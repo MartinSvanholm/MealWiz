@@ -26,6 +26,10 @@ public static class ResultHelper
 
         if (exception is PostgrestException postgrestException)
         {
+            // A unique violation (23505): another device got there first. Same message in Debug and Release.
+            if (SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Code == "23505")
+                return new Error(ErrorMessages.ChangedOnAnotherDevice).CausedBy(postgrestException);
+
             string errorMessage = "No response from server";
 #if DEBUG
             errorMessage = SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Message;

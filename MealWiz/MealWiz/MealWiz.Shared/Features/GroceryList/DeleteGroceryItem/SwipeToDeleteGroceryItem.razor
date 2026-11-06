@@ -1,0 +1,110 @@
+@using System.Globalization
+@implements IHandleEvent
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+
+@* A to-buy row that deletes when swiped left: the row follows the pointer over a red layer, and letting go past
+   DeleteDistance opens the same confirm drawer as the edit drawer's delete. Plain pointer events, so touch and mouse
+   both work; touch-action: pan-y leaves vertical scrolling to the browser. *@
+<div class="grocery-swipe">
+    @* Always there, so it stays visible while the row snaps back; the row's surface covers it at rest. *@
+    <div class="grocery-swipe-delete" data-testid="grocery-item-swipe-delete" aria-hidden="true">
+        <MudIcon Icon="@Icons.Material.Outlined.Delete" Class="grocery-swipe-delete-icon" />
+    </div>
+    <div class="grocery-swipe-row @(_swiping ? "swiping" : null)" data-testid="grocery-item-swipe" style="@RowStyle"
+         @onpointerdown="OnPointerDown" @onpointermove="OnPointerMove" @onpointerup="OnPointerUp"
+         @onpointerleave="OnPointerUp" @onpointercancel="OnPointerCancel">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    /// <summary>How far left (px) the row must be dragged for letting go to ask about deleting it.</summary>
+    public const double DeleteDistance = 80;
+
+    // Movement under this is still a tap on the checkbox or name.
+    private const double Slop = 10;
+
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private long? _pointerId;
+    private double _startX;
+    private double _startY;
+    private bool _swiping;
+    private double _offset;
+
+    private string? RowStyle => _offset < 0
+        ? $"transform: translateX({Math.Round(_offset).ToString(CultureInfo.InvariantCulture)}px)"
+        : null;
+
+    // Pointer events fire on every hover, so only re-render when the swipe actually changes.
+    Task IHandleEvent.HandleEventAsync(EventCallbackWorkItem callback, object? arg) => callback.InvokeAsync(arg);
+
+    private void OnPointerDown(PointerEventArgs e)
+    {
+        if (_pointerId is not null || (e.PointerType == "mouse" && e.Button != 0))
+            return;
+
+        _pointerId = e.PointerId;
+        _startX = e.ClientX;
+        _startY = e.ClientY;
+    }
+
+    private void OnPointerMove(PointerEventArgs e)
+    {
+        if (_pointerId != e.PointerId)
+            return;
+
+        var dx = e.ClientX - _startX;
+        var dy = e.ClientY - _startY;
+        if (!_swiping)
+        {
+            if (Math.Abs(dx) < Slop && Math.Abs(dy) < Slop)
+                return;
+
+            // Up, down or right: not a delete swipe, so let the page have it.
+            if (Math.Abs(dy) >= Math.Abs(dx) || dx > 0)
+            {
+                _pointerId = null;
+                return;
+            }
+
+            _swiping = true;
+        }
+
+        _offset = Math.Min(0, dx);
+        StateHasChanged();
+    }
+
+    private void OnPointerUp(PointerEventArgs e)
+    {
+        if (_pointerId != e.PointerId)
+            return;
+
+        var delete = _swiping && _offset <= -DeleteDistance;
+        Reset();
+        if (delete)
+            ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, GroceryItem);
+    }
+
+    private void OnPointerCancel(PointerEventArgs e)
+    {
+        if (_pointerId == e.PointerId)
+            Reset();
+    }
+
+    // The row snaps back; after a delete swipe it stays visible behind the confirm drawer, so cancelling keeps it.
+    private void Reset()
+    {
+        var changed = _swiping;
+        _pointerId = null;
+        _swiping = false;
+        _offset = 0;
+        if (changed)
+            StateHasChanged();
+    }
+}

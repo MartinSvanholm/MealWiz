@@ -1,6 +1,7 @@
 using Blazored.LocalStorage;
 using AddMealToMealPlanAction = MealWiz.Shared.Features.MealPlans.AddMealToMealPlan.AddMealToMealPlan;
 using CreateMealPlanAction = MealWiz.Shared.Features.MealPlans.CreateMealPlan.CreateMealPlan;
+using SwapMealInMealPlanAction = MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan.SwapMealInMealPlan;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
@@ -17,6 +18,8 @@ public interface IMealPlanStateContainer
     DateTime SelectedWeekStart { get; }
     bool SelectedDateHasMeal { get; }
     bool IsLoadingWeek { get; }
+    /// <summary>True while the user picks a meal to replace the selected day's meal. Ends when the day changes.</summary>
+    bool IsSwappingMeal { get; }
     bool IsCurrentWeek();
 
     event Action OnStateChanged;
@@ -25,6 +28,9 @@ public interface IMealPlanStateContainer
     Task LoadMealPlan();
     Task NavigateToWeek(DateTime targetDate);
     Task AddMealToPlan(Meal meal);
+    void StartSwap();
+    void CancelSwap();
+    Task SwapMealOnSelectedDate(Meal meal);
     Meal? GetMealFromSelectedDate();
     bool DateHasMeal(DateTime dateTime);
 }
@@ -52,6 +58,7 @@ public class MealPlanStateContainer(
         set
         {
             selectedDate = value;
+            IsSwappingMeal = false;
             NotifyStateChanged();
         }
     }
@@ -60,6 +67,8 @@ public class MealPlanStateContainer(
     public DateTime SelectedWeekStart { get; private set; } = DateTime.Now.StartOfWeek().Date;
 
     public bool IsLoadingWeek { get; private set; } = true;
+
+    public bool IsSwappingMeal { get; private set; }
 
     public bool IsCurrentWeek() =>
         SelectedWeekStart == DateTime.Now.StartOfWeek().Date;
@@ -104,7 +113,36 @@ public class MealPlanStateContainer(
         var result = await mediator.Send(new AddMealToMealPlanAction.Command(meal));
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
-        MealPlan!.MealOnDate.TryAdd(result.Value.MealDate!.Value, result.Value);
+        MealPlan!.MealOnDate.TryAdd(meal.MealDate.Value, meal);
+        MealPlan.PlannedMealIdOnDate[meal.MealDate.Value] = result.Value;
+        NotifyStateChanged();
+    }
+
+    public void StartSwap()
+    {
+        IsSwappingMeal = true;
+        NotifyStateChanged();
+    }
+
+    public void CancelSwap()
+    {
+        IsSwappingMeal = false;
+        NotifyStateChanged();
+    }
+
+    public async Task SwapMealOnSelectedDate(Meal meal)
+    {
+        var current = GetMealFromSelectedDate();
+        if (MealPlan is null || current is null) return;
+
+        var date = SelectedDate.Date;
+        var result = await mediator.Send(new SwapMealInMealPlanAction.Command(MealPlan.Id, date, current.Id, meal.Id));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        meal.MealDate = date;
+        meal.MealPlan = MealPlan;
+        MealPlan.MealOnDate[date] = meal;
+        IsSwappingMeal = false;
         NotifyStateChanged();
     }
 
