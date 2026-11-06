@@ -28,6 +28,8 @@ public class DrawerStateParameters
     public RenderFragment HeaderAction { get; set; }
     public string Title { get; set; }
     public string Description { get; set; }
+    /// <summary>Text of the confirm drawer's red button; null shows the localized "Delete".</summary>
+    public string? ConfirmLabel { get; set; }
     public string Width { get; set; } = null;
     public string Height { get; set; } = "100%";
 }

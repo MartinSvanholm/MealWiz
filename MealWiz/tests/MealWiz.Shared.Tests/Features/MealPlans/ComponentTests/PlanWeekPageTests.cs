@@ -246,4 +246,229 @@ public class PlanWeekPageTests : ComponentTestBase
 
         Assert.Equal("", CurrentPath);
     }
+
+    // ---- Adjusting the preview (MEA-80) ----
+
+    private IRenderedComponent<PlanWeekPage> RenderGenerated(string week)
+    {
+        var cut = RenderPage(week);
+        cut.Find(TestId("plan-week-generate")).Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("plan-week-shuffle-all"))));
+        return cut;
+    }
+
+    private static AngleSharp.Dom.IElement Row(IRenderedComponent<PlanWeekPage> cut, int index) => cut.FindAll(TestId("plan-week-day"))[index];
+
+    private static string MealOf(IRenderedComponent<PlanWeekPage> cut, int index) =>
+        Row(cut, index).QuerySelector(TestId("plan-week-day-meal"))!.TextContent.Trim();
+
+    [Fact]
+    public void Day_actions_show_only_after_generating()
+    {
+        var cut = RenderPage(Iso(NextMonday));
+        Assert.Empty(cut.FindAll(TestId("plan-week-day-shuffle")));
+        Assert.Empty(cut.FindAll(TestId("plan-week-day-pick")));
+        Assert.Empty(cut.FindAll(TestId("plan-week-day-clear")));
+        Assert.Empty(cut.FindAll(TestId("plan-week-shuffle-all")));
+        Assert.NotEmpty(cut.FindAll(TestId("plan-week-generate")));
+
+        cut.Find(TestId("plan-week-generate")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(7, cut.FindAll(TestId("plan-week-day-shuffle")).Count));
+        Assert.Equal(7, cut.FindAll(TestId("plan-week-day-pick")).Count);
+        Assert.Equal(7, cut.FindAll(TestId("plan-week-day-clear")).Count);
+        Assert.NotEmpty(cut.FindAll(TestId("plan-week-shuffle-all")));
+        Assert.Empty(cut.FindAll(TestId("plan-week-generate")));
+    }
+
+    [Fact]
+    public void Shuffle_puts_another_meal_on_that_day()
+    {
+        var cut = RenderGenerated(Iso(NextMonday));
+        var before = MealOf(cut, 1);
+
+        Row(cut, 1).QuerySelector(TestId("plan-week-day-shuffle"))!.Click();
+
+        cut.WaitForAssertion(() => Assert.NotEqual(before, MealOf(cut, 1)));
+        Assert.Equal(7, cut.FindAll(TestId("plan-week-day-meal")).Select(e => e.TextContent.Trim()).Distinct().Count());
+    }
+
+    [Fact]
+    public void Shuffle_is_disabled_on_a_locked_day()
+    {
+        var cut = RenderGenerated(Iso(NextMonday));
+
+        Row(cut, 1).QuerySelector(TestId("plan-week-day-lock"))!.Click();
+
+        Assert.True(Row(cut, 1).QuerySelector(TestId("plan-week-day-shuffle"))!.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Clear_empties_the_day()
+    {
+        var cut = RenderGenerated(Iso(NextMonday));
+
+        Row(cut, 2).QuerySelector(TestId("plan-week-day-clear"))!.Click();
+
+        Assert.Equal("Tap to pick a meal", Row(cut, 2).QuerySelector(TestId("plan-week-day-empty"))!.TextContent.Trim());
+        Assert.Empty(Row(cut, 2).QuerySelectorAll(TestId("plan-week-day-clear")));
+    }
+
+    [Fact]
+    public void Clear_is_disabled_on_a_day_with_a_saved_meal()
+    {
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(
+            Result.Ok<MealPlan?>(TestData.MealPlanWith(NextMonday.AddDays(2), _meals[3])));
+        var cut = RenderGenerated(Iso(NextMonday));
+
+        Assert.True(Row(cut, 2).QuerySelector(TestId("plan-week-day-clear"))!.HasAttribute("disabled"));
+        Assert.False(Row(cut, 0).QuerySelector(TestId("plan-week-day-clear"))!.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Lock_toggles_the_day_and_enables_or_disables_its_shuffle()
+    {
+        var cut = RenderGenerated(Iso(NextMonday));
+        Assert.False(Row(cut, 1).QuerySelector(TestId("plan-week-day-shuffle"))!.HasAttribute("disabled"));
+
+        Row(cut, 1).QuerySelector(TestId("plan-week-day-lock"))!.Click();
+        Assert.Equal("true", Row(cut, 1).GetAttribute("data-locked"));
+        Assert.True(Row(cut, 1).QuerySelector(TestId("plan-week-day-shuffle"))!.HasAttribute("disabled"));
+
+        Row(cut, 1).QuerySelector(TestId("plan-week-day-lock"))!.Click();
+        Assert.Equal("false", Row(cut, 1).GetAttribute("data-locked"));
+        Assert.False(Row(cut, 1).QuerySelector(TestId("plan-week-day-shuffle"))!.HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void Shuffle_all_rerolls_unlocked_days_and_keeps_locked_ones()
+    {
+        var cut = RenderGenerated(Iso(NextMonday));
+        Row(cut, 2).QuerySelector(TestId("plan-week-day-lock"))!.Click();
+        var before = Enumerable.Range(0, 7).Select(i => MealOf(cut, i)).ToList();
+
+        cut.Find(TestId("plan-week-shuffle-all")).Click();
+
+        cut.WaitForAssertion(() => Assert.NotEqual(before, Enumerable.Range(0, 7).Select(i => MealOf(cut, i)).ToList()));
+        Assert.Equal(before[2], MealOf(cut, 2));
+    }
+
+    [Fact]
+    public void Tapping_a_day_opens_the_pick_list_titled_for_that_day()
+    {
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+
+        Row(cut, 0).QuerySelector(TestId("plan-week-day-pick"))!.Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.Equal("Pick a meal for Monday", DrawerHost.Find(TestId("drawer-title")).TextContent.Trim()));
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("meal-list-item"))));
+    }
+
+    [Fact]
+    public void The_pick_list_leaves_out_the_days_meal_and_has_no_edit_buttons()
+    {
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+        var current = MealOf(cut, 0);
+
+        Row(cut, 0).QuerySelector(TestId("plan-week-day-pick"))!.Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("meal-list-item"))));
+        var names = DrawerHost.FindAll(TestId("meal-selection-name")).Select(e => e.TextContent.Trim()).ToList();
+        Assert.DoesNotContain(current, names);
+        Assert.Contains("Leftovers", names);
+        Assert.Empty(DrawerHost.FindAll(TestId("meal-selection-edit")));
+    }
+
+    [Fact]
+    public void Picking_eat_out_puts_it_on_the_day_locks_it_and_closes_the_drawer()
+    {
+        SetupMeals([.. _meals, _leftovers, TestData.Meal("Eat Out", 901, MealType.EatOut)]);
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+        Row(cut, 3).QuerySelector(TestId("plan-week-day-pick"))!.Click();
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("meal-list-item"))));
+
+        DrawerHost.FindAll(TestId("meal-list-item")).Single(r => r.TextContent.Contains("Eat Out")).QuerySelector(TestId("meal-selection-pick"))!.Click();
+
+        Assert.Equal("Eat Out", MealOf(cut, 3));
+        Assert.Equal("true", Row(cut, 3).GetAttribute("data-locked"));
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void Back_without_changes_leaves_without_asking()
+    {
+        RenderDrawers();
+        var cut = RenderPage(Iso(NextMonday));
+
+        cut.Find(TestId("plan-week-back")).Click();
+
+        Assert.Equal("", CurrentPath);
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+    }
+
+    [Fact]
+    public void Back_with_an_unsaved_preview_asks_to_discard()
+    {
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+
+        cut.Find(TestId("plan-week-back")).Click();
+
+        Assert.True(Drawer.IsConfirmDrawerOpen);
+        Assert.Equal("Discard this plan?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
+        Assert.Equal("The meals you've planned for this week haven't been saved.", ConfirmDrawerHost.Find(TestId("confirm-drawer-description")).TextContent.Trim());
+        Assert.Equal("Discard", ConfirmDrawerHost.Find(TestId("confirm-drawer-confirm")).TextContent.Trim());
+        Assert.NotEqual("", CurrentPath);
+    }
+
+    [Fact]
+    public void Cancel_in_the_discard_confirm_stays_with_the_preview()
+    {
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+        var before = Enumerable.Range(0, 7).Select(i => MealOf(cut, i)).ToList();
+        cut.Find(TestId("plan-week-back")).Click();
+
+        ConfirmDrawerHost.Find(TestId("confirm-drawer-cancel")).Click();
+
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.NotEqual("", CurrentPath);
+        Assert.Equal(before, Enumerable.Range(0, 7).Select(i => MealOf(cut, i)).ToList());
+    }
+
+    [Fact]
+    public void Discard_leaves_for_the_meal_plan()
+    {
+        RenderDrawers();
+        var cut = RenderGenerated(Iso(NextMonday));
+        cut.Find(TestId("plan-week-back")).Click();
+
+        Confirm();
+
+        Assert.Equal("", CurrentPath);
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+}
+
+/// <summary>The preview's texts come from <c>MealPlansResource</c> (UI-03), proved by echoing the keys.</summary>
+public class PlanWeekPageResourceTests() : ComponentTestBase(echoResourceKeys: true)
+{
+    [Fact]
+    public void The_new_preview_texts_come_from_the_resource()
+    {
+        SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(Enumerable.Range(1, 10).Select(i => TestData.Meal($"Meal {i}", i)).ToList()));
+        Auth.SetAuthorized("martin@example.com");
+        Navigation.NavigateTo("/plan-week?week=2026-11-09");
+        var cut = Render<PlanWeekPage>();
+        cut.Find(TestId("plan-week-generate")).Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("plan-week-shuffle-all"))));
+
+        Assert.Equal("[PlanWeek_ShuffleAll]", cut.Find(TestId("plan-week-shuffle-all")).TextContent.Trim());
+        cut.FindAll(TestId("plan-week-day-clear"))[0].Click();
+        Assert.Equal("[PlanWeek_TapToPick]", cut.Find(TestId("plan-week-day-empty")).TextContent.Trim());
+    }
 }

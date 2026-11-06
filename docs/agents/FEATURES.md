@@ -131,13 +131,13 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
   pick list for an empty day or while swapping the day's meal.
-- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate`, `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`) and `plan-week-save`. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week.
+- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate` (replaced by `plan-week-shuffle-all`, "Shuffle all", once a preview exists), `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`; once a preview exists also `plan-week-day-pick` (opens `Features/MealPlans/PlanWeek/PlanWeekPickMealDrawer.razor`, the pick list titled "Pick a meal for <Day>"; an empty day shows `plan-week-day-empty`), `plan-week-day-shuffle` (disabled on a locked day) and `plan-week-day-clear` (disabled with a saved meal; unlocks the day)) and `plan-week-save`. Picking by hand locks the day. `plan-week-back` leaves at once, or asks "Discard this plan?" (Cancel / Discard) when the preview has unsaved changes; the nav bar leaves without asking. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week. Its new texts (`PlanWeek_*`) live in `Features/MealPlans/MealPlansResource.cs` with `MealPlansResource.resx` and `MealPlansResource.da.resx`.
 - **Components:**
   - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
     day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
     moves a week. The E2E tests rely on `selected-day` and `has-meal`.
-  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`, with `.razor.css`: UI only. "Pick a meal for
+  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`: a thin wrapper over `IMealPlanStateContainer` around `Features/MealPlans/SelectMealForDate/MealPickList.razor` (with `.razor.css`), the parameter-driven list (`Heading`, `Hint`, `ExcludedMealId`, `ShowEdit`, `ShowCancel`/`OnCancel`, `OnPick`) also used by the Plan week pick drawer. UI only. "Pick a meal for
     <Day>" (`meal-selection-heading`, hint `meal-selection-hint`), search (`meal-selection-search`), shuffle
     (`shuffle-meals-button`, reloads and reorders the list) and one compact list: rows `meal-list-item`, each with
     `MealTile` (Eat Out and Leftovers first, neutral; the user's meals alternate orange and green), the pick button
@@ -154,7 +154,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
     card. Shown but not wired: `add-all-to-list` (MEA-74).
-  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
+  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. `PickMeal` picks one regular meal for a single day (never the current one). Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -170,7 +170,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
   `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
   `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
-  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
+  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `ShuffleAll`, `ShuffleDay`, `PickMeal`, `ClearDay`, `HasSavedMeal`, `HasPreview`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
     `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`. `MealPlan.PlannedMealIdOnDate` is a `Dictionary<DateTime, int>` of `meal_plans-meals` ids (a swap keeps the id); `AddMealToPlan` records the id and `RemoveMealButton` drops the date's id.
@@ -410,8 +410,8 @@ key, CORS and deployment.
       the full-width 52px orange button at the bottom (`drawer-footer`).
       Two buttons go in `<div class="mw-sheet-footer-pair">`; `.mw-sheet-footer-cancel` is grey and `.mw-sheet-footer-danger` is red.
     - ConfirmDrawer shows a red trash circle, the title (`confirm-drawer-title`), the description
-      (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red Delete
-      (`confirm-drawer-confirm`, runs `onConfirm`).
+      (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
+      (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,

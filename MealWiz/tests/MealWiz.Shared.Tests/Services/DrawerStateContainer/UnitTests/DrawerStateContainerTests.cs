@@ -155,6 +155,32 @@ public class DrawerStateContainerTests
     }
 
     [Fact]
+    public void OpenConfirmDrawer_WithAConfirmLabel_SetsIt()
+    {
+        _container.OpenConfirmDrawer("Discard this plan?", "Unsaved.", () => Task.CompletedTask, "Discard");
+
+        Assert.Equal("Discard", _container.StateParameters.ConfirmLabel);
+    }
+
+    [Fact]
+    public void OpenConfirmDrawer_WithoutAConfirmLabel_LeavesItNullSoTheDrawerShowsDelete()
+    {
+        _container.OpenConfirmDrawer("Delete meal?", "Sure?", () => Task.CompletedTask);
+
+        Assert.Null(_container.StateParameters.ConfirmLabel);
+    }
+
+    [Fact]
+    public void ConfirmLabel_AfterTheConfirmDrawerCloses_IsNullAgain()
+    {
+        _container.OpenConfirmDrawer("Discard?", "Sure?", () => Task.CompletedTask, "Discard");
+
+        _container.IsConfirmDrawerOpen = false;
+
+        Assert.Null(_container.StateParameters.ConfirmLabel);
+    }
+
+    [Fact]
     public void CloseDrawer_ClosesBothDrawersAndNotifies()
     {
         _container.OpenDrawer("Edit meal", typeof(FirstPage));
