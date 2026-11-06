@@ -1,5 +1,6 @@
 using FluentResults;
 using MealWiz.Shared.Helpers;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using Moq;
 using MudBlazor;
 using Supabase.Gotrue.Exceptions;
@@ -19,14 +20,36 @@ public class ResultHelperTests
     private readonly Mock<ISnackbar> _snackbar = new();
 
     [Fact]
-    public void MapException_OtherException_KeepsItsMessageAndCause()
+    public void MapException_OtherException_GivesTheGenericErrorAndKeepsTheCause()
     {
         var exception = new HttpRequestException("Connection refused");
 
         var error = ResultHelper.MapException(exception);
 
-        Assert.Equal("Connection refused", error.Message);
+        // The raw exception text is never shown to users; it stays on the cause for diagnosis.
+        Assert.Equal("An error has occurred, please try again.", error.Message);
         Assert.Same(exception, CauseOf(error));
+    }
+
+    [Fact]
+    public void MapException_OtherException_IsLocalized()
+    {
+        using var _ = CultureScope.Use("da");
+
+        Assert.Equal("Der opstod en fejl. Prøv igen.", ResultHelper.MapException(new InvalidOperationException("boom")).Message);
+    }
+
+    [Fact]
+    public void ErrorMessages_ComeFromTheSharedResource()
+    {
+        Assert.Equal("You need to be signed in to do that.", ErrorMessages.NotSignedIn);
+        Assert.Equal("No response from server", ErrorMessages.NoResponse);
+
+        using var _ = CultureScope.Use("da");
+        Assert.Equal("Du skal være logget ind for at gøre det.", ErrorMessages.NotSignedIn);
+        Assert.Equal("Der opstod en fejl. Prøv igen.", ErrorMessages.GenericError);
+        Assert.Equal("Intet svar fra serveren", ErrorMessages.NoResponse);
+        Assert.Equal("Det blev lige ændret på en anden enhed. Genindlæs for at se det.", ErrorMessages.ChangedOnAnotherDevice);
     }
 
     [Fact]
