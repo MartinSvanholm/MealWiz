@@ -11,10 +11,10 @@
     private int? CurrentMealId => _state.Days.FirstOrDefault(d => d.Date == Date.Date)?.Meal?.Id;
 
     /// <summary>Opens the drawer titled for the day.</summary>
-    public static void Open(IDrawerStateContainer drawer, DateTime date) =>
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer, DateTime date) =>
         drawer.OpenDrawer(new DrawerStateParameters
         {
-            Title = $"Pick a meal for {date.DayOfWeek}",
+            Title = localizer["PlanWeek_PickFor", date.DayOfWeek.ToWeekdayName()],
             Content = typeof(PlanWeekPickMealDrawer),
             Height = "85%",
             ContentParameters = new() { { nameof(Date), date } }

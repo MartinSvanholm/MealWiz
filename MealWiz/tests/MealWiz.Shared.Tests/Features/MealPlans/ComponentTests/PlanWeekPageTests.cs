@@ -453,3 +453,22 @@ public class PlanWeekPageTests : ComponentTestBase
         Assert.False(Drawer.IsDrawerOpen);
     }
 }
+
+/// <summary>The preview's texts come from <c>MealPlansResource</c> (UI-03), proved by echoing the keys.</summary>
+public class PlanWeekPageResourceTests() : ComponentTestBase(echoResourceKeys: true)
+{
+    [Fact]
+    public void The_new_preview_texts_come_from_the_resource()
+    {
+        SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(Enumerable.Range(1, 10).Select(i => TestData.Meal($"Meal {i}", i)).ToList()));
+        Auth.SetAuthorized("martin@example.com");
+        Navigation.NavigateTo("/plan-week?week=2026-11-09");
+        var cut = Render<PlanWeekPage>();
+        cut.Find(TestId("plan-week-generate")).Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("plan-week-shuffle-all"))));
+
+        Assert.Equal("[PlanWeek_ShuffleAll]", cut.Find(TestId("plan-week-shuffle-all")).TextContent.Trim());
+        cut.FindAll(TestId("plan-week-day-clear"))[0].Click();
+        Assert.Equal("[PlanWeek_TapToPick]", cut.Find(TestId("plan-week-day-empty")).TextContent.Trim());
+    }
+}

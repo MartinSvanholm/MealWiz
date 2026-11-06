@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="PlanWeek_Shuffle" xml:space="preserve">
+    <value>Shuffle {0}</value>
+    <comment>aria-label of a Plan week day's shuffle button; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_PickFor" xml:space="preserve">
+    <value>Pick a meal for {0}</value>
+    <comment>aria-label of a Plan week day's pick button and the pick drawer's title; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_TapToPick" xml:space="preserve">
+    <value>Tap to pick a meal</value>
+    <comment>Shown on an empty Plan week day in the preview</comment>
+  </data>
+  <data name="PlanWeek_Clear" xml:space="preserve">
+    <value>Clear {0}</value>
+    <comment>aria-label of a Plan week day's clear button; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_ShuffleAll" xml:space="preserve">
+    <value>Shuffle all</value>
+    <comment>Plan week: re-rolls every unlocked day</comment>
+  </data>
+  <data name="PlanWeek_DiscardTitle" xml:space="preserve">
+    <value>Discard this plan?</value>
+    <comment>Title of the confirm when leaving Plan week with an unsaved preview</comment>
+  </data>
+  <data name="PlanWeek_DiscardText" xml:space="preserve">
+    <value>The meals you've planned for this week haven't been saved.</value>
+    <comment>Text of that confirm</comment>
+  </data>
+  <data name="PlanWeek_Discard" xml:space="preserve">
+    <value>Discard</value>
+    <comment>Confirm button of that confirm</comment>
+  </data>
+</root>
