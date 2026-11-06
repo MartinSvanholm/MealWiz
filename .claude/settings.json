@@ -3,7 +3,8 @@
     "allow": [
       "Bash(gh pr view *)",
       "Bash(gh pr checks *)",
-      "Bash(scripts/merge-to-dev.sh *)"
+      "Bash(scripts/merge-to-dev.sh *)",
+      "mcp__Linear"
     ]
   }
 }
