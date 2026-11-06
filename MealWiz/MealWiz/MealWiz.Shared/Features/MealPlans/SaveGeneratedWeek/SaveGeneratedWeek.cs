@@ -3,6 +3,7 @@ using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 using Constants = Supabase.Postgrest.Constants;
@@ -15,7 +16,7 @@ public static class SaveGeneratedWeek
 
     public record Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days) : IRequest<Result>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient, IStringLocalizer<MealPlansResource> localizer) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -25,11 +26,11 @@ public static class SaveGeneratedWeek
             var monday = request.WeekStart.StartOfWeek().Date;
             var sunday = monday.AddDays(6);
 
-            if (request.Days.Count == 0) return Result.Fail("Nothing to save");
+            if (request.Days.Count == 0) return Result.Fail(localizer["PlanWeek_NothingToSave"]);
             if (request.Days.Any(d => d.Date.Date < monday || d.Date.Date > sunday))
-                return Result.Fail("Every day must be in the week");
+                return Result.Fail(localizer["PlanWeek_DayOutsideWeek"]);
             if (request.Days.Select(d => d.Date.Date).Distinct().Count() != request.Days.Count)
-                return Result.Fail("Each day can only be saved once");
+                return Result.Fail(localizer["PlanWeek_DayTwice"]);
 
             var mondayIso = Iso(monday);
 
@@ -53,7 +54,7 @@ public static class SaveGeneratedWeek
                     .From<MealPlanDb>()
                     .Insert(newPlan));
                 if (createResult.IsFailed) return createResult.ToResult();
-                if (createResult.Value.Model is null) return Result.Fail("The week could not be saved.");
+                if (createResult.Value.Model is null) return Result.Fail(localizer["PlanWeek_NotSaved"]);
 
                 plan = createResult.Value.Model;
                 plan.MealPlanMeals = [];
@@ -96,7 +97,7 @@ public static class SaveGeneratedWeek
                 if (insertResult.IsFailed) return insertResult.ToResult();
             }
 
-            return Result.Ok().WithSuccess("Week saved");
+            return Result.Ok().WithSuccess(localizer["PlanWeek_Saved"]);
         }
 
         private static string Iso(DateTime date) => date.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);

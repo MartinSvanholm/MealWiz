@@ -1,5 +1,6 @@
 using Bunit;
 using FluentResults;
+using MealWiz.Shared.Features.MealImport;
 using MealWiz.Shared.Features.MealImport.ImportMeal;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
@@ -88,13 +89,13 @@ public class ImportMealPageTests : ComponentTestBase
     [Fact]
     public void A_rejected_url_shows_the_reason_on_the_field()
     {
-        MealImport.Setup(m => m.StartImport(It.IsAny<string>())).ReturnsAsync(Result.Fail(MealImportStateContainer.InvalidUrlMessage));
+        MealImport.Setup(m => m.StartImport(It.IsAny<string>())).ReturnsAsync(Result.Fail(TestLocalizer.For<MealImportResource>()["Import_InvalidUrl"].Value));
         var cut = Render<ImportMealPage>();
 
         cut.Find(InputOf("import-url-input")).Input("not a url");
         cut.Find(TestId("import-submit")).Click();
 
-        cut.WaitForAssertion(() => Assert.Contains(MealImportStateContainer.InvalidUrlMessage, cut.Markup));
+        cut.WaitForAssertion(() => Assert.Contains(TestLocalizer.For<MealImportResource>()["Import_InvalidUrl"].Value, cut.Markup));
     }
 
     [Fact]

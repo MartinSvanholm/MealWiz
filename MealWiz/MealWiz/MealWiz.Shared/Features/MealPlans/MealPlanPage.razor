@@ -7,6 +7,7 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealPlansResource> L
 
 <div class="mw-page mw-meal-plan">
     <ScreenHeader Label="@WeekLabel">
@@ -99,7 +100,7 @@
 
     private string WeekLabel => WeekStart.ToWeekLabel();
 
-    private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now);
+    private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now, L);
 
     private void NavigateToPlanWeek() =>
         _navigationManager.NavigateTo($"/plan-week?week={WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");

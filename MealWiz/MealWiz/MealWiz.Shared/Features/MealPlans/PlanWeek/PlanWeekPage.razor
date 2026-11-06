@@ -7,11 +7,12 @@
 @inject ISnackbar _snackbar
 @inject TimeProvider _time
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealPlansResource> L
 
 <div class="mw-page mw-plan-week" data-testid="plan-week-page">
     <SubPageHeader Label="@_state.WeekStart.ToWeekLabel()" BackTestId="plan-week-back" OnBack="GoBackAsync">
         <TitleContent>
-            <span data-testid="plan-week-title">@_state.WeekStart.ToRelativeWeekTitle(_time.GetLocalNow().Date)</span>
+            <span data-testid="plan-week-title">@_state.WeekStart.ToRelativeWeekTitle(_time.GetLocalNow().Date, L)</span>
         </TitleContent>
         <Actions>
             <button type="button" class="mw-header-button" data-testid="plan-week-prev" aria-label="Previous week"

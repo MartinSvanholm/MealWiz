@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MealPlan_MealNotInPlan" xml:space="preserve">
+    <value>Måltidet blev ikke fundet i madplanen</value>
+  </data>
+  <data name="MealPlan_MealSwapped" xml:space="preserve">
+    <value>Måltidet er byttet</value>
+  </data>
+  <data name="MealPlan_MealAdded" xml:space="preserve">
+    <value>Måltidet er sat på madplanen</value>
+  </data>
+  <data name="MealPlan_MealNotAdded" xml:space="preserve">
+    <value>Måltidet kunne ikke sættes på madplanen.</value>
+  </data>
+  <data name="MealPlan_MealRemoved" xml:space="preserve">
+    <value>Måltidet er fjernet</value>
+  </data>
+  <data name="MealPlan_PlanOrDateMissing" xml:space="preserve">
+    <value>Madplan og dato skal udfyldes</value>
+  </data>
+  <data name="PlanWeek_NothingToSave" xml:space="preserve">
+    <value>Der er intet at gemme</value>
+  </data>
+  <data name="PlanWeek_DayOutsideWeek" xml:space="preserve">
+    <value>Alle dage skal ligge i ugen</value>
+  </data>
+  <data name="PlanWeek_DayTwice" xml:space="preserve">
+    <value>Hver dag kan kun gemmes én gang</value>
+  </data>
+  <data name="PlanWeek_NotSaved" xml:space="preserve">
+    <value>Ugen kunne ikke gemmes.</value>
+  </data>
+  <data name="PlanWeek_Saved" xml:space="preserve">
+    <value>Ugen er gemt</value>
+  </data>
+  <data name="WeekTitle_This" xml:space="preserve">
+    <value>Denne uge</value>
+  </data>
+  <data name="WeekTitle_Next" xml:space="preserve">
+    <value>Næste uge</value>
+  </data>
+  <data name="WeekTitle_Last" xml:space="preserve">
+    <value>Sidste uge</value>
+  </data>
+  <data name="WeekTitle_InWeeks_One" xml:space="preserve">
+    <value>Om {0} uge</value>
+  </data>
+  <data name="WeekTitle_InWeeks_Other" xml:space="preserve">
+    <value>Om {0} uger</value>
+  </data>
+  <data name="WeekTitle_WeeksAgo_One" xml:space="preserve">
+    <value>For {0} uge siden</value>
+  </data>
+  <data name="WeekTitle_WeeksAgo_Other" xml:space="preserve">
+    <value>For {0} uger siden</value>
+  </data>
+</root>

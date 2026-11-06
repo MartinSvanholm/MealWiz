@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ImportError_InvalidUrl" xml:space="preserve">
+    <value>Linket er ikke gyldigt. Brug et link, der starter med http:// eller https://.</value>
+  </data>
+  <data name="ImportError_NoRecipeFound" xml:space="preserve">
+    <value>Vi kunne ikke finde en opskrift på den side.</value>
+  </data>
+  <data name="ImportError_FetchFailed" xml:space="preserve">
+    <value>Vi kunne ikke hente siden. Tjek linket, og prøv igen.</value>
+  </data>
+  <data name="ImportError_Unreachable" xml:space="preserve">
+    <value>Vi kunne ikke få forbindelse til måltidsimporten. Prøv igen.</value>
+  </data>
+  <data name="ImportError_TimedOut" xml:space="preserve">
+    <value>Importen af måltidet tog for lang tid. Prøv igen.</value>
+  </data>
+  <data name="ImportError_Unknown" xml:space="preserve">
+    <value>Importen af måltidet mislykkedes. Prøv igen.</value>
+  </data>
+  <data name="Import_InvalidUrl" xml:space="preserve">
+    <value>Indtast et gyldigt link til måltidet (der starter med http:// eller https://).</value>
+  </data>
+  <data name="Import_AlreadyInProgress" xml:space="preserve">
+    <value>Der er allerede en import af et måltid i gang.</value>
+  </data>
+  <data name="Import_NotFound" xml:space="preserve">
+    <value>Importen af måltidet blev ikke fundet.</value>
+  </data>
+  <data name="Import_ServiceNotConfigured" xml:space="preserve">
+    <value>Måltidsimporten er ikke sat op.</value>
+  </data>
+  <data name="Import_ServiceResponded" xml:space="preserve">
+    <value>Måltidsimporten svarede med {0}.</value>
+  </data>
+  <data name="ImportToast_Failed" xml:space="preserve">
+    <value>Importen af måltidet mislykkedes: {0}</value>
+  </data>
+  <data name="ImportToast_SaveFailed" xml:space="preserve">
+    <value>"{0}" blev importeret, men kunne ikke gemmes: {1}</value>
+  </data>
+  <data name="ImportToast_IngredientsFailed" xml:space="preserve">
+    <value>"{0}" blev importeret, men nogle ingredienser kunne ikke gemmes: {1}</value>
+  </data>
+  <data name="ImportToast_Saved" xml:space="preserve">
+    <value>"{0}" blev importeret og tilføjet til dine måltider.</value>
+  </data>
+</root>
