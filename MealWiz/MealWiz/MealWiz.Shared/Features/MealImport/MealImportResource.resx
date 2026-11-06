@@ -69,4 +69,55 @@
     <value>"{0}" was imported and added to your meals.</value>
     <comment>{0} is the meal name</comment>
   </data>
+  <data name="ImportPage_HeaderLabel" xml:space="preserve">
+    <value>From a recipe link</value>
+    <comment>Small label above the Import meal page title</comment>
+  </data>
+  <data name="ImportPage_HeaderTitle" xml:space="preserve">
+    <value>Import meal</value>
+    <comment>Import meal page title</comment>
+  </data>
+  <data name="ImportPage_InBackgroundTitle" xml:space="preserve">
+    <value>Importing in the background</value>
+  </data>
+  <data name="ImportPage_InBackgroundHint" xml:space="preserve">
+    <value>We'll add the meal to your list when it's done.</value>
+  </data>
+  <data name="ImportPage_BackToMeals" xml:space="preserve">
+    <value>Back to meals</value>
+    <comment>Button back to the meals list</comment>
+  </data>
+  <data name="ImportPage_Fetching" xml:space="preserve">
+    <value>Fetching and parsing your meal…</value>
+  </data>
+  <data name="ImportPage_SlowHint" xml:space="preserve">
+    <value>This is taking a while. You can keep using the app; we'll add the meal when it's ready.</value>
+  </data>
+  <data name="ImportPage_ContinueInBackground" xml:space="preserve">
+    <value>Continue in background</value>
+    <comment>Button: let a slow import finish in the background</comment>
+  </data>
+  <data name="ImportPage_JobFailed" xml:space="preserve">
+    <value>The import failed</value>
+    <comment>Alert title above the reason a just-run import failed</comment>
+  </data>
+  <data name="ImportPage_LatestFailed" xml:space="preserve">
+    <value>Your last import failed</value>
+    <comment>Alert title above the reason the previous import failed</comment>
+  </data>
+  <data name="ImportPage_Intro" xml:space="preserve">
+    <value>Paste a link to a meal and we'll fill it in for you.</value>
+  </data>
+  <data name="ImportPage_UrlLabel" xml:space="preserve">
+    <value>Meal URL</value>
+    <comment>Label of the URL field</comment>
+  </data>
+  <data name="ImportPage_Import" xml:space="preserve">
+    <value>Import</value>
+    <comment>Submit button</comment>
+  </data>
+  <data name="ImportPage_TryAgain" xml:space="preserve">
+    <value>Try again</value>
+    <comment>Submit button after a failed import</comment>
+  </data>
 </root>

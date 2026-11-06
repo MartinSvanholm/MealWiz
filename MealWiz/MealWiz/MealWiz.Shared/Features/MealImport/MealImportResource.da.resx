@@ -57,4 +57,46 @@
   <data name="ImportToast_Saved" xml:space="preserve">
     <value>"{0}" blev importeret og tilføjet til dine måltider.</value>
   </data>
+  <data name="ImportPage_HeaderLabel" xml:space="preserve">
+    <value>Fra et opskriftslink</value>
+  </data>
+  <data name="ImportPage_HeaderTitle" xml:space="preserve">
+    <value>Importér måltid</value>
+  </data>
+  <data name="ImportPage_InBackgroundTitle" xml:space="preserve">
+    <value>Importerer i baggrunden</value>
+  </data>
+  <data name="ImportPage_InBackgroundHint" xml:space="preserve">
+    <value>Vi tilføjer måltidet til din liste, når det er klar.</value>
+  </data>
+  <data name="ImportPage_BackToMeals" xml:space="preserve">
+    <value>Tilbage til måltider</value>
+  </data>
+  <data name="ImportPage_Fetching" xml:space="preserve">
+    <value>Henter og læser dit måltid…</value>
+  </data>
+  <data name="ImportPage_SlowHint" xml:space="preserve">
+    <value>Det tager lidt tid. Du kan bare bruge appen imens; vi tilføjer måltidet, når det er klar.</value>
+  </data>
+  <data name="ImportPage_ContinueInBackground" xml:space="preserve">
+    <value>Fortsæt i baggrunden</value>
+  </data>
+  <data name="ImportPage_JobFailed" xml:space="preserve">
+    <value>Importen mislykkedes</value>
+  </data>
+  <data name="ImportPage_LatestFailed" xml:space="preserve">
+    <value>Din seneste import mislykkedes</value>
+  </data>
+  <data name="ImportPage_Intro" xml:space="preserve">
+    <value>Indsæt et link til et måltid, så udfylder vi det for dig.</value>
+  </data>
+  <data name="ImportPage_UrlLabel" xml:space="preserve">
+    <value>Link til måltid</value>
+  </data>
+  <data name="ImportPage_Import" xml:space="preserve">
+    <value>Importér</value>
+  </data>
+  <data name="ImportPage_TryAgain" xml:space="preserve">
+    <value>Prøv igen</value>
+  </data>
 </root>
