@@ -1,4 +1,5 @@
 @inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<IngredientsResource> L
 
 @* The add-ingredient row above the ingredient list: name, amount and an orange add button. The button (or Enter in the
    amount) opens the ingredient drawer, filled in with whatever was typed here and empty otherwise; the ingredient is
@@ -6,16 +7,16 @@
    drawer's switch changes that. *@
 <div class="mw-add-ingredient">
     <div class="mw-add-ingredient-name">
-        <MudTextField T="string" @ref="_nameField" data-testid="add-ingredient-name" Placeholder="Ingredient" aria-label="Ingredient"
+        <MudTextField T="string" @ref="_nameField" data-testid="add-ingredient-name" Placeholder="@L["AddIngredient_Name"]" aria-label="@L["AddIngredient_Name"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_name"
                       OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
     </div>
     <div class="mw-add-ingredient-amount">
-        <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="Amount" aria-label="Amount"
+        <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="@L["AddIngredient_Amount"]" aria-label="@L["AddIngredient_Amount"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount"
                       OnKeyDown="EnterKey.Then(OpenDrawer)" />
     </div>
-    <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="Add ingredient"
+    <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="@L["AddIngredient_Add"]"
             @onclick="OpenDrawer">
         <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" />
     </button>
@@ -46,7 +47,7 @@
         _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(IngredientDrawer),
-            Title = "Add ingredient",
+            Title = L["AddIngredient_Add"],
             Height = "45%",
             ContentParameters = new Dictionary<string, object>
             {

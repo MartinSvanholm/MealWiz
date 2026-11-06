@@ -16,4 +16,60 @@
     <value>Ingredient saved.</value>
     <comment>Toast after saving an ingredient</comment>
   </data>
+  <data name="IngredientDrawer_Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>Ingredient drawer field label</comment>
+  </data>
+  <data name="IngredientDrawer_Amount" xml:space="preserve">
+    <value>Amount</value>
+    <comment>Ingredient drawer field label</comment>
+  </data>
+  <data name="IngredientDrawer_AddToGroceryList" xml:space="preserve">
+    <value>Add to grocery list</value>
+    <comment>Switch: put this ingredient on the grocery list</comment>
+  </data>
+  <data name="AddIngredient_Name" xml:space="preserve">
+    <value>Ingredient</value>
+    <comment>Add row name placeholder and label</comment>
+  </data>
+  <data name="AddIngredient_Amount" xml:space="preserve">
+    <value>Amount</value>
+    <comment>Add row amount placeholder and label</comment>
+  </data>
+  <data name="AddIngredient_Add" xml:space="preserve">
+    <value>Add ingredient</value>
+    <comment>Add button label and the drawer title it opens</comment>
+  </data>
+  <data name="IngredientCard_AddAmount" xml:space="preserve">
+    <value>+ amount</value>
+    <comment>Amount chip when the ingredient has no amount</comment>
+  </data>
+  <data name="IngredientCard_EditTitle" xml:space="preserve">
+    <value>Edit ingredient</value>
+    <comment>Ingredient drawer title when editing</comment>
+  </data>
+  <data name="DeleteIngredient_Aria" xml:space="preserve">
+    <value>Delete {0}</value>
+    <comment>Delete button accessible label; {0} is the ingredient name</comment>
+  </data>
+  <data name="DeleteIngredient_ConfirmTitle" xml:space="preserve">
+    <value>Delete ingredient?</value>
+    <comment>Confirm drawer title</comment>
+  </data>
+  <data name="DeleteIngredient_ConfirmText" xml:space="preserve">
+    <value>Are you sure you want to delete this ingredient?</value>
+    <comment>Confirm drawer message</comment>
+  </data>
+  <data name="DeleteIngredient_Deleted" xml:space="preserve">
+    <value>Ingredient deleted.</value>
+    <comment>Toast after deleting an ingredient</comment>
+  </data>
+  <data name="SaveIngredient_Button" xml:space="preserve">
+    <value>Save ingredient</value>
+    <comment>Save button in the ingredient drawer</comment>
+  </data>
+  <data name="SaveIngredient_NameRequired" xml:space="preserve">
+    <value>Give the ingredient a name.</value>
+    <comment>Warning when saving without a name</comment>
+  </data>
 </root>

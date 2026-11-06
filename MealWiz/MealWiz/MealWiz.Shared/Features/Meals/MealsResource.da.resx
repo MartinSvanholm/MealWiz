@@ -18,4 +18,118 @@
   <data name="Meal_SystemEatOut" xml:space="preserve">
     <value>Spis ude</value>
   </data>
+  <data name="MealsPage_Title" xml:space="preserve">
+    <value>Dine måltider</value>
+  </data>
+  <data name="MealsPage_Count_One" xml:space="preserve">
+    <value>{0} måltid</value>
+  </data>
+  <data name="MealsPage_Count_Other" xml:space="preserve">
+    <value>{0} måltider</value>
+  </data>
+  <data name="MealsPage_Search" xml:space="preserve">
+    <value>Søg i måltider eller ingredienser</value>
+  </data>
+  <data name="MealsPage_FilterAria" xml:space="preserve">
+    <value>Filtrér måltider</value>
+  </data>
+  <data name="MealsPage_FilterAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="MealsPage_FilterThisWeek" xml:space="preserve">
+    <value>Denne uge</value>
+  </data>
+  <data name="MealsPage_FilterNoRecipe" xml:space="preserve">
+    <value>Uden opskrift</value>
+  </data>
+  <data name="MealsPage_Empty" xml:space="preserve">
+    <value>Ingen måltider endnu. Opret et med Ny, eller importér et fra et opskriftslink.</value>
+  </data>
+  <data name="MealsPage_NoMatchSearch" xml:space="preserve">
+    <value>Ingen måltider matcher "{0}".</value>
+  </data>
+  <data name="MealsPage_NoMatchThisWeek" xml:space="preserve">
+    <value>Ingen måltider planlagt denne uge.</value>
+  </data>
+  <data name="MealsPage_NoMatchNoRecipe" xml:space="preserve">
+    <value>Alle måltider har en opskrift.</value>
+  </data>
+  <data name="MealsPage_ImportTitle" xml:space="preserve">
+    <value>Importér fra et opskriftslink</value>
+  </data>
+  <data name="MealsPage_ImportHint" xml:space="preserve">
+    <value>Indsæt et link, så henter vi ingredienserne</value>
+  </data>
+  <data name="MealGrid_Ingredients_One" xml:space="preserve">
+    <value>{0} ingrediens</value>
+  </data>
+  <data name="MealGrid_Ingredients_Other" xml:space="preserve">
+    <value>{0} ingredienser</value>
+  </data>
+  <data name="AddMealMenu_Aria" xml:space="preserve">
+    <value>Tilføj måltid</value>
+  </data>
+  <data name="AddMealMenu_New" xml:space="preserve">
+    <value>Ny</value>
+  </data>
+  <data name="AddMealMenu_CreateManually" xml:space="preserve">
+    <value>Opret selv</value>
+  </data>
+  <data name="AddMealMenu_CreateManuallyHint" xml:space="preserve">
+    <value>Navn, opskrift og ingredienser</value>
+  </data>
+  <data name="AddMealMenu_Import" xml:space="preserve">
+    <value>Importér fra link</value>
+  </data>
+  <data name="AddMealMenu_ImportHint" xml:space="preserve">
+    <value>Indsæt et link til en opskrift</value>
+  </data>
+  <data name="AddMealMenu_ImportInProgress" xml:space="preserve">
+    <value>Import i gang…</value>
+  </data>
+  <data name="AddMealMenu_ImportInProgressHint" xml:space="preserve">
+    <value>Vi tilføjer måltidet, når det er klar</value>
+  </data>
+  <data name="AddMealMenu_ImportFailed" xml:space="preserve">
+    <value>Sidste import fejlede: se hvorfor</value>
+  </data>
+  <data name="EditMeal_Back" xml:space="preserve">
+    <value>Tilbage til måltider</value>
+  </data>
+  <data name="EditMeal_NameLabel" xml:space="preserve">
+    <value>Måltidets navn</value>
+  </data>
+  <data name="EditMeal_NamePlaceholder" xml:space="preserve">
+    <value>Giv dit måltid et navn</value>
+  </data>
+  <data name="EditMeal_Recipe" xml:space="preserve">
+    <value>Opskrift</value>
+  </data>
+  <data name="EditMeal_RecipePlaceholder" xml:space="preserve">
+    <value>Trin, ovntemperatur, små tricks…</value>
+  </data>
+  <data name="EditMeal_Ingredients" xml:space="preserve">
+    <value>Ingredienser</value>
+  </data>
+  <data name="EditMeal_Items_One" xml:space="preserve">
+    <value>{0} ingrediens</value>
+  </data>
+  <data name="EditMeal_Items_Other" xml:space="preserve">
+    <value>{0} ingredienser</value>
+  </data>
+  <data name="DeleteMeal_Button" xml:space="preserve">
+    <value>Slet måltid</value>
+  </data>
+  <data name="DeleteMeal_ConfirmTitle" xml:space="preserve">
+    <value>Slet måltid?</value>
+  </data>
+  <data name="DeleteMeal_ConfirmText" xml:space="preserve">
+    <value>Er du sikker på, at du vil slette måltidet? Det bliver også fjernet fra de madplaner, det er på.</value>
+  </data>
+  <data name="DeleteMeal_Deleted" xml:space="preserve">
+    <value>Måltid slettet</value>
+  </data>
+  <data name="SaveMeal_Saved" xml:space="preserve">
+    <value>Måltid gemt</value>
+  </data>
 </root>
