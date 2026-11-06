@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
+using MealWiz.Shared.Features.GroceryList.UpdateLinkedGroceryAmounts;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
@@ -25,6 +26,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
         SetupItems(_milkInList);
         SetupSources();
         SetupSend<AddPlanIngredientsToGroceryList.Command, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
+        SetupSend<UpdateLinkedGroceryAmounts.Command, Result>(Result.Ok());
         MealPlan.MealPlan = TestData.MealPlanWith(Day, Pancakes(), plannedMealId: 101);
     }
 
@@ -266,6 +268,238 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
         Assert.Equal("1.3 l", Assert.Single(Sent<AddPlanIngredientsToGroceryList.Command>()).Items[1].FinalAmount);
+    }
+
+    // ---- Changed amounts (Was / Now) ----
+
+    /// <summary>Flour on the list as 300 g, linked from Pancakes' Flour, which went from 200 g to 250 g.</summary>
+    private void SetupChangedFlour(string flourInList = "300 g", bool isPicked = false)
+    {
+        SetupItems(_milkInList, TestData.GroceryItem("Flour", flourInList, id: 2, isPicked: isPicked));
+        SetupSources(TestData.ChangedSource(2, 101, 11, "200 g", "250 g", id: 1), TestData.Source(1, 101, 12, "3 dl"));
+    }
+
+    private static IEnumerable<string> RowTexts(IRenderedComponent<AddPlanIngredientsToGroceryListDrawer> cut) =>
+        cut.FindAll(TestId("plan-ingredient-existing")).Select(e => e.TextContent.Trim());
+
+    [Fact]
+    public void A_linked_ingredient_whose_amount_changed_is_offered_with_old_new_and_the_adjusted_total()
+    {
+        SetupChangedFlour();
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("Flour", cut.Find(TestId("plan-ingredient-name")).TextContent);
+        Assert.Equal("Was 200 g · Now 250 g · In list 300 g", cut.Find(TestId("plan-ingredient-existing")).TextContent.Trim());
+        Assert.Equal("250 g", cut.Find(".plan-ingredient-now").TextContent.Replace("Now ", ""));
+        Assert.Equal("350 g", Amount(cut, 0));
+        Assert.Contains("is-duplicate", cut.Find(TestId("plan-ingredient-amount")).ClassList);
+        Assert.Equal("Update 1 on grocery list", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void A_changed_amount_in_another_unit_leaves_the_total_empty_and_required()
+    {
+        SetupChangedFlour(flourInList: "1 pack");
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("", Amount(cut, 0));
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+        Assert.Empty(Sent<UpdateLinkedGroceryAmounts.Command>());
+    }
+
+    [Fact]
+    public void A_change_only_in_case_or_spaces_is_not_offered()
+    {
+        SetupItems(_milkInList, TestData.GroceryItem("Flour", "300 g", id: 2));
+        SetupSources(TestData.ChangedSource(2, 101, 11, "200 G", " 200 g "), TestData.Source(1, 101, 12, "3 dl"));
+
+        var cut = RenderLoaded(0);
+
+        Assert.NotEmpty(cut.FindAll(TestId("plan-ingredients-all-on-list")));
+    }
+
+    [Fact]
+    public void A_changed_ingredient_whose_item_is_in_the_basket_is_left_out()
+    {
+        SetupChangedFlour(isPicked: true);
+
+        var cut = RenderLoaded(0);
+
+        Assert.NotEmpty(cut.FindAll(TestId("plan-ingredients-all-on-list")));
+    }
+
+    [Fact]
+    public void A_changed_ingredient_not_shown_on_the_grocery_list_is_left_out()
+    {
+        SetupChangedFlour();
+        MealPlan.MealPlan = TestData.MealPlanWith(Day, TestData.Meal(
+            "Pancakes", id: 5,
+            ingredients: [TestData.Ingredient("Flour", "200g", id: 11, showOnGroceryList: false), TestData.Ingredient("milk", "3 dl", id: 12)]),
+            plannedMealId: 101);
+
+        var cut = RenderLoaded(0);
+
+        Assert.NotEmpty(cut.FindAll(TestId("plan-ingredients-all-on-list")));
+    }
+
+    [Fact]
+    public void A_stale_source_is_not_offered_as_changed()
+    {
+        SetupItems(_milkInList, TestData.GroceryItem("Flour", "300 g", id: 2));
+        var stale = TestData.ChangedSource(2, 101, 11, "200 g", "250 g", id: 1);
+        stale.PlannedDayMealId = 99;
+        SetupSources(stale, TestData.Source(1, 101, 12, "3 dl"));
+
+        var cut = RenderLoaded(0);
+
+        Assert.NotEmpty(cut.FindAll(TestId("plan-ingredients-all-on-list")));
+    }
+
+    [Fact]
+    public void Changed_ingredients_outside_the_given_dates_are_not_offered()
+    {
+        SetupChangedFlour();
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, Pancakes(), 101),
+            (Day.AddDays(1), TestData.Meal("Soup", id: 8, ingredients: [TestData.Ingredient("Feta", "150 g", id: 22)]), 102));
+
+        var cut = Render<AddPlanIngredientsToGroceryListDrawer>(p => p.Add(x => x.Dates, new[] { Day.AddDays(1) }));
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(TestId("plan-ingredient-item"))));
+
+        Assert.Equal("Feta", cut.Find(TestId("plan-ingredient-name")).TextContent);
+    }
+
+    [Fact]
+    public void New_and_changed_rows_are_listed_in_plan_order_and_counted_together()
+    {
+        SetupChangedFlour();
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, Pancakes(), 101),
+            (Day.AddDays(1), TestData.Meal("Soup", id: 8, ingredients: [TestData.Ingredient("Feta", "150 g", id: 22)]), 102));
+
+        var cut = RenderLoaded(2);
+
+        Assert.Equal(["Flour", "Feta"], cut.FindAll(TestId("plan-ingredient-name")).Select(e => e.TextContent));
+        Assert.Equal("Add 2 to grocery list", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
+    }
+
+    private void SetupTwoChangedGarlic()
+    {
+        SetupItems(TestData.GroceryItem("Garlic", "30 g", id: 3));
+        SetupSources(
+            TestData.ChangedSource(3, 101, 21, "20 g", "30 g", id: 1),
+            TestData.ChangedSource(3, 102, 22, "10 g", "15 g", id: 2));
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, TestData.Meal("Soup", id: 8, ingredients: [TestData.Ingredient("Garlic", "30 g", id: 21)]), 101),
+            (Day.AddDays(1), TestData.Meal("Salad", id: 9, ingredients: [TestData.Ingredient("Garlic", "15 g", id: 22)]), 102));
+    }
+
+    [Fact]
+    public void Two_changed_sources_on_one_item_share_one_row_and_adjust_in_turn()
+    {
+        SetupTwoChangedGarlic();
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("Was 20 g + 10 g · Now 30 g + 15 g · In list 30 g", cut.Find(TestId("plan-ingredient-existing")).TextContent.Trim());
+        Assert.Equal("45 g", Amount(cut, 0));
+
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()));
+        Assert.Equal([(1, 3, "30 g", "45 g"), (2, 3, "15 g", "45 g")],
+            Sent<UpdateLinkedGroceryAmounts.Command>()[0].Updates.Select(u => (u.SourceId, u.GroceryItemId, u.SourceAmount, u.FinalAmount)));
+    }
+
+    private void SetupChangedFlourAndNewBreadFlour()
+    {
+        SetupChangedFlour();
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, Pancakes(), 101),
+            (Day.AddDays(1), TestData.Meal("Bread", id: 10, ingredients: [TestData.Ingredient("Flour", "500 g", id: 31)]), 102));
+    }
+
+    [Fact]
+    public void A_changed_item_that_a_new_ingredient_also_matches_gets_one_row()
+    {
+        SetupChangedFlourAndNewBreadFlour();
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("Plan 500 g · Was 200 g · Now 250 g · In list 300 g", cut.Find(TestId("plan-ingredient-existing")).TextContent.Trim());
+        Assert.Equal("850 g", Amount(cut, 0));
+
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()));
+        var added = Assert.Single(Sent<AddPlanIngredientsToGroceryList.Command>()).Items;
+        Assert.Equal([(102, 31, (int?)2, "850 g")], added.Select(i => (i.PlannedMealId, i.Ingredient.Id, i.ExistingGroceryItemId, i.FinalAmount)));
+        var update = Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()[0].Updates);
+        Assert.Equal((1, 2, "250 g", "850 g"), (update.SourceId, update.GroceryItemId, update.SourceAmount, update.FinalAmount));
+    }
+
+    [Fact]
+    public void Confirm_updates_changed_rows_and_closes_the_drawer()
+    {
+        SetupChangedFlour();
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
+        var cut = RenderLoaded(1);
+
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Empty(Sent<AddPlanIngredientsToGroceryList.Command>());
+        var update = Assert.Single(Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()).Updates);
+        Assert.Equal((1, 2, "250 g", "350 g"), (update.SourceId, update.GroceryItemId, update.SourceAmount, update.FinalAmount));
+        Assert.Equal(2, Sent<GetAllGroceryItems.Query>().Count);
+        Assert.Equal(2, Sent<GetGroceryItemSources.Query>().Count);
+        Assert.Contains("Grocery list updated", SnackbarMessages);
+    }
+
+    [Fact]
+    public void A_typed_total_is_sent_instead_of_the_suggestion()
+    {
+        SetupChangedFlour();
+        var cut = RenderLoaded(1);
+
+        cut.FindAll(InputOf("plan-ingredient-amount-input"))[0].Input("400 g");
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()));
+        Assert.Equal("400 g", Sent<UpdateLinkedGroceryAmounts.Command>()[0].Updates[0].FinalAmount);
+    }
+
+    [Fact]
+    public void A_failed_update_shows_the_error_and_keeps_the_drawer_open_with_the_typed_amount()
+    {
+        SetupChangedFlour();
+        SetupSend<UpdateLinkedGroceryAmounts.Command, Result>(Result.Fail("Update failed"));
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
+        var cut = RenderLoaded(1);
+
+        cut.FindAll(InputOf("plan-ingredient-amount-input"))[0].Input("400 g");
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Update failed", SnackbarMessages));
+        Assert.True(Drawer.IsDrawerOpen);
+        Assert.Equal("400 g", Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()).Updates[0].FinalAmount);
+        Assert.Single(Sent<GetAllGroceryItems.Query>());
+    }
+
+    [Fact]
+    public void A_failed_add_sends_no_update_and_keeps_the_drawer_open()
+    {
+        SetupChangedFlourAndNewBreadFlour();
+        SetupSend<AddPlanIngredientsToGroceryList.Command, Result<List<GroceryItem>>>(Result.Fail<List<GroceryItem>>("Add failed"));
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
+        var cut = RenderLoaded(1);
+
+        cut.Find(TestId("plan-ingredients-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Add failed", SnackbarMessages));
+        Assert.True(Drawer.IsDrawerOpen);
+        Assert.Empty(Sent<UpdateLinkedGroceryAmounts.Command>());
     }
 
     [Fact]
