@@ -44,4 +44,11 @@ public static class TestData
 
     public static GroceryItemSource Source(int groceryItemId, int? plannedMealId, int? ingredientId, string amount = "", int id = 0) =>
         new() { Id = id, GroceryItemId = groceryItemId, PlannedMealId = plannedMealId, IngredientId = ingredientId, Amount = amount };
+
+    public static GroceryItemSource ChangedSource(int groceryItemId, int plannedMealId, int ingredientId, string oldAmount, string newAmount, int id = 0) =>
+        new()
+        {
+            Id = id, GroceryItemId = groceryItemId, PlannedMealId = plannedMealId, IngredientId = ingredientId,
+            Amount = oldAmount, IngredientAmount = newAmount, PlannedDayMealId = 1, IngredientMealId = 1
+        };
 }
