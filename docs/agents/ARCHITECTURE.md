@@ -490,7 +490,7 @@ _drawerStateContainer.OpenDrawer(new DrawerStateParameters
 });
 ```
 
-For a confirmation, call `OpenConfirmDrawer(title, description, onConfirm)`. The container keeps `onConfirm` for that
+For a confirmation, call `OpenConfirmDrawer(title, description, onConfirm, confirmLabel = null)`. The container keeps `onConfirm` for that
 one confirmation only: Confirm awaits it, and closing the confirm drawer (confirmed or dismissed) drops it. Call
 `CloseDrawer()` at the end of `onConfirm`. `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`
 is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFragment, Type)` and
@@ -499,7 +499,7 @@ is the reference. The overloads `OpenDrawer(string, Type)`, `OpenDrawer(RenderFr
 The drawer shell (sheet, grab handle, close/back button, 22px title) is DrawerBase's job; content only renders its
 fields. Set `HeaderAction` (a `RenderFragment`) on `DrawerStateParameters` for a button on the right of the header,
 such as a red delete. Put the content's primary button inside `<DrawerFooter>` (`Components/Drawers/DrawerFooter.razor`):
-it becomes the full-width 52px orange button at the bottom. The confirm drawer always shows Cancel and a red Delete.
+it becomes the full-width 52px orange button at the bottom. The confirm drawer shows Cancel and a red confirm button labelled Delete, or `confirmLabel` (e.g. "Discard" on Plan week).
 
 ### Theme tokens (UI-02)
 
