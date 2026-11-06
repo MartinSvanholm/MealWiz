@@ -3,10 +3,11 @@
 @inject IMealImportStateContainer _mealImportStateContainer
 @inject IMealsStateContainer _mealsStateContainer
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealImportResource> L
 @implements IDisposable
 
 <div class="mw-page mw-import-page">
-    <SubPageHeader Label="From a recipe link" Title="Import meal" BackTestId="import-back" OnBack="OnBackClick" />
+    <SubPageHeader Label="@L["ImportPage_HeaderLabel"]" Title="@L["ImportPage_HeaderTitle"]" BackTestId="import-back" OnBack="OnBackClick" />
 
     <div class="mw-import-content">
         @if (IsBusy)
@@ -16,19 +17,19 @@
 
                 @if (_mealImportStateContainer.IsRunningInBackground)
                 {
-                    <span class="mw-import-progress-title">Importing in the background</span>
-                    <span class="mw-import-muted">We'll add the meal to your list when it's done.</span>
-                    <MudButton data-testid="import-back-to-meals" Variant="Variant.Outlined" Color="Color.Default" OnClick="OnBackClick">Back to meals</MudButton>
+                    <span class="mw-import-progress-title">@L["ImportPage_InBackgroundTitle"]</span>
+                    <span class="mw-import-muted">@L["ImportPage_InBackgroundHint"]</span>
+                    <MudButton data-testid="import-back-to-meals" Variant="Variant.Outlined" Color="Color.Default" OnClick="OnBackClick">@L["ImportPage_BackToMeals"]</MudButton>
                 }
                 else
                 {
-                    <span class="mw-import-progress-title">Fetching and parsing your meal…</span>
+                    <span class="mw-import-progress-title">@L["ImportPage_Fetching"]</span>
                     <span class="mw-import-muted mw-import-url">@_mealImportStateContainer.CurrentImport?.SourceUrl</span>
 
                     @if (_mealImportStateContainer.CanContinueInBackground)
                     {
-                        <span class="mw-import-muted">This is taking a while. You can keep using the app; we'll add the meal when it's ready.</span>
-                        <MudButton data-testid="import-continue-background" Variant="Variant.Outlined" Color="Color.Default" OnClick="OnContinueInBackgroundClick">Continue in background</MudButton>
+                        <span class="mw-import-muted">@L["ImportPage_SlowHint"]</span>
+                        <MudButton data-testid="import-continue-background" Variant="Variant.Outlined" Color="Color.Default" OnClick="OnContinueInBackgroundClick">@L["ImportPage_ContinueInBackground"]</MudButton>
                     }
                 }
             </section>
@@ -40,7 +41,7 @@
                 <section class="mw-import-alert" role="alert" data-testid="import-job-error">
                     <span class="mw-import-alert-icon" aria-hidden="true">!</span>
                     <span class="mw-import-alert-text">
-                        <span class="mw-import-alert-title">The import failed</span>
+                        <span class="mw-import-alert-title">@L["ImportPage_JobFailed"]</span>
                         <span class="mw-import-alert-reason">@_mealImportStateContainer.JobErrorMessage</span>
                         @if (!string.IsNullOrEmpty(_mealImportStateContainer.CurrentImport?.SourceUrl))
                         {
@@ -54,7 +55,7 @@
                 <section class="mw-import-alert" role="alert" data-testid="import-latest-failed">
                     <span class="mw-import-alert-icon" aria-hidden="true">!</span>
                     <span class="mw-import-alert-text">
-                        <span class="mw-import-alert-title">Your last import failed</span>
+                        <span class="mw-import-alert-title">@L["ImportPage_LatestFailed"]</span>
                         <span class="mw-import-alert-reason">@_mealImportStateContainer.LatestErrorMessage</span>
                         @if (!string.IsNullOrEmpty(_mealImportStateContainer.LatestImport?.SourceUrl))
                         {
@@ -69,11 +70,11 @@
                     <span class="mw-import-form-icon">
                         <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Inherit" Size="Size.Small" />
                     </span>
-                    <p>Paste a link to a meal and we'll fill it in for you.</p>
+                    <p>@L["ImportPage_Intro"]</p>
                 </div>
 
                 <MudTextField data-testid="import-url-input" @bind-Value="_url"
-                              Label="Meal URL"
+                              Label="@L["ImportPage_UrlLabel"]"
                               Placeholder="https://"
                               Variant="Variant.Outlined"
                               InputType="InputType.Url"
@@ -85,7 +86,7 @@
                               OnKeyDown="OnUrlKeyDown" />
 
                 <MudButton data-testid="import-submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth OnClick="StartImport">
-                    @(_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed ? "Try again" : "Import")
+                    @(_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed ? L["ImportPage_TryAgain"] : L["ImportPage_Import"])
                 </MudButton>
             </section>
         }

@@ -19,6 +19,7 @@ namespace MealWiz.Shared.Tests.Features.MealImport.ComponentTests;
 public class ImportMealPageTests : ComponentTestBase
 {
     private const string Url = "https://example.com/pancakes";
+    private const string EnglishDetail = "English detail from the Function";
 
     public ImportMealPageTests()
     {
@@ -166,6 +167,84 @@ public class ImportMealPageTests : ComponentTestBase
         Assert.Contains(Url, alert);
     }
 
+    public static TheoryData<MealImportErrorCode> ErrorCodes() => new(Enum.GetValues<MealImportErrorCode>());
+
+    private static string MessageFor(MealImportErrorCode? code) => TestLocalizer.For<MealImportResource>().ToMessage(code);
+
+    private void JobFailed(MealImportErrorCode? code)
+    {
+        MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Failed);
+        MealImport.SetupGet(m => m.JobErrorMessage).Returns(MessageFor(code));
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel
+        {
+            SourceUrl = Url,
+            Status = MealImportStatus.Failed,
+            ErrorCode = code,
+            ErrorMessage = EnglishDetail
+        });
+    }
+
+    private void LatestFailed(MealImportErrorCode? code)
+    {
+        MealImport.SetupGet(m => m.LatestImportFailed).Returns(true);
+        MealImport.SetupGet(m => m.LatestErrorMessage).Returns(MessageFor(code));
+        MealImport.SetupGet(m => m.LatestImport).Returns(new MealImportModel
+        {
+            SourceUrl = Url,
+            Status = MealImportStatus.Failed,
+            ErrorCode = code,
+            ErrorMessage = EnglishDetail
+        });
+    }
+
+    [Theory]
+    [MemberData(nameof(ErrorCodes))]
+    public void A_failed_job_shows_the_message_for_its_code_not_the_stored_detail(MealImportErrorCode code)
+    {
+        JobFailed(code);
+
+        var cut = Render<ImportMealPage>();
+
+        var alert = cut.Find(TestId("import-job-error")).TextContent;
+        Assert.Contains("The import failed", alert);
+        Assert.Contains(MessageFor(code), alert);
+        Assert.DoesNotContain(EnglishDetail, cut.Markup);
+    }
+
+    [Fact]
+    public void A_failed_job_without_a_code_shows_the_generic_message()
+    {
+        JobFailed(null);
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains(TestLocalizer.For<MealImportResource>()["ImportError_Unknown"].Value, cut.Find(TestId("import-job-error")).TextContent);
+        Assert.DoesNotContain(EnglishDetail, cut.Markup);
+    }
+
+    [Theory]
+    [MemberData(nameof(ErrorCodes))]
+    public void A_previously_failed_import_shows_the_message_for_its_code_not_the_stored_detail(MealImportErrorCode code)
+    {
+        LatestFailed(code);
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains(MessageFor(code), cut.Find(TestId("import-latest-failed")).TextContent);
+        Assert.DoesNotContain(EnglishDetail, cut.Markup);
+    }
+
+    [Fact]
+    public void A_previously_failed_import_without_a_code_shows_the_generic_message()
+    {
+        LatestFailed(null);
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains(TestLocalizer.For<MealImportResource>()["ImportError_Unknown"].Value, cut.Find(TestId("import-latest-failed")).TextContent);
+        Assert.DoesNotContain(EnglishDetail, cut.Markup);
+    }
+
     [Fact]
     public void A_success_while_waiting_opens_the_parsed_meal_in_the_edit_form()
     {
@@ -223,5 +302,66 @@ public class ImportMealPageTests : ComponentTestBase
         await DisposeComponentsAsync();
 
         MealImport.Verify(m => m.ContinueInBackground(), Times.Once);
+    }
+}
+
+/// <summary>
+/// The import page's texts come from <see cref="MealImportResource"/> (UI-03): every localizer echoes its key as
+/// <c>[Key]</c>, so a hard-coded text fails these tests. The English texts are asserted by <see cref="ImportMealPageTests"/>.
+/// </summary>
+public class ImportMealPageTextTests() : ComponentTestBase(echoResourceKeys: true)
+{
+    [Fact]
+    public void Idle_page_texts_come_from_resources()
+    {
+        var cut = Render<ImportMealPage>();
+
+        Assert.Equal("[ImportPage_HeaderLabel]", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Equal("[ImportPage_HeaderTitle]", cut.Find(TestId("screen-header-title")).TextContent.Trim());
+        Assert.Contains("[ImportPage_Intro]", cut.Find(TestId("import-form")).TextContent);
+        Assert.Contains("[ImportPage_UrlLabel]", cut.Markup);
+        Assert.Equal("[ImportPage_Import]", cut.Find(TestId("import-submit")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Failed_job_texts_come_from_resources()
+    {
+        MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Failed);
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel { Status = MealImportStatus.Failed });
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains("[ImportPage_JobFailed]", cut.Find(TestId("import-job-error")).TextContent);
+        Assert.Equal("[ImportPage_TryAgain]", cut.Find(TestId("import-submit")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Latest_failed_title_comes_from_resources()
+    {
+        MealImport.SetupGet(m => m.LatestImportFailed).Returns(true);
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains("[ImportPage_LatestFailed]", cut.Find(TestId("import-latest-failed")).TextContent);
+    }
+
+    [Theory]
+    [InlineData(false, false, "[ImportPage_Fetching]")]
+    [InlineData(true, false, "[ImportPage_SlowHint]")]
+    [InlineData(true, false, "[ImportPage_ContinueInBackground]")]
+    [InlineData(false, true, "[ImportPage_InBackgroundTitle]")]
+    [InlineData(false, true, "[ImportPage_InBackgroundHint]")]
+    [InlineData(false, true, "[ImportPage_BackToMeals]")]
+    public void Progress_texts_come_from_resources(bool canContinueInBackground, bool inBackground, string expected)
+    {
+        MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.AwaitingResult);
+        MealImport.SetupGet(m => m.IsImportInProgress).Returns(true);
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel { SourceUrl = "https://example.com" });
+        MealImport.SetupGet(m => m.CanContinueInBackground).Returns(canContinueInBackground);
+        MealImport.SetupGet(m => m.IsRunningInBackground).Returns(inBackground);
+
+        var cut = Render<ImportMealPage>();
+
+        Assert.Contains(expected, cut.Find(TestId("import-progress")).TextContent);
     }
 }
