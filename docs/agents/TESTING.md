@@ -55,6 +55,8 @@ only on green CI. While iterating, run just the project or class you're touching
 | A state container | Unit test in `Features/<F>/UnitTests/State/`, with `IMediator` mocked | fast, then local |
 | A model or its mapping | Unit test in `Features/<F>/UnitTests/Models/` | fast, then local |
 | A helper or service | Unit test in `Helpers/UnitTests/` or `Services/<Svc>/UnitTests/` | fast, then local |
+| UI text or a `.resx` | English and Danish values; `ResourceCompletenessTests` checks them. bUnit asserts the English text | fast, then local |
+| Localization setup (`Localization/`) | Unit test in `Localization/UnitTests/` | fast, then local |
 | DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
 | A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
 | Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
@@ -97,7 +99,8 @@ set to a few minutes. Everything else is `E2E` only.
 Features/<Feature>/UnitTests/{Models,State,Handlers}/
 Features/<Feature>/ComponentTests/
 Features/<Feature>/IntegrationTests/<Feature>HandlerTests.cs
-Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Theme/UnitTests/   Services/<Svc>/UnitTests/
+Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Localization/UnitTests/   Theme/UnitTests/
+Services/<Svc>/UnitTests/
 TestInfrastructure/
 ```
 
@@ -110,6 +113,9 @@ TestInfrastructure/
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
     `SnackbarMessages`, `CurrentPath`.
+  - It registers the real localization (`AddLocalization()`, `MealWizMudLocalizer`), so components render their
+    English resource texts. `ComponentTestBase(echoResourceKeys: true)` swaps in `EchoStringLocalizerFactory`, whose
+    localizers return `[Key]`: assert `[Nav_Plan]` to prove a text comes from a resource (`ShellTextTests`).
 - `LocalSupabaseFixture.cs` is shared per class through `IClassFixture`.
   - It creates a throwaway user (`shared-tests-<guid>@mealwiz.test`) and signs it in with the **anon key**, so every
     query goes through RLS.
@@ -122,6 +128,8 @@ TestInfrastructure/
 - `TestData.cs` provides in-memory models for unit and bUnit tests.
 - `ResultAssert.cs`: `Ok(result)` returns the value; `Failed(result[, message])`. A failure message includes the errors.
 - `TimeAssert.cs`: `CloseTo(expected, actual)`, with one minute of tolerance.
+- `CultureScope.cs`: `using var _ = CultureScope.Use("da");` runs the rest of the test in Danish (current culture and
+  UI culture, this async flow only).
 - `AuthTestHelper.cs`: `RoutedPage(typeof(Page))` renders a page with the real `[Authorize]` wiring.
 
 **Integration test shape:**
@@ -233,6 +241,18 @@ an UPDATE or DELETE policy may not change effective access, and `policies_are` i
 `meal_plans_duplicates_cleanup.test.sql` tests a migration's one-off data clean-up rather than a table. It drops the
 constraints inside its transaction, recreates duplicates, runs the migration's statements (copied verbatim, since
 migrations never change after merging) and checks what is left.
+
+### Language: tests run in English
+
+Every test project has an `xunit.runner.json` with `"culture": "en-US"`, which sets the default culture and UI
+culture for the whole run, so English assertions hold on a Danish machine. E2E browser contexts get
+`Locale = "en-US"` (`E2ETestBase`), because the app picks its language from the browser's. There are no Danish
+bUnit or E2E render tests. Danish is covered by:
+
+- `Localization/UnitTests/ResourceCompletenessTests.cs` (`shared-unit`): every resource embedded in MealWiz.Shared
+  has a `da` satellite with the same keys, no empty value, the same `{n}` placeholders, and `_One`/`_Other` plural
+  pairs. A new `.resx` is picked up automatically; it fails until the `.da.resx` is complete.
+- Unit tests that need Danish output (dates, messages) wrap the call in `CultureScope.Use("da")`.
 
 ## Writing a new test
 
