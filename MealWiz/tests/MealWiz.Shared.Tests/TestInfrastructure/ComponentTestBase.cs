@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Time.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using Moq;
 using MudBlazor;
 using MudBlazor.Services;
@@ -60,7 +61,15 @@ public abstract class ComponentTestBase : BunitContext
     /// <summary>bUnit's fake authentication; see <see cref="AuthTestHelper"/>.</summary>
     protected BunitAuthorizationContext Auth { get; }
 
-    protected ComponentTestBase()
+    protected ComponentTestBase() : this(echoResourceKeys: false)
+    {
+    }
+
+    /// <param name="echoResourceKeys">
+    /// Every <c>IStringLocalizer</c> returns <c>[Key]</c> instead of the resource text, so a test can prove a text
+    /// comes from a resource and isn't hard-coded (<see cref="EchoStringLocalizerFactory"/>).
+    /// </param>
+    protected ComponentTestBase(bool echoResourceKeys)
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
 
@@ -72,6 +81,8 @@ public abstract class ComponentTestBase : BunitContext
         // The real .resx resources, as the hosts register them; the run is pinned to en-US (xunit.runner.json).
         Services.AddLocalization();
         Services.Replace(ServiceDescriptor.Transient<MudLocalizer, MealWizMudLocalizer>());
+        if (echoResourceKeys)
+            Services.AddSingleton<IStringLocalizerFactory, EchoStringLocalizerFactory>();
 
         Meals = new MealsStateContainer(Mediator.Object);
         GroceryList = new GroceryListStateContainer(Mediator.Object);

@@ -1,4 +1,7 @@
-﻿<CascadingAuthenticationState>
+﻿@using MealWiz.Shared.Localization
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> L
+<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(MealWiz.Shared._Imports).Assembly}">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MealWiz.Shared.Layout.MainLayout)">
@@ -6,15 +9,15 @@
                     <RedirectToLogin />
                 </NotAuthorized>
                 <Authorizing>
-                    Authorizing...
+                    @L["Route_Authorizing"]
                 </Authorizing>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>
-            <PageTitle>Not found</PageTitle>
+            <PageTitle>@L["Route_NotFoundTitle"]</PageTitle>
             <LayoutView Layout="@typeof(MealWiz.Shared.Layout.MainLayout)">
-                <p role="alert">Sorry, there's nothing at this address.</p>
+                <p role="alert">@L["Route_NotFoundMessage"]</p>
             </LayoutView>
         </NotFound>
     </Router>

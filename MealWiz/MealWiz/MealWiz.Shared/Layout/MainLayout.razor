@@ -4,6 +4,8 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject Client _supabaseClient
 @inject IThemeService ThemeService
+@inject IStringLocalizer<SharedResource> L
+@inject IJSRuntime JS
 
 @* The data-theme hook the --mw-* tokens in css/mealwiz.css key off. It wraps the popover and snackbar providers
    so menus, drawer overlays and snackbars get the tokens too. display: contents keeps it out of the layout. *@
@@ -22,7 +24,7 @@
            area ends with padding-bottom: var(--mw-nav-clearance) (css/mealwiz.css). *@
         <AuthorizeView>
             <Authorized>
-                <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="Main">
+                <nav data-testid="bottom-nav" class="mw-bottom-nav" aria-label="@L["Nav_Main"]">
                     <NavMenu />
                 </nav>
             </Authorized>
@@ -38,6 +40,15 @@
     {
         ThemeService.OnChange += StateHasChanged;
         await ThemeService.InitializeAsync();
+    }
+
+    // <html lang> follows the UI language. index.html sets it before Blazor boots; this makes the C# culture the
+    // final word (the MAUI head's index.html can't read the stored choice from Preferences).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("document.documentElement.setAttribute", "lang",
+                System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
     }
 
     public void Dispose() => ThemeService.OnChange -= StateHasChanged;
