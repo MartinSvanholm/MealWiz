@@ -23,6 +23,13 @@ public interface IGroceryListStateContainer
     Task DeleteGroceryItem(GroceryItem groceryItem);
     /// <summary>Deletes every picked item ("Clear" next to "In the basket").</summary>
     Task ClearBasket();
+    /// <summary>Items from meals no longer in the plan; computed from the loaded items and sources.</summary>
+    IReadOnlyList<GroceryItem> StaleItems { get; }
+    /// <summary>
+    /// Review clean-up: unlinks <paramref name="unlinkIds"/> (they stay as manual items), then deletes
+    /// <paramref name="deleteIds"/>. False when a request failed (the toast is shown).
+    /// </summary>
+    Task<bool> DeleteAndUnlinkGroceryItems(List<int> deleteIds, List<int> unlinkIds);
 }
 
 public class GroceryListStateContainer(
@@ -112,5 +119,39 @@ public class GroceryListStateContainer(
         GroceryList.Items.RemoveAll(picked.Contains);
         Sources.RemoveAll(source => picked.Any(item => item.Id == source.GroceryItemId));
         NotifyStateChanged();
+    }
+
+    public IReadOnlyList<GroceryItem> StaleItems => StaleGroceryItems.Find(GroceryList.Items, Sources);
+
+    public async Task<bool> DeleteAndUnlinkGroceryItems(List<int> deleteIds, List<int> unlinkIds)
+    {
+        var changed = false;
+
+        if (unlinkIds.Count > 0)
+        {
+            var unlinked = await mediator.Send(new UnlinkGroceryItems.UnlinkGroceryItems.Command(unlinkIds));
+            if (unlinked.Handle(CurrentSnackbar).IsFailed) return false;
+
+            foreach (var item in GroceryList.Items.Where(item => unlinkIds.Contains(item.Id))) item.IsManual = true;
+            Sources.RemoveAll(source => unlinkIds.Contains(source.GroceryItemId));
+            changed = true;
+        }
+
+        if (deleteIds.Count > 0)
+        {
+            var deleted = await mediator.Send(new DeleteGroceryItems.DeleteGroceryItems.Command(deleteIds));
+            if (deleted.Handle(CurrentSnackbar).IsFailed)
+            {
+                if (changed) NotifyStateChanged();
+                return false;
+            }
+
+            GroceryList.Items.RemoveAll(item => deleteIds.Contains(item.Id));
+            Sources.RemoveAll(source => deleteIds.Contains(source.GroceryItemId));
+            changed = true;
+        }
+
+        if (changed) NotifyStateChanged();
+        return true;
     }
 }
