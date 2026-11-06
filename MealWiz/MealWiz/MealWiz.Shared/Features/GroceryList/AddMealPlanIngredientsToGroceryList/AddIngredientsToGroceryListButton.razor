@@ -22,12 +22,6 @@
             _loading = false;
         }
 
-        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
-        {
-            Content = typeof(AddPlanIngredientsToGroceryListDrawer),
-            Title = "From meal plan",
-            Width = "100%",
-            Height = "calc(100% - 64px)"
-        });
+        AddPlanIngredientsToGroceryListDrawer.Open(_drawerStateContainer, "From meal plan");
     }
 }

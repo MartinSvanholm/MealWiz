@@ -20,7 +20,7 @@ adds every E2E journey.
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
 | `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (9 cases) | smoke | Docker + Chromium |
+| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (10 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
@@ -116,7 +116,7 @@ TestInfrastructure/
   - It exposes `Client`, `UserId`, `GetOtherUserAsync()` (a second user, for cross-user checks),
     `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
-- `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder`. Each has fluent
+- `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder` (whose `InsertAsync` fills `PlannedMealIdOnDate`). Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
   `ClientExtensions` adds `CurrentUserId()` and `UniqueSuffix()`.
 - `TestData.cs` provides in-memory models for unit and bUnit tests.
@@ -212,7 +212,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 ### pgTAP: `supabase/tests/database/`
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
-`meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+`grocery_item_sources`, `meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
 names. Each file follows the same pattern:
 
 ```sql

@@ -26,10 +26,10 @@ public class MealSelectionListTests : ComponentTestBase
     {
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal> { _pasta, _leftovers, _tacos, _eatOut }));
         SetupSend<CreateMealPlan.Command, Result<MealPlan>>(Result.Ok(new MealPlan(DateTime.Today) { Id = 3 }));
-        // The handler echoes the meal back with its date set.
+        // The handler returns the id of the planned day it inserted.
         Mediator
             .Setup(m => m.Send(It.IsAny<AddMealToMealPlan.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IRequest<Result<Meal>> request, CancellationToken _) => Result.Ok(((AddMealToMealPlan.Command)request).Meal));
+            .ReturnsAsync(Result.Ok(42));
     }
 
     /// <summary>Plans the meal on the selected date and starts swapping it, as the card's Swap meal button does.</summary>

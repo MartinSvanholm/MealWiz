@@ -4,6 +4,7 @@ using Bunit.TestDoubles;
 using FluentResults;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
+using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -101,6 +102,7 @@ public abstract class ComponentTestBase : BunitContext
         // Empty-but-successful defaults for the loads that pages and containers fire on init.
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
+        SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>()));
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(null));
         SetupSend<GetMealPlannedDates.Query, Result<List<PlannedMealDate>>>(Result.Ok(new List<PlannedMealDate>()));
         MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Idle);

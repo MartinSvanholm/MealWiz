@@ -1,87 +1,188 @@
+@using MealWiz.Shared.Features.Ingredients.Models
+@using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMediator _mediator
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 
-@* The week's ingredients as one compact list, each with its amount on the right. Ingredients already on the list
-   show both amounts and an empty, orange-outlined field for the total. Matches update the existing item; the rest are
-   inserted in bulk. *@
-@* Flex column so DrawerFooter sits at the bottom of the drawer. *@
-<MudForm @ref="_form" Style="flex: 1 1 auto; display: flex; flex-direction: column; padding-top: 4px;">
-    <ul class="plan-ingredients">
-        @for (var i = 0; i < _mergeItems.Count; i++)
-        {
-            var item = _mergeItems[i];
-            var index = i;
-            <li class="plan-ingredient" data-testid="plan-ingredient-item">
-                <div class="plan-ingredient-text">
-                    <span class="plan-ingredient-name">@item.Name</span>
-                    @if (item.IsDuplicate)
-                    {
-                        <span class="plan-ingredient-existing" data-testid="plan-ingredient-existing">Plan @item.PlanAmount · <span class="plan-ingredient-in-list">In list @item.ExistingAmount</span></span>
-                    }
-                </div>
-                <div class="plan-ingredient-amount @(item.IsDuplicate ? "is-duplicate" : "")" data-testid="plan-ingredient-amount">
-                    <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input"
-                                  Placeholder="Total"
-                                  aria-label="@($"Amount for {item.Name}")"
-                                  @bind-Value="item.FinalAmount"
-                                  Immediate
-                                  OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
-                                  Variant="Variant.Outlined"
-                                  Margin="Margin.Dense"
-                                  Required="true"
-                                  RequiredError="Required" />
-                </div>
-            </li>
-        }
-    </ul>
+@* The planned ingredients that are not linked from their planned day yet, as one compact list with each amount on the
+   right. A name already on the list (or shared by several planned days) shows every amount and a suggested total in an
+   orange-outlined field. The command updates merged items, inserts the rest and links every ingredient to its day.
+   Open it for a whole week or for the given dates. *@
+@if (_state == DrawerState.Loading)
+{
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-loading">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+    </div>
+}
+else if (_state == DrawerState.NothingPlanned)
+{
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-empty">There's nothing from the meal plan to add.</div>
+}
+else if (_state == DrawerState.AllLinked)
+{
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-all-on-list">Everything is already on your list</div>
+}
+else
+{
+    @* Flex column so DrawerFooter sits at the bottom of the drawer. *@
+    <MudForm @ref="_form" Style="flex: 1 1 auto; display: flex; flex-direction: column; padding-top: 4px;">
+        <ul class="plan-ingredients">
+            @for (var i = 0; i < _rows.Count; i++)
+            {
+                var row = _rows[i];
+                var index = i;
+                <li class="plan-ingredient" data-testid="plan-ingredient-item">
+                    <div class="plan-ingredient-text">
+                        <span class="plan-ingredient-name" data-testid="plan-ingredient-name">@row.Name</span>
+                        @if (row.IsMerged)
+                        {
+                            <span class="plan-ingredient-existing" data-testid="plan-ingredient-existing">@row.PlanLabel@if (row.Existing != null){<text> · </text><span class="plan-ingredient-in-list">In list @AmountText(row.Existing.Amount)</span>}</span>
+                        }
+                    </div>
+                    <div class="plan-ingredient-amount @(row.IsMerged ? "is-duplicate" : "")" data-testid="plan-ingredient-amount">
+                        <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input"
+                                      Placeholder="Total"
+                                      aria-label="@($"Amount for {row.Name}")"
+                                      @bind-Value="row.FinalAmount"
+                                      Immediate
+                                      OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Required="true"
+                                      RequiredError="Required" />
+                    </div>
+                </li>
+            }
+        </ul>
 
-    <DrawerFooter>
-        <MudButton data-testid="plan-ingredients-confirm" Variant="Variant.Filled"
-                   Color="Color.Primary"
-                   FullWidth="true"
-                   OnClick="OnConfirmClicked">
-            Add @_mergeItems.Count to grocery list
-        </MudButton>
-    </DrawerFooter>
-</MudForm>
+        <DrawerFooter>
+            <MudButton data-testid="plan-ingredients-confirm" Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Disabled="_saving"
+                       OnClick="OnConfirmClicked">
+                Add @_rows.Count to grocery list
+            </MudButton>
+        </DrawerFooter>
+    </MudForm>
+}
 
 @code {
+    /// <summary>The dates to offer; null offers every planned day of the loaded week.</summary>
+    [Parameter] public IReadOnlyCollection<DateTime>? Dates { get; set; }
+
+    /// <summary>Opens the drawer for the given dates, or for the whole week when <paramref name="dates"/> is null.</summary>
+    public static void Open(IDrawerStateContainer drawer, string title, IReadOnlyCollection<DateTime>? dates = null) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(AddPlanIngredientsToGroceryListDrawer),
+            Title = title,
+            Width = "100%",
+            Height = "calc(100% - 64px)",
+            ContentParameters = dates is null ? [] : new() { { nameof(Dates), dates } }
+        });
+
+    private enum DrawerState { Loading, NothingPlanned, AllLinked, Rows }
+
     private MudForm _form = default!;
-    private List<MergeItem> _mergeItems = [];
+    private DrawerState _state = DrawerState.Loading;
+    private bool _saving;
+    private List<MergeRow> _rows = [];
     private MudTextField<string>[] _amountFields = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (_mealPlanStateContainer.MealPlan == null) return;
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
 
-        var currentItems = _groceryListStateContainer.GroceryList.Items;
-
-        var planIngredients = _mealPlanStateContainer.MealPlan.MealOnDate
-            .SelectMany(kvp => kvp.Value.Ingredients)
-            .Where(ingredient => ingredient.ShowOnGroceryList)
-            .ToList();
-
-        _mergeItems = planIngredients.Select(ingredient =>
+        var itemsResult = await _mediator.Send(new GetAllGroceryItems.Query());
+        if (itemsResult.Handle(_snackbar).IsFailed)
         {
-            var existing = currentItems.FirstOrDefault(g =>
-                string.Equals(g.Name, ingredient.Name, StringComparison.OrdinalIgnoreCase));
+            _drawerStateContainer.CloseDrawer();
+            return;
+        }
 
-            return new MergeItem
-            {
-                Name = ingredient.Name,
-                PlanAmount = ingredient.Amount ?? string.Empty,
-                FinalAmount = existing == null ? (ingredient.Amount ?? string.Empty) : string.Empty,
-                ExistingAmount = existing?.Amount ?? string.Empty,
-                ExistingGroceryItem = existing,
-                PlanGroceryItem = new GroceryItem(ingredient)
-            };
-        }).ToList();
+        var sourcesResult = await _mediator.Send(new GetGroceryItemSources.Query());
+        if (sourcesResult.Handle(_snackbar).IsFailed)
+        {
+            _drawerStateContainer.CloseDrawer();
+            return;
+        }
 
-        _amountFields = new MudTextField<string>[_mergeItems.Count];
+        var candidates = GetCandidates();
+        if (candidates.Count == 0)
+        {
+            _state = DrawerState.NothingPlanned;
+            return;
+        }
+
+        var linked = sourcesResult.Value
+            .Select(source => (source.PlannedMealId, source.IngredientId))
+            .ToHashSet();
+        candidates = candidates
+            .Where(c => !linked.Contains((c.PlannedMealId, (int?)c.Ingredient.Id)))
+            .ToList();
+        if (candidates.Count == 0)
+        {
+            _state = DrawerState.AllLinked;
+            return;
+        }
+
+        var toBuy = itemsResult.Value.Where(item => !item.IsPicked).ToList();
+        _rows = candidates
+            .GroupBy(c => c.Ingredient.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(group => BuildRow(group.ToList(), toBuy))
+            .ToList();
+        _amountFields = new MudTextField<string>[_rows.Count];
+        _state = DrawerState.Rows;
     }
+
+    private List<Candidate> GetCandidates()
+    {
+        var plan = _mealPlanStateContainer.MealPlan;
+        if (plan == null) return [];
+
+        var dates = Dates is null
+            ? plan.MealOnDate.Keys.ToList()
+            : Dates.Select(date => date.Date).Where(plan.MealOnDate.ContainsKey).Distinct().ToList();
+
+        var candidates = new List<Candidate>();
+        foreach (var date in dates.Order())
+        {
+            if (!plan.PlannedMealIdOnDate.TryGetValue(date, out var plannedMealId)) continue;
+
+            var meal = plan.MealOnDate[date];
+            candidates.AddRange(meal.Ingredients
+                .Where(ingredient => ingredient.ShowOnGroceryList)
+                .Select(ingredient => new Candidate(date, plannedMealId, meal.Name, ingredient)));
+        }
+
+        return candidates;
+    }
+
+    private static MergeRow BuildRow(List<Candidate> candidates, List<GroceryItem> toBuy)
+    {
+        var name = candidates[0].Ingredient.Name.Trim();
+        var existing = toBuy.FirstOrDefault(item => string.Equals(item.Name.Trim(), name, StringComparison.OrdinalIgnoreCase));
+        var planAmounts = candidates.Select(c => c.Ingredient.Amount ?? string.Empty).ToList();
+
+        var row = new MergeRow
+        {
+            Name = name,
+            Candidates = candidates,
+            Existing = existing,
+            PlanLabel = "Plan " + string.Join(" + ", planAmounts.Select(AmountText))
+        };
+
+        row.FinalAmount = row.IsMerged
+            ? AmountHelper.SuggestTotal(existing == null ? planAmounts : [existing.Amount, .. planAmounts]) ?? string.Empty
+            : planAmounts[0];
+
+        return row;
+    }
+
+    private static string AmountText(string? amount) => string.IsNullOrWhiteSpace(amount) ? "–" : amount;
 
     private async Task OnAmountEnter(int index)
     {
@@ -93,39 +194,40 @@
 
     private async Task OnConfirmClicked()
     {
+        if (_saving) return;
+
         await _form.Validate();
         if (!_form.IsValid) return;
 
-        foreach (var item in _mergeItems.Where(m => m.IsDuplicate))
-        {
-            item.ExistingGroceryItem!.Amount = item.FinalAmount;
-            await _groceryListStateContainer.UpdateGroceryItem(item.ExistingGroceryItem);
-        }
+        _saving = true;
 
-        var newItems = _mergeItems
-            .Where(m => !m.IsDuplicate)
-            .Select(m => { m.PlanGroceryItem.Amount = m.FinalAmount; return m.PlanGroceryItem; })
+        var items = _rows
+            .SelectMany(row => row.Candidates.Select(c =>
+                new PlanIngredientToAdd(c.PlannedMealId, c.Ingredient, c.MealName, row.Existing?.Id, row.FinalAmount)))
             .ToList();
 
-        if (newItems.Count > 0)
+        var result = await _mediator.Send(new AddPlanIngredientsToGroceryList.Command(items));
+        if (result.Handle(_snackbar).IsFailed)
         {
-            var result = await _mediator.Send(new AddMealPlanIngredientsToGroceryList.Command(newItems));
-            if (result.Handle(_snackbar).IsFailed) return;
+            _saving = false;
+            return;
         }
 
         await _groceryListStateContainer.LoadGroceryItems();
+        await _groceryListStateContainer.LoadSources();
         _drawerStateContainer.CloseDrawer();
         _snackbar.Add("Ingredients added to list");
     }
 
-    private class MergeItem
+    private record Candidate(DateTime Date, int PlannedMealId, string MealName, Ingredient Ingredient);
+
+    private class MergeRow
     {
         public string Name { get; set; } = string.Empty;
-        public string PlanAmount { get; set; } = string.Empty;
-        public string ExistingAmount { get; set; } = string.Empty;
+        public List<Candidate> Candidates { get; set; } = [];
+        public GroceryItem? Existing { get; set; }
         public string FinalAmount { get; set; } = string.Empty;
-        public GroceryItem? ExistingGroceryItem { get; set; }
-        public GroceryItem PlanGroceryItem { get; set; } = new();
-        public bool IsDuplicate => ExistingGroceryItem != null;
+        public string PlanLabel { get; set; } = string.Empty;
+        public bool IsMerged => Existing != null || Candidates.Count > 1;
     }
 }

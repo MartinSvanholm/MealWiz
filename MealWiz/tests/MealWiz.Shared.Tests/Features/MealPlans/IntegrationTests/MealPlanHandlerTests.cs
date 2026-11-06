@@ -109,6 +109,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         Assert.Equal(tuesday, planned.Key);
         Assert.Equal(meal.Id, planned.Value.Id);
         Assert.Equal("Tacos", planned.Value.Name);
+        Assert.Equal(await GetPlanRowIdAsync(found.Id, tuesday), found.PlannedMealIdOnDate[tuesday]);
     }
 
     [Fact]
@@ -158,8 +159,8 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         var addedOwn = ResultAssert.Ok(await AddAsync(ownMeal));
         ResultAssert.Ok(await AddAsync(leftovers));
 
-        Assert.Same(ownMeal, addedOwn);
         var rows = await GetPlanRowsAsync(plan.Id);
+        Assert.Equal(rows.Single(r => r.MealId == ownMeal.Id).Id, addedOwn);
         Assert.Equal(2, rows.Count);
         Assert.Contains(rows, r => r.MealId == ownMeal.Id && r.MealDate == Week(12).ToString("yyyy-MM-dd"));
         Assert.Contains(rows, r => r.MealId == leftovers.Id && r.MealDate == Week(12).AddDays(1).ToString("yyyy-MM-dd"));
@@ -235,6 +236,8 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
             .WithMeal(Week(20).AddDays(1), meal)
             .InsertAsync(supabase.Client);
 
+        var idsBefore = plan.PlannedMealIdOnDate.ToDictionary();
+
         ResultAssert.Ok(await SwapAsync(plan.Id, Week(20), meal.Id, other.Id));
         ResultAssert.Ok(await SwapAsync(plan.Id, Week(20).AddDays(1), meal.Id, eatOut.Id));
 
@@ -242,6 +245,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         Assert.Equal(2, rows.Count);
         Assert.Contains(rows, r => r.MealId == other.Id && r.MealDate == Iso(Week(20)));
         Assert.Contains(rows, r => r.MealId == eatOut.Id && r.MealDate == Iso(Week(20).AddDays(1)));
+        Assert.Equal(idsBefore.Values.Order(), rows.Select(r => r.Id).Order());
     }
 
     [Fact]
@@ -304,7 +308,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
     private Task<FluentResults.Result<MealPlan?>> GetByDateAsync(DateTime date) =>
         new GetMealPlanByDate.Handler(supabase.Client).Handle(new GetMealPlanByDate.Query(date), CancellationToken);
 
-    private Task<FluentResults.Result<Meal>> AddAsync(Meal meal) =>
+    private Task<FluentResults.Result<int>> AddAsync(Meal meal) =>
         new AddMealToMealPlan.Handler(supabase.Client).Handle(new AddMealToMealPlan.Command(meal), CancellationToken);
 
     private Task<FluentResults.Result> RemoveAsync(int mealId, int mealPlanId, DateTime mealDate) =>
@@ -312,6 +316,9 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
 
     private Task<FluentResults.Result> SwapAsync(int mealPlanId, DateTime mealDate, int currentMealId, int newMealId) =>
         new SwapMealInMealPlan.Handler(supabase.Client).Handle(new SwapMealInMealPlan.Command(mealPlanId, mealDate, currentMealId, newMealId), CancellationToken);
+
+    private async Task<int> GetPlanRowIdAsync(int mealPlanId, DateTime date) =>
+        (await GetPlanRowsAsync(mealPlanId)).Single(r => r.MealDate == Iso(date)).Id;
 
     private async Task<List<MealPlanMealDb>> GetPlanRowsAsync(int mealPlanId)
     {

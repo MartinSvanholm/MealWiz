@@ -59,3 +59,10 @@
     border-color: var(--mw-orange);
     border-width: 1.5px;
 }
+
+.plan-ingredients-state {
+    margin: 24px 16px;
+    text-align: center;
+    color: var(--mw-text-muted);
+    font-size: 15px;
+}

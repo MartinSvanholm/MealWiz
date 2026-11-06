@@ -113,7 +113,8 @@ public class MealPlanStateContainer(
         var result = await mediator.Send(new AddMealToMealPlanAction.Command(meal));
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
-        MealPlan!.MealOnDate.TryAdd(result.Value.MealDate!.Value, result.Value);
+        MealPlan!.MealOnDate.TryAdd(meal.MealDate.Value, meal);
+        MealPlan.PlannedMealIdOnDate[meal.MealDate.Value] = result.Value;
         NotifyStateChanged();
     }
 

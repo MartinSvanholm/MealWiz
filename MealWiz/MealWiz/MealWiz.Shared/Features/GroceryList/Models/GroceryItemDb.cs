@@ -18,6 +18,9 @@ public class GroceryItemDb : BaseModel
     [Column("is_picked")]
     public bool IsPicked { get; set; }
 
+    [Column("is_manual")]
+    public bool IsManual { get; set; }
+
     [Column("created_by")]
     public Guid CreatedBy { get; set; }
 

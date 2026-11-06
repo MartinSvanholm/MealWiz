@@ -61,7 +61,4 @@ The import journey doesn't run the Functions app. The browser's call to `/functi
 
 The tests assert today's behaviour and name the issue at the spot. Flip the assertion when the bug is fixed.
 
-| Issue | Where |
-|-------|-------|
-| [MEA-38](https://linear.app/mealwiz/issue/MEA-38): `show_on_grocery_list` is never read | `GroceryListJourneyTests`: both plan ingredients are offered |
-| [MEA-42](https://linear.app/mealwiz/issue/MEA-42): an item added by hand can't be checked off until a reload | `GroceryListJourneyTests`: the first tick gets a 403 |
+None.

@@ -158,7 +158,7 @@ stored as `yyyy-MM-dd` strings.
   |---|---|---|
   | GetMealPlanByDate | `Query(DateTime Date)` → `Result<MealPlan?>` | The plan whose `start_date..end_date` contains the date, with its meals; `null` if none |
   | CreateMealPlan | `Command(MealPlan)` → `Result<MealPlan>` | Insert a week's plan (sets `created_by`) |
-  | AddMealToMealPlan | `Command(Meal)` → `Result<Meal>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate` |
+  | AddMealToMealPlan | `Command(Meal)` → `Result<int>` | Insert a `meal_plans-meals` row from `Meal.MealPlan` + `Meal.MealDate`; returns the planned day's id |
   | RemoveMealFromMealPlan | `Command(int MealId, int MealPlanId, DateTime MealDate)` → `Result` | Delete the meal's row on that date in that plan |
   | SwapMealInMealPlan | `Command(int MealPlanId, DateTime MealDate, int CurrentMealId, int NewMealId)` → `Result` | Update that day's row to the new meal in one write; fails ("Meal not found in plan") when no row matches, including another user's |
   | GetMealPlannedDates | `Query(DateTime From, DateTime To)` → `Result<List<PlannedMealDate>>` | Each planned meal and date in the range (own rows) |
@@ -170,7 +170,7 @@ stored as `yyyy-MM-dd` strings.
   `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
-    `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`.
+    `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`. `MealPlan.PlannedMealIdOnDate` is a `Dictionary<DateTime, int>` of `meal_plans-meals` ids (a swap keeps the id); `AddMealToPlan` records the id and `RemoveMealButton` drops the date's id.
   - `Features/MealPlans/Models/MealPlanMealDb.cs`, table `meal_plans-meals` (`fk_meal_plan`, `fk_meal`, `meal_date`).
     It is the join table and has no domain model.
   - `Features/MealPlans/Models/PlannedMealDate.cs` ↔ `PlannedMealDateDb.cs` (slim read of `meal_plans-meals`), `PlanWeekSettings.cs`, `PlanWeekDay.cs`.
@@ -184,8 +184,11 @@ stored as `yyyy-MM-dd` strings.
 ## GroceryList
 
 A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "From meal plan"
-opens a drawer that lists the current week's plan ingredients. It matches them to existing items by name, ignoring
-case, and lets you set the final amount; matches update the existing item and the rest are inserted in bulk.
+opens a merge drawer (reusable for one planned day or a whole week) that lists the planned ingredients not linked
+from their planned day yet; with everything linked it says "Everything is already on your list". A to-buy item with the
+same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
+empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
+added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
@@ -213,36 +216,42 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     content. Blazor pointer events (no JS) move the row over a red layer; `touch-action: pan-y` keeps vertical
     scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
-    basket"; after a confirm drawer it calls `ClearBasket` on the state container.
+    basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
-    meal plan" header button; loads the meal plan if needed.
+    meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
-    drawer. It reads `IMealPlanStateContainer` and skips ingredients with `ShowOnGroceryList` off. Items already on
-    the list show "Plan X · In list Y" and an empty, orange-outlined amount; the button reads "Add N to grocery list".
+    drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
+    off, groups same names into one row (subline "Plan X + Y · In list Z", orange field for merged rows) and shows
+    `plan-ingredients-loading`, `plan-ingredients-empty` or `plan-ingredients-all-on-list`; the button reads "Add N to
+    grocery list"; row names carry `plan-ingredient-name`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllGroceryItems | `Query()` → `Result<List<GroceryItem>>` | All of the user's items |
   | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
-  | AddMealPlanIngredientsToGroceryList | `Command(List<GroceryItem>)` → `Result<List<int>>` | Bulk insert; `created_by` comes from each ingredient |
+  | GetGroceryItemSources | `Query()` → `Result<List<GroceryItemSource>>` | Every source of the user's items, with the planned day's meal and date and the ingredient's meal and name |
+  | AddPlanIngredientsToGroceryList | `Command(List<PlanIngredientToAdd> Items)` → `Result<List<GroceryItem>>` | Skips already-linked pairs, updates merged items' amount, inserts new items (is_manual false, one per name), adds a source per ingredient |
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
-  | ClearBasket | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request (the picked ones the user saw); ids RLS hides are skipped |
+  | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
-  `ClearBasket`.
+  `ClearBasket`, `Sources` and `LoadSources`.
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
+  - `GroceryItem.IsManual` (`is_manual`).
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/grocery_items.test.sql`
+  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
 
 ## MealImport
 
@@ -477,7 +486,8 @@ table and policy list.
 |---|---|---|---|
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
+| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
+| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount` |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |

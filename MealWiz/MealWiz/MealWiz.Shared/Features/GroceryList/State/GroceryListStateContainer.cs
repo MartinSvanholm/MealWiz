@@ -9,11 +9,14 @@ public interface IGroceryListStateContainer
 {
     ISnackbar CurrentSnackbar { get; set; }
     Models.GroceryList GroceryList { get; }
+    /// <summary>Which planned day and ingredient each item came from; loaded by <see cref="LoadSources"/>.</summary>
+    List<GroceryItemSource> Sources { get; }
 
     event Action OnStateChanged;
 
     Task AddGroceryItemToGroceryList(GroceryItem groceryItem);
     Task LoadGroceryItems();
+    Task LoadSources();
     void NotifyStateChanged();
     Task UpdateGroceryItem(GroceryItem groceryItem);
     Task ToggleIsPicked(GroceryItem item);
@@ -27,6 +30,17 @@ public class GroceryListStateContainer(
 {
     private Models.GroceryList groceryList { get; set; } = new();
     public Models.GroceryList GroceryList => groceryList;
+
+    public List<GroceryItemSource> Sources { get; private set; } = [];
+
+    public async Task LoadSources()
+    {
+        var result = await mediator.Send(new GetGroceryItemSources.GetGroceryItemSources.Query());
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        Sources = result.Value;
+        NotifyStateChanged();
+    }
 
     public async Task LoadGroceryItems()
     {
@@ -84,6 +98,7 @@ public class GroceryListStateContainer(
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
         GroceryList.Items.Remove(groceryItem);
+        Sources.RemoveAll(source => source.GroceryItemId == groceryItem.Id);
         NotifyStateChanged();
     }
 
@@ -91,10 +106,11 @@ public class GroceryListStateContainer(
     {
         var picked = GroceryList.Items.Where(item => item.IsPicked).ToList();
 
-        var result = await mediator.Send(new ClearBasket.ClearBasket.Command(picked.ConvertAll(item => item.Id)));
+        var result = await mediator.Send(new DeleteGroceryItems.DeleteGroceryItems.Command(picked.ConvertAll(item => item.Id)));
         if (result.Handle(CurrentSnackbar).IsFailed) return;
 
         GroceryList.Items.RemoveAll(picked.Contains);
+        Sources.RemoveAll(source => picked.Any(item => item.Id == source.GroceryItemId));
         NotifyStateChanged();
     }
 }

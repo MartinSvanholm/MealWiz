@@ -16,6 +16,7 @@ public class GroceryListModelTests
             Name = "milk",
             Amount = "1 l",
             IsPicked = true,
+            IsManual = false,
             CreatedBy = Guid.NewGuid(),
             CreatedAt = new DateTime(2026, 10, 12, 8, 0, 0, DateTimeKind.Utc),
             UpdatedAt = new DateTime(2026, 10, 12, 9, 0, 0, DateTimeKind.Utc)
@@ -27,6 +28,7 @@ public class GroceryListModelTests
         Assert.Equal(original.Name, db.Name);
         Assert.Equal(original.Amount, db.Amount);
         Assert.Equal(original.IsPicked, db.IsPicked);
+        Assert.Equal(original.IsManual, db.IsManual);
         Assert.Equal(original.CreatedBy, db.CreatedBy);
         Assert.Equal(original.CreatedAt, db.CreatedAt);
         Assert.Equal(original.UpdatedAt, db.UpdatedAt);
@@ -51,6 +53,7 @@ public class GroceryListModelTests
         Assert.Equal(string.Empty, item.Name);
         Assert.Equal(string.Empty, item.Amount);
         Assert.False(item.IsPicked);
+        Assert.True(item.IsManual);
     }
 
     [Fact]
@@ -66,6 +69,7 @@ public class GroceryListModelTests
         Assert.Equal("500 g", item.Amount);
         Assert.Equal(ingredient.CreatedBy, item.CreatedBy);
         Assert.False(item.IsPicked);
+        Assert.False(item.IsManual);
         Assert.InRange(item.CreatedAt, before, DateTime.UtcNow);
         Assert.Null(item.UpdatedAt);
     }
