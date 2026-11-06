@@ -8,6 +8,7 @@
 @inject TimeProvider _time
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
 
 <div class="mw-page mw-plan-week" data-testid="plan-week-page">
     <SubPageHeader Label="@_state.WeekStart.ToWeekLabel()" BackTestId="plan-week-back" OnBack="GoBackAsync">
@@ -15,11 +16,11 @@
             <span data-testid="plan-week-title">@_state.WeekStart.ToRelativeWeekTitle(_time.GetLocalNow().Date, L)</span>
         </TitleContent>
         <Actions>
-            <button type="button" class="mw-header-button" data-testid="plan-week-prev" aria-label="Previous week"
+            <button type="button" class="mw-header-button" data-testid="plan-week-prev" aria-label="@L["Week_Previous"]"
                     disabled="@(_state.IsThisWeek || IsBusy)" @onclick="PreviousWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronLeft" />
             </button>
-            <button type="button" class="mw-header-button" data-testid="plan-week-next" aria-label="Next week"
+            <button type="button" class="mw-header-button" data-testid="plan-week-next" aria-label="@L["Week_Next"]"
                     disabled="@IsBusy" @onclick="NextWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
             </button>
@@ -35,10 +36,10 @@
         @if (_state.HasNoRegularMeals)
         {
             <section class="mw-plan-week-empty-pool" data-testid="plan-week-empty-pool">
-                <h2 class="mw-plan-week-empty-title">No meals to plan with</h2>
-                <p class="mw-plan-week-empty-body">Create a few meals first, then come back to plan your week.</p>
+                <h2 class="mw-plan-week-empty-title">@L["PlanWeek_NoMealsTitle"]</h2>
+                <p class="mw-plan-week-empty-body">@L["PlanWeek_NoMealsBody"]</p>
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="plan-week-go-to-meals"
-                           OnClick="@(() => _navigationManager.NavigateTo("/meals"))">Go to Meals</MudButton>
+                           OnClick="@(() => _navigationManager.NavigateTo("/meals"))">@L["PlanWeek_GoToMeals"]</MudButton>
             </section>
         }
         else
@@ -48,15 +49,15 @@
                     <span class="mw-plan-week-setting-icon">
                         <MudIcon Icon="@Icons.Material.Outlined.History" Color="Color.Inherit" Size="Size.Small" />
                     </span>
-                    <span class="mw-plan-week-setting-label">Skip meals used in the last</span>
+                    <span class="mw-plan-week-setting-label">@L["PlanWeek_SkipRecent"]</span>
                     <div class="mw-plan-week-stepper">
-                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-decrease" aria-label="Fewer weeks"
+                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-decrease" aria-label="@L["PlanWeek_FewerWeeks"]"
                                 disabled="@(_state.Settings.WeeksBack <= PlanWeekSettings.MinWeeksBack || IsBusy)"
                                 @onclick="() => _state.SetWeeksBack(_state.Settings.WeeksBack - 1)">
                             <MudIcon Icon="@Icons.Material.Rounded.Remove" Size="Size.Small" />
                         </button>
                         <span class="mw-plan-week-weeks-back" data-testid="plan-week-weeks-back-value">@WeeksBackText</span>
-                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-increase" aria-label="More weeks"
+                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-increase" aria-label="@L["PlanWeek_MoreWeeks"]"
                                 disabled="@(_state.Settings.WeeksBack >= PlanWeekSettings.MaxWeeksBack || IsBusy)"
                                 @onclick="() => _state.SetWeeksBack(_state.Settings.WeeksBack + 1)">
                             <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
@@ -68,17 +69,17 @@
                         <MudIcon Icon="@Icons.Material.Outlined.Repeat" Color="Color.Inherit" Size="Size.Small" />
                     </span>
                     <MudSwitch T="bool" data-testid="plan-week-leftovers-switch" Value="@_state.Settings.LeftoversAfterEveryMeal"
-                               ValueChanged="@_state.SetLeftoversAfterEveryMeal" Label="Leftovers after every meal"
+                               ValueChanged="@_state.SetLeftoversAfterEveryMeal" Label="@L["PlanWeek_LeftoversSwitch"]"
                                LabelPlacement="Placement.Start" Color="Color.Primary" />
                 </div>
             </section>
 
             <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth data-testid="plan-week-generate"
-                       Disabled="@(!_state.CanGenerate)" OnClick="_state.Generate">Generate</MudButton>
+                       Disabled="@(!_state.CanGenerate)" OnClick="_state.Generate">@L["PlanWeek_Generate"]</MudButton>
 
             @if (_state.UsedFallback)
             {
-                <p class="mw-plan-week-note" data-testid="plan-week-fallback-note">Too few meals weren't used recently, so some days got the ones used longest ago.</p>
+                <p class="mw-plan-week-note" data-testid="plan-week-fallback-note">@L["PlanWeek_FallbackNote"]</p>
             }
 
             <ul class="mw-plan-week-days" data-testid="plan-week-days">
@@ -90,30 +91,30 @@
                         data-date="@day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
                         data-locked="@(day.IsLocked ? "true" : "false")">
                         <div class="mw-plan-week-day-date">
-                            <span class="mw-plan-week-day-name" data-testid="plan-week-day-name">@day.Date.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant()</span>
+                            <span class="mw-plan-week-day-name" data-testid="plan-week-day-name">@day.Date.ToDayTag()</span>
                             <span class="mw-plan-week-day-number" data-testid="plan-week-day-number">@day.Date.Day</span>
                         </div>
                         @if (day.Meal is { } meal)
                         {
-                            <MealTile Name="@meal.Name" Neutral="@(!meal.IsRegular)" Index="index" Size="MealTile.TileSize.Small" />
-                            <span class="mw-plan-week-day-meal" data-testid="plan-week-day-meal">@meal.Name</span>
+                            <MealTile Name="@meal.DisplayName(M)" Neutral="@(!meal.IsRegular)" Index="index" Size="MealTile.TileSize.Small" />
+                            <span class="mw-plan-week-day-meal" data-testid="plan-week-day-meal">@meal.DisplayName(M)</span>
                             <button type="button" class="mw-plan-week-lock" data-testid="plan-week-day-lock"
                                     aria-pressed="@(day.IsLocked ? "true" : "false")"
-                                    aria-label="@($"{(day.IsLocked ? "Unlock" : "Lock")} {day.Date.DayOfWeek}")"
+                                    aria-label="@L[day.IsLocked ? "PlanWeek_UnlockDay" : "PlanWeek_LockDay", day.Date.DayOfWeek.ToWeekdayName()]"
                                     @onclick="() => _state.ToggleLock(day.Date)">
                                 <MudIcon Icon="@(day.IsLocked ? Icons.Material.Filled.Lock : Icons.Material.Outlined.LockOpen)" Color="Color.Inherit" Size="Size.Small" />
                             </button>
                         }
                         else
                         {
-                            <span class="mw-plan-week-day-meal mw-plan-day-empty" data-testid="plan-week-day-meal">Empty</span>
+                            <span class="mw-plan-week-day-meal mw-plan-day-empty" data-testid="plan-week-day-meal">@L["PlanWeek_EmptyDay"]</span>
                         }
                     </li>
                 }
             </ul>
 
             <MudButton Variant="Variant.Filled" Color="Color.Dark" FullWidth data-testid="plan-week-save"
-                       Disabled="@(!_state.CanSave)" OnClick="SaveAsync">Save week</MudButton>
+                       Disabled="@(!_state.CanSave)" OnClick="SaveAsync">@L["PlanWeek_Save"]</MudButton>
         }
     </div>
 </div>
@@ -127,7 +128,7 @@
 
     private bool IsBusy => _state.IsLoading || _state.IsGenerating || _state.IsSaving;
 
-    private string WeeksBackText => _state.Settings.WeeksBack == 1 ? "1 week" : $"{_state.Settings.WeeksBack} weeks";
+    private string WeeksBackText => L.Plural("PlanWeek_Weeks", _state.Settings.WeeksBack);
 
     private static string DayClass(PlanWeekDay day) =>
         day.Meal is null ? "is-empty" : day.IsLocked ? "is-locked" : string.Empty;

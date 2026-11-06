@@ -66,4 +66,145 @@
   <data name="WeekTitle_WeeksAgo_Other" xml:space="preserve">
     <value>For {0} uger siden</value>
   </data>
+  <data name="Week_Previous" xml:space="preserve">
+    <value>Forrige uge</value>
+  </data>
+  <data name="Week_Next" xml:space="preserve">
+    <value>Næste uge</value>
+  </data>
+  <data name="MealPlan_BackToThisWeekAria" xml:space="preserve">
+    <value>{0}. Tilbage til denne uge</value>
+  </data>
+  <data name="MealPlan_PlanWeek" xml:space="preserve">
+    <value>Planlæg ugen</value>
+  </data>
+  <data name="MealPlan_Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="WeekStrip_Aria" xml:space="preserve">
+    <value>Ugens dage</value>
+  </data>
+  <data name="PickMeal_Heading" xml:space="preserve">
+    <value>Vælg et måltid til {0}</value>
+  </data>
+  <data name="PickMeal_SwapHeading" xml:space="preserve">
+    <value>Byt måltidet for {0}</value>
+  </data>
+  <data name="PickMeal_Hint" xml:space="preserve">
+    <value>Intet planlagt endnu. Tryk på et måltid for at tilføje det.</value>
+  </data>
+  <data name="PickMeal_SwapHint" xml:space="preserve">
+    <value>Tryk på et måltid for at erstatte {0}.</value>
+  </data>
+  <data name="PickMeal_Search" xml:space="preserve">
+    <value>Søg i måltider</value>
+  </data>
+  <data name="PickMeal_Shuffle" xml:space="preserve">
+    <value>Bland måltiderne</value>
+  </data>
+  <data name="PickMeal_Empty" xml:space="preserve">
+    <value>Du har ingen måltider endnu. Opret et på siden Måltider.</value>
+  </data>
+  <data name="PickMeal_NoMatch" xml:space="preserve">
+    <value>Ingen måltider matcher "{0}".</value>
+  </data>
+  <data name="PickMeal_EditAria" xml:space="preserve">
+    <value>Rediger {0}</value>
+  </data>
+  <data name="RemoveMeal_Aria" xml:space="preserve">
+    <value>Fjern måltidet fra dagen</value>
+  </data>
+  <data name="RemoveMeal_MealOrDateMissing" xml:space="preserve">
+    <value>Måltid eller dato mangler</value>
+  </data>
+  <data name="PlanWeek_NoMealsTitle" xml:space="preserve">
+    <value>Ingen måltider at planlægge med</value>
+  </data>
+  <data name="PlanWeek_NoMealsBody" xml:space="preserve">
+    <value>Opret først et par måltider, og kom så tilbage og planlæg din uge.</value>
+  </data>
+  <data name="PlanWeek_GoToMeals" xml:space="preserve">
+    <value>Gå til Måltider</value>
+  </data>
+  <data name="PlanWeek_SkipRecent" xml:space="preserve">
+    <value>Spring måltider over, der er brugt de sidste</value>
+  </data>
+  <data name="PlanWeek_FewerWeeks" xml:space="preserve">
+    <value>Færre uger</value>
+  </data>
+  <data name="PlanWeek_MoreWeeks" xml:space="preserve">
+    <value>Flere uger</value>
+  </data>
+  <data name="PlanWeek_Weeks_One" xml:space="preserve">
+    <value>{0} uge</value>
+  </data>
+  <data name="PlanWeek_Weeks_Other" xml:space="preserve">
+    <value>{0} uger</value>
+  </data>
+  <data name="PlanWeek_LeftoversSwitch" xml:space="preserve">
+    <value>Rester efter hvert måltid</value>
+  </data>
+  <data name="PlanWeek_Generate" xml:space="preserve">
+    <value>Generér</value>
+  </data>
+  <data name="PlanWeek_FallbackNote" xml:space="preserve">
+    <value>For få måltider er ikke brugt for nylig, så nogle dage fik dem, der er brugt længst tid siden.</value>
+  </data>
+  <data name="PlanWeek_LockDay" xml:space="preserve">
+    <value>Lås {0}</value>
+  </data>
+  <data name="PlanWeek_UnlockDay" xml:space="preserve">
+    <value>Lås {0} op</value>
+  </data>
+  <data name="PlanWeek_EmptyDay" xml:space="preserve">
+    <value>Tom</value>
+  </data>
+  <data name="PlanWeek_Save" xml:space="preserve">
+    <value>Gem ugen</value>
+  </data>
+  <data name="DayCard_HeroAria" xml:space="preserve">
+    <value>Aftensmad {0}</value>
+  </data>
+  <data name="DayCard_DayDinner" xml:space="preserve">
+    <value>{0} · Aftensmad</value>
+  </data>
+  <data name="DayCard_Swap" xml:space="preserve">
+    <value>Byt måltid</value>
+  </data>
+  <data name="DayCard_IngredientsTitle" xml:space="preserve">
+    <value>Ingredienser</value>
+  </data>
+  <data name="DayCard_AddAllToList" xml:space="preserve">
+    <value>Tilføj alle til listen</value>
+  </data>
+  <data name="DayCard_NoIngredients" xml:space="preserve">
+    <value>Ingen ingredienser endnu</value>
+  </data>
+  <data name="DayCard_NoRecipe" xml:space="preserve">
+    <value>Ingen opskrift endnu</value>
+  </data>
+  <data name="DayCard_NoRecipeHint" xml:space="preserve">
+    <value>Skriv trinene, eller importér fra et link</value>
+  </data>
+  <data name="DayCard_AddRecipe" xml:space="preserve">
+    <value>Tilføj</value>
+  </data>
+  <data name="DayCard_RecipeTitle" xml:space="preserve">
+    <value>Opskrift</value>
+  </data>
+  <data name="DayCard_NothingToCook" xml:space="preserve">
+    <value>Intet at lave</value>
+  </data>
+  <data name="DayCard_RecipeReady" xml:space="preserve">
+    <value>Opskrift klar</value>
+  </data>
+  <data name="DayCard_Ingredients_One" xml:space="preserve">
+    <value>{0} ingrediens</value>
+  </data>
+  <data name="DayCard_Ingredients_Other" xml:space="preserve">
+    <value>{0} ingredienser</value>
+  </data>
+  <data name="DayCard_Summary" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
 </root>
