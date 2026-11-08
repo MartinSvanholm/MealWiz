@@ -1,9 +1,11 @@
-﻿@inject IMediator _mediator
+﻿@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IMediator _mediator
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 
-<MudButton data-testid="save-grocery-item-button" OnClick="SaveClicked" Color="Color.Primary" Variant="Variant.Filled">Save item</MudButton>
+<MudButton data-testid="save-grocery-item-button" OnClick="SaveClicked" Color="Color.Primary" Variant="Variant.Filled">@L["GroceryItem_Save"]</MudButton>
 
 @code {
     [Parameter]

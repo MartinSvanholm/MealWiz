@@ -1,5 +1,7 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
 @implements IDisposable
 
 @* The pick-a-meal state of the Meal plan: MealPickList wired to the selected day. For a day with no meal a pick adds
@@ -15,11 +17,11 @@
     private Meal? CurrentMeal =>
         _mealPlanStateContainer.IsSwappingMeal ? _mealPlanStateContainer.GetMealFromSelectedDate() : null;
 
-    private string Heading => CurrentMeal is not null ? $"Swap the meal for {Day}" : $"Pick a meal for {Day}";
+    private string Heading => L[CurrentMeal is not null ? "PickMeal_SwapHeading" : "PickMeal_Heading", Day.ToWeekdayName()];
 
     private string Hint => CurrentMeal is { } current
-        ? $"Tap a meal to replace {current.Name}."
-        : "Nothing planned yet. Tap a meal to add it.";
+        ? L["PickMeal_SwapHint", current.DisplayName(M)]
+        : L["PickMeal_Hint"];
 
     protected override void OnInitialized() => _mealPlanStateContainer.OnStateChanged += StateHasChanged;
 

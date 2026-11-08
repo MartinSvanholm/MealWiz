@@ -1,3 +1,5 @@
+using MealWiz.Shared.Features.GroceryList;
+using MealWiz.Shared.Features.MealPlans;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
@@ -35,7 +37,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var before = DateTime.UtcNow;
         var item = new GroceryItemBuilder().WithName("Apples").WithAmount("4").Build();
 
-        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new AddGroceryItem.Command(item), CancellationToken));
 
         var row = await GetRowAsync(added.Id);
         Assert.NotNull(row);
@@ -56,7 +58,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var item = new GroceryItemBuilder().WithName("Milk").Build();
-        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client).Handle(new AddGroceryItem.Command(item), CancellationToken));
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new AddGroceryItem.Command(item), CancellationToken));
 
         added.IsPicked = true;
         ResultAssert.Ok(await UpdateAsync(added));
@@ -72,7 +74,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var signedOut = await supabase.CreateSignedOutClientAsync();
 
-        var result = await new AddGroceryItem.Handler(signedOut)
+        var result = await new AddGroceryItem.Handler(signedOut, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddGroceryItem.Command(new GroceryItemBuilder().Build()), CancellationToken);
 
         ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
@@ -211,7 +213,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var added = ResultAssert.Ok(await AddAsync(planned.Entries()));
         var otherUser = await supabase.GetOtherUserAsync();
         var othersPlanned = await PlanAsync(1, otherUser.Client, ("Beans", "1 can"));
-        var othersAdded = ResultAssert.Ok(await new AddPlanIngredientsToGroceryList.Handler(otherUser.Client)
+        var othersAdded = ResultAssert.Ok(await new AddPlanIngredientsToGroceryList.Handler(otherUser.Client, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddPlanIngredientsToGroceryList.Command(othersPlanned.Entries()), CancellationToken));
 
         var sources = ResultAssert.Ok(await GetSourcesAsync());
@@ -238,7 +240,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var added = ResultAssert.Ok(await AddAsync(planned.Entries()));
         var other = await new MealBuilder().InsertAsync(supabase.Client);
 
-        ResultAssert.Ok(await new SwapMealInMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new SwapMealInMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new SwapMealInMealPlan.Command(planned.Plan.Id, planned.Date, planned.Meal.Id, other.Id), CancellationToken));
 
         var source = Assert.Single(ResultAssert.Ok(await GetSourcesAsync()), s => s.GroceryItemId == added[0].Id);
@@ -272,7 +274,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var planned = await PlanAsync(4, supabase.Client, ("Butter", "50 g"));
         var added = ResultAssert.Ok(await AddAsync(planned.Entries()));
 
-        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(planned.Meal.Id, planned.Plan.Id, planned.Date), CancellationToken));
 
         var source = Assert.Single(ResultAssert.Ok(await GetSourcesAsync()), s => s.GroceryItemId == added[0].Id);
@@ -378,7 +380,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var signedOut = await supabase.CreateSignedOutClientAsync();
         var entry = new PlanIngredientToAdd(1, new Ingredient { Id = 1, Name = "Salt" }, "Soup", null, "1 tsp");
 
-        var result = await new AddPlanIngredientsToGroceryList.Handler(signedOut)
+        var result = await new AddPlanIngredientsToGroceryList.Handler(signedOut, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddPlanIngredientsToGroceryList.Command([entry]), CancellationToken);
 
         ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
@@ -505,7 +507,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var (planned, _, items) = await PlanAndAddAsync(supabase.Client, StaleWeek(5), ("Butter", "50 g"));
 
-        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(planned.Meal.Id, planned.Plan.Id, planned.Date), CancellationToken));
 
         var sources = ResultAssert.Ok(await GetSourcesAsync());
@@ -523,7 +525,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var (planned, plannedMealId, items) = await PlanAndAddAsync(supabase.Client, StaleWeek(6), ("Pasta", "400 g"));
         var other = await new MealBuilder().InsertAsync(supabase.Client);
 
-        ResultAssert.Ok(await new SwapMealInMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new SwapMealInMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new SwapMealInMealPlan.Command(planned.Plan.Id, planned.Date, planned.Meal.Id, other.Id), CancellationToken));
 
         var sources = ResultAssert.Ok(await GetSourcesAsync());
@@ -564,7 +566,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
             new(plan.PlannedMealIdOnDate[monday.AddDays(1)], second.Ingredients[0], second.Name, null, "600 g")
         ]));
 
-        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(first.Id, plan.Id, monday), CancellationToken));
 
         var sources = ResultAssert.Ok(await GetSourcesAsync());
@@ -576,7 +578,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var (planned, _, items) = await PlanAndAddAsync(supabase.Client, StaleWeek(9), ("Oats", "100 g"));
-        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(planned.Meal.Id, planned.Plan.Id, planned.Date), CancellationToken));
 
         ResultAssert.Ok(await UnlinkAsync(items[0].Id));
@@ -592,7 +594,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var (planned, _, items) = await PlanAndAddAsync(supabase.Client, StaleWeek(10), ("Sugar", "1 dl"));
-        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client)
+        ResultAssert.Ok(await new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(planned.Meal.Id, planned.Plan.Id, planned.Date), CancellationToken));
 
         ResultAssert.Ok(await DeleteItemsAsync(items[0].Id));
@@ -613,7 +615,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         var meal = await builder.InsertAsync(client);
         var plan = await new MealPlanBuilder().ForWeekOf(day).WithMeal(day, meal).InsertAsync(client);
         var planned = new Planned(plan, meal, day, plan.PlannedMealIdOnDate[day]);
-        var result = await new AddPlanIngredientsToGroceryList.Handler(client)
+        var result = await new AddPlanIngredientsToGroceryList.Handler(client, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddPlanIngredientsToGroceryList.Command(planned.Entries()), CancellationToken);
         return (planned, planned.PlannedMealId, ResultAssert.Ok(result));
     }
@@ -642,7 +644,7 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     private Task<FluentResults.Result<List<GroceryItem>>> AddAsync(List<PlanIngredientToAdd> items) =>
-        new AddPlanIngredientsToGroceryList.Handler(supabase.Client).Handle(new AddPlanIngredientsToGroceryList.Command(items), CancellationToken);
+        new AddPlanIngredientsToGroceryList.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new AddPlanIngredientsToGroceryList.Command(items), CancellationToken);
 
     private Task<FluentResults.Result<List<GroceryItemSource>>> GetSourcesAsync() =>
         new GetGroceryItemSources.Handler(supabase.Client).Handle(new GetGroceryItemSources.Query(), CancellationToken);
@@ -654,10 +656,10 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     private Task<FluentResults.Result<int>> UpdateAsync(GroceryItem item) =>
-        new UpdateGroceryItem.Handler(supabase.Client).Handle(new UpdateGroceryItem.Command(item), CancellationToken);
+        new UpdateGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new UpdateGroceryItem.Command(item), CancellationToken);
 
     private Task<FluentResults.Result<int>> DeleteAsync(GroceryItem item) =>
-        new DeleteGroceryItem.Handler(supabase.Client).Handle(new DeleteGroceryItem.Command(item), CancellationToken);
+        new DeleteGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new DeleteGroceryItem.Command(item), CancellationToken);
 
     private Task<FluentResults.Result> DeleteItemsAsync(params int[] ids) =>
         new DeleteGroceryItems.Handler(supabase.Client).Handle(new DeleteGroceryItems.Command([.. ids]), CancellationToken);

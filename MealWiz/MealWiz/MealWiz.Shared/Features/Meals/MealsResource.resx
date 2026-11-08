@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Meal_SystemLeftovers" xml:space="preserve">
+    <value>Leftovers</value>
+    <comment>Name of the built-in Leftovers meal (meal type leftover); the stored English name is never shown</comment>
+  </data>
+  <data name="Meal_SystemEatOut" xml:space="preserve">
+    <value>Eat Out</value>
+    <comment>Name of the built-in Eat Out meal (meal type eat_out); the stored English name is never shown</comment>
+  </data>
+  <data name="MealsPage_Title" xml:space="preserve">
+    <value>Your meals</value>
+    <comment>Meals page header title</comment>
+  </data>
+  <data name="MealsPage_Count_One" xml:space="preserve">
+    <value>{0} meal</value>
+    <comment>Meals page header label: number of meals</comment>
+  </data>
+  <data name="MealsPage_Count_Other" xml:space="preserve">
+    <value>{0} meals</value>
+    <comment>Meals page header label: number of meals</comment>
+  </data>
+  <data name="MealsPage_Search" xml:space="preserve">
+    <value>Search meals or ingredients</value>
+    <comment>Search field placeholder</comment>
+  </data>
+  <data name="MealsPage_FilterAria" xml:space="preserve">
+    <value>Filter meals</value>
+    <comment>Accessible label of the filter chip group</comment>
+  </data>
+  <data name="MealsPage_FilterAll" xml:space="preserve">
+    <value>All</value>
+    <comment>Filter chip: every meal</comment>
+  </data>
+  <data name="MealsPage_FilterThisWeek" xml:space="preserve">
+    <value>This week</value>
+    <comment>Filter chip: meals planned this week</comment>
+  </data>
+  <data name="MealsPage_FilterNoRecipe" xml:space="preserve">
+    <value>No recipe</value>
+    <comment>Filter chip: meals without a recipe</comment>
+  </data>
+  <data name="MealsPage_Empty" xml:space="preserve">
+    <value>No meals yet. Create one with New, or import one from a recipe link.</value>
+    <comment>Shown when the user has no meals; 'New' is the AddMealMenu_New button</comment>
+  </data>
+  <data name="MealsPage_NoMatchSearch" xml:space="preserve">
+    <value>No meals match "{0}".</value>
+    <comment>{0} is the search text</comment>
+  </data>
+  <data name="MealsPage_NoMatchThisWeek" xml:space="preserve">
+    <value>No meals planned this week.</value>
+    <comment>This week filter with no meals</comment>
+  </data>
+  <data name="MealsPage_NoMatchNoRecipe" xml:space="preserve">
+    <value>Every meal has a recipe.</value>
+    <comment>No recipe filter with no meals</comment>
+  </data>
+  <data name="MealsPage_ImportTitle" xml:space="preserve">
+    <value>Import from a recipe link</value>
+    <comment>Import entry at the bottom of the Meals page</comment>
+  </data>
+  <data name="MealsPage_ImportHint" xml:space="preserve">
+    <value>Paste a URL, we grab the ingredients</value>
+    <comment>Import entry hint</comment>
+  </data>
+  <data name="MealGrid_Ingredients_One" xml:space="preserve">
+    <value>{0} ingredient</value>
+    <comment>Meal card: number of ingredients</comment>
+  </data>
+  <data name="MealGrid_Ingredients_Other" xml:space="preserve">
+    <value>{0} ingredients</value>
+    <comment>Meal card: number of ingredients</comment>
+  </data>
+  <data name="AddMealMenu_Aria" xml:space="preserve">
+    <value>Add meal</value>
+    <comment>Accessible label of the New menu</comment>
+  </data>
+  <data name="AddMealMenu_New" xml:space="preserve">
+    <value>New</value>
+    <comment>Button that opens the add-meal menu</comment>
+  </data>
+  <data name="AddMealMenu_CreateManually" xml:space="preserve">
+    <value>Create manually</value>
+    <comment>Menu item: create a meal by hand</comment>
+  </data>
+  <data name="AddMealMenu_CreateManuallyHint" xml:space="preserve">
+    <value>Name, recipe and ingredients</value>
+    <comment>Hint under Create manually</comment>
+  </data>
+  <data name="AddMealMenu_Import" xml:space="preserve">
+    <value>Import from URL</value>
+    <comment>Menu item: import a meal from a recipe link</comment>
+  </data>
+  <data name="AddMealMenu_ImportHint" xml:space="preserve">
+    <value>Paste a link to a recipe</value>
+    <comment>Hint under the import menu item</comment>
+  </data>
+  <data name="AddMealMenu_ImportInProgress" xml:space="preserve">
+    <value>Import in progress…</value>
+    <comment>Import menu item while an import runs</comment>
+  </data>
+  <data name="AddMealMenu_ImportInProgressHint" xml:space="preserve">
+    <value>We'll add the meal when it's ready</value>
+    <comment>Hint while an import runs</comment>
+  </data>
+  <data name="AddMealMenu_ImportFailed" xml:space="preserve">
+    <value>Last import failed: see why</value>
+    <comment>Import menu item after a failed import</comment>
+  </data>
+  <data name="EditMeal_Back" xml:space="preserve">
+    <value>Back to meals</value>
+    <comment>Back button accessible label</comment>
+  </data>
+  <data name="EditMeal_NameLabel" xml:space="preserve">
+    <value>Meal name</value>
+    <comment>Label above the meal name input</comment>
+  </data>
+  <data name="EditMeal_NamePlaceholder" xml:space="preserve">
+    <value>Name your meal</value>
+    <comment>Meal name input placeholder</comment>
+  </data>
+  <data name="EditMeal_Recipe" xml:space="preserve">
+    <value>Recipe</value>
+    <comment>Section heading</comment>
+  </data>
+  <data name="EditMeal_RecipePlaceholder" xml:space="preserve">
+    <value>Steps, oven temperature, little tricks…</value>
+    <comment>Recipe field placeholder</comment>
+  </data>
+  <data name="EditMeal_Ingredients" xml:space="preserve">
+    <value>Ingredients</value>
+    <comment>Section heading</comment>
+  </data>
+  <data name="EditMeal_Items_One" xml:space="preserve">
+    <value>{0} item</value>
+    <comment>Number of ingredients on the meal</comment>
+  </data>
+  <data name="EditMeal_Items_Other" xml:space="preserve">
+    <value>{0} items</value>
+    <comment>Number of ingredients on the meal</comment>
+  </data>
+  <data name="DeleteMeal_Button" xml:space="preserve">
+    <value>Delete meal</value>
+    <comment>Button on the edit meal page</comment>
+  </data>
+  <data name="DeleteMeal_ConfirmTitle" xml:space="preserve">
+    <value>Delete Meal?</value>
+    <comment>Confirm drawer title</comment>
+  </data>
+  <data name="DeleteMeal_ConfirmText" xml:space="preserve">
+    <value>Are you sure you want to delete this meal? It will also be removed from any meal plans it's on.</value>
+    <comment>Confirm drawer message</comment>
+  </data>
+  <data name="DeleteMeal_Deleted" xml:space="preserve">
+    <value>Meal deleted</value>
+    <comment>Toast after deleting a meal</comment>
+  </data>
+  <data name="SaveMeal_Saved" xml:space="preserve">
+    <value>Meal saved</value>
+    <comment>Toast after saving a meal</comment>
+  </data>
+</root>

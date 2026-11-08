@@ -84,4 +84,215 @@
     <value>Meal or meal date cannot be empty</value>
     <comment>Toast when remove is pressed with no meal on the selected day</comment>
   </data>
+  <data name="MealPlan_MealNotInPlan" xml:space="preserve">
+    <value>Meal not found in plan</value>
+  </data>
+  <data name="MealPlan_MealSwapped" xml:space="preserve">
+    <value>Meal swapped</value>
+    <comment>Toast after swapping a day's meal</comment>
+  </data>
+  <data name="MealPlan_MealAdded" xml:space="preserve">
+    <value>Meal added to plan</value>
+    <comment>Toast after picking a meal for a day</comment>
+  </data>
+  <data name="MealPlan_MealNotAdded" xml:space="preserve">
+    <value>The meal could not be added to the plan.</value>
+  </data>
+  <data name="MealPlan_MealRemoved" xml:space="preserve">
+    <value>Meal removed</value>
+    <comment>Toast after removing a day's meal</comment>
+  </data>
+  <data name="MealPlan_PlanOrDateMissing" xml:space="preserve">
+    <value>Meal plan or meal date cannot be empty</value>
+  </data>
+  <data name="PlanWeek_NothingToSave" xml:space="preserve">
+    <value>Nothing to save</value>
+  </data>
+  <data name="PlanWeek_DayOutsideWeek" xml:space="preserve">
+    <value>Every day must be in the week</value>
+  </data>
+  <data name="PlanWeek_DayTwice" xml:space="preserve">
+    <value>Each day can only be saved once</value>
+  </data>
+  <data name="PlanWeek_NotSaved" xml:space="preserve">
+    <value>The week could not be saved.</value>
+  </data>
+  <data name="PlanWeek_Saved" xml:space="preserve">
+    <value>Week saved</value>
+    <comment>Toast after saving a generated week</comment>
+  </data>
+  <data name="WeekTitle_This" xml:space="preserve">
+    <value>This week</value>
+    <comment>Relative title of the shown week</comment>
+  </data>
+  <data name="WeekTitle_Next" xml:space="preserve">
+    <value>Next week</value>
+  </data>
+  <data name="WeekTitle_Last" xml:space="preserve">
+    <value>Last week</value>
+  </data>
+  <data name="WeekTitle_InWeeks_One" xml:space="preserve">
+    <value>In {0} week</value>
+    <comment>Only used for counts above 1 today, but plurals come in pairs</comment>
+  </data>
+  <data name="WeekTitle_InWeeks_Other" xml:space="preserve">
+    <value>In {0} weeks</value>
+  </data>
+  <data name="WeekTitle_WeeksAgo_One" xml:space="preserve">
+    <value>{0} week ago</value>
+    <comment>Only used for counts above 1 today, but plurals come in pairs</comment>
+  </data>
+  <data name="WeekTitle_WeeksAgo_Other" xml:space="preserve">
+    <value>{0} weeks ago</value>
+  </data>
+  <data name="Week_Previous" xml:space="preserve">
+    <value>Previous week</value>
+    <comment>Header button on the Meal plan and Plan week</comment>
+  </data>
+  <data name="Week_Next" xml:space="preserve">
+    <value>Next week</value>
+    <comment>Header button on the Meal plan and Plan week</comment>
+  </data>
+  <data name="MealPlan_BackToThisWeekAria" xml:space="preserve">
+    <value>{0}. Back to this week</value>
+    <comment>{0} is the relative week title, e.g. 'Next week'</comment>
+  </data>
+  <data name="MealPlan_PlanWeek" xml:space="preserve">
+    <value>Plan the week</value>
+  </data>
+  <data name="MealPlan_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="WeekStrip_Aria" xml:space="preserve">
+    <value>Days of the week</value>
+  </data>
+  <data name="PickMeal_Heading" xml:space="preserve">
+    <value>Pick a meal for {0}</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="PickMeal_SwapHeading" xml:space="preserve">
+    <value>Swap the meal for {0}</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="PickMeal_Hint" xml:space="preserve">
+    <value>Nothing planned yet. Tap a meal to add it.</value>
+  </data>
+  <data name="PickMeal_SwapHint" xml:space="preserve">
+    <value>Tap a meal to replace {0}.</value>
+    <comment>{0} is the name of the day's current meal</comment>
+  </data>
+  <data name="PickMeal_Search" xml:space="preserve">
+    <value>Search meals</value>
+  </data>
+  <data name="PickMeal_Shuffle" xml:space="preserve">
+    <value>Shuffle meals</value>
+  </data>
+  <data name="PickMeal_Empty" xml:space="preserve">
+    <value>You have no meals yet. Create one from the Meals page.</value>
+  </data>
+  <data name="PickMeal_NoMatch" xml:space="preserve">
+    <value>No meals match "{0}".</value>
+    <comment>{0} is the search text</comment>
+  </data>
+  <data name="PickMeal_EditAria" xml:space="preserve">
+    <value>Edit {0}</value>
+    <comment>{0} is the meal name</comment>
+  </data>
+  <data name="PlanWeek_NoMealsTitle" xml:space="preserve">
+    <value>No meals to plan with</value>
+  </data>
+  <data name="PlanWeek_NoMealsBody" xml:space="preserve">
+    <value>Create a few meals first, then come back to plan your week.</value>
+  </data>
+  <data name="PlanWeek_GoToMeals" xml:space="preserve">
+    <value>Go to Meals</value>
+  </data>
+  <data name="PlanWeek_SkipRecent" xml:space="preserve">
+    <value>Skip meals used in the last</value>
+    <comment>Followed by a stepper showing e.g. '3 weeks'</comment>
+  </data>
+  <data name="PlanWeek_FewerWeeks" xml:space="preserve">
+    <value>Fewer weeks</value>
+  </data>
+  <data name="PlanWeek_MoreWeeks" xml:space="preserve">
+    <value>More weeks</value>
+  </data>
+  <data name="PlanWeek_Weeks_One" xml:space="preserve">
+    <value>{0} week</value>
+  </data>
+  <data name="PlanWeek_Weeks_Other" xml:space="preserve">
+    <value>{0} weeks</value>
+  </data>
+  <data name="PlanWeek_LeftoversSwitch" xml:space="preserve">
+    <value>Leftovers after every meal</value>
+  </data>
+  <data name="PlanWeek_Generate" xml:space="preserve">
+    <value>Generate</value>
+  </data>
+  <data name="PlanWeek_FallbackNote" xml:space="preserve">
+    <value>Too few meals weren't used recently, so some days got the ones used longest ago.</value>
+  </data>
+  <data name="PlanWeek_LockDay" xml:space="preserve">
+    <value>Lock {0}</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_UnlockDay" xml:space="preserve">
+    <value>Unlock {0}</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_EmptyDay" xml:space="preserve">
+    <value>Empty</value>
+    <comment>A day with no meal in the generated week</comment>
+  </data>
+  <data name="PlanWeek_Save" xml:space="preserve">
+    <value>Save week</value>
+  </data>
+  <data name="DayCard_HeroAria" xml:space="preserve">
+    <value>{0} dinner</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="DayCard_DayDinner" xml:space="preserve">
+    <value>{0} · Dinner</value>
+    <comment>{0} is the weekday name</comment>
+  </data>
+  <data name="DayCard_Swap" xml:space="preserve">
+    <value>Swap meal</value>
+  </data>
+  <data name="DayCard_IngredientsTitle" xml:space="preserve">
+    <value>Ingredients</value>
+  </data>
+  <data name="DayCard_AddAllToList" xml:space="preserve">
+    <value>Add all to list</value>
+  </data>
+  <data name="DayCard_NoIngredients" xml:space="preserve">
+    <value>No ingredients yet</value>
+  </data>
+  <data name="DayCard_NoRecipe" xml:space="preserve">
+    <value>No recipe yet</value>
+  </data>
+  <data name="DayCard_NoRecipeHint" xml:space="preserve">
+    <value>Write the steps or import from a link</value>
+  </data>
+  <data name="DayCard_AddRecipe" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="DayCard_RecipeTitle" xml:space="preserve">
+    <value>Recipe</value>
+  </data>
+  <data name="DayCard_NothingToCook" xml:space="preserve">
+    <value>Nothing to cook</value>
+  </data>
+  <data name="DayCard_RecipeReady" xml:space="preserve">
+    <value>Recipe ready</value>
+  </data>
+  <data name="DayCard_Ingredients_One" xml:space="preserve">
+    <value>{0} ingredient</value>
+  </data>
+  <data name="DayCard_Ingredients_Other" xml:space="preserve">
+    <value>{0} ingredients</value>
+  </data>
+  <data name="DayCard_Summary" xml:space="preserve">
+    <value>{0} · {1}</value>
+    <comment>{0} is the ingredient count, {1} the recipe status</comment>
+  </data>
 </root>

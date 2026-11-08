@@ -1,5 +1,6 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
 using Supabase;
 using Supabase.Postgrest.Responses;
@@ -15,7 +16,7 @@ public static class CreateMealPlan
         public async Task<Result<MealPlan>> Handle(Command request, CancellationToken cancellationToken)
         {
             if (supabaseClient.Auth.CurrentSession?.User == null)
-                return Result.Fail<MealPlan>("Not authenticated");
+                return Result.Fail<MealPlan>(ErrorMessages.NotSignedIn);
 
             request.MealPlan.CreatedAt = DateTime.UtcNow;
             request.MealPlan.CreatedBy = new Guid(supabaseClient.Auth.CurrentSession.User.Id);

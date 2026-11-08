@@ -3,6 +3,7 @@ using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.Meals;
 using MealWiz.Shared.Features.MealPlans;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
 using MealWiz.Shared.Features.Meals.Models;
@@ -27,10 +28,13 @@ public class RemoveMealDrawerTests : ComponentTestBase
         RenderDrawers();
     }
 
-    private void Open(params int[] groceryItemIds)
+    private void Open(params int[] groceryItemIds) => Open(_tacos, groceryItemIds);
+
+    private void Open(Meal meal, params int[] groceryItemIds)
     {
         var localizer = Services.GetRequiredService<IStringLocalizer<MealPlansResource>>();
-        DrawerHost.InvokeAsync(() => RemoveMealDrawer.Open(Drawer, localizer, _tacos, _date, groceryItemIds));
+        var mealsLocalizer = Services.GetRequiredService<IStringLocalizer<MealsResource>>();
+        DrawerHost.InvokeAsync(() => RemoveMealDrawer.Open(Drawer, localizer, mealsLocalizer, meal, _date, groceryItemIds));
         DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
     }
 
@@ -44,6 +48,16 @@ public class RemoveMealDrawerTests : ComponentTestBase
         Assert.Empty(DrawerHost.FindAll(TestId("remove-meal-grocery-row")));
         Assert.Equal("Cancel", DrawerHost.Find(TestId("remove-meal-cancel")).TextContent.Trim());
         Assert.Equal("Remove", DrawerHost.Find(TestId("remove-meal-confirm")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void A_system_meal_is_named_by_its_type()
+    {
+        Open(new Meal { Id = 2, Name = "stored-leftovers-name", Type = MealType.Leftover });
+
+        Assert.Equal("Remove Leftovers?", DrawerHost.Find(TestId("drawer-title")).TextContent);
+        Assert.StartsWith("Leftovers comes off", DrawerHost.Find(TestId("remove-meal-description")).TextContent);
+        Assert.DoesNotContain("stored-leftovers-name", DrawerHost.Markup);
     }
 
     [Theory]
@@ -155,7 +169,8 @@ public class RemoveMealDrawerResourceTests() : ComponentTestBase(echoResourceKey
         MealPlan.MealPlan = TestData.MealPlanWith(date, tacos);
         RenderDrawers();
 
-        DrawerHost.InvokeAsync(() => RemoveMealDrawer.Open(Drawer, Services.GetRequiredService<IStringLocalizer<MealPlansResource>>(), tacos, date, [11]));
+        DrawerHost.InvokeAsync(() => RemoveMealDrawer.Open(Drawer, Services.GetRequiredService<IStringLocalizer<MealPlansResource>>(),
+            Services.GetRequiredService<IStringLocalizer<MealsResource>>(), tacos, date, [11]));
 
         DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
         Assert.Equal("[RemoveMeal_Title]", DrawerHost.Find(TestId("drawer-title")).TextContent);

@@ -130,6 +130,8 @@ TestInfrastructure/
 - `TimeAssert.cs`: `CloseTo(expected, actual)`, with one minute of tolerance.
 - `CultureScope.cs`: `using var _ = CultureScope.Use("da");` runs the rest of the test in Danish (current culture and
   UI culture, this async flow only).
+- `TestLocalizer.cs`: `TestLocalizer.For<MealsResource>()` is the real resource localizer, for tests that construct a
+  handler or state container themselves (handlers that return localized messages take one).
 - `AuthTestHelper.cs`: `RoutedPage(typeof(Page))` renders a page with the real `[Authorize]` wiring.
 
 **Integration test shape:**

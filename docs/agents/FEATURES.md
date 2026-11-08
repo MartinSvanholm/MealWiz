@@ -30,6 +30,9 @@ blank. The header count stays the total. When nothing matches, `meal-list-no-mat
 meals are planned this week, or that every meal has a recipe.
 
 - **Folder:** `Features/Meals/`
+- **Texts:** `Features/Meals/MealsResource.cs` with `MealsResource.resx` / `.da.resx` (UI-03). The system meals are shown
+  by type, never by their stored English name: `Features/Meals/Models/MealDisplayName.cs`, `meal.DisplayName(L)`
+  (Leftovers/Rester, Eat Out/Spis ude; a regular meal keeps its name). Used by the pick list, Plan week and the day card.
 - **Pages:**
   - `Features/Meals/MealsPage.razor` at `/meals`: header ("N meals", add menu), search, filter chips
     (`meal-filter-all|this-week|no-recipe`), the meal grid and the "Import from a recipe link" entry
@@ -81,6 +84,7 @@ opens it to edit ("Edit ingredient"). A new meal's ingredients are kept as pendi
 saved and has an id.
 
 - **Folder:** `Features/Ingredients/`
+- **Texts:** `Features/Ingredients/IngredientsResource.cs` with `IngredientsResource.resx` / `.da.resx`.
 - **Pages:** none. The Edit Meal page hosts this feature.
 - **Components:**
   - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): name, amount
@@ -124,6 +128,9 @@ stored as `yyyy-MM-dd` strings.
 Removing a day's meal always asks first in a drawer. When the day has grocery items only it needs (still to buy, not manual, linked to the meal now on the day, no other live source), a switch, on by default, deletes them too. Shared items just lose that day's link, because the FK nulls it.
 
 - **Folder:** `Features/MealPlans/`
+- **Texts:** `Features/MealPlans/MealPlansResource.cs` with `MealPlansResource.resx` / `.da.resx`, also read by the
+  day card (`Features/Meals/MealDisplayComponent.razor`). The relative week title is
+  `Features/MealPlans/WeekTitles.cs`, `weekStart.ToRelativeWeekTitle(today, L)` ("Denne uge", "Om 3 uger").
 - **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
   `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
   "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
@@ -212,6 +219,7 @@ every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy 
 also deletes it after the same confirm drawer; basket pills don't swipe.
 
 - **Folder:** `Features/GroceryList/`
+- **Texts:** `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` / `.da.resx`.
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
 - **Components:**
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
@@ -282,7 +290,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports` and subscribes to that row
 over Supabase Realtime. It then POSTs `{ jobId, url }` to the Azure Function (see
 [Functions: ScrapeRecipe](#functions-scraperecipe)), which scrapes the page and writes `succeeded` + `parsed_meal` or
-`failed` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
+`failed` + `error_code` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
 whether the row was written.
 
 On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal()`. After 30 s the page offers
@@ -290,7 +298,13 @@ On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal(
 toast if it fails. The client fails the row itself (`MarkMealImportFailed`) if the Function is unreachable or the row
 stays pending past 3 minutes. One job runs at a time.
 
+A failed row's `error_code` says why: `invalid_url`, `no_recipe_found` and `fetch_failed` (or `unknown`) from the
+Function; `unreachable` or `timed_out` from the client. The UI shows the localized message for the code
+(`ImportError_<Code>`, null or unknown = `ImportError_Unknown`) and never `error_message`, which keeps the English
+detail for diagnosis.
+
 - **Folder:** `Features/MealImport/`
+- **Texts:** `Features/MealImport/MealImportResource.cs` with `MealImportResource.resx` / `.da.resx`.
 - **Pages:** `Features/MealImport/ImportMeal/ImportMealPage.razor` at `/meals/import`: sub-page header, the failed
   alert (`import-job-error` or `import-latest-failed`), the form card (`import-form`, `import-url-input`,
   `import-submit`) and the progress card (`import-progress`). `AddMealMenu` on the Meals
@@ -302,7 +316,7 @@ stays pending past 3 minutes. One job runs at a time.
   | CreateMealImport | `Command(Guid Id, string SourceUrl)` → `Result<MealImport>` | Insert the pending row (guarded user id) |
   | GetMealImport | `Query(Guid Id)` → `Result<MealImport>` | Read one row (used to catch up after subscribing) |
   | GetLatestMealImport | `Query` → `Result<MealImport?>` | The user's newest row, for the entry-point status |
-  | MarkMealImportFailed | `Command(Guid Id, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
+  | MarkMealImportFailed | `Command(Guid Id, MealImportErrorCode ErrorCode, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
   | TriggerScrapeRecipe | `Command(Guid JobId, string Url)` → `Result` | POST to `<MealImportFunction:url>/api/ScrapeRecipe` with `x-functions-key`. Uses `HttpClient`, not Supabase |
 
 - **State:**
@@ -315,12 +329,17 @@ stays pending past 3 minutes. One job runs at a time.
   - `Features/MealImport/Models/MealImport.cs` ↔ `Features/MealImport/Models/MealImportDb.cs`, table `meal_imports`.
   - `Features/MealImport/Models/ParsedMeal.cs`: the `parsed_meal` jsonb contract.
   - `Features/MealImport/Models/MealImportStatus.cs`: `pending`, `succeeded`, `failed`.
+  - `Features/MealImport/Models/MealImportErrorCode.cs`: the `error_code` values (contract
+    `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
+    `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
   - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
     `supabase_realtime` publication.
   - `supabase/migrations/20261012120000_allow_client_to_fail_meal_imports.sql`
+  - `supabase/migrations/20261106120000_add_meal_import_error_codes.sql`: `error_code` with its check constraint, in
+    the client's update grant.
 - **Tests:**
   - unit: `Features/MealImport/UnitTests/` (Handlers, Models, State)
   - bUnit: `Features/MealImport/ComponentTests/ImportMealPageTests.cs`
@@ -387,7 +406,9 @@ The server half of MealImport, in a separate Azure Functions app (isolated worke
 doesn't reference MealWiz.Shared. `POST /api/ScrapeRecipe` (`AuthorizationLevel.Function`) takes `{ jobId, url }`. It
 loads the `meal_imports` row with the service-role key and acts only if the row is still `pending`. It always fetches
 the row's stored `source_url`, never the URL in the request body. It parses the recipe (JSON-LD, then Microdata, then
-OpenGraph), maps it to the payload, and writes the result back.
+OpenGraph), maps it to the payload, and writes the result back. A failure also writes `error_code`: `invalid_url`
+(the stored URL isn't absolute http/https), `fetch_failed` (any RecipeFetcher error: redirects, status, size cap,
+DNS, non-public host, network, timeout), `no_recipe_found` (no parser found a recipe) or `unknown` (anything else).
 
 Responses: 200 means the row is resolved; 502 means the row couldn't be read or written and is still pending, so the
 client fails it; 400 means a bad body. `MealWiz/src/MealWiz.Functions/README.md` covers local setup, the function
@@ -408,7 +429,8 @@ key, CORS and deployment.
   - `MealWiz/src/MealWiz.Functions/Shared/Ingredients/IngredientLineParser.cs`: splits "200 g flour" into amount and name.
   - `MealWiz/src/MealWiz.Functions/Shared/SupabaseAccess/ServiceRoleSupabaseClientFactory.cs`: the service-role
     client. It bypasses RLS, and exists only here.
-  - `MealWiz/src/MealWiz.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload` and `RecipeImportStatus`.
+  - `MealWiz/src/MealWiz.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload`, `RecipeImportStatus` and
+    `RecipeImportErrorCode`.
     These deliberately duplicate the Shared types (FN-01); `MealWiz/tests/Contracts/` keeps them in sync.
 - **DI:** `MealWiz/src/MealWiz.Functions/ServiceCollectionExtensions.cs`, called from `MealWiz/src/MealWiz.Functions/Program.cs`.
 - **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/`
@@ -448,7 +470,7 @@ key, CORS and deployment.
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
   - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
-  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`, `ToWeekLabel`, `ToRelativeWeekTitle`), `DictionaryExtensions.cs`.
+  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
 - **`Components/`:** generic UI.
   - `Components/NavMenu.razor`, the three tabs (Plan, also active on `/plan-week`; Groceries; Meals; `nav-meal-plan`, `nav-grocery-list`,
@@ -515,4 +537,4 @@ table and policy list.
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the six codes in `meal_import_error_code.json`; the Function writes the result with the service role |

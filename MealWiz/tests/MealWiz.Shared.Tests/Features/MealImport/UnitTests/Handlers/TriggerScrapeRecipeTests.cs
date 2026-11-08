@@ -1,6 +1,8 @@
 using System.Net;
 using FluentResults;
+using MealWiz.Shared.Features.MealImport;
 using MealWiz.Shared.Features.MealImport.Models;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using Trigger = MealWiz.Shared.Features.MealImport.TriggerScrapeRecipe.TriggerScrapeRecipe;
 using Xunit;
 
@@ -37,7 +39,8 @@ public class TriggerScrapeRecipeTests
     {
         using var httpClient = new HttpClient(new StubHandler(statusCode));
         var handler = new Trigger.Handler(
-            httpClient, new MealImportFunctionOptions("https://functions.example.com", "key"));
+            httpClient, new MealImportFunctionOptions("https://functions.example.com", "key"),
+            TestLocalizer.For<MealImportResource>());
 
         return await handler.Handle(
             new Trigger.Command(Guid.NewGuid(), "https://example.com/recipe"),

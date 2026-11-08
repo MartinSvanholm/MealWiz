@@ -1,6 +1,7 @@
 ﻿@page "/grocerylist"
 @attribute [Authorize]
 @using MealWiz.Shared.Features.GroceryList.ClearBasket
+@inject IStringLocalizer<GroceryListResource> L
 @inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
@@ -10,7 +11,7 @@
 
 @* Dense on purpose: the shopper needs to see everything left to find, so about ten to-buy rows fit on a phone. *@
 <div class="mw-page grocery-page">
-    <ScreenHeader Label="@HeaderLabel" Title="Groceries">
+    <ScreenHeader Label="@HeaderLabel" Title="@L["GroceryList_Title"]">
         <Actions>
             <AddIngredientsToGroceryListButton />
         </Actions>
@@ -19,10 +20,10 @@
     <div class="grocery-top">
         <div class="grocery-progress-row">
             <div class="grocery-progress" data-testid="grocery-progress" role="progressbar"
-                 aria-label="Items in the basket" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@ProgressPercent">
+                 aria-label="@L["GroceryList_ProgressAria"]" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@ProgressPercent">
                 <div class="grocery-progress-fill" style="width: @(ProgressPercent)%"></div>
             </div>
-            <span class="grocery-progress-count" data-testid="grocery-progress-count"><span class="grocery-progress-picked">@Picked.Count</span> of @Items.Count @ItemsWord</span>
+            <span class="grocery-progress-count" data-testid="grocery-progress-count">@ProgressText</span>
         </div>
 
         <AddGroceryItemField />
@@ -41,22 +42,22 @@
         @if (Items.Count == 0)
         {
             <div class="grocery-empty" data-testid="grocery-list-empty">
-                <span class="grocery-empty-title">Your list is empty</span>
-                <span>Add an item above, or take the week's ingredients from your meal plan.</span>
+                <span class="grocery-empty-title">@L["GroceryList_Empty"]</span>
+                <span>@L["GroceryList_EmptyHint"]</span>
             </div>
         }
 
         @if (ToBuy.Count > 0)
         {
             <section class="grocery-section">
-                <h2 class="grocery-section-heading" data-testid="grocery-to-buy-heading">To buy · @ToBuy.Count</h2>
+                <h2 class="grocery-section-heading" data-testid="grocery-to-buy-heading">@L["GroceryList_ToBuy", ToBuy.Count]</h2>
                 <ul class="grocery-to-buy" data-testid="grocery-to-buy">
                     @foreach (var item in ToBuy)
                     {
                         <li class="grocery-row" data-testid="grocery-item" @key="item">
                             <SwipeToDeleteGroceryItem GroceryItem="item">
                                 <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
-                                        role="checkbox" aria-checked="false" aria-label="@($"Check off {item.Name}")"
+                                        role="checkbox" aria-checked="false" aria-label="@L["GroceryList_CheckOffAria", item.Name]"
                                         @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
                                     <span class="grocery-check-box" aria-hidden="true"></span>
                                 </button>
@@ -76,7 +77,7 @@
         {
             <section class="grocery-section">
                 <div class="grocery-section-row">
-                    <h2 class="grocery-section-heading" data-testid="grocery-basket-heading">In the basket · @Picked.Count</h2>
+                    <h2 class="grocery-section-heading" data-testid="grocery-basket-heading">@L["GroceryList_InBasket", Picked.Count]</h2>
                     <ClearBasketButton />
                 </div>
                 <ul class="grocery-basket" data-testid="grocery-basket">
@@ -84,7 +85,7 @@
                     {
                         <li data-testid="grocery-item" @key="item">
                             <button type="button" class="grocery-pill" data-testid="grocery-item-checkbox"
-                                    role="checkbox" aria-checked="true" aria-label="@($"Put {item.Name} back on the list")"
+                                    role="checkbox" aria-checked="true" aria-label="@L["GroceryList_PutBackAria", item.Name]"
                                     @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
                                 <MudIcon Icon="@Icons.Material.Rounded.Check" Class="grocery-pill-check" />
                                 <span class="grocery-pill-name">@item.Name</span>
@@ -102,13 +103,18 @@
     private List<GroceryItem> ToBuy => Items.Where(i => !i.IsPicked).ToList();
     private List<GroceryItem> Picked => Items.Where(i => i.IsPicked).ToList();
 
-    private string ItemsWord => Items.Count == 1 ? "item" : "items";
-
     private int ProgressPercent => Items.Count == 0 ? 0 : (int)Math.Round(100.0 * Picked.Count / Items.Count);
 
     // The week the "From meal plan" drawer takes its ingredients from.
     private string HeaderLabel =>
-        $"{Items.Count} {ItemsWord} · Week {System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)}";
+        L[Items.Count == 1 ? "GroceryList_Header_One" : "GroceryList_Header_Other",
+            Items.Count, System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)];
+
+    // "1 of 2 items": the picked count keeps its own span (bold), the noun follows the total. Only numbers are
+    // formatted into the markup.
+    private MarkupString ProgressText =>
+        new(L[Items.Count == 1 ? "GroceryList_Progress_One" : "GroceryList_Progress_Other",
+            $"<span class=\"grocery-progress-picked\">{Picked.Count}</span>", Items.Count]);
 
     // Items from meals no longer in the plan (swapped, or removed from the plan with the switch off).
     private int StaleCount => _groceryListStateContainer.StaleItems.Count;

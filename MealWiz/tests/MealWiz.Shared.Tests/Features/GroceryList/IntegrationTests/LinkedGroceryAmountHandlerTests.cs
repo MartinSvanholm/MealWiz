@@ -189,7 +189,7 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
         var plannedMealId = plan.PlannedMealIdOnDate[day];
 
         var entries = meal.Ingredients.ConvertAll(i => new PlanIngredientToAdd(plannedMealId, i, meal.Name, null, i.Amount ?? string.Empty));
-        var added = ResultAssert.Ok(await new AddPlanIngredientsToGroceryList.Handler(client)
+        var added = ResultAssert.Ok(await new AddPlanIngredientsToGroceryList.Handler(client, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddPlanIngredientsToGroceryList.Command(entries), CancellationToken));
         return (meal, plannedMealId, added);
     }

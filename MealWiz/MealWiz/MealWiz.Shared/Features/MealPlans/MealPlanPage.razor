@@ -7,6 +7,7 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealPlansResource> L
 
 <div class="mw-page mw-meal-plan">
     <ScreenHeader Label="@WeekLabel">
@@ -18,25 +19,25 @@
             else
             {
                 <button type="button" class="mw-week-back" data-testid="meal-plan-current-week"
-                        aria-label="@($"{WeekTitle}. Back to this week")"
+                        aria-label="@L["MealPlan_BackToThisWeekAria", WeekTitle]"
                         disabled="@_mealPlanStateContainer.IsLoadingWeek"
                         @onclick="GoToCurrentWeek"><span data-testid="meal-plan-week-title">@WeekTitle</span></button>
             }
         </TitleContent>
         <Actions>
-            <button type="button" class="mw-header-button" data-testid="week-prev" aria-label="Previous week"
+            <button type="button" class="mw-header-button" data-testid="week-prev" aria-label="@L["Week_Previous"]"
                     disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="PreviousWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronLeft" />
             </button>
-            <button type="button" class="mw-header-button" data-testid="week-next" aria-label="Next week"
+            <button type="button" class="mw-header-button" data-testid="week-next" aria-label="@L["Week_Next"]"
                     disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NextWeek">
                 <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
             </button>
-            <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="Plan the week"
+            <button type="button" class="mw-header-button" data-testid="plan-week-button" aria-label="@L["MealPlan_PlanWeek"]"
                     disabled="@_mealPlanStateContainer.IsLoadingWeek" @onclick="NavigateToPlanWeek">
                 <MudIcon Icon="@Icons.Material.Outlined.CalendarMonth" />
             </button>
-            <button type="button" class="mw-avatar" data-testid="account-button" aria-label="Account"
+            <button type="button" class="mw-avatar" data-testid="account-button" aria-label="@L["MealPlan_Account"]"
                     @onclick="@(() => _navigationManager.NavigateTo("/account"))">
                 @if (UserInitial is { } initial)
                 {
@@ -99,7 +100,7 @@
 
     private string WeekLabel => WeekStart.ToWeekLabel();
 
-    private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now);
+    private string WeekTitle => WeekStart.ToRelativeWeekTitle(DateTime.Now, L);
 
     private void NavigateToPlanWeek() =>
         _navigationManager.NavigateTo($"/plan-week?week={WeekStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");

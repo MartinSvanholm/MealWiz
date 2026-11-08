@@ -6,6 +6,7 @@
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
 
 @* A 44px dark round button; the Meal plan puts it in the corner of the selected day's orange card. It opens the
    RemoveMealDrawer, which asks first and can remove the grocery items only this meal needs. *@
@@ -49,6 +50,6 @@
             ? PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id)
             : [];
 
-        RemoveMealDrawer.Open(_drawerStateContainer, L, meal, date, ids);
+        RemoveMealDrawer.Open(_drawerStateContainer, L, M, meal, date, ids);
     }
 }

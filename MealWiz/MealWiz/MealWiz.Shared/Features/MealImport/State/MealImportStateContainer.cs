@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
 
 namespace MealWiz.Shared.Features.MealImport.State;
@@ -69,7 +70,8 @@ public class MealImportStateContainer(
     IMealImportRealtimeSubscriber realtimeSubscriber,
     IMealsStateContainer mealsStateContainer,
     ISnackbar snackbar,
-    TimeProvider timeProvider) : StateContainerBase, IMealImportStateContainer, IDisposable
+    TimeProvider timeProvider,
+    IStringLocalizer<MealImportResource> localizer) : StateContainerBase, IMealImportStateContainer, IDisposable
 {
     public static readonly TimeSpan BackgroundEligibilityDelay = TimeSpan.FromSeconds(30);
 
@@ -79,10 +81,10 @@ public class MealImportStateContainer(
     /// </summary>
     public static readonly TimeSpan ResultTimeout = TimeSpan.FromMinutes(3);
 
-    public const string ServiceUnreachableMessage = "We couldn't reach the meal import service. Please try again.";
-    public const string TimedOutMessage = "The meal import took too long. Please try again.";
-    public const string InvalidUrlMessage = "Please enter a valid meal URL (starting with http:// or https://).";
-    public const string ImportInProgressMessage = "A meal import is already in progress.";
+    // English details stored in error_message for diagnosis only; the user sees the message for the error code.
+    private const string UnreachableDetail = "The import Function could not be called, or answered with an error.";
+    private const string TimedOutDetail = "No result within the client's timeout.";
+    private const string ClientErrorDetail = "The client failed while running the import.";
 
     private readonly object jobLock = new();
     private readonly List<Task> backgroundWork = [];
@@ -101,7 +103,7 @@ public class MealImportStateContainer(
 
     public bool IsImportInProgress => JobStatus is MealImportJobStatus.Submitting or MealImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == MealImportStatus.Failed;
-    public string? LatestErrorMessage => LatestImportFailed ? LatestImport!.ErrorMessage ?? ErrorMessages.GenericError : null;
+    public string? LatestErrorMessage => LatestImportFailed ? localizer.ToMessage(LatestImport!.ErrorCode) : null;
     public MealImportEntryState EntryState => MealImportJobHelper.GetEntryState(IsImportInProgress, LatestImportFailed);
 
     public async Task LoadLatestImport()
@@ -122,8 +124,8 @@ public class MealImportStateContainer(
 
     public async Task<Result> StartImport(string url)
     {
-        if (IsImportInProgress) return Result.Fail(ImportInProgressMessage);
-        if (!MealImportJobHelper.TryNormalizeMealUrl(url, out var sourceUrl)) return Result.Fail(InvalidUrlMessage);
+        if (IsImportInProgress) return Result.Fail(localizer["Import_AlreadyInProgress"]);
+        if (!MealImportJobHelper.TryNormalizeMealUrl(url, out var sourceUrl)) return Result.Fail(localizer["Import_InvalidUrl"]);
 
         var jobId = Guid.NewGuid();
 
@@ -142,7 +144,7 @@ public class MealImportStateContainer(
 
             // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
             if (IsRunningInBackground)
-                snackbar.Add($"Meal import failed: {JobErrorMessage}", Severity.Error);
+                snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
 
             NotifyStateChanged();
             return createResult.ToResult();
@@ -225,12 +227,12 @@ public class MealImportStateContainer(
 
             if (triggerResult.IsSuccess) return;
 
-            await FailPendingJob(jobId, ServiceUnreachableMessage);
+            await FailPendingJob(jobId, MealImportErrorCode.Unreachable, UnreachableDetail);
         }
         catch (Exception)
         {
             await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
-                jobId, CurrentImport, ErrorMessages.GenericError, timeProvider.GetUtcNow().UtcDateTime));
+                jobId, CurrentImport, MealImportErrorCode.Unknown, ClientErrorDetail, timeProvider.GetUtcNow().UtcDateTime));
         }
     }
 
@@ -252,9 +254,9 @@ public class MealImportStateContainer(
     /// <item>If neither is possible, fail the job in memory only.</item>
     /// </list>
     /// </summary>
-    private async Task FailPendingJob(Guid jobId, string errorMessage)
+    private async Task FailPendingJob(Guid jobId, MealImportErrorCode errorCode, string errorMessage)
     {
-        var markResult = await mediator.Send(new MarkMealImportFailed.MarkMealImportFailed.Command(jobId, errorMessage));
+        var markResult = await mediator.Send(new MarkMealImportFailed.MarkMealImportFailed.Command(jobId, errorCode, errorMessage));
         if (markResult.IsSuccess && markResult.Value is not null)
         {
             await Resolve(jobId, markResult.Value);
@@ -265,7 +267,7 @@ public class MealImportStateContainer(
         if (markResult.IsSuccess && await TryResolveFromRow(jobId)) return;
 
         await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
-            jobId, CurrentImport, errorMessage, timeProvider.GetUtcNow().UtcDateTime));
+            jobId, CurrentImport, errorCode, errorMessage, timeProvider.GetUtcNow().UtcDateTime));
     }
 
     /// <summary>
@@ -303,11 +305,11 @@ public class MealImportStateContainer(
             }
             else
             {
-                JobErrorMessage = row.ErrorMessage ?? ErrorMessages.GenericError;
+                JobErrorMessage = localizer.ToMessage(row.ErrorCode);
                 JobStatus = MealImportJobStatus.Failed;
 
                 if (IsRunningInBackground)
-                    snackbar.Add($"Meal import failed: {JobErrorMessage}", Severity.Error);
+                    snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
             }
         }
         catch (Exception)
@@ -331,7 +333,7 @@ public class MealImportStateContainer(
         var saveResult = await mediator.Send(new Meals.SaveMeal.SaveMeal.Command(meal));
         if (saveResult.IsFailed)
         {
-            snackbar.Add($"\"{meal.Name}\" was imported but couldn't be saved: {saveResult.Errors.First().Message}", Severity.Error);
+            snackbar.Add(localizer["ImportToast_SaveFailed", meal.Name, saveResult.Errors.First().Message], Severity.Error);
             return;
         }
 
@@ -341,7 +343,7 @@ public class MealImportStateContainer(
             var ingredientResult = await mediator.Send(new Ingredients.SaveIngredient.SaveIngredient.Command(ingredient, savedMealId));
             if (ingredientResult.IsFailed)
             {
-                snackbar.Add($"\"{meal.Name}\" was imported but some ingredients couldn't be saved: {ingredientResult.Errors.First().Message}", Severity.Error);
+                snackbar.Add(localizer["ImportToast_IngredientsFailed", meal.Name, ingredientResult.Errors.First().Message], Severity.Error);
                 break;
             }
         }
@@ -350,7 +352,7 @@ public class MealImportStateContainer(
         mealsStateContainer.CurrentSnackbar ??= snackbar;
         await mealsStateContainer.LoadMeals();
 
-        snackbar.Add($"\"{meal.Name}\" was imported and added to your meals.", Severity.Success);
+        snackbar.Add(localizer["ImportToast_Saved", meal.Name], Severity.Success);
     }
 
     /// <summary>
@@ -409,12 +411,12 @@ public class MealImportStateContainer(
         {
             if (await TryResolveFromRow(jobId)) return;
 
-            await FailPendingJob(jobId, TimedOutMessage);
+            await FailPendingJob(jobId, MealImportErrorCode.TimedOut, TimedOutDetail);
         }
         catch (Exception)
         {
             await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
-                jobId, CurrentImport, TimedOutMessage, timeProvider.GetUtcNow().UtcDateTime));
+                jobId, CurrentImport, MealImportErrorCode.TimedOut, TimedOutDetail, timeProvider.GetUtcNow().UtcDateTime));
         }
     }
 

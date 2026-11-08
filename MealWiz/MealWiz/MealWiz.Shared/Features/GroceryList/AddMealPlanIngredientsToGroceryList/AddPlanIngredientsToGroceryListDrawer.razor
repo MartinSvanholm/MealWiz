@@ -1,5 +1,8 @@
+@using MealWiz.Shared.Features.GroceryList
 @using MealWiz.Shared.Features.Ingredients.Models
 @using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems
+@inject IStringLocalizer<GroceryListResource> L
+@inject IStringLocalizer<SharedResource> S
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMediator _mediator
@@ -20,11 +23,11 @@
 }
 else if (_state == DrawerState.NothingPlanned)
 {
-    <div class="plan-ingredients-state" data-testid="plan-ingredients-empty">There's nothing from the meal plan to add.</div>
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-empty">@L["PlanIngredients_NothingPlanned"]</div>
 }
 else if (_state == DrawerState.AllLinked)
 {
-    <div class="plan-ingredients-state" data-testid="plan-ingredients-all-on-list">Everything is already on your list</div>
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-all-on-list">@L["PlanIngredients_AllOnList"]</div>
 }
 else
 {
@@ -45,15 +48,15 @@ else
                     </div>
                     <div class="plan-ingredient-amount @(row.IsMerged ? "is-duplicate" : "")" data-testid="plan-ingredient-amount">
                         <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input"
-                                      Placeholder="Total"
-                                      aria-label="@($"Amount for {row.Name}")"
+                                      Placeholder="@L["PlanIngredients_Total"]"
+                                      aria-label="@L["PlanIngredients_AmountAria", row.Name].Value"
                                       @bind-Value="row.FinalAmount"
                                       Immediate
                                       OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       Required="true"
-                                      RequiredError="Required" />
+                                      RequiredError="@S["Common_Required"]" />
                     </div>
                 </li>
             }

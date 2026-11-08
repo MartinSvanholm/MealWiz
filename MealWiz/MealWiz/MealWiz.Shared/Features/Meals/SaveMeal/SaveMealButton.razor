@@ -2,6 +2,8 @@
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
 @inject ISender _mediator
+@inject IStringLocalizer<MealsResource> L
+@inject IStringLocalizer<SharedResource> S
 
 <MudLoadingButton
 data-testid="save-meal-button"
@@ -10,7 +12,7 @@ ButtonVariant="ButtonVariant.Button"
 Variant="Variant.Filled"
 Color="Color.Dark"
 StartIcon="@Icons.Material.Filled.Check"
-OnClick="SaveMeal">Save</MudLoadingButton>
+OnClick="SaveMeal">@S["Common_Save"]</MudLoadingButton>
 
 @code {
     private bool IsSaving { get; set; }
@@ -46,7 +48,7 @@ OnClick="SaveMeal">Save</MudLoadingButton>
                 }
             }
 
-            _snackbar.Add("Meal saved", Severity.Success);
+            _snackbar.Add(L["SaveMeal_Saved"], Severity.Success);
             _navigationManager.NavigateTo("/meals");
         }
         finally

@@ -1,15 +1,18 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+
 @* Add or edit a grocery item: name and amount side by side, then "Save item". When the name is already filled in
    (from the add field), the amount gets the focus. The fields edit a copy, so closing without saving changes nothing
    (MEA-76). *@
 <div class="grocery-item-fields">
     <div class="mw-field">
-        <label class="mw-field-label" for="grocery-item-name">Name</label>
+        <label class="mw-field-label" for="grocery-item-name">@L["GroceryItem_Name"]</label>
         <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" InputId="grocery-item-name" @bind-Value="_draft.Name" Variant="Variant.Outlined"
                       OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
     </div>
     <div class="mw-field">
-        <label class="mw-field-label" for="grocery-item-amount">Amount</label>
-        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="e.g. 2" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
+        <label class="mw-field-label" for="grocery-item-amount">@L["GroceryItem_Amount"]</label>
+        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="@L["GroceryItem_AmountPlaceholder"]" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
                       Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
     </div>
 </div>

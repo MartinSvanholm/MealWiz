@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(21);
+select plan(24);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -111,7 +111,7 @@ select throws_ok(
 -- The same update MarkMealImportFailed sends.
 select results_eq(
     $$ update public.meal_imports
-       set status = 'failed', error_message = 'Function unreachable', updated_at = now(),
+       set status = 'failed', error_code = 'unreachable', error_message = 'Function unreachable', updated_at = now(),
            updated_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'
        where id = '00000000-0000-0000-0000-00000000a001' and status = 'pending'
        returning id $$,
@@ -170,10 +170,27 @@ select results_eq(
 );
 
 select results_eq(
-    $$ select source_url, parsed_meal, error_message from public.meal_imports
+    $$ select source_url, parsed_meal, error_code, error_message from public.meal_imports
        where id = '00000000-0000-0000-0000-00000000a001' $$,
-    $$ values ('https://example.test/a1'::text, null::jsonb, 'Function unreachable'::text) $$,
+    $$ values ('https://example.test/a1'::text, null::jsonb, 'unreachable'::text, 'Function unreachable'::text) $$,
     'failing the import changed only the columns MarkMealImportFailed sends'
+);
+
+-- error_code: nullable, and only the codes in MealWiz/tests/Contracts/meal_import_error_code.json.
+select col_is_null('public', 'meal_imports', 'error_code', 'error_code is nullable');
+
+select lives_ok(
+    $$ insert into public.meal_imports (created_by, source_url, status, error_code)
+       select 'aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/' || code, 'failed', code
+       from unnest(array['invalid_url', 'no_recipe_found', 'fetch_failed', 'unreachable', 'timed_out', 'unknown']) as code $$,
+    'every error code in the contract is accepted'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, source_url, status, error_code)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/bogus', 'failed', 'bogus') $$,
+    '23514', null,
+    'an unknown error code is rejected'
 );
 
 select * from finish();

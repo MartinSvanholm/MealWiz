@@ -1,13 +1,14 @@
 @inject IMealsStateContainer _mealsStateContainer
 @inject IMealImportStateContainer _mealImportStateContainer
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealsResource> L
 @implements IDisposable
 
-<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" AriaLabel="Add meal">
+<MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" AriaLabel="@L["AddMealMenu_Aria"]">
     <ActivatorContent>
         <button type="button" class="mw-add-meal-button" data-testid="add-meal-menu" aria-haspopup="menu">
             <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Size="Size.Small" />
-            New
+            @L["AddMealMenu_New"]
             @if (EntryState != MealImportEntryState.Default)
             {
                 <span class="mw-add-meal-dot" data-testid="add-meal-menu-dot" data-state="@DotState" aria-hidden="true"></span>
@@ -21,8 +22,8 @@
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Size="Size.Small" />
                 </span>
                 <span class="mw-add-meal-text">
-                    <span class="mw-add-meal-title">Create manually</span>
-                    <span class="mw-add-meal-hint">Name, recipe and ingredients</span>
+                    <span class="mw-add-meal-title">@L["AddMealMenu_CreateManually"]</span>
+                    <span class="mw-add-meal-hint">@L["AddMealMenu_CreateManuallyHint"]</span>
                 </span>
             </span>
         </MudMenuItem>
@@ -35,8 +36,8 @@
                             <MudIcon Icon="@SpinnerIcon" Color="Color.Inherit" Size="Size.Small" />
                         </span>
                         <span class="mw-add-meal-text">
-                            <span class="mw-add-meal-title mw-text-info">Import in progress…</span>
-                            <span class="mw-add-meal-hint">We'll add the meal when it's ready</span>
+                            <span class="mw-add-meal-title mw-text-info">@L["AddMealMenu_ImportInProgress"]</span>
+                            <span class="mw-add-meal-hint">@L["AddMealMenu_ImportInProgressHint"]</span>
                         </span>
                         break;
                     case MealImportEntryState.Failed:
@@ -44,8 +45,8 @@
                             <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Color="Color.Inherit" Size="Size.Small" />
                         </span>
                         <span class="mw-add-meal-text">
-                            <span class="mw-add-meal-title mw-text-warning">Last import failed: see why</span>
-                            <span class="mw-add-meal-hint">Paste a link to a recipe</span>
+                            <span class="mw-add-meal-title mw-text-warning">@L["AddMealMenu_ImportFailed"]</span>
+                            <span class="mw-add-meal-hint">@L["AddMealMenu_ImportHint"]</span>
                         </span>
                         break;
                     default:
@@ -53,8 +54,8 @@
                             <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Inherit" Size="Size.Small" />
                         </span>
                         <span class="mw-add-meal-text">
-                            <span class="mw-add-meal-title">Import from URL</span>
-                            <span class="mw-add-meal-hint">Paste a link to a recipe</span>
+                            <span class="mw-add-meal-title">@L["AddMealMenu_Import"]</span>
+                            <span class="mw-add-meal-hint">@L["AddMealMenu_ImportHint"]</span>
                         </span>
                         break;
                 }

@@ -2,6 +2,7 @@ using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 using static Supabase.Postgrest.Constants;
@@ -18,7 +19,7 @@ public static class AddPlanIngredientsToGroceryList
 {
     public record Command(List<PlanIngredientToAdd> Items) : IRequest<Result<List<GroceryItem>>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<List<GroceryItem>>>
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result<List<GroceryItem>>>
     {
         public async Task<Result<List<GroceryItem>>> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -29,7 +30,7 @@ public static class AddPlanIngredientsToGroceryList
             var user = new Guid(userId);
 
             if (request.Items.Any(item => item.PlannedMealId <= 0 || item.Ingredient.Id <= 0))
-                return Result.Fail("Only saved ingredients of planned meals can be added.");
+                return Result.Fail(localizer["GroceryItems_OnlyPlannedIngredients"]);
 
             var plannedMealIds = request.Items.Select(item => item.PlannedMealId).Distinct().ToList();
             var linkedResult = await Result.Try(async Task<ModeledResponse<GroceryItemSourceDb>> () => await supabaseClient
@@ -58,7 +59,7 @@ public static class AddPlanIngredientsToGroceryList
                     .Set(x => x.UpdatedAt!, DateTime.UtcNow)
                     .Update(cancellationToken: cancellationToken));
                 if (updateResult.IsFailed) return updateResult.ToResult<List<GroceryItem>>();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail("The grocery item could not be found.");
+                if (updateResult.Value.Models.Count == 0) return Result.Fail(localizer["GroceryItem_NotFound"]);
 
                 updated.Add(new GroceryItem(updateResult.Value.Models[0]));
                 foreach (var entry in group) itemIdOfEntry[entry] = id;
@@ -86,7 +87,7 @@ public static class AddPlanIngredientsToGroceryList
                     .From<GroceryItemDb>()
                     .Insert(newItems.ConvertAll(item => item.MapToDb()), cancellationToken: cancellationToken));
                 if (insertResult.IsFailed) return insertResult.ToResult<List<GroceryItem>>();
-                if (insertResult.Value.Models.Count < newGroups.Count) return Result.Fail("The grocery items could not be added.");
+                if (insertResult.Value.Models.Count < newGroups.Count) return Result.Fail(localizer["GroceryItems_NotAdded"]);
 
                 // Bulk insert order is not guaranteed: find each group's row by name.
                 var rowByName = insertResult.Value.Models.ToDictionary(row => row.Name.Trim(), StringComparer.OrdinalIgnoreCase);

@@ -71,6 +71,17 @@ public class GroceryListPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Header_and_progress_say_item_for_a_single_item()
+    {
+        SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk }));
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        var week = ISOWeek.GetWeekOfYear(MealPlan.SelectedWeekStart);
+        Assert.Equal($"1 item · Week {week}", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Equal("0 of 1 item", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
+    }
+
+    [Fact]
     public void Checking_off_an_item_saves_it_as_picked_and_moves_it_to_the_basket()
     {
         var cut = RenderWithPopovers<GroceryListPage>();

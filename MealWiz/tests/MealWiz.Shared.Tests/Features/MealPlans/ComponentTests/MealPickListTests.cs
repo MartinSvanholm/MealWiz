@@ -73,7 +73,8 @@ public class MealPickListTests : ComponentTestBase
         var picked = new List<Meal>();
         var cut = Render<MealPickList>(p => p.Add(x => x.OnPick, m => picked.Add(m)));
 
-        foreach (var name in new[] { "Eat out", "Leftovers" })
+        // System meals show their display name by type ("Eat Out"), whatever is stored ("Eat out" in the test data).
+        foreach (var name in new[] { "Eat Out", "Leftovers" })
         {
             cut.FindAll(TestId("meal-list-item")).Single(r => r.TextContent.Contains(name)).QuerySelector(TestId("meal-selection-pick"))!.Click();
         }

@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using FluentResults;
 using MealWiz.Shared.Features.MealImport.Models;
 using MediatR;
+using Microsoft.Extensions.Localization;
 
 namespace MealWiz.Shared.Features.MealImport.TriggerScrapeRecipe;
 
@@ -14,12 +15,12 @@ public static class TriggerScrapeRecipe
 {
     public record Command(Guid JobId, string Url) : IRequest<Result>;
 
-    public class Handler(HttpClient httpClient, MealImportFunctionOptions options) : IRequestHandler<Command, Result>
+    public class Handler(HttpClient httpClient, MealImportFunctionOptions options, IStringLocalizer<MealImportResource> localizer) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(options.Url))
-                return Result.Fail("The meal import service is not configured.");
+                return Result.Fail(localizer["Import_ServiceNotConfigured"]);
 
             var endpoint = $"{options.Url.TrimEnd('/')}/api/ScrapeRecipe";
 
@@ -39,7 +40,7 @@ public static class TriggerScrapeRecipe
             using var response = sendResult.Value;
             return response.IsSuccessStatusCode
                 ? Result.Ok()
-                : Result.Fail($"The meal import service responded with {(int)response.StatusCode}.");
+                : Result.Fail(localizer["Import_ServiceResponded", (int)response.StatusCode]);
         }
     }
 }

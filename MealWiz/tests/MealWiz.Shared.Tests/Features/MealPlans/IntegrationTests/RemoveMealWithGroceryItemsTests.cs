@@ -1,3 +1,5 @@
+using MealWiz.Shared.Features.MealPlans;
+using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
@@ -88,11 +90,11 @@ public class RemoveMealWithGroceryItemsTests(LocalSupabaseFixture supabase) : IC
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var monday = Week(2);
-        var manualGarlic = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client)
+        var manualGarlic = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>())
             .Handle(new AddGroceryItem.Command(new GroceryItemBuilder().WithName("Garlic").WithAmount("1 clove").Build()), CancellationToken));
         var setup = await PlanPastaAndSoupSharingGarlicAsync(monday, pastaGarlicMergesInto: manualGarlic.Id);
         setup.Spaghetti.IsPicked = true;
-        ResultAssert.Ok(await new UpdateGroceryItem.Handler(supabase.Client).Handle(new UpdateGroceryItem.Command(setup.Spaghetti), CancellationToken));
+        ResultAssert.Ok(await new UpdateGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new UpdateGroceryItem.Command(setup.Spaghetti), CancellationToken));
 
         var onlyPasta = await OnlyNeededByAsync(setup.PastaDay);
 
@@ -139,11 +141,11 @@ public class RemoveMealWithGroceryItemsTests(LocalSupabaseFixture supabase) : IC
         PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, await GetItemsAsync(), ResultAssert.Ok(await GetSourcesAsync()));
 
     private Task<FluentResults.Result> RemoveAsync(Setup setup, DateTime date) =>
-        new RemoveMealFromMealPlan.Handler(supabase.Client)
+        new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
             .Handle(new RemoveMealFromMealPlan.Command(setup.Pasta.Id, setup.Plan.Id, date), CancellationToken);
 
     private Task<FluentResults.Result<List<GroceryItem>>> AddAsync(List<PlanIngredientToAdd> items) =>
-        new AddPlanIngredientsToGroceryList.Handler(supabase.Client).Handle(new AddPlanIngredientsToGroceryList.Command(items), CancellationToken);
+        new AddPlanIngredientsToGroceryList.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new AddPlanIngredientsToGroceryList.Command(items), CancellationToken);
 
     private Task<FluentResults.Result> DeleteAsync(List<int> ids) =>
         new DeleteGroceryItems.Handler(supabase.Client).Handle(new DeleteGroceryItems.Command(ids), CancellationToken);

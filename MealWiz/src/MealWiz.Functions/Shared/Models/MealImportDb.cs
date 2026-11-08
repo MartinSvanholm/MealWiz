@@ -21,6 +21,9 @@ public class MealImportDb : BaseModel
     [Column("parsed_meal")]
     public MealImportPayload? ParsedMeal { get; set; }
 
+    [Column("error_code")]
+    public string? ErrorCode { get; set; }
+
     [Column("error_message")]
     public string? ErrorMessage { get; set; }
 

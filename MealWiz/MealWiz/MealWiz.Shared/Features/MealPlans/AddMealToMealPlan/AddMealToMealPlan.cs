@@ -2,7 +2,9 @@
 using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 
@@ -12,15 +14,15 @@ public static class AddMealToMealPlan
 {
     public record Command(Meal Meal) : IRequest<Result<int>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<int>>
+    public class Handler(Client supabaseClient, IStringLocalizer<MealPlansResource> localizer) : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
             if (request.Meal.MealPlan == null || request.Meal.MealDate == null)
-                return Result.Fail<int>("Meal plan or meal date cannot be empty");
+                return Result.Fail<int>(localizer["MealPlan_PlanOrDateMissing"]);
 
             if (supabaseClient.Auth.CurrentSession?.User == null)
-                return Result.Fail<int>("Not authenticated");
+                return Result.Fail<int>(ErrorMessages.NotSignedIn);
 
             var mealPlanMealDb = new MealPlanMealDb()
             {
@@ -39,8 +41,8 @@ public static class AddMealToMealPlan
             if (result.IsFailed) return result.ToResult<int>();
 
             return result.Value.Model is { } model
-                ? Result.Ok(model.Id).WithSuccess("Meal added to plan")
-                : Result.Fail<int>("The meal could not be added to the plan.");
+                ? Result.Ok(model.Id).WithSuccess(localizer["MealPlan_MealAdded"])
+                : Result.Fail<int>(localizer["MealPlan_MealNotAdded"]);
         }
     }
 }
