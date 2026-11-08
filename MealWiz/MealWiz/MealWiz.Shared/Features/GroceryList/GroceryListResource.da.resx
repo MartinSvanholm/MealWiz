@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="MergeDrawer_Plan" xml:space="preserve">
+    <value>Plan {0}</value>
+  </data>
+  <data name="MergeDrawer_Was" xml:space="preserve">
+    <value>Var {0}</value>
+  </data>
+  <data name="MergeDrawer_Now" xml:space="preserve">
+    <value>Nu {0}</value>
+  </data>
+  <data name="MergeDrawer_InList" xml:space="preserve">
+    <value>På listen {0}</value>
+  </data>
+  <data name="MergeDrawer_Add" xml:space="preserve">
+    <value>Tilføj {0} til indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Update" xml:space="preserve">
+    <value>Opdatér {0} på indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Added" xml:space="preserve">
+    <value>Ingredienser tilføjet til listen</value>
+  </data>
+  <data name="MergeDrawer_Updated" xml:space="preserve">
+    <value>Indkøbslisten er opdateret</value>
+  </data>
+  <data name="LinkedAmounts_OnlyLinked" xml:space="preserve">
+    <value>Kun varer, der er knyttet til madplanen, kan opdateres.</value>
+  </data>
+  <data name="LinkedAmounts_ItemNotFound" xml:space="preserve">
+    <value>Varen blev ikke fundet.</value>
+  </data>
+  <data name="LinkedAmounts_InBasket" xml:space="preserve">
+    <value>Varen ligger allerede i kurven.</value>
+  </data>
+  <data name="LinkedAmounts_LinkNotFound" xml:space="preserve">
+    <value>Varens tilknytning blev ikke fundet.</value>
+  </data>
+</root>

@@ -20,7 +20,7 @@ adds every E2E journey.
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
 | `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (10 cases) | smoke | Docker + Chromium |
+| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (11 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 

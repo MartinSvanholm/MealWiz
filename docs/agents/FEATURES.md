@@ -193,6 +193,12 @@ same name (ignoring case) is merged into: the total is pre-filled by `AmountHelp
 empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
 
+A linked ingredient whose amount changed after it was added (the source's amount differs from the ingredient's current
+amount, trimmed and ignoring case; the item is still to buy; the source isn't stale) is offered again in the same
+drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all share
+a unit and the result is above zero, else an empty required field. Confirming updates the item's amount and the
+source's remembered amount, so it isn't offered again.
+
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
 "X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
@@ -224,9 +230,12 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
-    off, groups same names into one row (subline "Plan X + Y · In list Z", orange field for merged rows) and shows
-    `plan-ingredients-loading`, `plan-ingredients-empty` or `plan-ingredients-all-on-list`; the button reads "Add N to
-    grocery list"; row names carry `plan-ingredient-name`.
+    off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
+    with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
+    orange field for merged rows) and shows `plan-ingredients-loading`, `plan-ingredients-empty` or
+    `plan-ingredients-all-on-list` (nothing new and nothing changed); the button reads "Add N to grocery list", or
+    "Update N on grocery list" when every row is change-only (snackbar "Grocery list updated"); row names carry
+    `plan-ingredient-name`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -235,6 +244,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
   | GetGroceryItemSources | `Query()` → `Result<List<GroceryItemSource>>` | Every source of the user's items, with the planned day's meal and date and the ingredient's meal and name |
   | AddPlanIngredientsToGroceryList | `Command(List<PlanIngredientToAdd> Items)` → `Result<List<GroceryItem>>` | Skips already-linked pairs, updates merged items' amount, inserts new items (is_manual false, one per name), adds a source per ingredient |
+  | UpdateLinkedGroceryAmounts | `Command(List<LinkedAmountUpdate> Updates)` → `Result` | Checks each item is the user's and still to buy and each source belongs to its item; sets each item's amount once, then each source's remembered amount |
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
@@ -246,13 +256,13 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
-  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
   - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
-  - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`
+  - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
   - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
