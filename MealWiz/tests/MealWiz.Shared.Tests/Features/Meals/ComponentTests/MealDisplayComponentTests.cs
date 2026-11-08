@@ -78,6 +78,17 @@ public class MealDisplayComponentTests : ComponentTestBase
     }
 
     [Fact]
+    public void A_system_meal_shows_its_display_name_not_its_stored_name()
+    {
+        Plan(TestData.Meal("stored-leftovers-name", type: MealType.Leftover));
+
+        var cut = Render<MealDisplayComponent>();
+
+        Assert.Equal("Leftovers", cut.Find(TestId("meal-display-name")).TextContent.Trim());
+        Assert.DoesNotContain("stored-leftovers-name", cut.Markup);
+    }
+
+    [Fact]
     public void Add_all_to_list_is_shown_but_not_wired_yet_and_there_is_no_eaten_out_button()
     {
         Plan(TestData.Meal("Lasagne", ingredients: [TestData.Ingredient("Pasta sheets", "1 pk")]));
@@ -128,5 +139,24 @@ public class MealDisplayComponentTests : ComponentTestBase
         cut.InvokeAsync(() => MealPlan.SelectedDate = today.AddDays(1));
 
         Assert.Equal("Lasagne", cut.Find(TestId("meal-display-name")).TextContent.Trim());
+    }
+}
+
+/// <summary>The day card's texts come from resources (UI-03): every localizer echoes its key as <c>[Key]</c>.</summary>
+public class MealDisplayComponentTextTests() : ComponentTestBase(echoResourceKeys: true)
+{
+    [Fact]
+    public void The_card_and_its_sections_read_from_resources()
+    {
+        MealPlan.MealPlan = TestData.MealPlanWith(MealPlan.SelectedDate, TestData.Meal("Lasagne", ingredients: [TestData.Ingredient("Pasta sheets", "1 pk")]));
+
+        var cut = Render<MealDisplayComponent>();
+
+        Assert.Equal("[DayCard_HeroAria]", cut.Find(TestId("meal-display-hero")).GetAttribute("aria-label"));
+        Assert.Equal("[DayCard_DayDinner]", cut.Find(TestId("meal-display-day")).TextContent.Trim());
+        Assert.Equal("[DayCard_Summary]", cut.Find(TestId("meal-display-summary")).TextContent.Trim());
+        Assert.Equal("[DayCard_Swap]", cut.Find(TestId("swap-meal-button")).TextContent.Trim());
+        Assert.Equal("[DayCard_AddAllToList]", cut.Find(TestId("add-all-to-list")).TextContent.Trim());
+        Assert.Equal("[DayCard_AddRecipe]", cut.Find(TestId("meal-display-add-recipe")).TextContent.Trim());
     }
 }

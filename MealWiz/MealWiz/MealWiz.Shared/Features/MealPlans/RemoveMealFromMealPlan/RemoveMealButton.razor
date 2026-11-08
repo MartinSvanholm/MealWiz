@@ -1,9 +1,10 @@
 ﻿@inject ISnackbar _snackbar
 @inject IMediator _mediator
 @inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IStringLocalizer<MealPlansResource> L
 
 @* A 44px dark round button; the Meal plan puts it in the corner of the selected day's orange card. *@
-<button type="button" class="mw-remove-meal" data-testid="remove-meal-button" aria-label="Remove meal from this day" @onclick="RemoveMealFromMealPlan">
+<button type="button" class="mw-remove-meal" data-testid="remove-meal-button" aria-label="@L["RemoveMeal_Aria"]" @onclick="RemoveMealFromMealPlan">
     <MudIcon Icon="@Icons.Material.Rounded.Close" Size="Size.Small" />
 </button>
 
@@ -14,7 +15,7 @@
 
         if (meal == null || meal.MealDate == null) 
         {
-            _snackbar.Add("Meal or meal date cannot be empty", Severity.Error);
+            _snackbar.Add(L["RemoveMeal_MealOrDateMissing"], Severity.Error);
             return;
         }
 
