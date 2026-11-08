@@ -56,5 +56,40 @@
   </data>
   <data name="ReviewItems_Empty" xml:space="preserve">
     <value>Intet at gennemgå</value>
+  <data name="MergeDrawer_Plan" xml:space="preserve">
+    <value>Plan {0}</value>
+  </data>
+  <data name="MergeDrawer_Was" xml:space="preserve">
+    <value>Var {0}</value>
+  </data>
+  <data name="MergeDrawer_Now" xml:space="preserve">
+    <value>Nu {0}</value>
+  </data>
+  <data name="MergeDrawer_InList" xml:space="preserve">
+    <value>På listen {0}</value>
+  </data>
+  <data name="MergeDrawer_Add" xml:space="preserve">
+    <value>Tilføj {0} til indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Update" xml:space="preserve">
+    <value>Opdatér {0} på indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Added" xml:space="preserve">
+    <value>Ingredienser tilføjet til listen</value>
+  </data>
+  <data name="MergeDrawer_Updated" xml:space="preserve">
+    <value>Indkøbslisten er opdateret</value>
+  </data>
+  <data name="LinkedAmounts_OnlyLinked" xml:space="preserve">
+    <value>Kun varer, der er knyttet til madplanen, kan opdateres.</value>
+  </data>
+  <data name="LinkedAmounts_ItemNotFound" xml:space="preserve">
+    <value>Varen blev ikke fundet.</value>
+  </data>
+  <data name="LinkedAmounts_InBasket" xml:space="preserve">
+    <value>Varen ligger allerede i kurven.</value>
+  </data>
+  <data name="LinkedAmounts_LinkNotFound" xml:space="preserve">
+    <value>Varens tilknytning blev ikke fundet.</value>
   </data>
 </root>

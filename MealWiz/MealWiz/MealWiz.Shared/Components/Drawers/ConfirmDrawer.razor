@@ -19,7 +19,7 @@
         }
         <div class="mw-confirm-buttons">
             <MudButton data-testid="confirm-drawer-cancel" Variant="Variant.Filled" Class="mw-confirm-cancel" OnClick="Cancel">@L["Common_Cancel"]</MudButton>
-            <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">@L["Common_Delete"]</Button>
+            <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">@(_drawerStateContainer.StateParameters.ConfirmLabel ?? L["Common_Delete"].Value)</Button>
         </div>
     </div>
 </MudDrawer>

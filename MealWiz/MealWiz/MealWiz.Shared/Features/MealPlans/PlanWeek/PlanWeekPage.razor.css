@@ -256,3 +256,54 @@
     margin: 0 0 8px;
     color: var(--mw-text-muted);
 }
+
+/* Preview row actions (MEA-80): the meal is a pick button, then shuffle and clear. */
+.mw-plan-week-pick {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: var(--mw-touch);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    border: none;
+    background: none;
+    color: var(--mw-text);
+}
+
+.mw-plan-week-pick .mw-plan-week-day-meal {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mw-plan-week-pick .mw-plan-day-empty {
+    color: var(--mw-text-muted);
+}
+
+.mw-plan-week-action {
+    flex: none;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-text);
+}
+
+.mw-plan-week-action:disabled {
+    opacity: .4;
+    cursor: default;
+}
+
+.mw-plan-week-pick:focus-visible,
+.mw-plan-week-action:focus-visible {
+    outline: 2px solid var(--mw-orange-text);
+    outline-offset: 2px;
+}

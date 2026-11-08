@@ -78,6 +78,56 @@ public class GroceryItemSourceModelTests
         Assert.True(new GroceryItemSource(Details(plannedDayMealId: 6, ingredientMealId: 5)).IsStale);
 
     [Fact]
+    public void FromDetailsDb_MapsTheIngredientsCurrentAmount()
+    {
+        var db = Details();
+        db.Ingredient!.Amount = "750 g";
+
+        Assert.Equal("750 g", new GroceryItemSource(db).IngredientAmount);
+    }
+
+    [Fact]
+    public void FromDetailsDb_WithoutIngredient_HasNoIngredientAmount()
+    {
+        var db = Details();
+        db.Ingredient = null;
+        db.IngredientId = null;
+
+        Assert.Null(new GroceryItemSource(db).IngredientAmount);
+    }
+
+    [Fact]
+    public void FromDetailsDb_IngredientWithoutAmount_HasAnEmptyIngredientAmount()
+    {
+        var db = Details();
+        db.Ingredient!.Amount = null;
+
+        Assert.Equal("", new GroceryItemSource(db).IngredientAmount);
+    }
+
+    [Theory]
+    [InlineData("500 g", "750 g", true)]
+    [InlineData("500 g", "500 g", false)]
+    [InlineData(" 500 g ", "500 G", false)]
+    [InlineData("500 g", "", true)]
+    [InlineData("", "500 g", true)]
+    [InlineData("500 g", null, false)]
+    public void HasChangedAmount_ComparesTrimmedAmountsIgnoringCase(string amount, string? ingredientAmount, bool expected)
+    {
+        var source = new GroceryItemSource(Details()) { Amount = amount, IngredientAmount = ingredientAmount };
+
+        Assert.Equal(expected, source.HasChangedAmount);
+    }
+
+    [Fact]
+    public void HasChangedAmount_StaleSource_IsFalse()
+    {
+        var source = new GroceryItemSource(Details(plannedDayMealId: 6, ingredientMealId: 5)) { Amount = "500 g", IngredientAmount = "750 g" };
+
+        Assert.False(source.HasChangedAmount);
+    }
+
+    [Fact]
     public void MapToGroceryItemSourceDb_CopiesTheColumns()
     {
         var source = new GroceryItemSource(Details());

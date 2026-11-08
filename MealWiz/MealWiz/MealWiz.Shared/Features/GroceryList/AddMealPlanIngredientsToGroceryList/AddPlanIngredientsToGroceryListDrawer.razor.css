@@ -41,6 +41,11 @@
     color: var(--mw-text-muted);
 }
 
+.plan-ingredient-now {
+    color: var(--mw-orange-text);
+    font-weight: 700;
+}
+
 .plan-ingredient-in-list {
     color: var(--mw-green-text);
     font-weight: 700;

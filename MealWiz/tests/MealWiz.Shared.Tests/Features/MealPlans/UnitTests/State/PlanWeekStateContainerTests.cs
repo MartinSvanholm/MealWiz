@@ -438,6 +438,238 @@ public class PlanWeekStateContainerTests
         _mediator.Verify(m => m.Send(It.IsAny<SaveGeneratedWeek.Command>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ---- Adjusting the preview (MEA-80) ----
+
+    private async Task<IPlanWeekStateContainer> OpenAndGenerate(DateTime? week = null)
+    {
+        await _container.Open(week ?? NextMonday);
+        await _container.Generate();
+        return _container;
+    }
+
+    private int PlannedDatesQueries() =>
+        _mediator.Invocations.Count(i => i.Method.Name == nameof(IMediator.Send) && i.Arguments[0] is GetMealPlannedDates.Query);
+
+    [Fact]
+    public async Task Generate_SetsHasPreview()
+    {
+        await _container.Open(NextMonday);
+        Assert.False(_container.HasPreview);
+
+        await _container.Generate();
+
+        Assert.True(_container.HasPreview);
+    }
+
+    [Fact]
+    public async Task Open_And_NavigateToWeek_ClearHasPreview()
+    {
+        await OpenAndGenerate();
+
+        await _container.NavigateToWeek(NextMonday.AddDays(7));
+        Assert.False(_container.HasPreview);
+
+        await _container.Generate();
+        await _container.Open(NextMonday);
+        Assert.False(_container.HasPreview);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_UnlockedDay_PutsAnotherRegularMealNotOnOtherDays()
+    {
+        await OpenAndGenerate();
+        var date = NextMonday.AddDays(1);
+        var before = _container.Days[1].Meal!;
+        var others = _container.Days.Where(d => d.Date != date).Select(d => d.Meal!.Id).ToHashSet();
+
+        await _container.ShuffleDay(date);
+
+        var after = _container.Days[1].Meal!;
+        Assert.NotEqual(before.Id, after.Id);
+        Assert.True(after.IsRegular);
+        Assert.DoesNotContain(after.Id, others);
+        Assert.False(_container.Days[1].IsLocked);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_LockedDay_ChangesNothing()
+    {
+        await OpenAndGenerate();
+        var date = NextMonday.AddDays(1);
+        _container.ToggleLock(date);
+        var before = _container.Days.ToList();
+
+        await _container.ShuffleDay(date);
+
+        Assert.Equal(before, _container.Days);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_EmptyUnlockedDay_FillsIt()
+    {
+        await OpenAndGenerate();
+        var date = NextMonday.AddDays(3);
+        _container.ClearDay(date);
+        Assert.Null(_container.Days[3].Meal);
+
+        await _container.ShuffleDay(date);
+
+        Assert.NotNull(_container.Days[3].Meal);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_NoOtherMeal_LeavesTheDay()
+    {
+        SetupMeals([_meals[0], _leftovers, _eatOut]);
+        await OpenAndGenerate();
+        var before = _container.Days.ToList();
+
+        await _container.ShuffleDay(NextMonday);
+
+        Assert.Equal(before, _container.Days);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_Notifies()
+    {
+        await OpenAndGenerate();
+        _notifications = 0;
+
+        await _container.ShuffleDay(NextMonday.AddDays(1));
+
+        Assert.True(_notifications > 0);
+    }
+
+    [Fact]
+    public async Task ShuffleDay_WeeksBackChangedSinceGenerate_ReloadsTheInputs()
+    {
+        await OpenAndGenerate();
+        var queries = PlannedDatesQueries();
+
+        await _container.ShuffleDay(NextMonday.AddDays(1));
+        Assert.Equal(queries, PlannedDatesQueries());
+
+        await _container.SetWeeksBack(5);
+        await _container.ShuffleDay(NextMonday.AddDays(1));
+
+        Assert.Equal(queries + 1, PlannedDatesQueries());
+    }
+
+    [Fact]
+    public async Task ShuffleAll_RerollsUnlockedDaysAndKeepsLockedOnes()
+    {
+        await OpenAndGenerate();
+        var lockedDate = NextMonday.AddDays(2);
+        _container.ToggleLock(lockedDate);
+        var lockedMeal = _container.Days[2].Meal!;
+        var before = _container.Days.Select(d => d.Meal!.Id).ToList();
+
+        await _container.ShuffleAll();
+
+        Assert.Same(lockedMeal, _container.Days[2].Meal);
+        Assert.NotEqual(before, _container.Days.Select(d => d.Meal!.Id).ToList());
+        Assert.True(_container.HasPreview);
+    }
+
+    [Fact]
+    public async Task ShuffleAll_FillsClearedDays()
+    {
+        await OpenAndGenerate();
+        _container.ClearDay(NextMonday.AddDays(4));
+
+        await _container.ShuffleAll();
+
+        Assert.All(_container.Days, d => Assert.NotNull(d.Meal));
+    }
+
+    [Fact]
+    public async Task PickMeal_SetsTheMealLocksTheDayAndMarksDirty()
+    {
+        await _container.Open(NextMonday);
+        Assert.False(_container.IsDirty);
+
+        _container.PickMeal(NextMonday.AddDays(1), _meals[4]);
+
+        var day = _container.Days[1];
+        Assert.Same(_meals[4], day.Meal);
+        Assert.True(day.IsLocked);
+        Assert.True(_container.IsDirty);
+    }
+
+    [Fact]
+    public async Task PickMeal_AcceptsEatOutAndLeftovers()
+    {
+        await _container.Open(NextMonday);
+
+        _container.PickMeal(NextMonday, _eatOut);
+        _container.PickMeal(NextMonday.AddDays(1), _leftovers);
+
+        Assert.Same(_eatOut, _container.Days[0].Meal);
+        Assert.Same(_leftovers, _container.Days[1].Meal);
+    }
+
+    [Fact]
+    public async Task PickMeal_OnALockedDay_ReplacesTheMeal()
+    {
+        SetupWeek(PlanWith(NextMonday.AddDays(2), _meals[3]));
+        await _container.Open(NextMonday);
+
+        _container.PickMeal(NextMonday.AddDays(2), _meals[5]);
+
+        Assert.Same(_meals[5], _container.Days[2].Meal);
+        Assert.Equal(_meals[3].Id, _container.Days[2].SavedMealId);
+    }
+
+    [Fact]
+    public async Task ClearDay_EmptiesAndUnlocksTheDay()
+    {
+        await OpenAndGenerate();
+        var date = NextMonday.AddDays(1);
+        _container.ToggleLock(date);
+
+        _container.ClearDay(date);
+
+        Assert.Null(_container.Days[1].Meal);
+        Assert.False(_container.Days[1].IsLocked);
+    }
+
+    [Fact]
+    public async Task ClearDay_DayWithASavedMeal_ChangesNothing()
+    {
+        SetupWeek(PlanWith(NextMonday.AddDays(2), _meals[3]));
+        await _container.Open(NextMonday);
+        Assert.True(_container.HasSavedMeal(NextMonday.AddDays(2)));
+
+        _container.ClearDay(NextMonday.AddDays(2));
+
+        Assert.Same(_meals[3], _container.Days[2].Meal);
+    }
+
+    [Fact]
+    public async Task Save_WritesAHandPickedLockedDay()
+    {
+        await _container.Open(NextMonday);
+        _container.PickMeal(NextMonday.AddDays(1), _eatOut);
+        SetupSave(Result.Ok().WithSuccess("Week saved"));
+
+        await _container.Save();
+
+        _mediator.Verify(m => m.Send(
+            It.Is<SaveGeneratedWeek.Command>(c => c.Days.Count == 1 && c.Days[0].MealId == _eatOut.Id && c.Days[0].Date == NextMonday.AddDays(1)),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Save_Success_ClearsHasPreview()
+    {
+        await OpenAndGenerate();
+        SetupSave(Result.Ok().WithSuccess("Week saved"));
+
+        await _container.Save();
+
+        Assert.False(_container.HasPreview);
+    }
+
     [Fact]
     public async Task EveryMutatingMethod_Notifies()
     {

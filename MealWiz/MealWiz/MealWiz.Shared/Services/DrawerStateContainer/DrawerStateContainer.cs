@@ -123,10 +123,11 @@ public partial class DrawerStateContainer : IDrawerStateContainer
         IsConfirmDrawerOpen = false;
     }
 
-    public void OpenConfirmDrawer(string title, string description, Func<Task> onConfirm)
+    public void OpenConfirmDrawer(string title, string description, Func<Task> onConfirm, string? confirmLabel = null)
     {
         StateParameters.Title = title;
         StateParameters.Description = description;
+        StateParameters.ConfirmLabel = confirmLabel;
         _onConfirm = onConfirm;
 
         IsConfirmDrawerOpen = true;
