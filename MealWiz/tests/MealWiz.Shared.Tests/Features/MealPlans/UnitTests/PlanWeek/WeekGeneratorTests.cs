@@ -289,4 +289,71 @@ public class WeekGeneratorTests
 
         Assert.Equal(Ids(Run(input, 7)), Ids(Run(input, 7)));
     }
+
+    private static readonly IReadOnlySet<int> None = new HashSet<int>();
+    private static readonly IReadOnlyDictionary<int, DateTime> NoHistory = new Dictionary<int, DateTime>();
+
+    [Theory, MemberData(nameof(Seeds))]
+    public void PickMeal_PicksANonExcludedMealNotTakenAndNotCurrent(int seed)
+    {
+        var pool = Pool(8);
+
+        var meal = WeekGenerator.PickMeal(pool, new HashSet<int> { 1, 2 }, NoHistory, new HashSet<int> { 3, 4 }, 5, new Random(seed));
+
+        Assert.NotNull(meal);
+        Assert.DoesNotContain(meal!.Id, new[] { 1, 2, 3, 4, 5 });
+    }
+
+    [Fact]
+    public void PickMeal_SameSeed_PicksTheSameMeal()
+    {
+        var pool = Pool(10);
+
+        Assert.Equal(
+            WeekGenerator.PickMeal(pool, None, NoHistory, None, null, new Random(9))!.Id,
+            WeekGenerator.PickMeal(pool, None, NoHistory, None, null, new Random(9))!.Id);
+    }
+
+    [Fact]
+    public void PickMeal_EveryFreeMealExcluded_PicksTheLeastRecentlyUsed()
+    {
+        var pool = Pool(3);
+        var lastUsed = new Dictionary<int, DateTime> { [1] = Monday.AddDays(-7), [2] = Monday.AddDays(-30), [3] = Monday.AddDays(-30) };
+
+        var meal = WeekGenerator.PickMeal(pool, new HashSet<int> { 1, 2, 3 }, lastUsed, None, null, new Random(1));
+
+        Assert.Equal(2, meal!.Id); // oldest; the tie goes to the lower id
+    }
+
+    [Fact]
+    public void PickMeal_EveryMealTaken_AllowsARepeatButNotTheCurrentMeal()
+    {
+        var pool = Pool(3);
+
+        var meal = WeekGenerator.PickMeal(pool, None, NoHistory, new HashSet<int> { 1, 2, 3 }, 2, new Random(1));
+
+        Assert.NotNull(meal);
+        Assert.NotEqual(2, meal!.Id);
+    }
+
+    [Theory, MemberData(nameof(Seeds))]
+    public void PickMeal_NeverPicksEatOutOrLeftovers(int seed)
+    {
+        var pool = Pool(2);
+        pool.Add(LeftoversMeal);
+        pool.Add(EatOutMeal);
+
+        var meal = WeekGenerator.PickMeal(pool, None, NoHistory, None, null, new Random(seed));
+
+        Assert.True(meal!.IsRegular);
+    }
+
+    [Fact]
+    public void PickMeal_OnlyTheCurrentMealExists_ReturnsNull()
+    {
+        var pool = Pool(1);
+        pool.Add(LeftoversMeal);
+
+        Assert.Null(WeekGenerator.PickMeal(pool, None, NoHistory, None, 1, new Random(1)));
+    }
 }

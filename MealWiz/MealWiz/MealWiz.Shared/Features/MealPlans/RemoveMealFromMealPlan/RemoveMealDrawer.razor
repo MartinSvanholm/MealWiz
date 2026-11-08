@@ -1,0 +1,91 @@
+@using DeleteGroceryItemsAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItems.DeleteGroceryItems
+@using MealWiz.Shared.Features.Meals.Models
+@inject IMediator _mediator
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<SharedResource> S
+
+@* Asks before a day's meal comes off the plan. When the meal has grocery items only it needs, a switch (on by default)
+   deletes them too. Opened by RemoveMealButton through Open; removing happens here because removing the meal unmounts
+   the button. *@
+<div class="mw-remove-meal-drawer">
+    <p class="mw-remove-meal-drawer-description" data-testid="remove-meal-description">@L["RemoveMeal_Description", Meal.Name, MealDate.DayOfWeek.ToWeekdayName()]</p>
+    @if (GroceryItemIds.Count > 0)
+    {
+        <div class="mw-remove-meal-drawer-switch" data-testid="remove-meal-grocery-row">
+            <span class="mw-remove-meal-drawer-switch-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" /></span>
+            <span class="mw-remove-meal-drawer-switch-label" data-testid="remove-meal-grocery-label">@SwitchLabel</span>
+            <MudSwitch T="bool" data-testid="remove-meal-grocery-switch" @bind-Value="_alsoRemoveGroceryItems" Color="Color.Primary" aria-label="@SwitchLabel" />
+        </div>
+    }
+    <DrawerFooter>
+        <div class="mw-sheet-footer-pair">
+            <MudButton data-testid="remove-meal-cancel" Variant="Variant.Filled" Class="mw-sheet-footer-cancel" Disabled="_removing" OnClick="Cancel">@S["Common_Cancel"]</MudButton>
+            <Button data-testid="remove-meal-confirm" Color="Color.Error" Class="mw-sheet-footer-danger" IsLoading="_removing" OnClick="RemoveAsync">@L["RemoveMeal_Confirm"]</Button>
+        </div>
+    </DrawerFooter>
+</div>
+
+@code {
+    public const string DrawerHeight = "calc(236px + env(safe-area-inset-bottom))";
+    public const string DrawerHeightWithSwitch = "calc(312px + env(safe-area-inset-bottom))";
+
+    [Parameter] public Meal Meal { get; set; } = default!;
+    [Parameter] public DateTime MealDate { get; set; }
+    /// <summary>The grocery items only this planned day needs (PlannedMealGroceryItems.OnlyNeededBy).</summary>
+    [Parameter] public IReadOnlyList<int> GroceryItemIds { get; set; } = [];
+
+    private bool _alsoRemoveGroceryItems = true;
+    private bool _removing;
+
+    private string SwitchLabel => L.Plural("RemoveMeal_AlsoRemove", GroceryItemIds.Count);
+
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(RemoveMealDrawer),
+            Title = localizer["RemoveMeal_Title", meal.Name],
+            Height = groceryItemIds.Count > 0 ? DrawerHeightWithSwitch : DrawerHeight,
+            ContentParameters = new()
+            {
+                { nameof(Meal), meal },
+                { nameof(MealDate), mealDate },
+                { nameof(GroceryItemIds), groceryItemIds }
+            }
+        });
+
+    private void Cancel() => _drawerStateContainer.CloseDrawer();
+
+    private async Task RemoveAsync()
+    {
+        var plan = _mealPlanStateContainer.MealPlan;
+        if (plan == null) return;
+
+        _removing = true;
+
+        // MEA-33: the meal stays on the day, and the grocery items stay, when the request failed.
+        var result = await _mediator.Send(new RemoveMealFromMealPlan.Command(Meal.Id, plan.Id, MealDate));
+        if (result.Handle(_snackbar).IsFailed)
+        {
+            _removing = false;
+            return;
+        }
+
+        plan.MealOnDate.Remove(MealDate);
+        plan.PlannedMealIdOnDate.Remove(MealDate);
+        _mealPlanStateContainer.NotifyStateChanged();
+
+        if (_alsoRemoveGroceryItems && GroceryItemIds.Count > 0)
+        {
+            var deleted = await _mediator.Send(new DeleteGroceryItemsAction.Command(GroceryItemIds.ToList()));
+            // Not Handle(): the meal is already gone, so this says the items stayed rather than echoing the raw error.
+            _snackbar.Add(
+                deleted.IsSuccess ? L.Plural("RemoveMeal_ItemsRemoved", GroceryItemIds.Count) : L["RemoveMeal_ItemsNotRemoved"],
+                deleted.IsSuccess ? Severity.Success : Severity.Error);
+        }
+
+        _drawerStateContainer.CloseDrawer();
+    }
+}

@@ -1,29 +1,54 @@
-﻿@inject ISnackbar _snackbar
+﻿@using GetAllGroceryItemsAction = MealWiz.Shared.Features.GroceryList.GetAllGroceryItems.GetAllGroceryItems
+@using GetGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.GetGroceryItemSources.GetGroceryItemSources
+@using MealWiz.Shared.Features.GroceryList.Models
+@inject ISnackbar _snackbar
 @inject IMediator _mediator
 @inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 @inject IStringLocalizer<MealPlansResource> L
 
-@* A 44px dark round button; the Meal plan puts it in the corner of the selected day's orange card. *@
-<button type="button" class="mw-remove-meal" data-testid="remove-meal-button" aria-label="@L["RemoveMeal_Aria"]" @onclick="RemoveMealFromMealPlan">
+@* A 44px dark round button; the Meal plan puts it in the corner of the selected day's orange card. It opens the
+   RemoveMealDrawer, which asks first and can remove the grocery items only this meal needs. *@
+<button type="button" class="mw-remove-meal" data-testid="remove-meal-button" aria-label="@L["RemoveMeal_ButtonLabel"]" disabled="@_loading" @onclick="OpenRemoveDrawer">
     <MudIcon Icon="@Icons.Material.Rounded.Close" Size="Size.Small" />
 </button>
 
 @code {
-    private async Task RemoveMealFromMealPlan()
+    private bool _loading;
+
+    private async Task OpenRemoveDrawer()
     {
         var meal = _mealPlanStateContainer.GetMealFromSelectedDate();
 
-        if (meal == null || meal.MealDate == null) 
+        if (meal == null || meal.MealDate == null)
         {
-            _snackbar.Add(L["RemoveMeal_MealOrDateMissing"], Severity.Error);
+            _snackbar.Add(L["RemoveMeal_NoMeal"], Severity.Error);
             return;
         }
 
-        var result = await _mediator.Send(new RemoveMealFromMealPlan.Command(meal.Id, _mealPlanStateContainer.MealPlan.Id, meal.MealDate.Value));
-        if (result.Handle(_snackbar).IsFailed) return;
+        var date = meal.MealDate.Value.Date;
+        _loading = true;
 
-        _mealPlanStateContainer.MealPlan.MealOnDate.Remove(meal.MealDate.Value);
-        _mealPlanStateContainer.MealPlan.PlannedMealIdOnDate.Remove(meal.MealDate.Value);
-        _mealPlanStateContainer.NotifyStateChanged();
+        var items = await _mediator.Send(new GetAllGroceryItemsAction.Query());
+        if (items.Handle(_snackbar).IsFailed)
+        {
+            _loading = false;
+            return;
+        }
+
+        var sources = await _mediator.Send(new GetGroceryItemSourcesAction.Query());
+        if (sources.Handle(_snackbar).IsFailed)
+        {
+            _loading = false;
+            return;
+        }
+
+        _loading = false;
+
+        var ids = _mealPlanStateContainer.MealPlan.PlannedMealIdOnDate.TryGetValue(date, out var plannedMealId)
+            ? PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id)
+            : [];
+
+        RemoveMealDrawer.Open(_drawerStateContainer, L, meal, date, ids);
     }
 }

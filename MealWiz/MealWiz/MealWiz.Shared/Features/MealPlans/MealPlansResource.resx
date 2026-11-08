@@ -12,6 +12,78 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="PlanWeek_Shuffle" xml:space="preserve">
+    <value>Shuffle {0}</value>
+    <comment>aria-label of a Plan week day's shuffle button; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_PickFor" xml:space="preserve">
+    <value>Pick a meal for {0}</value>
+    <comment>aria-label of a Plan week day's pick button and the pick drawer's title; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_TapToPick" xml:space="preserve">
+    <value>Tap to pick a meal</value>
+    <comment>Shown on an empty Plan week day in the preview</comment>
+  </data>
+  <data name="PlanWeek_Clear" xml:space="preserve">
+    <value>Clear {0}</value>
+    <comment>aria-label of a Plan week day's clear button; {0} is the weekday name</comment>
+  </data>
+  <data name="PlanWeek_ShuffleAll" xml:space="preserve">
+    <value>Shuffle all</value>
+    <comment>Plan week: re-rolls every unlocked day</comment>
+  </data>
+  <data name="PlanWeek_DiscardTitle" xml:space="preserve">
+    <value>Discard this plan?</value>
+    <comment>Title of the confirm when leaving Plan week with an unsaved preview</comment>
+  </data>
+  <data name="PlanWeek_DiscardText" xml:space="preserve">
+    <value>The meals you've planned for this week haven't been saved.</value>
+    <comment>Text of that confirm</comment>
+  </data>
+  <data name="PlanWeek_Discard" xml:space="preserve">
+    <value>Discard</value>
+    <comment>Confirm button of that confirm</comment>
+  </data>
+  <data name="RemoveMeal_Title" xml:space="preserve">
+    <value>Remove {0}?</value>
+    <comment>Title of the drawer that asks before a day's meal is removed; {0} is the meal name</comment>
+  </data>
+  <data name="RemoveMeal_Description" xml:space="preserve">
+    <value>{0} comes off {1}'s plan.</value>
+    <comment>{0} is the meal name, {1} the weekday name</comment>
+  </data>
+  <data name="RemoveMeal_AlsoRemove_One" xml:space="preserve">
+    <value>Also remove {0} item from the grocery list</value>
+    <comment>Switch in the remove-meal drawer; also its aria-label</comment>
+  </data>
+  <data name="RemoveMeal_AlsoRemove_Other" xml:space="preserve">
+    <value>Also remove {0} items from the grocery list</value>
+    <comment>Switch in the remove-meal drawer; also its aria-label</comment>
+  </data>
+  <data name="RemoveMeal_Confirm" xml:space="preserve">
+    <value>Remove</value>
+    <comment>Red button of the remove-meal drawer</comment>
+  </data>
+  <data name="RemoveMeal_ItemsRemoved_One" xml:space="preserve">
+    <value>{0} item removed from the grocery list</value>
+    <comment>Toast after the meal and its grocery item were removed</comment>
+  </data>
+  <data name="RemoveMeal_ItemsRemoved_Other" xml:space="preserve">
+    <value>{0} items removed from the grocery list</value>
+    <comment>Toast after the meal and its grocery items were removed</comment>
+  </data>
+  <data name="RemoveMeal_ItemsNotRemoved" xml:space="preserve">
+    <value>The grocery items couldn't be removed. They're still on your grocery list.</value>
+    <comment>Toast when the meal was removed but deleting its grocery items failed</comment>
+  </data>
+  <data name="RemoveMeal_ButtonLabel" xml:space="preserve">
+    <value>Remove meal from this day</value>
+    <comment>aria-label of the round remove button on the selected day's card</comment>
+  </data>
+  <data name="RemoveMeal_NoMeal" xml:space="preserve">
+    <value>Meal or meal date cannot be empty</value>
+    <comment>Toast when remove is pressed with no meal on the selected day</comment>
+  </data>
   <data name="MealPlan_MealNotInPlan" xml:space="preserve">
     <value>Meal not found in plan</value>
   </data>
@@ -125,12 +197,6 @@
   <data name="PickMeal_EditAria" xml:space="preserve">
     <value>Edit {0}</value>
     <comment>{0} is the meal name</comment>
-  </data>
-  <data name="RemoveMeal_Aria" xml:space="preserve">
-    <value>Remove meal from this day</value>
-  </data>
-  <data name="RemoveMeal_MealOrDateMissing" xml:space="preserve">
-    <value>Meal or meal date cannot be empty</value>
   </data>
   <data name="PlanWeek_NoMealsTitle" xml:space="preserve">
     <value>No meals to plan with</value>

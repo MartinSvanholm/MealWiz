@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MauiWASM.Tests.TestInfrastructure.E2E;
+using Microsoft.Playwright;
 using Xunit;
 
 namespace MauiWASM.Tests.E2ETests;
@@ -8,6 +9,9 @@ namespace MauiWASM.Tests.E2ETests;
 [Trait("Category", "Smoke")]
 public class GroceryListJourneyTests : E2ETestBase
 {
+    private static readonly Regex HasMeal = new(@"\bhas-meal\b");
+    private static readonly Regex SelectedDay = new(@"\bselected-day\b");
+
     [Fact]
     public async Task GroceryList_IsFilledFromThePlan_AndManualItemsCanBeAddedCheckedAndDeleted()
     {
@@ -193,5 +197,224 @@ public class GroceryListJourneyTests : E2ETestBase
         await Page.ReloadAsync();
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(4);
         await Expect(Row("grocery-item", "Tomatoes").GetByTestId("grocery-item-amount")).ToHaveTextAsync("600 g");
+    }
+
+    [Fact]
+    public async Task GroceryList_RemovingAPlannedMeal_RemovesItsOwnItems_AndKeepsSharedOnes()
+    {
+        const string pasta = "E2E Garlic pasta";
+        const string soup = "E2E Tomato soup";
+        await Supabase.InsertMealAsync(User, pasta,
+            new SeedIngredient("Spaghetti", "400 g", ShowOnGroceryList: true),
+            new SeedIngredient("Garlic", "2 cloves", ShowOnGroceryList: true));
+        await Supabase.InsertMealAsync(User, soup,
+            new SeedIngredient("Tomatoes", "6", ShowOnGroceryList: true),
+            new SeedIngredient("Garlic", "1 clove", ShowOnGroceryList: true));
+
+        await LoginAsync();
+        await PlanOnDayAsync(0, pasta);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(1);
+        await Expect(Row("grocery-item", "Garlic")).ToHaveCountAsync(1);
+
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await PlanOnDayAsync(1, soup);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        var garlicRow = Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Garlic" });
+        await FillAsync(garlicRow.GetByTestId("plan-ingredient-amount-input"), "3 cloves");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+
+        // Remove the pasta: only the spaghetti goes with it
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Page.GetByTestId("remove-meal-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Remove E2E Garlic pasta?");
+        await Expect(Drawer.GetByTestId("remove-meal-grocery-label")).ToHaveTextAsync("Also remove 1 item from the grocery list");
+        await Expect(Drawer.Locator("input[data-testid=remove-meal-grocery-switch], [data-testid=remove-meal-grocery-switch] input")).ToBeCheckedAsync();
+        await Drawer.GetByTestId("remove-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Day(0)).Not.ToHaveClassAsync(HasMeal);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Tomatoes")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+    }
+
+    [Fact]
+    public async Task GroceryList_AfterASwap_WarnsAboutItemsFromTheOldMeal_AndReviewRemovesOrKeepsThem()
+    {
+        const string tacos = "E2E Tacos";
+        const string soup = "E2E Leek soup";
+        await Supabase.InsertMealAsync(User, tacos,
+            new SeedIngredient("Tortillas", "8", ShowOnGroceryList: true),
+            new SeedIngredient("Salsa", "1 jar", ShowOnGroceryList: true));
+        await Supabase.InsertMealAsync(User, soup, new SeedIngredient("Leeks", "3", ShowOnGroceryList: true));
+
+        await LoginAsync();
+
+        // Plan the tacos on the first day and the soup on the second
+        await PlanOnDayAsync(0, tacos);
+        await PlanOnDayAsync(1, soup);
+
+        // Everything is current, so there is no banner
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+
+        // Swap the tacos day for another meal: its two items now come from a meal that left the plan
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Day(0).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
+        await Page.GetByTestId("swap-meal-button").ClickAsync();
+        await Expect(Page.GetByTestId("meal-selection-heading")).ToContainTextAsync("Swap the meal for");
+        await Row("meal-list-item", "Eat Out").ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Eat Out");
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page.GetByTestId("stale-items-text")).ToHaveTextAsync("2 items are from meals no longer in your plan");
+
+        // Review lists them under the old meal, ticked
+        await Page.GetByTestId("stale-items-review").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Review items");
+        await Expect(Drawer.GetByTestId("review-group")).ToHaveCountAsync(1);
+        await Expect(Drawer.GetByTestId("review-group-heading")).ToHaveTextAsync(tacos);
+        await Expect(Drawer.GetByTestId("review-item-checkbox")).ToHaveCountAsync(2);
+        await Expect(Drawer.GetByTestId("review-item-checkbox").First).ToBeCheckedAsync();
+        await Expect(Drawer.GetByTestId("review-item-checkbox").Last).ToBeCheckedAsync();
+
+        // Keep the salsa: untick it, then remove the rest
+        var salsa = Drawer.GetByTestId("review-item").Filter(new() { HasText = "Salsa" }).GetByTestId("review-item-checkbox");
+        await salsa.ClickAsync();
+        await Expect(salsa).Not.ToBeCheckedAsync();
+        await Expect(Drawer.GetByTestId("review-items-confirm")).ToHaveTextAsync("Remove 1 item");
+        await Drawer.GetByTestId("review-items-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Tortillas")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Leeks")).ToBeVisibleAsync();
+
+        // The salsa stays as the user's own item, also after a reload
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Leeks")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+    }
+
+    private ILocator Day(int index) => Page.GetByTestId("week-day").Nth(index);
+
+    private async Task PlanOnDayAsync(int day, string meal)
+    {
+        await Day(day).ClickAsync();
+        await Expect(Day(day)).ToHaveClassAsync(SelectedDay);
+        await Row("meal-list-item", meal).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(meal);
+        await Expect(Day(day)).ToHaveClassAsync(HasMeal);
+    }
+
+    [Fact]
+    public async Task GroceryList_AfterAnIngredientsAmountChanges_FromMealPlanOffersTheAdjustedTotal_AndLeavesBasketItemsAlone()
+    {
+        const string penne = "E2E Penne bake";
+        await Supabase.InsertMealAsync(User, penne,
+            new SeedIngredient("Penne", "500 g", ShowOnGroceryList: true),
+            new SeedIngredient("Basil", "1 bunch", ShowOnGroceryList: true));
+
+        await LoginAsync();
+
+        await Page.GetByTestId("week-day").First.ClickAsync();
+        await Expect(Page.GetByTestId("week-day").First).ToHaveClassAsync(new Regex(@"\bselected-day\b"));
+        await Row("meal-list-item", penne).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(penne);
+
+        // Penne is already on the list by hand, with an amount of its own
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Penne");
+        await Page.GetByTestId("add-grocery-item-button").ClickAsync();
+        await FillAsync(Drawer.GetByTestId("grocery-item-amount-input"), "200 g");
+        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        // Adding from the plan merges Penne and adds Basil; both are now linked
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        var penneRow = Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Penne" });
+        await Expect(penneRow.GetByTestId("plan-ingredient-existing")).ToHaveTextAsync("Plan 500 g · In list 200 g");
+        await Expect(penneRow.GetByTestId("plan-ingredient-amount-input")).ToHaveValueAsync("700 g");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("700 g");
+        await Expect(Row("grocery-item", "Basil").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 bunch");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+
+        // Basil goes in the basket
+        var basilCheckbox = Row("grocery-item", "Basil").GetByTestId("grocery-item-checkbox");
+        var saved = await Page.RunAndWaitForResponseAsync(
+            () => basilCheckbox.ClickAsync(),
+            response => response.Url.Contains("/rest/v1/grocery_items") && response.Request.Method == "PATCH");
+        Assert.True(saved.Ok, $"Expected the update to succeed, got {saved.Status}.");
+        await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Basil");
+
+        // Both amounts change on the meal
+        await Page.GetByTestId("nav-meals").ClickAsync();
+        await Row("meal-list-item", penne).ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals/edit"));
+        await Row("ingredient-card", "Penne").ClickAsync();
+        await FillAsync(Drawer.GetByTestId("ingredient-amount-input"), "750 g");
+        await Drawer.GetByTestId("save-ingredient-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Row("ingredient-card", "Basil").ClickAsync();
+        await FillAsync(Drawer.GetByTestId("ingredient-amount-input"), "2 bunch");
+        await Drawer.GetByTestId("save-ingredient-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Page.GetByTestId("save-meal-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
+
+        // Only Penne is offered again: old and new amount, and the adjusted total (700 - 500 + 750)
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(1);
+        var changed = Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Penne" });
+        await Expect(changed.GetByTestId("plan-ingredient-existing")).ToHaveTextAsync("Was 500 g · Now 750 g · In list 700 g");
+        await Expect(changed.GetByTestId("plan-ingredient-amount-input")).ToHaveValueAsync("950 g");
+        await Expect(Drawer.GetByTestId("plan-ingredients-confirm")).ToHaveTextAsync("Update 1 on grocery list");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("950 g");
+        await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveTextAsync("Basil");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+
+        // Nothing is offered a second time
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredients-all-on-list")).ToBeVisibleAsync();
+        await Drawer.GetByTestId("drawer-close").ClickAsync();
+
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Penne")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("950 g");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
     }
 }

@@ -17,3 +17,8 @@
     outline: 2px solid var(--mw-dark-button-bg);
     outline-offset: 2px;
 }
+
+.mw-remove-meal:disabled {
+    opacity: 0.6;
+    cursor: default;
+}

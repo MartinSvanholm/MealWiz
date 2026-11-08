@@ -12,6 +12,87 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="StaleBanner_Text_One" xml:space="preserve">
+    <value>{0} vare er fra et måltid, der ikke længere er i din plan</value>
+  </data>
+  <data name="StaleBanner_Text_Other" xml:space="preserve">
+    <value>{0} varer er fra måltider, der ikke længere er i din plan</value>
+  </data>
+  <data name="StaleBanner_Review" xml:space="preserve">
+    <value>Gennemgå</value>
+  </data>
+  <data name="ReviewItems_Title" xml:space="preserve">
+    <value>Gennemgå varer</value>
+  </data>
+  <data name="ReviewItems_Hint" xml:space="preserve">
+    <value>Markerede varer fjernes fra din liste. Umarkerede varer bliver på din liste som dine egne varer.</value>
+  </data>
+  <data name="ReviewItems_OtherItems" xml:space="preserve">
+    <value>Andre varer</value>
+  </data>
+  <data name="ReviewItems_RemoveFor" xml:space="preserve">
+    <value>Fjern {0}</value>
+  </data>
+  <data name="ReviewItems_Remove_One" xml:space="preserve">
+    <value>Fjern {0} vare</value>
+  </data>
+  <data name="ReviewItems_Remove_Other" xml:space="preserve">
+    <value>Fjern {0} varer</value>
+  </data>
+  <data name="ReviewItems_KeepAll" xml:space="preserve">
+    <value>Behold alle</value>
+  </data>
+  <data name="ReviewItems_Removed_One" xml:space="preserve">
+    <value>Fjernede {0} vare</value>
+  </data>
+  <data name="ReviewItems_Removed_Other" xml:space="preserve">
+    <value>Fjernede {0} varer</value>
+  </data>
+  <data name="ReviewItems_Kept_One" xml:space="preserve">
+    <value>Beholdt {0} vare</value>
+  </data>
+  <data name="ReviewItems_Kept_Other" xml:space="preserve">
+    <value>Beholdt {0} varer</value>
+  </data>
+  <data name="ReviewItems_Empty" xml:space="preserve">
+    <value>Intet at gennemgå</value>
+  </data>
+  <data name="MergeDrawer_Plan" xml:space="preserve">
+    <value>Plan {0}</value>
+  </data>
+  <data name="MergeDrawer_Was" xml:space="preserve">
+    <value>Var {0}</value>
+  </data>
+  <data name="MergeDrawer_Now" xml:space="preserve">
+    <value>Nu {0}</value>
+  </data>
+  <data name="MergeDrawer_InList" xml:space="preserve">
+    <value>På listen {0}</value>
+  </data>
+  <data name="MergeDrawer_Add" xml:space="preserve">
+    <value>Tilføj {0} til indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Update" xml:space="preserve">
+    <value>Opdatér {0} på indkøbslisten</value>
+  </data>
+  <data name="MergeDrawer_Added" xml:space="preserve">
+    <value>Ingredienser tilføjet til listen</value>
+  </data>
+  <data name="MergeDrawer_Updated" xml:space="preserve">
+    <value>Indkøbslisten er opdateret</value>
+  </data>
+  <data name="LinkedAmounts_OnlyLinked" xml:space="preserve">
+    <value>Kun varer, der er knyttet til madplanen, kan opdateres.</value>
+  </data>
+  <data name="LinkedAmounts_ItemNotFound" xml:space="preserve">
+    <value>Varen blev ikke fundet.</value>
+  </data>
+  <data name="LinkedAmounts_InBasket" xml:space="preserve">
+    <value>Varen ligger allerede i kurven.</value>
+  </data>
+  <data name="LinkedAmounts_LinkNotFound" xml:space="preserve">
+    <value>Varens tilknytning blev ikke fundet.</value>
+  </data>
   <data name="GroceryItem_NotAdded" xml:space="preserve">
     <value>Varen kunne ikke tilføjes.</value>
   </data>
@@ -117,25 +198,10 @@
   <data name="PlanIngredients_AllOnList" xml:space="preserve">
     <value>Alt er allerede på din liste</value>
   </data>
-  <data name="PlanIngredients_Plan" xml:space="preserve">
-    <value>Madplan {0}</value>
-  </data>
-  <data name="PlanIngredients_InList" xml:space="preserve">
-    <value>I listen {0}</value>
-  </data>
   <data name="PlanIngredients_Total" xml:space="preserve">
     <value>I alt</value>
   </data>
   <data name="PlanIngredients_AmountAria" xml:space="preserve">
     <value>Mængde for {0}</value>
-  </data>
-  <data name="PlanIngredients_Add_One" xml:space="preserve">
-    <value>Tilføj {0} til indkøbslisten</value>
-  </data>
-  <data name="PlanIngredients_Add_Other" xml:space="preserve">
-    <value>Tilføj {0} til indkøbslisten</value>
-  </data>
-  <data name="PlanIngredients_Added" xml:space="preserve">
-    <value>Ingredienser tilføjet til listen</value>
   </data>
 </root>
