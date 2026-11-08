@@ -5,13 +5,14 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 @inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
 @inject IStringLocalizer<SharedResource> S
 
 @* Asks before a day's meal comes off the plan. When the meal has grocery items only it needs, a switch (on by default)
    deletes them too. Opened by RemoveMealButton through Open; removing happens here because removing the meal unmounts
    the button. *@
 <div class="mw-remove-meal-drawer">
-    <p class="mw-remove-meal-drawer-description" data-testid="remove-meal-description">@L["RemoveMeal_Description", Meal.Name, MealDate.DayOfWeek.ToWeekdayName()]</p>
+    <p class="mw-remove-meal-drawer-description" data-testid="remove-meal-description">@L["RemoveMeal_Description", Meal.DisplayName(M), MealDate.DayOfWeek.ToWeekdayName()]</p>
     @if (GroceryItemIds.Count > 0)
     {
         <div class="mw-remove-meal-drawer-switch" data-testid="remove-meal-grocery-row">
@@ -42,11 +43,12 @@
 
     private string SwitchLabel => L.Plural("RemoveMeal_AlsoRemove", GroceryItemIds.Count);
 
-    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds) =>
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer,
+        IStringLocalizer<MealsResource> mealsLocalizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds) =>
         drawer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(RemoveMealDrawer),
-            Title = localizer["RemoveMeal_Title", meal.Name],
+            Title = localizer["RemoveMeal_Title", meal.DisplayName(mealsLocalizer)],
             Height = groceryItemIds.Count > 0 ? DrawerHeightWithSwitch : DrawerHeight,
             ContentParameters = new()
             {
