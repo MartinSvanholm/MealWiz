@@ -121,6 +121,7 @@ A weekly plan with one meal per day. The home page shows the selected week, and 
 selected week is kept in local storage under `mealplan_selected_week`. Picking a meal for a day creates that week's
 `meal_plans` row if none exists yet (`CreateMealPlan`), then inserts a `meal_plans-meals` row for the date. Dates are
 stored as `yyyy-MM-dd` strings.
+Removing a day's meal always asks first in a drawer. When the day has grocery items only it needs (still to buy, not manual, linked to the meal now on the day, no other live source), a switch, on by default, deletes them too. Shared items just lose that day's link, because the FK nulls it.
 
 - **Folder:** `Features/MealPlans/`
 - **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
@@ -144,7 +145,9 @@ stored as `yyyy-MM-dd` strings.
     `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
     left out, a pick replaces it (`SwapMealOnSelectedDate`) and Cancel (`meal-selection-cancel`) returns to the card.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
-    corner of the selected day's card (`remove-meal-button`).
+    corner of the selected day's card (`remove-meal-button`). It loads the grocery items and sources through MediatR, picks the ids with `PlannedMealGroceryItems.OnlyNeededBy`, opens `RemoveMealDrawer` and is disabled while loading.
+  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the switch row `remove-meal-grocery-row` with `remove-meal-grocery-label` and `remove-meal-grocery-switch` only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; a failed remove deletes nothing, a failed delete says the items stayed.
+  - `Features/MealPlans/MealPlansResource.cs` (+ `MealPlansResource.resx`, `MealPlansResource.da.resx`): the feature's texts (UI-03).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
@@ -177,7 +180,7 @@ stored as `yyyy-MM-dd` strings.
 - **Tests:**
   - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
-  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`
+  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`, `RemoveMealWithGroceryItemsTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
@@ -255,6 +258,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `GroceryItem.IsManual` (`is_manual`).
   - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
+  - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
@@ -414,6 +418,7 @@ key, CORS and deployment.
       which scrolls. A custom `Header` replaces the whole row.
     - `Components/Drawers/DrawerFooter.razor`: drawer content wraps its primary button in `<DrawerFooter>` to get
       the full-width 52px orange button at the bottom (`drawer-footer`).
+      Two buttons go in `<div class="mw-sheet-footer-pair">`; `.mw-sheet-footer-cancel` is grey and `.mw-sheet-footer-danger` is red.
     - ConfirmDrawer shows a red trash circle, the title (`confirm-drawer-title`), the description
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
