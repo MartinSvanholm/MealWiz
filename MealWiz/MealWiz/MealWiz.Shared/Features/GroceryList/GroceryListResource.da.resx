@@ -12,6 +12,51 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="StaleBanner_Text_One" xml:space="preserve">
+    <value>{0} vare er fra et måltid, der ikke længere er i din plan</value>
+  </data>
+  <data name="StaleBanner_Text_Other" xml:space="preserve">
+    <value>{0} varer er fra måltider, der ikke længere er i din plan</value>
+  </data>
+  <data name="StaleBanner_Review" xml:space="preserve">
+    <value>Gennemgå</value>
+  </data>
+  <data name="ReviewItems_Title" xml:space="preserve">
+    <value>Gennemgå varer</value>
+  </data>
+  <data name="ReviewItems_Hint" xml:space="preserve">
+    <value>Markerede varer fjernes fra din liste. Umarkerede varer bliver på din liste som dine egne varer.</value>
+  </data>
+  <data name="ReviewItems_OtherItems" xml:space="preserve">
+    <value>Andre varer</value>
+  </data>
+  <data name="ReviewItems_RemoveFor" xml:space="preserve">
+    <value>Fjern {0}</value>
+  </data>
+  <data name="ReviewItems_Remove_One" xml:space="preserve">
+    <value>Fjern {0} vare</value>
+  </data>
+  <data name="ReviewItems_Remove_Other" xml:space="preserve">
+    <value>Fjern {0} varer</value>
+  </data>
+  <data name="ReviewItems_KeepAll" xml:space="preserve">
+    <value>Behold alle</value>
+  </data>
+  <data name="ReviewItems_Removed_One" xml:space="preserve">
+    <value>Fjernede {0} vare</value>
+  </data>
+  <data name="ReviewItems_Removed_Other" xml:space="preserve">
+    <value>Fjernede {0} varer</value>
+  </data>
+  <data name="ReviewItems_Kept_One" xml:space="preserve">
+    <value>Beholdt {0} vare</value>
+  </data>
+  <data name="ReviewItems_Kept_Other" xml:space="preserve">
+    <value>Beholdt {0} varer</value>
+  </data>
+  <data name="ReviewItems_Empty" xml:space="preserve">
+    <value>Intet at gennemgå</value>
+  </data>
   <data name="MergeDrawer_Plan" xml:space="preserve">
     <value>Plan {0}</value>
   </data>

@@ -207,3 +207,41 @@
     font-size: 17px;
     font-weight: 600;
 }
+
+/* Banner for items from meals no longer in the plan (first child of the scrolling list). */
+.grocery-stale {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 6px 6px 12px;
+    background-color: var(--mw-surface);
+    border: 1.5px solid var(--mw-warning-text);
+    border-radius: var(--mw-radius-m);
+}
+
+.grocery-stale ::deep .grocery-stale-icon {
+    flex: 0 0 auto;
+    color: var(--mw-warning-text);
+}
+
+.grocery-stale-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--mw-text);
+}
+
+.grocery-stale-review {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-orange-text);
+    cursor: pointer;
+}

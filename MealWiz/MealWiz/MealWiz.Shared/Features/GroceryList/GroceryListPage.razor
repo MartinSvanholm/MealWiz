@@ -5,6 +5,7 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IStringLocalizer<GroceryListResource> L
 @implements IDisposable
 
 @* Dense on purpose: the shopper needs to see everything left to find, so about ten to-buy rows fit on a phone. *@
@@ -28,6 +29,15 @@
     </div>
 
     <div class="grocery-scroll">
+        @if (StaleCount > 0)
+        {
+            <section class="grocery-stale" role="status" data-testid="stale-items-banner">
+                <MudIcon Icon="@Icons.Material.Filled.WarningAmber" Class="grocery-stale-icon" />
+                <span class="grocery-stale-text" data-testid="stale-items-text">@StaleText</span>
+                <button type="button" class="grocery-stale-review" data-testid="stale-items-review" @onclick="OpenReview">@L["StaleBanner_Review"]</button>
+            </section>
+        }
+
         @if (Items.Count == 0)
         {
             <div class="grocery-empty" data-testid="grocery-list-empty">
@@ -100,11 +110,23 @@
     private string HeaderLabel =>
         $"{Items.Count} {ItemsWord} · Week {System.Globalization.ISOWeek.GetWeekOfYear(_mealPlanStateContainer.SelectedWeekStart)}";
 
+    // Items from meals no longer in the plan (swapped, or removed from the plan with the switch off).
+    private int StaleCount => _groceryListStateContainer.StaleItems.Count;
+
+    private string StaleText => L.Plural("StaleBanner_Text", StaleCount);
+
+    private void OpenReview() =>
+        ReviewGroceryItemsDrawer.Open(
+            _drawerStateContainer,
+            L["ReviewItems_Title"],
+            StaleGroceryItems.GroupByMeal(_groceryListStateContainer.StaleItems, _groceryListStateContainer.Sources));
+
     protected override async Task OnInitializedAsync()
     {
         _groceryListStateContainer.OnStateChanged += StateHasChanged;
         _groceryListStateContainer.CurrentSnackbar = _snackbar;
         await _groceryListStateContainer.LoadGroceryItems();
+        await _groceryListStateContainer.LoadSources();
 
         await base.OnInitializedAsync();
     }

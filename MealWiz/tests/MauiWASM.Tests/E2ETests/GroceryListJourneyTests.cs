@@ -258,6 +258,72 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
     }
 
+    [Fact]
+    public async Task GroceryList_AfterASwap_WarnsAboutItemsFromTheOldMeal_AndReviewRemovesOrKeepsThem()
+    {
+        const string tacos = "E2E Tacos";
+        const string soup = "E2E Leek soup";
+        await Supabase.InsertMealAsync(User, tacos,
+            new SeedIngredient("Tortillas", "8", ShowOnGroceryList: true),
+            new SeedIngredient("Salsa", "1 jar", ShowOnGroceryList: true));
+        await Supabase.InsertMealAsync(User, soup, new SeedIngredient("Leeks", "3", ShowOnGroceryList: true));
+
+        await LoginAsync();
+
+        // Plan the tacos on the first day and the soup on the second
+        await PlanOnDayAsync(0, tacos);
+        await PlanOnDayAsync(1, soup);
+
+        // Everything is current, so there is no banner
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+
+        // Swap the tacos day for another meal: its two items now come from a meal that left the plan
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Day(0).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
+        await Page.GetByTestId("swap-meal-button").ClickAsync();
+        await Expect(Page.GetByTestId("meal-selection-heading")).ToContainTextAsync("Swap the meal for");
+        await Row("meal-list-item", "Eat Out").ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Eat Out");
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page.GetByTestId("stale-items-text")).ToHaveTextAsync("2 items are from meals no longer in your plan");
+
+        // Review lists them under the old meal, ticked
+        await Page.GetByTestId("stale-items-review").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Review items");
+        await Expect(Drawer.GetByTestId("review-group")).ToHaveCountAsync(1);
+        await Expect(Drawer.GetByTestId("review-group-heading")).ToHaveTextAsync(tacos);
+        await Expect(Drawer.GetByTestId("review-item-checkbox")).ToHaveCountAsync(2);
+        await Expect(Drawer.GetByTestId("review-item-checkbox").First).ToBeCheckedAsync();
+        await Expect(Drawer.GetByTestId("review-item-checkbox").Last).ToBeCheckedAsync();
+
+        // Keep the salsa: untick it, then remove the rest
+        var salsa = Drawer.GetByTestId("review-item").Filter(new() { HasText = "Salsa" }).GetByTestId("review-item-checkbox");
+        await salsa.ClickAsync();
+        await Expect(salsa).Not.ToBeCheckedAsync();
+        await Expect(Drawer.GetByTestId("review-items-confirm")).ToHaveTextAsync("Remove 1 item");
+        await Drawer.GetByTestId("review-items-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Tortillas")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Leeks")).ToBeVisibleAsync();
+
+        // The salsa stays as the user's own item, also after a reload
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Leeks")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+    }
+
     private ILocator Day(int index) => Page.GetByTestId("week-day").Nth(index);
 
     private async Task PlanOnDayAsync(int day, string meal)

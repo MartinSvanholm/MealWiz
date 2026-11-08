@@ -45,6 +45,26 @@ public static class TestData
     public static GroceryItemSource Source(int groceryItemId, int? plannedMealId, int? ingredientId, string amount = "", int id = 0) =>
         new() { Id = id, GroceryItemId = groceryItemId, PlannedMealId = plannedMealId, IngredientId = ingredientId, Amount = amount };
 
+    /// <summary>An item added from the meal plan (not manual), as the stale rule sees it.</summary>
+    public static GroceryItem LinkedGroceryItem(string name, int id, string amount = "", bool isPicked = false) =>
+        new() { Id = id, Name = name, Amount = amount, IsPicked = isPicked, IsManual = false };
+
+    /// <summary>A source whose planned day now holds another meal, so it is stale.</summary>
+    public static GroceryItemSource StaleSource(int id, int groceryItemId, string? mealName) =>
+        new()
+        {
+            Id = id, GroceryItemId = groceryItemId, PlannedMealId = 100 + id, IngredientId = 200 + id,
+            PlannedDayMealId = 2, IngredientMealId = 1, MealName = mealName
+        };
+
+    /// <summary>A source whose planned day still holds the ingredient's meal.</summary>
+    public static GroceryItemSource CurrentSource(int id, int groceryItemId, string? mealName = "Current") =>
+        new()
+        {
+            Id = id, GroceryItemId = groceryItemId, PlannedMealId = 100 + id, IngredientId = 200 + id,
+            PlannedDayMealId = 1, IngredientMealId = 1, MealName = mealName
+        };
+
     public static GroceryItemSource ChangedSource(int groceryItemId, int plannedMealId, int ingredientId, string oldAmount, string newAmount, int id = 0) =>
         new()
         {
