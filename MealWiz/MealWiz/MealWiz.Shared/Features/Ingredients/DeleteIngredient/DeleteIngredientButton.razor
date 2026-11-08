@@ -2,6 +2,7 @@
 @inject IMealsStateContainer _mealsStateContainer
 @inject ISender _mediator
 @inject ISnackbar _snackbar
+@inject IStringLocalizer<IngredientsResource> L
 @implements IDisposable
 
 <MudLoadingButton
@@ -11,7 +12,7 @@ ButtonVariant="@ButtonVariant.IconButton"
 Icon="@Icons.Material.Filled.Delete"
 Color="Color.Error"
 Size="Size.Medium"
-aria-label="@($"Delete {Ingredient.Name}")" />
+aria-label="@L["DeleteIngredient_Aria", Ingredient.Name]" />
 
 @code {
     [Parameter]
@@ -35,7 +36,7 @@ aria-label="@($"Delete {Ingredient.Name}")" />
             return;
         }
 
-        _drawerStateContainer.OpenConfirmDrawer("Delete ingredient?", "Are you sure you want to delete this ingredient?", OnConfirmDelete);
+        _drawerStateContainer.OpenConfirmDrawer(L["DeleteIngredient_ConfirmTitle"], L["DeleteIngredient_ConfirmText"], OnConfirmDelete);
     }
 
     private async Task OnConfirmDelete()
@@ -45,7 +46,7 @@ aria-label="@($"Delete {Ingredient.Name}")" />
 
         await _mealsStateContainer.ReloadIngredientsForMealToEdit();
 
-        _snackbar.Add("Ingredient deleted.", Severity.Success);
+        _snackbar.Add(L["DeleteIngredient_Deleted"], Severity.Success);
         _drawerStateContainer.CloseDrawer();
     }
 }

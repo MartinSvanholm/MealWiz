@@ -5,10 +5,11 @@
 @inject ISnackbar _snackbar
 @inject ISender _mediator
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealsResource> L
 @implements IDisposable
 
 <div class="mw-page mw-meals-page">
-    <ScreenHeader Label="@CountLabel" Title="Your meals">
+    <ScreenHeader Label="@CountLabel" Title="@L["MealsPage_Title"]">
         <Actions>
             <AddMealMenu />
         </Actions>
@@ -17,22 +18,22 @@
     <div class="mw-meals-content">
         <MudTextField T="string" data-testid="meal-list-search"
                       @bind-Value="_search"
-                      Placeholder="Search meals or ingredients"
+                      Placeholder="@L["MealsPage_Search"]"
                       Variant="Variant.Outlined"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Immediate="true"
                       Clearable="true" />
 
-        <div class="mw-meal-filters" role="group" aria-label="Filter meals">
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-all" aria-pressed="@IsPressed(MealFilter.All)" @onclick="() => _filter = MealFilter.All">All</button>
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-this-week" aria-pressed="@IsPressed(MealFilter.ThisWeek)" @onclick="() => _filter = MealFilter.ThisWeek">This week</button>
-            <button type="button" class="mw-meal-filter" data-testid="meal-filter-no-recipe" aria-pressed="@IsPressed(MealFilter.NoRecipe)" @onclick="() => _filter = MealFilter.NoRecipe">No recipe</button>
+        <div class="mw-meal-filters" role="group" aria-label="@L["MealsPage_FilterAria"]">
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-all" aria-pressed="@IsPressed(MealFilter.All)" @onclick="() => _filter = MealFilter.All">@L["MealsPage_FilterAll"]</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-this-week" aria-pressed="@IsPressed(MealFilter.ThisWeek)" @onclick="() => _filter = MealFilter.ThisWeek">@L["MealsPage_FilterThisWeek"]</button>
+            <button type="button" class="mw-meal-filter" data-testid="meal-filter-no-recipe" aria-pressed="@IsPressed(MealFilter.NoRecipe)" @onclick="() => _filter = MealFilter.NoRecipe">@L["MealsPage_FilterNoRecipe"]</button>
         </div>
 
         @if (!RegularMeals.Any())
         {
-            <p class="mw-meals-empty" data-testid="meal-list-empty">No meals yet. Create one with New, or import one from a recipe link.</p>
+            <p class="mw-meals-empty" data-testid="meal-list-empty">@L["MealsPage_Empty"]</p>
         }
         else if (!FilteredMeals.Any())
         {
@@ -48,8 +49,8 @@
                 <MudIcon Icon="@Icons.Material.Filled.Link" Color="Color.Inherit" Size="Size.Small" />
             </span>
             <span class="mw-meals-import-text">
-                <span class="mw-meals-import-title">Import from a recipe link</span>
-                <span class="mw-meals-import-hint">Paste a URL, we grab the ingredients</span>
+                <span class="mw-meals-import-title">@L["MealsPage_ImportTitle"]</span>
+                <span class="mw-meals-import-hint">@L["MealsPage_ImportHint"]</span>
             </span>
         </button>
     </div>
@@ -84,13 +85,13 @@
     private bool ContainsSearch(string? text) => text?.Contains(_search, StringComparison.InvariantCultureIgnoreCase) == true;
 
     private string NoMatchMessage =>
-        !string.IsNullOrWhiteSpace(_search) ? $"No meals match \"{_search}\"."
-        : _filter == MealFilter.ThisWeek ? "No meals planned this week."
-        : "Every meal has a recipe.";
+        !string.IsNullOrWhiteSpace(_search) ? L["MealsPage_NoMatchSearch", _search]
+        : _filter == MealFilter.ThisWeek ? L["MealsPage_NoMatchThisWeek"]
+        : L["MealsPage_NoMatchNoRecipe"];
 
     private string IsPressed(MealFilter filter) => filter == _filter ? "true" : "false";
 
-    private string CountLabel => RegularMeals.Count() == 1 ? "1 meal" : $"{RegularMeals.Count()} meals";
+    private string CountLabel => L.Plural("MealsPage_Count", RegularMeals.Count());
 
     protected override async Task OnInitializedAsync()
     {

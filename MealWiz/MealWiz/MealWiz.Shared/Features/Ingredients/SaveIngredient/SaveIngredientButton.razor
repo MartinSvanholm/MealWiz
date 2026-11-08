@@ -1,8 +1,9 @@
 ﻿@inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
+@inject IStringLocalizer<IngredientsResource> L
 
-<MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveAsync" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Primary" ButtonVariant="ButtonVariant.Button" FullWidth>Save ingredient</MudLoadingButton>
+<MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveAsync" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Primary" ButtonVariant="ButtonVariant.Button" FullWidth>@L["SaveIngredient_Button"]</MudLoadingButton>
 
 @code {
     [Parameter]
@@ -24,7 +25,7 @@
         // An ingredient needs a name (the add row used to check this before the drawer took over saving).
         if (string.IsNullOrWhiteSpace(edited.Name))
         {
-            _snackbar.Add("Give the ingredient a name.", Severity.Warning);
+            _snackbar.Add(L["SaveIngredient_NameRequired"], Severity.Warning);
             return;
         }
 
@@ -42,7 +43,7 @@
 
             isSaved = true;
             _drawerStateContainer.CloseDrawer();
-            if (wasSaved) _snackbar.Add("Ingredient saved.", Severity.Success);
+            if (wasSaved) _snackbar.Add(L["Ingredient_Saved"], Severity.Success);
         }
         finally
         {

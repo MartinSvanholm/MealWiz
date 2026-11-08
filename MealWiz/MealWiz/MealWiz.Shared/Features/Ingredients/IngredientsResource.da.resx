@@ -15,4 +15,46 @@
   <data name="Ingredient_Saved" xml:space="preserve">
     <value>Ingrediensen er gemt.</value>
   </data>
+  <data name="IngredientDrawer_Name" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="IngredientDrawer_Amount" xml:space="preserve">
+    <value>Mængde</value>
+  </data>
+  <data name="IngredientDrawer_AddToGroceryList" xml:space="preserve">
+    <value>Tilføj til indkøbsliste</value>
+  </data>
+  <data name="AddIngredient_Name" xml:space="preserve">
+    <value>Ingrediens</value>
+  </data>
+  <data name="AddIngredient_Amount" xml:space="preserve">
+    <value>Mængde</value>
+  </data>
+  <data name="AddIngredient_Add" xml:space="preserve">
+    <value>Tilføj ingrediens</value>
+  </data>
+  <data name="IngredientCard_AddAmount" xml:space="preserve">
+    <value>+ mængde</value>
+  </data>
+  <data name="IngredientCard_EditTitle" xml:space="preserve">
+    <value>Rediger ingrediens</value>
+  </data>
+  <data name="DeleteIngredient_Aria" xml:space="preserve">
+    <value>Slet {0}</value>
+  </data>
+  <data name="DeleteIngredient_ConfirmTitle" xml:space="preserve">
+    <value>Slet ingrediens?</value>
+  </data>
+  <data name="DeleteIngredient_ConfirmText" xml:space="preserve">
+    <value>Er du sikker på, at du vil slette ingrediensen?</value>
+  </data>
+  <data name="DeleteIngredient_Deleted" xml:space="preserve">
+    <value>Ingrediens slettet.</value>
+  </data>
+  <data name="SaveIngredient_Button" xml:space="preserve">
+    <value>Gem ingrediens</value>
+  </data>
+  <data name="SaveIngredient_NameRequired" xml:space="preserve">
+    <value>Giv ingrediensen et navn.</value>
+  </data>
 </root>

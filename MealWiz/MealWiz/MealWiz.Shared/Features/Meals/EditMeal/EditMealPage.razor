@@ -3,6 +3,7 @@
 @inject IMealsStateContainer _mealsStateContainer
 @inject NavigationManager _navigationManager
 @inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<MealsResource> L
 @implements IDisposable
 
 @* Fills the screen above the bottom nav: the visible height (dvh, with a vh fallback) minus the nav space and the
@@ -11,13 +12,13 @@
     <div class="mw-edit-meal-scroll">
         <section class="mw-edit-meal-header">
             <div class="mw-edit-meal-header-row">
-                <button type="button" class="mw-edit-meal-back" data-testid="edit-meal-back" aria-label="Back to meals" @onclick="OnBackClick">
+                <button type="button" class="mw-edit-meal-back" data-testid="edit-meal-back" aria-label="@L["EditMeal_Back"]" @onclick="OnBackClick">
                     <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" />
                 </button>
                 <SaveMealButton />
             </div>
-            <label class="mw-edit-meal-name-label" for="meal-name-input">Meal name</label>
-            <input id="meal-name-input" class="mw-edit-meal-name" data-testid="meal-name-input" placeholder="Name your meal"
+            <label class="mw-edit-meal-name-label" for="meal-name-input">@L["EditMeal_NameLabel"]</label>
+            <input id="meal-name-input" class="mw-edit-meal-name" data-testid="meal-name-input" placeholder="@L["EditMeal_NamePlaceholder"]"
                    autocomplete="off" enterkeyhint="next"
                    @bind="_mealsStateContainer.MealToEdit.Name"
                    @onkeydown="EnterKey.Then(() => _recipeField.FocusAsync())" />
@@ -25,14 +26,14 @@
 
         <div class="mw-edit-meal-body">
             <div class="mw-edit-meal-section">
-                <h2 class="mw-edit-meal-heading">Recipe</h2>
-                <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Lines="4" Placeholder="Steps, oven temperature, little tricks…"
+                <h2 class="mw-edit-meal-heading">@L["EditMeal_Recipe"]</h2>
+                <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Lines="4" Placeholder="@L["EditMeal_RecipePlaceholder"]"
                                       @bind-Value="_mealsStateContainer.MealToEdit.Recipe" Variant="Variant.Outlined" />
             </div>
 
             <div class="mw-edit-meal-section">
                 <div class="mw-edit-meal-heading-row">
-                    <h2 class="mw-edit-meal-heading">Ingredients</h2>
+                    <h2 class="mw-edit-meal-heading">@L["EditMeal_Ingredients"]</h2>
                     <span class="mw-edit-meal-count" data-testid="edit-meal-ingredient-count">@ItemCount</span>
                 </div>
 
@@ -57,14 +58,7 @@
 @code {
     private MudTextFieldExtended<string> _recipeField = default!;
 
-    private string ItemCount
-    {
-        get
-        {
-            var count = _mealsStateContainer.MealToEdit.Ingredients.Count;
-            return count == 1 ? "1 item" : $"{count} items";
-        }
-    }
+    private string ItemCount => L.Plural("EditMeal_Items", _mealsStateContainer.MealToEdit.Ingredients.Count);
 
     protected override void OnInitialized()
     {
