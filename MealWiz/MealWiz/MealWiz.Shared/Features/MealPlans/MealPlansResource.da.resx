@@ -12,6 +12,30 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="PlanWeek_Shuffle" xml:space="preserve">
+    <value>Bland {0}</value>
+  </data>
+  <data name="PlanWeek_PickFor" xml:space="preserve">
+    <value>Vælg et måltid til {0}</value>
+  </data>
+  <data name="PlanWeek_TapToPick" xml:space="preserve">
+    <value>Tryk for at vælge et måltid</value>
+  </data>
+  <data name="PlanWeek_Clear" xml:space="preserve">
+    <value>Ryd {0}</value>
+  </data>
+  <data name="PlanWeek_ShuffleAll" xml:space="preserve">
+    <value>Bland alle</value>
+  </data>
+  <data name="PlanWeek_DiscardTitle" xml:space="preserve">
+    <value>Kassér denne plan?</value>
+  </data>
+  <data name="PlanWeek_DiscardText" xml:space="preserve">
+    <value>De måltider, du har planlagt for denne uge, er ikke gemt.</value>
+  </data>
+  <data name="PlanWeek_Discard" xml:space="preserve">
+    <value>Kassér</value>
+  </data>
   <data name="RemoveMeal_Title" xml:space="preserve">
     <value>Fjern {0}?</value>
   </data>
@@ -41,28 +65,5 @@
   </data>
   <data name="RemoveMeal_NoMeal" xml:space="preserve">
     <value>Måltid eller dato må ikke være tom</value>
-  <data name="PlanWeek_Shuffle" xml:space="preserve">
-    <value>Bland {0}</value>
-  </data>
-  <data name="PlanWeek_PickFor" xml:space="preserve">
-    <value>Vælg et måltid til {0}</value>
-  </data>
-  <data name="PlanWeek_TapToPick" xml:space="preserve">
-    <value>Tryk for at vælge et måltid</value>
-  </data>
-  <data name="PlanWeek_Clear" xml:space="preserve">
-    <value>Ryd {0}</value>
-  </data>
-  <data name="PlanWeek_ShuffleAll" xml:space="preserve">
-    <value>Bland alle</value>
-  </data>
-  <data name="PlanWeek_DiscardTitle" xml:space="preserve">
-    <value>Kassér denne plan?</value>
-  </data>
-  <data name="PlanWeek_DiscardText" xml:space="preserve">
-    <value>De måltider, du har planlagt for denne uge, er ikke gemt.</value>
-  </data>
-  <data name="PlanWeek_Discard" xml:space="preserve">
-    <value>Kassér</value>
   </data>
 </root>
