@@ -71,6 +71,7 @@
   <data name="ReviewItems_Empty" xml:space="preserve">
     <value>Nothing to review</value>
     <comment>Review drawer without items</comment>
+  </data>
   <data name="MergeDrawer_Plan" xml:space="preserve">
     <value>Plan {0}</value>
     <comment>Merge drawer subline: the planned amounts, {0} = amounts joined with " + "</comment>

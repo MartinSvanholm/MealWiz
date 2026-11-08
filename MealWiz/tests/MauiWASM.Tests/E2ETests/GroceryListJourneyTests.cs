@@ -268,6 +268,9 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("week-day").Nth(index)).ToHaveClassAsync(new Regex(@"\bselected-day\b"));
         await Row("meal-list-item", meal).ClickAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(meal);
+    }
+
+    [Fact]
     public async Task GroceryList_AfterAnIngredientsAmountChanges_FromMealPlanOffersTheAdjustedTotal_AndLeavesBasketItemsAlone()
     {
         const string penne = "E2E Penne bake";
