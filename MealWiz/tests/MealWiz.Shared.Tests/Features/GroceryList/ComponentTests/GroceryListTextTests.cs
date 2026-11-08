@@ -96,8 +96,8 @@ public class GroceryListTextTests() : ComponentTestBase(echoResourceKeys: true)
         var cut = Render<AddPlanIngredientsToGroceryListDrawer>();
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(TestId("plan-ingredients-loading"))));
 
-        Assert.Equal("[PlanIngredients_Plan] · [PlanIngredients_InList]", cut.Find(TestId("plan-ingredient-existing")).TextContent.Trim());
-        Assert.Equal("[PlanIngredients_Add_Other]", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
+        Assert.Equal("[MergeDrawer_Plan] · [MergeDrawer_InList]", cut.Find(TestId("plan-ingredient-existing")).TextContent.Trim());
+        Assert.Equal("[MergeDrawer_Add]", cut.Find(TestId("plan-ingredients-confirm")).TextContent.Trim());
         Assert.Equal("[PlanIngredients_AmountAria]", cut.Find(InputOf("plan-ingredient-amount-input")).GetAttribute("aria-label"));
         Assert.Equal("[PlanIngredients_Total]", cut.Find(InputOf("plan-ingredient-amount-input")).GetAttribute("placeholder"));
     }
