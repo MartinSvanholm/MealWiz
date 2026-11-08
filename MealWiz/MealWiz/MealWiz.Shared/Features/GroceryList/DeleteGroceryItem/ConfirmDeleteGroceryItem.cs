@@ -1,6 +1,7 @@
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Services.DrawerStateContainer;
+using Microsoft.Extensions.Localization;
 
 namespace MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 
@@ -9,9 +10,11 @@ namespace MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 /// </summary>
 public static class ConfirmDeleteGroceryItem
 {
-    public static void Open(IDrawerStateContainer drawerStateContainer, IGroceryListStateContainer groceryListStateContainer, GroceryItem groceryItem)
+    public static void Open(IDrawerStateContainer drawerStateContainer, IGroceryListStateContainer groceryListStateContainer,
+        IStringLocalizer<GroceryListResource> localizer, GroceryItem groceryItem)
     {
-        drawerStateContainer.OpenConfirmDrawer($"Delete {groceryItem.Name}?", "Are you sure you want to delete this grocery item?", async () =>
+        drawerStateContainer.OpenConfirmDrawer(localizer["GroceryItem_DeleteConfirmTitle", groceryItem.Name],
+            localizer["GroceryItem_DeleteConfirmMessage"], async () =>
         {
             await groceryListStateContainer.DeleteGroceryItem(groceryItem);
             drawerStateContainer.CloseDrawer();

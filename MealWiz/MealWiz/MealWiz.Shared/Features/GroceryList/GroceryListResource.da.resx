@@ -24,4 +24,118 @@
   <data name="GroceryItems_OnlyPlannedIngredients" xml:space="preserve">
     <value>Kun gemte ingredienser fra måltider på madplanen kan tilføjes.</value>
   </data>
+  <data name="GroceryList_Title" xml:space="preserve">
+    <value>Indkøb</value>
+  </data>
+  <data name="GroceryList_Header_One" xml:space="preserve">
+    <value>{0} vare · Uge {1}</value>
+  </data>
+  <data name="GroceryList_Header_Other" xml:space="preserve">
+    <value>{0} varer · Uge {1}</value>
+  </data>
+  <data name="GroceryList_ProgressAria" xml:space="preserve">
+    <value>Varer i kurven</value>
+  </data>
+  <data name="GroceryList_Progress_One" xml:space="preserve">
+    <value>{0} af {1} vare</value>
+  </data>
+  <data name="GroceryList_Progress_Other" xml:space="preserve">
+    <value>{0} af {1} varer</value>
+  </data>
+  <data name="GroceryList_Empty" xml:space="preserve">
+    <value>Din liste er tom</value>
+  </data>
+  <data name="GroceryList_EmptyHint" xml:space="preserve">
+    <value>Tilføj en vare ovenfor, eller hent ugens ingredienser fra din madplan.</value>
+  </data>
+  <data name="GroceryList_ToBuy" xml:space="preserve">
+    <value>Skal købes · {0}</value>
+  </data>
+  <data name="GroceryList_InBasket" xml:space="preserve">
+    <value>I kurven · {0}</value>
+  </data>
+  <data name="GroceryList_CheckOffAria" xml:space="preserve">
+    <value>Sæt flueben ved {0}</value>
+  </data>
+  <data name="GroceryList_PutBackAria" xml:space="preserve">
+    <value>Sæt {0} tilbage på listen</value>
+  </data>
+  <data name="GroceryList_ClearBasket" xml:space="preserve">
+    <value>Ryd</value>
+  </data>
+  <data name="GroceryList_ClearConfirmTitle_One" xml:space="preserve">
+    <value>Ryd {0} vare?</value>
+  </data>
+  <data name="GroceryList_ClearConfirmTitle_Other" xml:space="preserve">
+    <value>Ryd {0} varer?</value>
+  </data>
+  <data name="GroceryList_ClearConfirmMessage" xml:space="preserve">
+    <value>Alt i kurven bliver slettet fra din indkøbsliste.</value>
+  </data>
+  <data name="GroceryList_AddItemLabel" xml:space="preserve">
+    <value>Tilføj en vare</value>
+  </data>
+  <data name="GroceryList_AddItemPlaceholder" xml:space="preserve">
+    <value>Tilføj en vare</value>
+  </data>
+  <data name="GroceryList_AddItemAria" xml:space="preserve">
+    <value>Tilføj vare</value>
+  </data>
+  <data name="GroceryList_FromMealPlan" xml:space="preserve">
+    <value>Fra madplan</value>
+  </data>
+  <data name="GroceryItem_AddTitle" xml:space="preserve">
+    <value>Tilføj vare</value>
+  </data>
+  <data name="GroceryItem_EditTitle" xml:space="preserve">
+    <value>Rediger vare</value>
+  </data>
+  <data name="GroceryItem_EditAria" xml:space="preserve">
+    <value>Rediger {0}</value>
+  </data>
+  <data name="GroceryItem_Name" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="GroceryItem_Amount" xml:space="preserve">
+    <value>Mængde</value>
+  </data>
+  <data name="GroceryItem_AmountPlaceholder" xml:space="preserve">
+    <value>fx 2</value>
+  </data>
+  <data name="GroceryItem_Save" xml:space="preserve">
+    <value>Gem vare</value>
+  </data>
+  <data name="GroceryItem_DeleteConfirmTitle" xml:space="preserve">
+    <value>Slet {0}?</value>
+  </data>
+  <data name="GroceryItem_DeleteConfirmMessage" xml:space="preserve">
+    <value>Er du sikker på, at du vil slette denne vare?</value>
+  </data>
+  <data name="PlanIngredients_NothingPlanned" xml:space="preserve">
+    <value>Der er intet fra madplanen at tilføje.</value>
+  </data>
+  <data name="PlanIngredients_AllOnList" xml:space="preserve">
+    <value>Alt er allerede på din liste</value>
+  </data>
+  <data name="PlanIngredients_Plan" xml:space="preserve">
+    <value>Madplan {0}</value>
+  </data>
+  <data name="PlanIngredients_InList" xml:space="preserve">
+    <value>I listen {0}</value>
+  </data>
+  <data name="PlanIngredients_Total" xml:space="preserve">
+    <value>I alt</value>
+  </data>
+  <data name="PlanIngredients_AmountAria" xml:space="preserve">
+    <value>Mængde for {0}</value>
+  </data>
+  <data name="PlanIngredients_Add_One" xml:space="preserve">
+    <value>Tilføj {0} til indkøbslisten</value>
+  </data>
+  <data name="PlanIngredients_Add_Other" xml:space="preserve">
+    <value>Tilføj {0} til indkøbslisten</value>
+  </data>
+  <data name="PlanIngredients_Added" xml:space="preserve">
+    <value>Ingredienser tilføjet til listen</value>
+  </data>
 </root>

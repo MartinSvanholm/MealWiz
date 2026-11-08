@@ -1,12 +1,15 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IStringLocalizer<SharedResource> S
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 
 @* The red delete action in the Edit item drawer's header. Deletes after the confirm drawer. *@
-<MudIconButton data-testid="delete-grocery-item-button" aria-label="Delete" OnClick="OnDeleteClick" Icon="@Icons.Material.Outlined.Delete" Class="mw-text-red" />
+<MudIconButton data-testid="delete-grocery-item-button" aria-label="@S["Common_Delete"].Value" OnClick="OnDeleteClick" Icon="@Icons.Material.Outlined.Delete" Class="mw-text-red" />
 
 @code {
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();
 
-    private void OnDeleteClick() => ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, GroceryItem);
+    private void OnDeleteClick() => ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, L, GroceryItem);
 }

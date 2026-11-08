@@ -1,5 +1,8 @@
+@using MealWiz.Shared.Features.GroceryList
 @using MealWiz.Shared.Features.Ingredients.Models
 @using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems
+@inject IStringLocalizer<GroceryListResource> L
+@inject IStringLocalizer<SharedResource> S
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMediator _mediator
@@ -18,11 +21,11 @@
 }
 else if (_state == DrawerState.NothingPlanned)
 {
-    <div class="plan-ingredients-state" data-testid="plan-ingredients-empty">There's nothing from the meal plan to add.</div>
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-empty">@L["PlanIngredients_NothingPlanned"]</div>
 }
 else if (_state == DrawerState.AllLinked)
 {
-    <div class="plan-ingredients-state" data-testid="plan-ingredients-all-on-list">Everything is already on your list</div>
+    <div class="plan-ingredients-state" data-testid="plan-ingredients-all-on-list">@L["PlanIngredients_AllOnList"]</div>
 }
 else
 {
@@ -38,20 +41,20 @@ else
                         <span class="plan-ingredient-name" data-testid="plan-ingredient-name">@row.Name</span>
                         @if (row.IsMerged)
                         {
-                            <span class="plan-ingredient-existing" data-testid="plan-ingredient-existing">@row.PlanLabel@if (row.Existing != null){<text> · </text><span class="plan-ingredient-in-list">In list @AmountText(row.Existing.Amount)</span>}</span>
+                            <span class="plan-ingredient-existing" data-testid="plan-ingredient-existing">@row.PlanLabel@if (row.Existing != null){<text> · </text><span class="plan-ingredient-in-list">@L["PlanIngredients_InList", AmountText(row.Existing.Amount)]</span>}</span>
                         }
                     </div>
                     <div class="plan-ingredient-amount @(row.IsMerged ? "is-duplicate" : "")" data-testid="plan-ingredient-amount">
                         <MudTextField @ref="_amountFields[index]" data-testid="plan-ingredient-amount-input"
-                                      Placeholder="Total"
-                                      aria-label="@($"Amount for {row.Name}")"
+                                      Placeholder="@L["PlanIngredients_Total"]"
+                                      aria-label="@L["PlanIngredients_AmountAria", row.Name].Value"
                                       @bind-Value="row.FinalAmount"
                                       Immediate
                                       OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
                                       Variant="Variant.Outlined"
                                       Margin="Margin.Dense"
                                       Required="true"
-                                      RequiredError="Required" />
+                                      RequiredError="@S["Common_Required"]" />
                     </div>
                 </li>
             }
@@ -63,7 +66,7 @@ else
                        FullWidth="true"
                        Disabled="_saving"
                        OnClick="OnConfirmClicked">
-                Add @_rows.Count to grocery list
+                @L.Plural("PlanIngredients_Add", _rows.Count)
             </MudButton>
         </DrawerFooter>
     </MudForm>
@@ -132,7 +135,7 @@ else
         var toBuy = itemsResult.Value.Where(item => !item.IsPicked).ToList();
         _rows = candidates
             .GroupBy(c => c.Ingredient.Name.Trim(), StringComparer.OrdinalIgnoreCase)
-            .Select(group => BuildRow(group.ToList(), toBuy))
+            .Select(group => BuildRow(group.ToList(), toBuy, L))
             .ToList();
         _amountFields = new MudTextField<string>[_rows.Count];
         _state = DrawerState.Rows;
@@ -161,7 +164,7 @@ else
         return candidates;
     }
 
-    private static MergeRow BuildRow(List<Candidate> candidates, List<GroceryItem> toBuy)
+    private static MergeRow BuildRow(List<Candidate> candidates, List<GroceryItem> toBuy, IStringLocalizer<GroceryListResource> localizer)
     {
         var name = candidates[0].Ingredient.Name.Trim();
         var existing = toBuy.FirstOrDefault(item => string.Equals(item.Name.Trim(), name, StringComparison.OrdinalIgnoreCase));
@@ -172,7 +175,7 @@ else
             Name = name,
             Candidates = candidates,
             Existing = existing,
-            PlanLabel = "Plan " + string.Join(" + ", planAmounts.Select(AmountText))
+            PlanLabel = localizer["PlanIngredients_Plan", string.Join(" + ", planAmounts.Select(AmountText))]
         };
 
         row.FinalAmount = row.IsMerged
@@ -216,7 +219,7 @@ else
         await _groceryListStateContainer.LoadGroceryItems();
         await _groceryListStateContainer.LoadSources();
         _drawerStateContainer.CloseDrawer();
-        _snackbar.Add("Ingredients added to list");
+        _snackbar.Add(L["PlanIngredients_Added"]);
     }
 
     private record Candidate(DateTime Date, int PlannedMealId, string MealName, Ingredient Ingredient);

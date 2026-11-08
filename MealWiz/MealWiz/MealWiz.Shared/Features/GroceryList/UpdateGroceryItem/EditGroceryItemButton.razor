@@ -1,7 +1,9 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 
 @* An item's name on the list. Tapping it opens the Edit item drawer, whose red header action deletes the item. *@
-<button type="button" class="grocery-item-name" data-testid="grocery-item-name" aria-label="@($"Edit {GroceryItem.Name}")" @onclick="UpdateItemClicked"><span class="grocery-item-name-text">@GroceryItem.Name</span></button>
+<button type="button" class="grocery-item-name" data-testid="grocery-item-name" aria-label="@L["GroceryItem_EditAria", GroceryItem.Name]" @onclick="UpdateItemClicked"><span class="grocery-item-name-text">@GroceryItem.Name</span></button>
 
 @code {
     [Parameter]
@@ -13,7 +15,7 @@
         _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(GroceryItemDrawer),
-            Title = "Edit item",
+            Title = L["GroceryItem_EditTitle"],
             Height = GroceryItemDrawer.DrawerHeight,
             HeaderAction = @<DeleteGroceryItemButton GroceryItem="item" />,
             ContentParameters = new Dictionary<string, object>
