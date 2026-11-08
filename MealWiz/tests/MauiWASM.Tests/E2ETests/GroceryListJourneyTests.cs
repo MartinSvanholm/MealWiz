@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MauiWASM.Tests.TestInfrastructure.E2E;
+using Microsoft.Playwright;
 using Xunit;
 
 namespace MauiWASM.Tests.E2ETests;
@@ -8,6 +9,9 @@ namespace MauiWASM.Tests.E2ETests;
 [Trait("Category", "Smoke")]
 public class GroceryListJourneyTests : E2ETestBase
 {
+    private static readonly Regex HasMeal = new(@"\bhas-meal\b");
+    private static readonly Regex SelectedDay = new(@"\bselected-day\b");
+
     [Fact]
     public async Task GroceryList_IsFilledFromThePlan_AndManualItemsCanBeAddedCheckedAndDeleted()
     {
@@ -196,6 +200,65 @@ public class GroceryListJourneyTests : E2ETestBase
     }
 
     [Fact]
+    public async Task GroceryList_RemovingAPlannedMeal_RemovesItsOwnItems_AndKeepsSharedOnes()
+    {
+        const string pasta = "E2E Garlic pasta";
+        const string soup = "E2E Tomato soup";
+        await Supabase.InsertMealAsync(User, pasta,
+            new SeedIngredient("Spaghetti", "400 g", ShowOnGroceryList: true),
+            new SeedIngredient("Garlic", "2 cloves", ShowOnGroceryList: true));
+        await Supabase.InsertMealAsync(User, soup,
+            new SeedIngredient("Tomatoes", "6", ShowOnGroceryList: true),
+            new SeedIngredient("Garlic", "1 clove", ShowOnGroceryList: true));
+
+        await LoginAsync();
+        await PlanOnDayAsync(0, pasta);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(1);
+        await Expect(Row("grocery-item", "Garlic")).ToHaveCountAsync(1);
+
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await PlanOnDayAsync(1, soup);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        var garlicRow = Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Garlic" });
+        await FillAsync(garlicRow.GetByTestId("plan-ingredient-amount-input"), "3 cloves");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+
+        // Remove the pasta: only the spaghetti goes with it
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Page.GetByTestId("remove-meal-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Remove E2E Garlic pasta?");
+        await Expect(Drawer.GetByTestId("remove-meal-grocery-label")).ToHaveTextAsync("Also remove 1 item from the grocery list");
+        await Expect(Drawer.Locator("input[data-testid=remove-meal-grocery-switch], [data-testid=remove-meal-grocery-switch] input")).ToBeCheckedAsync();
+        await Drawer.GetByTestId("remove-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Day(0)).Not.ToHaveClassAsync(HasMeal);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Tomatoes")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+    }
+
+    [Fact]
     public async Task GroceryList_AfterASwap_WarnsAboutItemsFromTheOldMeal_AndReviewRemovesOrKeepsThem()
     {
         const string tacos = "E2E Tacos";
@@ -221,7 +284,7 @@ public class GroceryListJourneyTests : E2ETestBase
 
         // Swap the tacos day for another meal: its two items now come from a meal that left the plan
         await Page.GetByTestId("nav-meal-plan").ClickAsync();
-        await Page.GetByTestId("week-day").Nth(0).ClickAsync();
+        await Day(0).ClickAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
         await Page.GetByTestId("swap-meal-button").ClickAsync();
         await Expect(Page.GetByTestId("meal-selection-heading")).ToContainTextAsync("Swap the meal for");
@@ -261,13 +324,15 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
     }
 
-    /// <summary>Selects the <paramref name="index"/>th day of the week on the meal plan and plans the meal on it.</summary>
-    private async Task PlanOnDayAsync(int index, string meal)
+    private ILocator Day(int index) => Page.GetByTestId("week-day").Nth(index);
+
+    private async Task PlanOnDayAsync(int day, string meal)
     {
-        await Page.GetByTestId("week-day").Nth(index).ClickAsync();
-        await Expect(Page.GetByTestId("week-day").Nth(index)).ToHaveClassAsync(new Regex(@"\bselected-day\b"));
+        await Day(day).ClickAsync();
+        await Expect(Day(day)).ToHaveClassAsync(SelectedDay);
         await Row("meal-list-item", meal).ClickAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(meal);
+        await Expect(Day(day)).ToHaveClassAsync(HasMeal);
     }
 
     [Fact]
