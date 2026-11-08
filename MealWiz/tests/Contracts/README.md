@@ -7,6 +7,7 @@ projects deliberately share no code, so the payload and status types are duplica
 |------|----------------|-------------|
 | `parsed_meal.json` | `MealImportPayload` serializes to exactly this | `ParsedMeal` deserializes it with every field set |
 | `meal_import_status.json` | `RecipeImportStatus` names and DB values | `MealImportStatus` names and DB values |
+| `meal_import_error_code.json` | `RecipeImportErrorCode` names and DB values (`meal_imports.error_code`) | `MealImportErrorCode` names and DB values |
 
 Both test projects link these files as content. Change a type on one side and that side's test fails;
 update the file and the other side's test fails until it matches too.

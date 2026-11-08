@@ -36,6 +36,7 @@ public class MealImportModelTests
             SourceUrl = "https://example.com/recipe",
             Status = MealImportStatus.Failed,
             ParsedMeal = new ParsedMeal { Name = "Pasta" },
+            ErrorCode = MealImportErrorCode.NoRecipeFound,
             ErrorMessage = "Nope",
             CreatedAt = new DateTime(2026, 10, 12, 8, 0, 0, DateTimeKind.Utc),
             UpdatedAt = new DateTime(2026, 10, 12, 8, 1, 0, DateTimeKind.Utc),
@@ -51,6 +52,8 @@ public class MealImportModelTests
         Assert.Equal(original.SourceUrl, roundTripped.SourceUrl);
         Assert.Equal(original.Status, roundTripped.Status);
         Assert.Same(original.ParsedMeal, roundTripped.ParsedMeal);
+        Assert.Equal("no_recipe_found", db.ErrorCode);
+        Assert.Equal(original.ErrorCode, roundTripped.ErrorCode);
         Assert.Equal(original.ErrorMessage, roundTripped.ErrorMessage);
         Assert.Equal(original.CreatedAt, roundTripped.CreatedAt);
         Assert.Equal(original.UpdatedAt, roundTripped.UpdatedAt);
@@ -82,6 +85,29 @@ public class MealImportModelTests
             Assert.Equal(dbValue, status.ToDbValue());
             Assert.Equal(status, MealImportStatusExtensions.FromDbValue(dbValue));
         }
+    }
+
+    [Fact]
+    public void ErrorCode_DbValuesMatchTheFunctionsContract()
+    {
+        var contract = JsonConvert.DeserializeObject<Dictionary<string, string>>(ReadContract("meal_import_error_code.json"))!;
+
+        Assert.Equal(contract.Keys.Order(), Enum.GetNames<MealImportErrorCode>().Order());
+        foreach (var (name, dbValue) in contract)
+        {
+            var code = Enum.Parse<MealImportErrorCode>(name);
+            Assert.Equal(dbValue, code.ToDbValue());
+            Assert.Equal(code, MealImportErrorCodeExtensions.FromDbValue(dbValue));
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("site_on_fire")]
+    public void ErrorCode_MissingOrUnknownDbValue_IsNull(string? dbValue)
+    {
+        Assert.Null(MealImportErrorCodeExtensions.FromDbValue(dbValue));
     }
 
     private static string ReadContract(string fileName) =>

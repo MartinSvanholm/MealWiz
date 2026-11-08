@@ -1,4 +1,5 @@
 @inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<IngredientsResource> L
 
 @* One ingredient row on the edit meal form: name, amount chip and trash.
    Tapping the row or the chip opens the ingredient drawer. *@
@@ -6,7 +7,7 @@
     <span class="mw-ingredient-name">@Ingredient.Name</span>
     <button type="button" class="mw-ingredient-amount" data-testid="ingredient-amount-chip" data-empty="@(HasAmount ? "false" : "true")"
             @onclick="EditIngredient" @onclick:stopPropagation="true">
-        <span class="mw-ingredient-amount-text">@(HasAmount ? Ingredient.Amount : "+ amount")</span>
+        <span class="mw-ingredient-amount-text">@(HasAmount ? Ingredient.Amount : L["IngredientCard_AddAmount"])</span>
     </button>
     <span class="mw-ingredient-delete" @onclick:stopPropagation="true">
         <DeleteIngredientButton Ingredient="Ingredient" />
@@ -24,7 +25,7 @@
         _drawerStateContainer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(IngredientDrawer),
-            Title = "Edit ingredient",
+            Title = L["IngredientCard_EditTitle"],
             Height = "45%",
             HeaderAction = @<DeleteIngredientButton Ingredient="Ingredient" TestId="drawer-delete-ingredient" />,
             ContentParameters = new Dictionary<string, object>

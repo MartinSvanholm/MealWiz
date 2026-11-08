@@ -12,12 +12,15 @@ public static class ResultHelper
         Result.Setup(cfg => cfg.DefaultTryCatchHandler = MapException);
     }
 
-    /// <summary>The default <c>Result.Try</c> catch handler: turns a caught exception into an error.</summary>
+    /// <summary>
+    /// The default <c>Result.Try</c> catch handler: turns a caught exception into an error whose message, in the
+    /// current UI culture, is what the user sees. Debug builds show Supabase's own message instead, for developers.
+    /// </summary>
     internal static IError MapException(Exception exception)
     {
         if (exception is GotrueException gotrueException)
         {
-            string errorMessage = "No response from server";
+            string errorMessage = ErrorMessages.NoResponse;
 #if DEBUG
             errorMessage = SupabaseHelper.GetSupabaseErrorMessage(gotrueException).Message;
 #endif
@@ -26,14 +29,19 @@ public static class ResultHelper
 
         if (exception is PostgrestException postgrestException)
         {
-            string errorMessage = "No response from server";
+            // A unique violation (23505): another device got there first. Same message in Debug and Release.
+            if (SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Code == "23505")
+                return new Error(ErrorMessages.ChangedOnAnotherDevice).CausedBy(postgrestException);
+
+            string errorMessage = ErrorMessages.NoResponse;
 #if DEBUG
             errorMessage = SupabaseHelper.GetSupabaseErrorMessage(postgrestException).Message;
 #endif
             return new Error(errorMessage).CausedBy(postgrestException);
         }
 
-        return new Error(exception.Message).CausedBy(exception);
+        // Raw exception text isn't for users (it's English and technical); it stays on the cause for diagnosis.
+        return new Error(ErrorMessages.GenericError).CausedBy(exception);
     }
 
     public static Result<T> Handle<T>(this Result<T> result, ISnackbar snackbar)

@@ -1,4 +1,4 @@
-﻿namespace MealWiz.Shared.Helpers;
+namespace MealWiz.Shared.Helpers;
 
 public static class DateTimeExtensions
 {

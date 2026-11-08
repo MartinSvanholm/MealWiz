@@ -46,7 +46,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
     {
         var row = await ImportAsync(server.Url("/no-recipe"));
 
-        AssertFailed(row, "Could not find recipe data on the page.");
+        AssertFailed(row, RecipeImportErrorCode.NoRecipeFound, "Could not find recipe data on the page.");
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
     {
         var row = await ImportAsync(server.Url("/missing"));
 
-        AssertFailed(row, "Request failed with status 404.");
+        AssertFailed(row, RecipeImportErrorCode.FetchFailed, "Request failed with status 404.");
     }
 
     [Fact]
@@ -64,7 +64,19 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
 
         Assert.Equal(RecipeImportStatus.Failed, RecipeImportStatusExtensions.FromDbValue(row.Status));
         Assert.Null(row.ParsedMeal);
+        Assert.Equal(RecipeImportErrorCode.FetchFailed, RecipeImportErrorCodeExtensions.FromDbValue(row.ErrorCode));
         Assert.Contains("publicly routable", row.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task ParserThrows_WritesUnknownCode()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var pendingRow = await supabase.InsertPendingRowAsync(server.Url("/recipe"));
+
+        var row = await HandleAsync(pendingRow.Id, pendingRow.SourceUrl, parser: new ThrowingRecipeParser());
+
+        AssertFailed(row, RecipeImportErrorCode.Unknown, "The parser broke.");
     }
 
     [Fact]
@@ -72,7 +84,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
     {
         var row = await ImportAsync("file:///etc/passwd");
 
-        AssertFailed(row, "The URL must be an absolute http or https URL.");
+        AssertFailed(row, RecipeImportErrorCode.InvalidUrl, "The URL must be an absolute http or https URL.");
     }
 
     // The client always inserts the row first, so a missing row means the Function reads the wrong database.
@@ -200,9 +212,10 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
     /// Runs the handler and returns the row as it ends up. Every outcome that goes through here leaves the row
     /// telling the client what happened (resolved now, or already), so the handler must report success.
     /// </summary>
-    private async Task<MealImportDb> HandleAsync(Guid jobId, string url, IRecipeFetcher? fetcher = null)
+    private async Task<MealImportDb> HandleAsync(Guid jobId, string url, IRecipeFetcher? fetcher = null,
+        IRecipeParser? parser = null)
     {
-        var result = await CreateHandler(fetcher).HandleAsync(
+        var result = await CreateHandler(fetcher, parser: parser).HandleAsync(
             new ScrapeRecipeRequest(jobId, url),
             TestContext.Current.CancellationToken);
 
@@ -214,10 +227,11 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
     }
 
     private ScrapeRecipeHandler CreateHandler(
-        IRecipeFetcher? fetcher = null, IServiceRoleSupabaseClientFactory? clientFactory = null) => new(
+        IRecipeFetcher? fetcher = null, IServiceRoleSupabaseClientFactory? clientFactory = null,
+        IRecipeParser? parser = null) => new(
         clientFactory ?? new ServiceRoleSupabaseClientFactory(supabase.Configuration),
         fetcher ?? CreateRecipeFetcher(),
-        new RecipeParser(new JsonLdRecipeParser(), new MicrodataRecipeParser(), new OpenGraphRecipeParser()),
+        parser ?? new RecipeParser(new JsonLdRecipeParser(), new MicrodataRecipeParser(), new OpenGraphRecipeParser()),
         new RecipeMapper(new IngredientLineParser()),
         NullLogger<ScrapeRecipeHandler>.Instance);
 
@@ -239,9 +253,15 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         Assert.Equal(expectedName, ingredient.Name);
     }
 
-    private static void AssertFailed(MealImportDb row, string expectedError)
+    private sealed class ThrowingRecipeParser : IRecipeParser
+    {
+        public Task<ParsedRecipe?> ParseAsync(string html) => throw new InvalidOperationException("The parser broke.");
+    }
+
+    private static void AssertFailed(MealImportDb row, RecipeImportErrorCode expectedCode, string expectedError)
     {
         Assert.Equal(RecipeImportStatus.Failed, RecipeImportStatusExtensions.FromDbValue(row.Status));
+        Assert.Equal(expectedCode, RecipeImportErrorCodeExtensions.FromDbValue(row.ErrorCode));
         Assert.Null(row.ParsedMeal);
         Assert.Equal(expectedError, row.ErrorMessage);
         Assert.NotNull(row.UpdatedAt);

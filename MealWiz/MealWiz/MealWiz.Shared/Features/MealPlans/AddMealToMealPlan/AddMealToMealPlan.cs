@@ -2,7 +2,9 @@
 using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.Meals.Models;
+using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 
@@ -10,17 +12,17 @@ namespace MealWiz.Shared.Features.MealPlans.AddMealToMealPlan;
 
 public static class AddMealToMealPlan
 {
-    public record Command(Meal Meal) : IRequest<Result<Meal>>;
+    public record Command(Meal Meal) : IRequest<Result<int>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<Meal>>
+    public class Handler(Client supabaseClient, IStringLocalizer<MealPlansResource> localizer) : IRequestHandler<Command, Result<int>>
     {
-        public async Task<Result<Meal>> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
             if (request.Meal.MealPlan == null || request.Meal.MealDate == null)
-                return new Result().WithError("Meal plan or meal date cannot be empty");
+                return Result.Fail<int>(localizer["MealPlan_PlanOrDateMissing"]);
 
             if (supabaseClient.Auth.CurrentSession?.User == null)
-                return Result.Fail<Meal>("Not authenticated");
+                return Result.Fail<int>(ErrorMessages.NotSignedIn);
 
             var mealPlanMealDb = new MealPlanMealDb()
             {
@@ -36,9 +38,11 @@ public static class AddMealToMealPlan
                 .From<MealPlanMealDb>()
                 .Insert(mealPlanMealDb));
 
-            if (result.IsFailed) return result.ToResult<Meal>();
+            if (result.IsFailed) return result.ToResult<int>();
 
-            return new Result<Meal>().WithValue(request.Meal).WithSuccess("Meal added to plan");
+            return result.Value.Model is { } model
+                ? Result.Ok(model.Id).WithSuccess(localizer["MealPlan_MealAdded"])
+                : Result.Fail<int>(localizer["MealPlan_MealNotAdded"]);
         }
     }
 }

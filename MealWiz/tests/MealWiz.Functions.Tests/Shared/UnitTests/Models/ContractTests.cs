@@ -48,6 +48,20 @@ public class ContractTests
         }
     }
 
+    [Fact]
+    public void RecipeImportErrorCode_DbValuesMatchTheContract()
+    {
+        var contract = JsonConvert.DeserializeObject<Dictionary<string, string>>(ReadContract("meal_import_error_code.json"))!;
+
+        Assert.Equal(contract.Keys.Order(), Enum.GetNames<RecipeImportErrorCode>().Order());
+        foreach (var (name, dbValue) in contract)
+        {
+            var code = Enum.Parse<RecipeImportErrorCode>(name);
+            Assert.Equal(dbValue, code.ToDbValue());
+            Assert.Equal(code, RecipeImportErrorCodeExtensions.FromDbValue(dbValue));
+        }
+    }
+
     private static string ReadContract(string fileName) =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Contracts", fileName));
 }

@@ -88,15 +88,18 @@ public class ScrapeRecipeHandler(
         {
             importRow.Status = RecipeImportStatus.Succeeded.ToDbValue();
             importRow.ParsedMeal = parsedMealResult.Value;
+            importRow.ErrorCode = null;
             importRow.ErrorMessage = null;
         }
         else
         {
             var errorMessage = Describe(parsedMealResult.Errors);
-            logger.LogWarning("Recipe import {JobId} failed: {Error}", request.JobId, errorMessage);
+            var errorCode = CodeOf(parsedMealResult.Errors);
+            logger.LogWarning("Recipe import {JobId} failed ({ErrorCode}): {Error}", request.JobId, errorCode, errorMessage);
 
             importRow.Status = RecipeImportStatus.Failed.ToDbValue();
             importRow.ParsedMeal = null;
+            importRow.ErrorCode = errorCode.ToDbValue();
             importRow.ErrorMessage = errorMessage;
         }
 
@@ -130,28 +133,47 @@ public class ScrapeRecipeHandler(
         if (!Uri.TryCreate(url, UriKind.Absolute, out var parsedUrl) ||
             (parsedUrl.Scheme != Uri.UriSchemeHttp && parsedUrl.Scheme != Uri.UriSchemeHttps))
         {
-            return Result.Fail("The URL must be an absolute http or https URL.");
+            return Fail(RecipeImportErrorCode.InvalidUrl, new Error("The URL must be an absolute http or https URL."));
         }
 
         var fetchResult = await recipeFetcher.FetchAsync(parsedUrl, cancellationToken);
         if (fetchResult.IsFailed)
         {
-            return Result.Fail<MealImportPayload>(fetchResult.Errors);
+            // Redirects, a disallowed redirect scheme, the status, the size cap, DNS, a non-public host, network
+            // errors and timeouts: the page couldn't be fetched.
+            return Fail(RecipeImportErrorCode.FetchFailed, fetchResult.Errors);
         }
 
         var parseResult = await Result.Try(() => recipeParser.ParseAsync(fetchResult.Value));
         if (parseResult.IsFailed)
         {
-            return Result.Fail<MealImportPayload>(parseResult.Errors);
+            return Fail(RecipeImportErrorCode.Unknown, parseResult.Errors);
         }
 
         if (parseResult.Value is null)
         {
-            return Result.Fail("Could not find recipe data on the page.");
+            return Fail(RecipeImportErrorCode.NoRecipeFound, new Error("Could not find recipe data on the page."));
         }
 
         return Result.Ok(recipeMapper.Map(parseResult.Value));
     }
+
+    private const string ErrorCodeKey = "ErrorCode";
+
+    private static Result<MealImportPayload> Fail(RecipeImportErrorCode code, params IEnumerable<IError> errors)
+    {
+        var tagged = errors.ToList();
+        foreach (var error in tagged)
+            error.Metadata[ErrorCodeKey] = code;
+        return Result.Fail<MealImportPayload>(tagged);
+    }
+
+    /// <summary>The code the failing step tagged its errors with; anything untagged is <see cref="RecipeImportErrorCode.Unknown"/>.</summary>
+    private static RecipeImportErrorCode CodeOf(IReadOnlyList<IError> errors) =>
+        errors.Select(e => e.Metadata.TryGetValue(ErrorCodeKey, out var code) ? code : null)
+            .OfType<RecipeImportErrorCode>()
+            .DefaultIfEmpty(RecipeImportErrorCode.Unknown)
+            .First();
 
     private static string Describe(IReadOnlyList<IError> errors) => string.Join("; ", errors.Select(e => e.Message));
 }

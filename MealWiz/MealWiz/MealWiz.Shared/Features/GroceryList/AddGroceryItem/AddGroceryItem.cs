@@ -2,6 +2,7 @@
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 
@@ -11,7 +12,7 @@ public static class AddGroceryItem
 {
     public record Command(GroceryItem GroceryItem) : IRequest<Result<GroceryItem>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<GroceryItem>>
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result<GroceryItem>>
     {
         public async Task<Result<GroceryItem>> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -28,7 +29,7 @@ public static class AddGroceryItem
                 .Insert(groceryItemDb));
 
             if (result.IsFailed) return result.ToResult<GroceryItem>();
-            if (result.Value.Model is null) return Result.Fail("The grocery item could not be added.");
+            if (result.Value.Model is null) return Result.Fail(localizer["GroceryItem_NotAdded"]);
 
             return new GroceryItem(result.Value.Model);
         }

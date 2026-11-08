@@ -8,6 +8,7 @@ public sealed class GroceryItemBuilder
     private string _name = $"Test grocery item {ClientExtensions.UniqueSuffix()}";
     private string _amount = "1";
     private bool _isPicked;
+    private bool _isManual = true;
 
     public GroceryItemBuilder WithName(string name)
     {
@@ -27,8 +28,16 @@ public sealed class GroceryItemBuilder
         return this;
     }
 
+    /// <summary>An item typed by hand (the default) or, with false, one added from the meal plan.</summary>
+    public GroceryItemBuilder Manual(bool isManual = true)
+    {
+        _isManual = isManual;
+        return this;
+    }
+
     public GroceryItem Build() => new()
     {
+        IsManual = _isManual,
         Name = _name,
         Amount = _amount,
         IsPicked = _isPicked

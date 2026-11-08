@@ -1,6 +1,7 @@
 ﻿using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 
@@ -10,7 +11,7 @@ public static class DeleteGroceryItem
 {
     public record Command(GroceryItem GroceryItem) : IRequest<Result<int>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<int>>
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result<int>>
     {
         public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -19,7 +20,7 @@ public static class DeleteGroceryItem
                 .Delete(request.GroceryItem.MapToDb()));
 
             if (result.IsFailed) return result.ToResult<int>();
-            if (result.Value.Model is null) return Result.Fail("The grocery item could not be found.");
+            if (result.Value.Model is null) return Result.Fail(localizer["GroceryItem_NotFound"]);
 
             return result.Value.Model.Id;
         }

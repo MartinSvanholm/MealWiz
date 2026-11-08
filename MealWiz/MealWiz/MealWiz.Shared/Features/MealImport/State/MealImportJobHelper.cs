@@ -1,5 +1,4 @@
 using MealWiz.Shared.Features.MealImport.Models;
-using MealWiz.Shared.Helpers;
 
 namespace MealWiz.Shared.Features.MealImport.State;
 
@@ -55,7 +54,8 @@ public static class MealImportJobHelper
         if (row.Status == MealImportStatus.Succeeded && row.ParsedMeal is null)
         {
             row.Status = MealImportStatus.Failed;
-            row.ErrorMessage ??= ErrorMessages.GenericError;
+            row.ErrorCode ??= MealImportErrorCode.Unknown;
+            row.ErrorMessage ??= "The import succeeded without a parsed meal.";
         }
 
         return row;
@@ -66,7 +66,7 @@ public static class MealImportJobHelper
     /// (the row itself may stay pending). Keeps what we know about the row from <paramref name="current"/>.
     /// </summary>
     public static Models.MealImport CreateLocallyFailedImport(
-        Guid jobId, Models.MealImport? current, string errorMessage, DateTime now)
+        Guid jobId, Models.MealImport? current, MealImportErrorCode errorCode, string errorMessage, DateTime now)
     {
         return new Models.MealImport
         {
@@ -75,6 +75,7 @@ public static class MealImportJobHelper
             SourceUrl = current?.SourceUrl ?? string.Empty,
             CreatedAt = current?.CreatedAt ?? now,
             Status = MealImportStatus.Failed,
+            ErrorCode = errorCode,
             ErrorMessage = errorMessage
         };
     }

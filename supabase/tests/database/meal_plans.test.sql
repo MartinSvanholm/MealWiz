@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(17);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -12,6 +12,8 @@ insert into auth.users (id, email, aud, role) values
 insert into public.meal_plans (id, start_date, end_date, created_by, created_at) values
     (900001, '2026-01-05', '2026-01-11', 'aaaaaaaa-0000-0000-0000-0000000000a1', now()),
     (900002, '2026-01-05', '2026-01-11', 'bbbbbbbb-0000-0000-0000-0000000000b2', now());
+
+select col_is_unique('public', 'meal_plans', array['created_by', 'start_date'], 'meal_plans has one plan per user and start date');
 
 -- As user A.
 set local role authenticated;
@@ -27,6 +29,13 @@ select lives_ok(
     $$ insert into public.meal_plans (id, start_date, end_date, created_by, created_at)
        values (900003, '2026-01-12', '2026-01-18', 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
     'user A can insert their own meal plan'
+);
+
+select throws_ok(
+    $$ insert into public.meal_plans (start_date, end_date, created_by, created_at)
+       values ('2026-01-05', '2026-01-11', 'aaaaaaaa-0000-0000-0000-0000000000a1', now()) $$,
+    '23505', null,
+    'user A cannot create a second plan for a week they already have'
 );
 
 select throws_ok(
@@ -103,6 +112,12 @@ select results_eq(
     $$ select id from public.meal_plans where id in (900001, 900002) order by id $$,
     $$ values (900001::bigint), (900002::bigint) $$,
     'no meal plan was deleted by another user or anon'
+);
+
+select is(
+    (select count(*)::int from public.meal_plans where start_date = '2026-01-05'),
+    2,
+    'two users can each have a plan for the same week'
 );
 
 select * from finish();

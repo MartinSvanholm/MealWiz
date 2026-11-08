@@ -1,0 +1,8 @@
+{
+  "InvalidUrl": "invalid_url",
+  "NoRecipeFound": "no_recipe_found",
+  "FetchFailed": "fetch_failed",
+  "Unreachable": "unreachable",
+  "TimedOut": "timed_out",
+  "Unknown": "unknown"
+}

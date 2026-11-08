@@ -1,6 +1,5 @@
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
-using MealWiz.Shared.Helpers;
 using Xunit;
 using MealImportModel = MealWiz.Shared.Features.MealImport.Models.MealImport;
 
@@ -60,17 +59,19 @@ public class MealImportJobHelperTests
         var row = MealImportJobHelper.EnsureUsableResult(new MealImportModel { Status = MealImportStatus.Succeeded });
 
         Assert.Equal(MealImportStatus.Failed, row.Status);
-        Assert.Equal(ErrorMessages.GenericError, row.ErrorMessage);
+        Assert.Equal(MealImportErrorCode.Unknown, row.ErrorCode);
+        Assert.NotNull(row.ErrorMessage);
     }
 
     [Fact]
     public void EnsureUsableResult_LeavesUsableRowsAlone()
     {
         var succeeded = new MealImportModel { Status = MealImportStatus.Succeeded, ParsedMeal = new ParsedMeal() };
-        var failed = new MealImportModel { Status = MealImportStatus.Failed, ErrorMessage = "Nope" };
+        var failed = new MealImportModel { Status = MealImportStatus.Failed, ErrorCode = MealImportErrorCode.FetchFailed, ErrorMessage = "Nope" };
 
         Assert.Equal(MealImportStatus.Succeeded, MealImportJobHelper.EnsureUsableResult(succeeded).Status);
         Assert.Equal("Nope", MealImportJobHelper.EnsureUsableResult(failed).ErrorMessage);
+        Assert.Equal(MealImportErrorCode.FetchFailed, failed.ErrorCode);
     }
 
     [Fact]
@@ -85,13 +86,14 @@ public class MealImportJobHelperTests
             CreatedAt = new DateTime(2026, 10, 12, 8, 0, 0, DateTimeKind.Utc)
         };
 
-        var failed = MealImportJobHelper.CreateLocallyFailedImport(jobId, current, "Offline", DateTime.UtcNow);
+        var failed = MealImportJobHelper.CreateLocallyFailedImport(jobId, current, MealImportErrorCode.Unreachable, "Offline", DateTime.UtcNow);
 
         Assert.Equal(jobId, failed.Id);
         Assert.Equal(current.CreatedBy, failed.CreatedBy);
         Assert.Equal(current.SourceUrl, failed.SourceUrl);
         Assert.Equal(current.CreatedAt, failed.CreatedAt);
         Assert.Equal(MealImportStatus.Failed, failed.Status);
+        Assert.Equal(MealImportErrorCode.Unreachable, failed.ErrorCode);
         Assert.Equal("Offline", failed.ErrorMessage);
     }
 
@@ -100,7 +102,7 @@ public class MealImportJobHelperTests
     {
         var now = new DateTime(2026, 10, 12, 9, 0, 0, DateTimeKind.Utc);
 
-        var failed = MealImportJobHelper.CreateLocallyFailedImport(Guid.NewGuid(), null, "Offline", now);
+        var failed = MealImportJobHelper.CreateLocallyFailedImport(Guid.NewGuid(), null, MealImportErrorCode.TimedOut, "Offline", now);
 
         Assert.Equal(now, failed.CreatedAt);
         Assert.Equal(string.Empty, failed.SourceUrl);

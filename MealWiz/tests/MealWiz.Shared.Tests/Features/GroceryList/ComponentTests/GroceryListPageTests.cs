@@ -4,7 +4,7 @@ using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
-using MealWiz.Shared.Features.GroceryList.ClearBasket;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Components;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
@@ -68,6 +68,17 @@ public class GroceryListPageTests : ComponentTestBase
         Assert.Equal("Groceries", cut.Find(TestId("screen-header-title")).TextContent.Trim());
         Assert.Equal("1 of 2 items", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
         Assert.Equal("50", cut.Find(TestId("grocery-progress")).GetAttribute("aria-valuenow"));
+    }
+
+    [Fact]
+    public void Header_and_progress_say_item_for_a_single_item()
+    {
+        SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk }));
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        var week = ISOWeek.GetWeekOfYear(MealPlan.SelectedWeekStart);
+        Assert.Equal($"1 item · Week {week}", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Equal("0 of 1 item", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
     }
 
     [Fact]
@@ -297,7 +308,7 @@ public class GroceryListPageTests : ComponentTestBase
         eggs.IsPicked = true;
         _milk.IsPicked = true;
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread, eggs }));
-        SetupSend<ClearBasket.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
         RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();
 
@@ -306,11 +317,11 @@ public class GroceryListPageTests : ComponentTestBase
         clear.Click();
         Assert.True(Drawer.IsConfirmDrawerOpen);
         Assert.Equal("Clear 2 items?", ConfirmDrawerHost.Find(TestId("confirm-drawer-title")).TextContent.Trim());
-        Assert.Empty(Sent<ClearBasket.Command>());
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
         Confirm();
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(TestId("grocery-basket"))));
-        Assert.Equal([_milk.Id, eggs.Id], Assert.Single(Sent<ClearBasket.Command>()).GroceryItemIds.Order());
+        Assert.Equal([_milk.Id, eggs.Id], Assert.Single(Sent<DeleteGroceryItems.Command>()).GroceryItemIds.Order());
         Assert.Equal(["Bread"], ToBuy(cut));
         Assert.Equal("0 of 1 item", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
         Assert.False(Drawer.IsConfirmDrawerOpen);
@@ -339,7 +350,7 @@ public class GroceryListPageTests : ComponentTestBase
         ConfirmDrawerHost.Find(TestId("confirm-drawer-cancel")).Click();
 
         Assert.False(Drawer.IsConfirmDrawerOpen);
-        Assert.Empty(Sent<ClearBasket.Command>());
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
         Assert.Equal(["Milk"], Basket(cut));
     }
 

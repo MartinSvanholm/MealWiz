@@ -23,6 +23,10 @@ public class MealImportDb : BaseModel
     [Column("parsed_meal")]
     public ParsedMeal? ParsedMeal { get; set; }
 
+    [Column("error_code")]
+    public string? ErrorCode { get; set; }
+
+    // The English detail, for diagnosis only; the UI shows the localized message for ErrorCode.
     [Column("error_message")]
     public string? ErrorMessage { get; set; }
 

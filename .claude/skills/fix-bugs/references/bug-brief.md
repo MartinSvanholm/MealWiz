@@ -4,8 +4,12 @@
 
 ```
 Run the `implement-issue` skill in bug mode for these Linear bugs, in one branch and one PR to dev:
-- <ID> "<title>" (<url>)<flags, e.g. " — may need an RLS change: ask before that part">
-- <ID> "<title>" (<url>)
+- <ID> "<title>" (<url>) — fix plan in the issue<flags, e.g. " — may need an RLS change: ask before that part">
+- <ID> "<title>" (<url>) — no plan: diagnose it yourself
+
+A bug marked "fix plan in the issue" has an approved `## Fix plan` in its description: execute it (red test, check it
+fails for the stated reason, fix) and don't re-diagnose. If the red test doesn't fail as the plan says, or the fix
+doesn't fit the code, stop (stop rule 8 in the skill) and message the session that started you; it owns the plan.
 
 <Cleared by the user before start: <decision, quoting the user>. This counts as the user's answer for that flag.>
 
@@ -26,8 +30,9 @@ cleared it.
 
 ```
 MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
-a .NET 10 Azure Function for meal import. A /fix-bugs coordinator grouped the open Bug issues by the files they touch
-and started one session per group in parallel worktrees from dev. Rules: CLAUDE.md and docs/agents/. PRs go to dev
+a .NET 10 Azure Function for meal import. A /fix-bugs coordinator diagnosed the open Bug issues, wrote approved fix
+plans into the ones that needed them, grouped them by the files they touch and started one session per group in
+parallel worktrees from dev. Rules: CLAUDE.md and docs/agents/. PRs go to dev
 only, never main. Fix only your group's bugs; file anything else in Linear with the Bug label and no project.
 Windows: PowerShell 5.1, so write commit messages and PR bodies to a file (git commit -F, gh pr create --body-file).
 ```
@@ -42,7 +47,7 @@ GitHub through the GitHub MCP tools, no gh CLI.", and add to the `prompt`:
 You run in your own Claude Code cloud container, in cloud mode (see the implement-issue skill): it says how to check
 your branch (<ids>-<slug>, never dev), set up with scripts/cloud-setup.sh, watch CI and merge without the gh CLI.
 The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it your
-BLOCKED / UNBLOCKED / MERGED / STUCK lines too.
+BLOCKED / UNBLOCKED / PLAN / MERGED / STUCK lines too.
 ```
 
 ## Call shape (local mode)
@@ -56,6 +61,8 @@ start_session(
   use_worktree: true,
   source_branch: "dev",
   branch_name: "<ids>-<slug>",            // e.g. mea-35-37-mealplan-fixes
+  model: "<current Sonnet id>",           // e.g. claude-sonnet-5-5
+  effort: "medium",
   prompt: <above>,
   background: <above>)
 ```

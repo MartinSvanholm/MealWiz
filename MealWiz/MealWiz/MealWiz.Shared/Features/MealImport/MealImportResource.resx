@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ImportError_InvalidUrl" xml:space="preserve">
+    <value>That link isn't valid. Use a link that starts with http:// or https://.</value>
+    <comment>A failed import, error_code invalid_url</comment>
+  </data>
+  <data name="ImportError_NoRecipeFound" xml:space="preserve">
+    <value>We couldn't find a recipe on that page.</value>
+    <comment>A failed import, error_code no_recipe_found</comment>
+  </data>
+  <data name="ImportError_FetchFailed" xml:space="preserve">
+    <value>We couldn't fetch that page. Check the link and try again.</value>
+    <comment>A failed import, error_code fetch_failed: redirects, error status, too big, unreachable site</comment>
+  </data>
+  <data name="ImportError_Unreachable" xml:space="preserve">
+    <value>We couldn't reach the meal import service. Please try again.</value>
+    <comment>A failed import, error_code unreachable: the import Function couldn't be called</comment>
+  </data>
+  <data name="ImportError_TimedOut" xml:space="preserve">
+    <value>The meal import took too long. Please try again.</value>
+    <comment>A failed import, error_code timed_out</comment>
+  </data>
+  <data name="ImportError_Unknown" xml:space="preserve">
+    <value>The meal import failed. Please try again.</value>
+    <comment>A failed import with error_code unknown, none, or one this app doesn't know</comment>
+  </data>
+  <data name="Import_InvalidUrl" xml:space="preserve">
+    <value>Please enter a valid meal URL (starting with http:// or https://).</value>
+    <comment>Validation error on the URL field</comment>
+  </data>
+  <data name="Import_AlreadyInProgress" xml:space="preserve">
+    <value>A meal import is already in progress.</value>
+  </data>
+  <data name="Import_NotFound" xml:space="preserve">
+    <value>The meal import could not be found.</value>
+  </data>
+  <data name="Import_ServiceNotConfigured" xml:space="preserve">
+    <value>The meal import service is not configured.</value>
+  </data>
+  <data name="Import_ServiceResponded" xml:space="preserve">
+    <value>The meal import service responded with {0}.</value>
+    <comment>{0} is the HTTP status code</comment>
+  </data>
+  <data name="ImportToast_Failed" xml:space="preserve">
+    <value>Meal import failed: {0}</value>
+    <comment>Toast for a background import that failed; {0} is the reason</comment>
+  </data>
+  <data name="ImportToast_SaveFailed" xml:space="preserve">
+    <value>"{0}" was imported but couldn't be saved: {1}</value>
+    <comment>{0} is the meal name, {1} the reason</comment>
+  </data>
+  <data name="ImportToast_IngredientsFailed" xml:space="preserve">
+    <value>"{0}" was imported but some ingredients couldn't be saved: {1}</value>
+    <comment>{0} is the meal name, {1} the reason</comment>
+  </data>
+  <data name="ImportToast_Saved" xml:space="preserve">
+    <value>"{0}" was imported and added to your meals.</value>
+    <comment>{0} is the meal name</comment>
+  </data>
+  <data name="ImportPage_HeaderLabel" xml:space="preserve">
+    <value>From a recipe link</value>
+    <comment>Small label above the Import meal page title</comment>
+  </data>
+  <data name="ImportPage_HeaderTitle" xml:space="preserve">
+    <value>Import meal</value>
+    <comment>Import meal page title</comment>
+  </data>
+  <data name="ImportPage_InBackgroundTitle" xml:space="preserve">
+    <value>Importing in the background</value>
+  </data>
+  <data name="ImportPage_InBackgroundHint" xml:space="preserve">
+    <value>We'll add the meal to your list when it's done.</value>
+  </data>
+  <data name="ImportPage_BackToMeals" xml:space="preserve">
+    <value>Back to meals</value>
+    <comment>Button back to the meals list</comment>
+  </data>
+  <data name="ImportPage_Fetching" xml:space="preserve">
+    <value>Fetching and parsing your meal…</value>
+  </data>
+  <data name="ImportPage_SlowHint" xml:space="preserve">
+    <value>This is taking a while. You can keep using the app; we'll add the meal when it's ready.</value>
+  </data>
+  <data name="ImportPage_ContinueInBackground" xml:space="preserve">
+    <value>Continue in background</value>
+    <comment>Button: let a slow import finish in the background</comment>
+  </data>
+  <data name="ImportPage_JobFailed" xml:space="preserve">
+    <value>The import failed</value>
+    <comment>Alert title above the reason a just-run import failed</comment>
+  </data>
+  <data name="ImportPage_LatestFailed" xml:space="preserve">
+    <value>Your last import failed</value>
+    <comment>Alert title above the reason the previous import failed</comment>
+  </data>
+  <data name="ImportPage_Intro" xml:space="preserve">
+    <value>Paste a link to a meal and we'll fill it in for you.</value>
+  </data>
+  <data name="ImportPage_UrlLabel" xml:space="preserve">
+    <value>Meal URL</value>
+    <comment>Label of the URL field</comment>
+  </data>
+  <data name="ImportPage_Import" xml:space="preserve">
+    <value>Import</value>
+    <comment>Submit button</comment>
+  </data>
+  <data name="ImportPage_TryAgain" xml:space="preserve">
+    <value>Try again</value>
+    <comment>Submit button after a failed import</comment>
+  </data>
+</root>

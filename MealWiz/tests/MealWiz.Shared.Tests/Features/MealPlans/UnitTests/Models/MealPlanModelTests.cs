@@ -33,8 +33,8 @@ public class MealPlanModelTests
             UpdatedAt = new DateTime(2026, 10, 12, 9, 0, 0, DateTimeKind.Utc),
             MealPlanMeals =
             [
-                new MealPlanMealDb { MealDate = "2026-10-20", Meal = new MealDb { Id = 1, Name = "Pasta" } },
-                new MealPlanMealDb { MealDate = "2026-10-22", Meal = new MealDb { Id = 2, Name = "Leftovers", MealType = MealTypeExtensions.LeftoverValue } }
+                new MealPlanMealDb { Id = 7, MealDate = "2026-10-20", Meal = new MealDb { Id = 1, Name = "Pasta" } },
+                new MealPlanMealDb { Id = 9, MealDate = "2026-10-22", Meal = new MealDb { Id = 2, Name = "Leftovers", MealType = MealTypeExtensions.LeftoverValue } }
             ]
         };
 
@@ -59,6 +59,25 @@ public class MealPlanModelTests
     }
 
     [Fact]
+    public void MealPlan_FromDbModel_KeysPlannedMealIdsByDate()
+    {
+        var plan = new MealPlan(new MealPlanDb
+        {
+            StartDate = "2026-10-19",
+            EndDate = "2026-10-25",
+            MealPlanMeals =
+            [
+                new MealPlanMealDb { Id = 7, MealDate = "2026-10-20", Meal = new MealDb { Id = 1, Name = "Pasta" } },
+                new MealPlanMealDb { Id = 9, MealDate = "2026-10-22", Meal = new MealDb { Id = 2, Name = "Tacos" } }
+            ]
+        });
+
+        Assert.Equal(
+            new Dictionary<DateTime, int> { [new DateTime(2026, 10, 20)] = 7, [new DateTime(2026, 10, 22)] = 9 },
+            plan.PlannedMealIdOnDate);
+    }
+
+    [Fact]
     public void MealPlan_FromDbModelWithoutMeals_HasAnEmptyDictionary()
     {
         var withNull = new MealPlan(new MealPlanDb { StartDate = "2026-10-19", EndDate = "2026-10-25", MealPlanMeals = null! });
@@ -66,6 +85,8 @@ public class MealPlanModelTests
 
         Assert.Empty(withNull.MealOnDate);
         Assert.Empty(withEmpty.MealOnDate);
+        Assert.Empty(withNull.PlannedMealIdOnDate);
+        Assert.Empty(withEmpty.PlannedMealIdOnDate);
     }
 
     [Fact]

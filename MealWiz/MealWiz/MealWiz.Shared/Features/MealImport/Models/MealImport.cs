@@ -7,6 +7,9 @@ public class MealImport
     public string SourceUrl { get; set; }
     public MealImportStatus Status { get; set; } = MealImportStatus.Pending;
     public ParsedMeal? ParsedMeal { get; set; }
+    public MealImportErrorCode? ErrorCode { get; set; }
+
+    /// <summary>The English detail, for diagnosis only. Show <see cref="MealImportErrorMessages.ToMessage"/> instead.</summary>
     public string? ErrorMessage { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -26,6 +29,7 @@ public class MealImport
         SourceUrl = mealImportDb.SourceUrl;
         Status = MealImportStatusExtensions.FromDbValue(mealImportDb.Status);
         ParsedMeal = mealImportDb.ParsedMeal;
+        ErrorCode = MealImportErrorCodeExtensions.FromDbValue(mealImportDb.ErrorCode);
         ErrorMessage = mealImportDb.ErrorMessage;
         CreatedAt = mealImportDb.CreatedAt;
         UpdatedAt = mealImportDb.UpdatedAt;
@@ -41,6 +45,7 @@ public class MealImport
             SourceUrl = SourceUrl,
             Status = Status.ToDbValue(),
             ParsedMeal = ParsedMeal,
+            ErrorCode = ErrorCode?.ToDbValue(),
             ErrorMessage = ErrorMessage,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt,

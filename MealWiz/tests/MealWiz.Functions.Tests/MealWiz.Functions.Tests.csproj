@@ -30,5 +30,10 @@
     <!-- Golden files shared with the other test project; see ../Contracts/README.md. -->
     <None Include="..\Contracts\*.json" Link="Contracts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Pins the run to en-US (CurrentCulture and CurrentUICulture), so English assertions hold on any machine.
+         A test that needs Danish sets the culture itself. -->
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

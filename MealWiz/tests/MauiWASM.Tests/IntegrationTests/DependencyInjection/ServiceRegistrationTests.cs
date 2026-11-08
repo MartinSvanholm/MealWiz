@@ -1,11 +1,14 @@
 using System.Reflection;
 using MauiWASM.Tests.TestInfrastructure;
 using MealWiz.Shared.Features.MealImport.Models;
+using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.Authentication;
 using MediatR;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using MudBlazor;
 using Xunit;
 
 namespace MauiWASM.Tests.IntegrationTests.DependencyInjection;
@@ -55,11 +58,15 @@ public class ServiceRegistrationTests
             typeof(MealImportFunctionOptions),
             typeof(TimeProvider),
             typeof(HttpClient),
+            typeof(IStringLocalizerFactory),
+            typeof(IStringLocalizer<SharedResource>),
+            typeof(MudLocalizer),
         ]);
 
         await using var provider = BuildProvider();
         await using var scope = provider.CreateAsyncScope();
         Assert.IsType<CustomAuthStateProvider>(scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>());
+        Assert.IsType<MealWizMudLocalizer>(scope.ServiceProvider.GetRequiredService<MudLocalizer>());
     }
 
     private static async Task AssertAllResolve(IEnumerable<Type> serviceTypes, bool expectAny = false)

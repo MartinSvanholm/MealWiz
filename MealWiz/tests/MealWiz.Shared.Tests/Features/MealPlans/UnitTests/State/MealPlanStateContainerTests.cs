@@ -118,6 +118,7 @@ public class MealPlanStateContainerTests
         Assert.Equal(PastWednesday.Date, meal.MealDate);
         Assert.Same(created, meal.MealPlan);
         Assert.Same(meal, created.MealOnDate[PastWednesday.Date]);
+        Assert.Equal(77, created.PlannedMealIdOnDate[PastWednesday.Date]);
     }
 
     [Fact]
@@ -149,6 +150,7 @@ public class MealPlanStateContainerTests
 
         _mediator.Verify(m => m.Send(It.IsAny<CreateMealPlan.Command>(), It.IsAny<CancellationToken>()), Times.Never);
         Assert.Same(meal, plan.MealOnDate[PastWednesday.Date]);
+        Assert.Equal(77, plan.PlannedMealIdOnDate[PastWednesday.Date]);
         Assert.Same(plan, meal.MealPlan);
         Assert.True(_container.SelectedDateHasMeal);
         Assert.Equal(1, _notifications);
@@ -163,12 +165,13 @@ public class MealPlanStateContainerTests
         _notifications = 0;
         _mediator
             .Setup(m => m.Send(It.IsAny<AddMealToMealPlan.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Fail<Meal>("Add failed"));
+            .ReturnsAsync(Result.Fail<int>("Add failed"));
 
         await _container.AddMealToPlan(new Meal { Id = 1 });
 
         Assert.Empty(plan.MealOnDate);
         Assert.Equal(0, _notifications);
+        Assert.Empty(plan.PlannedMealIdOnDate);
         VerifyToast("Add failed", Severity.Error);
     }
 
@@ -207,6 +210,20 @@ public class MealPlanStateContainerTests
         Assert.Equal(PastWednesday.Date, replacement.MealDate);
         Assert.Same(plan, replacement.MealPlan);
         Assert.False(_container.IsSwappingMeal);
+    }
+
+    [Fact]
+    public async Task SwapMealOnSelectedDate_KeepsThePlannedDayId()
+    {
+        var (plan, _) = PlanWithMealOnPastWednesday();
+        plan.PlannedMealIdOnDate[PastWednesday.Date] = 31;
+        _mediator
+            .Setup(m => m.Send(It.IsAny<SwapMealInMealPlan.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok());
+
+        await _container.SwapMealOnSelectedDate(new Meal { Id = 2, Name = "Tacos" });
+
+        Assert.Equal(31, plan.PlannedMealIdOnDate[PastWednesday.Date]);
     }
 
     [Fact]
@@ -282,7 +299,7 @@ public class MealPlanStateContainerTests
     private void SetupAddEchoesTheMeal() =>
         _mediator
             .Setup(m => m.Send(It.IsAny<AddMealToMealPlan.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((AddMealToMealPlan.Command c, CancellationToken _) => Result.Ok(c.Meal));
+            .ReturnsAsync((AddMealToMealPlan.Command c, CancellationToken _) => Result.Ok(77));
 
     private (MealPlan Plan, Meal Current) PlanWithMealOnPastWednesday()
     {

@@ -1,3 +1,4 @@
+@inject IStringLocalizer<SharedResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 @implements IDisposable
 
@@ -17,8 +18,8 @@
             <p data-testid="confirm-drawer-description" class="mw-confirm-description">@_drawerStateContainer.StateParameters.Description</p>
         }
         <div class="mw-confirm-buttons">
-            <MudButton data-testid="confirm-drawer-cancel" Variant="Variant.Filled" Class="mw-confirm-cancel" OnClick="Cancel">Cancel</MudButton>
-            <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">Delete</Button>
+            <MudButton data-testid="confirm-drawer-cancel" Variant="Variant.Filled" Class="mw-confirm-cancel" OnClick="Cancel">@L["Common_Cancel"]</MudButton>
+            <Button data-testid="confirm-drawer-confirm" Color="Color.Error" Class="mw-confirm-delete" OnClick="OnConfirmClicked">@(_drawerStateContainer.StateParameters.ConfirmLabel ?? L["Common_Delete"].Value)</Button>
         </div>
     </div>
 </MudDrawer>

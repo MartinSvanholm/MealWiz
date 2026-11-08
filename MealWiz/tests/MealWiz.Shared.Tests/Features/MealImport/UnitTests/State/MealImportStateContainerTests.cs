@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.Ingredients.SaveIngredient;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.SaveMeal;
 using MealWiz.Shared.Features.Meals.State;
+using MealWiz.Shared.Features.MealImport;
 using MealWiz.Shared.Features.MealImport.CreateMealImport;
 using MealWiz.Shared.Features.MealImport.GetLatestMealImport;
 using MealWiz.Shared.Features.MealImport.GetMealImport;
@@ -10,6 +11,7 @@ using MealWiz.Shared.Features.MealImport.MarkMealImportFailed;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Features.MealImport.TriggerScrapeRecipe;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using MediatR;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -26,6 +28,14 @@ namespace MealWiz.Shared.Tests.Features.MealImport.UnitTests.State;
 public class MealImportStateContainerTests
 {
     private const string Url = "https://example.com/recipe";
+
+    private static readonly Microsoft.Extensions.Localization.IStringLocalizer<MealImportResource> Localizer =
+        TestLocalizer.For<MealImportResource>();
+
+    // What the user sees for each failure: the message for the row's error code, never its English error_message.
+    private static readonly string NoRecipeMessage = Localizer.ToMessage(MealImportErrorCode.NoRecipeFound);
+    private static readonly string UnreachableMessage = Localizer.ToMessage(MealImportErrorCode.Unreachable);
+    private static readonly string TimedOutMessage = Localizer.ToMessage(MealImportErrorCode.TimedOut);
 
     private readonly Mock<IMediator> _mediator = new();
     private readonly Mock<IMealImportRealtimeSubscriber> _subscriber = new();
@@ -71,7 +81,7 @@ public class MealImportStateContainerTests
         _subscription.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
 
         _container = new MealImportStateContainer(
-            _mediator.Object, _subscriber.Object, _mealsState.Object, _snackbar.Object, _time);
+            _mediator.Object, _subscriber.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
     }
 
     [Fact]
@@ -97,7 +107,7 @@ public class MealImportStateContainerTests
         var result = await _container.StartImport(url);
 
         Assert.True(result.IsFailed);
-        Assert.Equal(MealImportStateContainer.InvalidUrlMessage, result.Errors[0].Message);
+        Assert.Equal(Localizer["Import_InvalidUrl"].Value, result.Errors[0].Message);
         Assert.Equal(MealImportJobStatus.Idle, _container.JobStatus);
         Assert.Empty(_calls);
     }
@@ -110,7 +120,7 @@ public class MealImportStateContainerTests
         var second = await _container.StartImport("https://example.com/other");
 
         Assert.True(second.IsFailed);
-        Assert.Equal(MealImportStateContainer.ImportInProgressMessage, second.Errors[0].Message);
+        Assert.Equal(Localizer["Import_AlreadyInProgress"].Value, second.Errors[0].Message);
         _mediator.Verify(m => m.Send(It.IsAny<CreateMealImport.Command>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -259,13 +269,24 @@ public class MealImportStateContainerTests
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page."));
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal("No recipe found on the page.", _container.JobErrorMessage);
+        Assert.Equal(NoRecipeMessage, _container.JobErrorMessage);
         Assert.True(_container.LatestImportFailed);
-        Assert.Equal("No recipe found on the page.", _container.LatestErrorMessage);
+        Assert.Equal(NoRecipeMessage, _container.LatestErrorMessage);
         VerifyNoSnackbar();
+    }
+
+    [Fact]
+    public async Task RealtimeFailure_WithoutACode_ShowsTheGenericImportFailure()
+    {
+        await _container.StartImport(Url);
+
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Something English from the Function"));
+
+        Assert.Equal(Localizer.ToMessage(MealImportErrorCode.Unknown), _container.JobErrorMessage);
+        Assert.Equal(Localizer.ToMessage(MealImportErrorCode.Unknown), _container.LatestErrorMessage);
     }
 
     [Fact]
@@ -293,11 +314,11 @@ public class MealImportStateContainerTests
     public async Task RealtimeFailure_InBackground_ToastsAndSavesNothing()
     {
         await StartAndBackground();
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page."));
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         Assert.True(_container.LatestImportFailed);
         _mediator.Verify(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()), Times.Never);
-        VerifySnackbar(Severity.Error, "No recipe found on the page.");
+        VerifySnackbar(Severity.Error, NoRecipeMessage);
     }
 
     [Fact]
@@ -334,13 +355,13 @@ public class MealImportStateContainerTests
         _mediator
             .Setup(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MarkMealImportFailed.Command c, CancellationToken _) =>
-                Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorMessage: c.ErrorMessage)));
+                Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorCode: c.ErrorCode, errorMessage: c.ErrorMessage)));
         await _container.StartImport(Url);
 
         await CompleteFunctionCall(Result.Fail("Network error"));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal(MealImportStateContainer.ServiceUnreachableMessage, _container.JobErrorMessage);
+        Assert.Equal(UnreachableMessage, _container.JobErrorMessage);
         Assert.True(_container.LatestImportFailed);
         _mediator.Verify(m => m.Send(It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -348,13 +369,13 @@ public class MealImportStateContainerTests
     [Fact]
     public async Task FunctionUnreachable_RowAlreadyFailed_ShowsTheExistingErrorWithoutUpdatingTheRow()
     {
-        SetupGetMealImport(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page."));
+        SetupGetMealImport(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
         await _container.StartImport(Url);
 
         await CompleteFunctionCall(Result.Fail("Timed out"));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal("No recipe found on the page.", _container.JobErrorMessage);
+        Assert.Equal(NoRecipeMessage, _container.JobErrorMessage);
         VerifyNoMarkFailed();
     }
 
@@ -387,7 +408,7 @@ public class MealImportStateContainerTests
         await CompleteFunctionCall(Result.Fail("Offline"));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal(MealImportStateContainer.ServiceUnreachableMessage, _container.JobErrorMessage);
+        Assert.Equal(UnreachableMessage, _container.JobErrorMessage);
     }
 
     // The Function answers 502 when it couldn't load or write the row (e.g. its Supabase key was rejected), and
@@ -402,10 +423,10 @@ public class MealImportStateContainerTests
         await CompleteFunctionCall(Result.Fail("The meal import service responded with 502."));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal(MealImportStateContainer.ServiceUnreachableMessage, _container.JobErrorMessage);
+        Assert.Equal(UnreachableMessage, _container.JobErrorMessage);
         Assert.True(_container.LatestImportFailed);
         _mediator.Verify(m => m.Send(
-            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorMessage == MealImportStateContainer.ServiceUnreachableMessage),
+            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorCode == MealImportErrorCode.Unreachable),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -424,10 +445,10 @@ public class MealImportStateContainerTests
         _time.Advance(TimeSpan.FromSeconds(1));
         await Eventually(() => _container.JobStatus == MealImportJobStatus.Failed);
 
-        Assert.Equal(MealImportStateContainer.TimedOutMessage, _container.JobErrorMessage);
+        Assert.Equal(TimedOutMessage, _container.JobErrorMessage);
         Assert.True(_container.LatestImportFailed);
         _mediator.Verify(m => m.Send(
-            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorMessage == MealImportStateContainer.TimedOutMessage),
+            It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorCode == MealImportErrorCode.TimedOut),
             It.IsAny<CancellationToken>()), Times.Once);
         _subscription.Verify(s => s.DisposeAsync(), Times.Once);
     }
@@ -456,19 +477,19 @@ public class MealImportStateContainerTests
         _time.Advance(MealImportStateContainer.ResultTimeout);
         await Eventually(() => _container.JobStatus == MealImportJobStatus.Failed);
 
-        Assert.Equal(MealImportStateContainer.TimedOutMessage, _container.JobErrorMessage);
+        Assert.Equal(TimedOutMessage, _container.JobErrorMessage);
     }
 
     [Fact]
     public async Task JobResolvedBeforeTheTimeout_TimeoutDoesNothing()
     {
         await _container.StartImport(Url);
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page."));
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         _time.Advance(MealImportStateContainer.ResultTimeout);
         await Task.Delay(50, TestContext.Current.CancellationToken);
 
-        Assert.Equal("No recipe found on the page.", _container.JobErrorMessage);
+        Assert.Equal(NoRecipeMessage, _container.JobErrorMessage);
         _mediator.Verify(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()), Times.Never);
         VerifyNoMarkFailed();
     }
@@ -492,11 +513,11 @@ public class MealImportStateContainerTests
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "First"));
+        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.FetchFailed, errorMessage: "First"));
         await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
-        Assert.Equal("First", _container.JobErrorMessage);
+        Assert.Equal(Localizer.ToMessage(MealImportErrorCode.FetchFailed), _container.JobErrorMessage);
         _subscription.Verify(s => s.DisposeAsync(), Times.Once);
     }
 
@@ -530,12 +551,12 @@ public class MealImportStateContainerTests
     {
         _mediator
             .Setup(m => m.Send(It.IsAny<GetLatestMealImport.Query>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorMessage: "No recipe found on the page.")));
+            .ReturnsAsync(Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page.")));
 
         await _container.LoadLatestImport();
 
         Assert.True(_container.LatestImportFailed);
-        Assert.Equal("No recipe found on the page.", _container.LatestErrorMessage);
+        Assert.Equal(NoRecipeMessage, _container.LatestErrorMessage);
     }
 
     [Fact]
@@ -608,7 +629,7 @@ public class MealImportStateContainerTests
         _mediator
             .Setup(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((MarkMealImportFailed.Command c, CancellationToken _) =>
-                Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorMessage: c.ErrorMessage)));
+                Result.Ok<MealImportModel?>(Row(MealImportStatus.Failed, errorCode: c.ErrorCode, errorMessage: c.ErrorMessage)));
 
     private void VerifyNoMarkFailed() =>
         _mediator.Verify(m => m.Send(It.IsAny<MarkMealImportFailed.Command>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -619,12 +640,14 @@ public class MealImportStateContainerTests
     private void VerifyNoSnackbar() =>
         _snackbar.Verify(s => s.Add(It.IsAny<string>(), It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()), Times.Never);
 
-    private MealImportModel Row(MealImportStatus status, ParsedMeal? parsedMeal = null, string? errorMessage = null) => new()
+    private MealImportModel Row(MealImportStatus status, ParsedMeal? parsedMeal = null, string? errorMessage = null,
+        MealImportErrorCode? errorCode = null) => new()
     {
         Id = _jobId,
         SourceUrl = Url,
         Status = status,
         ParsedMeal = parsedMeal,
+        ErrorCode = errorCode,
         ErrorMessage = errorMessage
     };
 

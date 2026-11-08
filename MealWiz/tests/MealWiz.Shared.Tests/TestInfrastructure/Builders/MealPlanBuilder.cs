@@ -37,7 +37,8 @@ public sealed class MealPlanBuilder
     {
         StartDate = _startDate,
         EndDate = _endDate,
-        MealOnDate = new Dictionary<DateTime, Meal>(_mealOnDate)
+        MealOnDate = new Dictionary<DateTime, Meal>(_mealOnDate),
+        PlannedMealIdOnDate = []
     };
 
     /// <summary>Inserts the plan and then one meal_plans-meals row per planned meal, as the client's signed-in user.</summary>
@@ -56,7 +57,7 @@ public sealed class MealPlanBuilder
         {
             if (meal.Id == 0) throw new InvalidOperationException("Insert the meal before planning it.");
 
-            await client.From<MealPlanMealDb>().Insert(new MealPlanMealDb
+            var plannedDay = await client.From<MealPlanMealDb>().Insert(new MealPlanMealDb
             {
                 MealDate = date.ToString("yyyy-MM-dd"),
                 MealId = meal.Id,
@@ -64,6 +65,7 @@ public sealed class MealPlanBuilder
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = userId
             });
+            mealPlan.PlannedMealIdOnDate[date] = plannedDay.Model!.Id;
 
             meal.MealPlan = mealPlan;
             meal.MealDate = date;

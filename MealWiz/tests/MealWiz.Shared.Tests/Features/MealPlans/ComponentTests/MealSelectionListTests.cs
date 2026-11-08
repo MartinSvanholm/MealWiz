@@ -26,10 +26,10 @@ public class MealSelectionListTests : ComponentTestBase
     {
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal> { _pasta, _leftovers, _tacos, _eatOut }));
         SetupSend<CreateMealPlan.Command, Result<MealPlan>>(Result.Ok(new MealPlan(DateTime.Today) { Id = 3 }));
-        // The handler echoes the meal back with its date set.
+        // The handler returns the id of the planned day it inserted.
         Mediator
             .Setup(m => m.Send(It.IsAny<AddMealToMealPlan.Command>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IRequest<Result<Meal>> request, CancellationToken _) => Result.Ok(((AddMealToMealPlan.Command)request).Meal));
+            .ReturnsAsync(Result.Ok(42));
     }
 
     /// <summary>Plans the meal on the selected date and starts swapping it, as the card's Swap meal button does.</summary>
@@ -48,7 +48,8 @@ public class MealSelectionListTests : ComponentTestBase
         var cut = Render<MealSelectionList>();
 
         var names = Names(cut);
-        Assert.Equal(["Eat out", "Leftovers"], names.Take(2));
+        // System meals show their display name, whatever is stored ("Eat out" here).
+        Assert.Equal(["Eat Out", "Leftovers"], names.Take(2));
         Assert.Equal(["Pasta", "Tacos"], names.Skip(2).Order());
     }
 
@@ -134,6 +135,33 @@ public class MealSelectionListTests : ComponentTestBase
     }
 
     [Fact]
+    public void A_system_meal_is_listed_and_found_by_its_display_name_not_its_stored_name()
+    {
+        var leftovers = TestData.Meal("stored-leftovers-name", id: 5, type: MealType.Leftover);
+        SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal> { _pasta, leftovers }));
+        var cut = Render<MealSelectionList>();
+
+        Assert.Equal(["Leftovers", "Pasta"], Names(cut));
+        Assert.DoesNotContain("stored-leftovers-name", cut.Markup);
+
+        cut.Find(InputOf("meal-selection-search")).Input("leftov");
+        Assert.Equal(["Leftovers"], Names(cut));
+
+        cut.Find(InputOf("meal-selection-search")).Input("stored");
+        Assert.Empty(cut.FindAll(TestId("meal-list-item")));
+    }
+
+    [Fact]
+    public void Swapping_out_a_system_meal_names_it_by_its_display_name()
+    {
+        StartSwapping(TestData.Meal("stored-leftovers-name", id: 5, type: MealType.Leftover));
+
+        var cut = Render<MealSelectionList>();
+
+        Assert.Equal("Tap a meal to replace Leftovers.", cut.Find(TestId("meal-selection-hint")).TextContent.Trim());
+    }
+
+    [Fact]
     public void A_search_with_no_matches_says_so_instead_of_showing_an_empty_list()
     {
         var cut = Render<MealSelectionList>();
@@ -154,7 +182,7 @@ public class MealSelectionListTests : ComponentTestBase
 
         Assert.Equal("Swap the meal for Sunday", cut.Find(TestId("meal-selection-heading")).TextContent.Trim());
         Assert.Contains("Pasta", cut.Find(TestId("meal-selection-hint")).TextContent);
-        Assert.Equal(["Eat out", "Leftovers", "Tacos"], Names(cut));
+        Assert.Equal(["Eat Out", "Leftovers", "Tacos"], Names(cut));
     }
 
     [Fact]

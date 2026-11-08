@@ -1,0 +1,243 @@
+@page "/plan-week"
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Authorization
+@attribute [Authorize]
+@implements IDisposable
+@inject IPlanWeekStateContainer _state
+@inject ISnackbar _snackbar
+@inject TimeProvider _time
+@inject NavigationManager _navigationManager
+@inject IDrawerStateContainer _drawer
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
+
+<div class="mw-page mw-plan-week" data-testid="plan-week-page">
+    <SubPageHeader Label="@_state.WeekStart.ToWeekLabel()" BackTestId="plan-week-back" OnBack="GoBackAsync">
+        <TitleContent>
+            <span data-testid="plan-week-title">@_state.WeekStart.ToRelativeWeekTitle(_time.GetLocalNow().Date, L)</span>
+        </TitleContent>
+        <Actions>
+            <button type="button" class="mw-header-button" data-testid="plan-week-prev" aria-label="@L["Week_Previous"]"
+                    disabled="@(_state.IsThisWeek || IsBusy)" @onclick="PreviousWeek">
+                <MudIcon Icon="@Icons.Material.Rounded.ChevronLeft" />
+            </button>
+            <button type="button" class="mw-header-button" data-testid="plan-week-next" aria-label="@L["Week_Next"]"
+                    disabled="@IsBusy" @onclick="NextWeek">
+                <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" />
+            </button>
+        </Actions>
+    </SubPageHeader>
+
+    <div class="mw-plan-week-body">
+        @if (_state.IsLoading)
+        {
+            <MudProgressLinear Indeterminate Color="Color.Primary" data-testid="plan-week-loading" />
+        }
+
+        @if (_state.HasNoRegularMeals)
+        {
+            <section class="mw-plan-week-empty-pool" data-testid="plan-week-empty-pool">
+                <h2 class="mw-plan-week-empty-title">@L["PlanWeek_NoMealsTitle"]</h2>
+                <p class="mw-plan-week-empty-body">@L["PlanWeek_NoMealsBody"]</p>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="plan-week-go-to-meals"
+                           OnClick="@(() => _navigationManager.NavigateTo("/meals"))">@L["PlanWeek_GoToMeals"]</MudButton>
+            </section>
+        }
+        else
+        {
+            <section class="mw-plan-week-settings" data-testid="plan-week-settings">
+                <div class="mw-plan-week-setting">
+                    <span class="mw-plan-week-setting-icon">
+                        <MudIcon Icon="@Icons.Material.Outlined.History" Color="Color.Inherit" Size="Size.Small" />
+                    </span>
+                    <span class="mw-plan-week-setting-label">@L["PlanWeek_SkipRecent"]</span>
+                    <div class="mw-plan-week-stepper">
+                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-decrease" aria-label="@L["PlanWeek_FewerWeeks"]"
+                                disabled="@(_state.Settings.WeeksBack <= PlanWeekSettings.MinWeeksBack || IsBusy)"
+                                @onclick="() => _state.SetWeeksBack(_state.Settings.WeeksBack - 1)">
+                            <MudIcon Icon="@Icons.Material.Rounded.Remove" Size="Size.Small" />
+                        </button>
+                        <span class="mw-plan-week-weeks-back" data-testid="plan-week-weeks-back-value">@WeeksBackText</span>
+                        <button type="button" class="mw-plan-week-step" data-testid="plan-week-weeks-back-increase" aria-label="@L["PlanWeek_MoreWeeks"]"
+                                disabled="@(_state.Settings.WeeksBack >= PlanWeekSettings.MaxWeeksBack || IsBusy)"
+                                @onclick="() => _state.SetWeeksBack(_state.Settings.WeeksBack + 1)">
+                            <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+                        </button>
+                    </div>
+                </div>
+                <div class="mw-plan-week-setting mw-plan-week-switch">
+                    <span class="mw-plan-week-setting-icon">
+                        <MudIcon Icon="@Icons.Material.Outlined.Repeat" Color="Color.Inherit" Size="Size.Small" />
+                    </span>
+                    <MudSwitch T="bool" data-testid="plan-week-leftovers-switch" Value="@_state.Settings.LeftoversAfterEveryMeal"
+                               ValueChanged="@_state.SetLeftoversAfterEveryMeal" Label="@L["PlanWeek_LeftoversSwitch"]"
+                               LabelPlacement="Placement.Start" Color="Color.Primary" />
+                </div>
+            </section>
+
+            @if (_state.HasPreview)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth data-testid="plan-week-shuffle-all"
+                           StartIcon="@Icons.Material.Rounded.Shuffle"
+                           Disabled="@(_busy || !_state.CanGenerate || _state.Days.All(d => d.IsLocked))"
+                           OnClick="_state.ShuffleAll">@L["PlanWeek_ShuffleAll"]</MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth data-testid="plan-week-generate"
+                           Disabled="@(!_state.CanGenerate)" OnClick="_state.Generate">@L["PlanWeek_Generate"]</MudButton>
+            }
+
+            @if (_state.UsedFallback)
+            {
+                <p class="mw-plan-week-note" data-testid="plan-week-fallback-note">@L["PlanWeek_FallbackNote"]</p>
+            }
+
+            <ul class="mw-plan-week-days" data-testid="plan-week-days">
+                @for (var i = 0; i < _state.Days.Count; i++)
+                {
+                    var day = _state.Days[i];
+                    var index = i;
+                    <li class="mw-plan-week-day @DayClass(day)" data-testid="plan-week-day"
+                        data-date="@day.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
+                        data-locked="@(day.IsLocked ? "true" : "false")">
+                        <div class="mw-plan-week-day-date">
+                            <span class="mw-plan-week-day-name" data-testid="plan-week-day-name">@day.Date.ToDayTag()</span>
+                            <span class="mw-plan-week-day-number" data-testid="plan-week-day-number">@day.Date.Day</span>
+                        </div>
+                        @if (day.Meal is { } meal)
+                        {
+                            <MealTile Name="@meal.DisplayName(M)" Neutral="@(!meal.IsRegular)" Index="index" Size="MealTile.TileSize.Small" />
+                            @if (_state.HasPreview)
+                            {
+                                <button type="button" class="mw-plan-week-pick" data-testid="plan-week-day-pick"
+                                        aria-label="@L["PlanWeek_PickFor", day.Date.DayOfWeek.ToWeekdayName()]" @onclick="() => PlanWeekPickMealDrawer.Open(_drawer, L, day.Date)">
+                                    <span class="mw-plan-week-day-meal" data-testid="plan-week-day-meal">@meal.DisplayName(M)</span>
+                                </button>
+                                <button type="button" class="mw-plan-week-action" data-testid="plan-week-day-shuffle"
+                                        aria-label="@L["PlanWeek_Shuffle", day.Date.DayOfWeek.ToWeekdayName()]" disabled="@(day.IsLocked || _busy || IsBusy)"
+                                        @onclick="() => ShuffleDayAsync(day.Date)">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Shuffle" Color="Color.Inherit" Size="Size.Small" />
+                                </button>
+                                <button type="button" class="mw-plan-week-action" data-testid="plan-week-day-clear"
+                                        aria-label="@L["PlanWeek_Clear", day.Date.DayOfWeek.ToWeekdayName()]" disabled="@(_state.HasSavedMeal(day.Date) || _busy || IsBusy)"
+                                        @onclick="() => _state.ClearDay(day.Date)">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Close" Color="Color.Inherit" Size="Size.Small" />
+                                </button>
+                            }
+                            else
+                            {
+                                <span class="mw-plan-week-day-meal" data-testid="plan-week-day-meal">@meal.DisplayName(M)</span>
+                            }
+                            <button type="button" class="mw-plan-week-lock" data-testid="plan-week-day-lock"
+                                    aria-pressed="@(day.IsLocked ? "true" : "false")"
+                                    aria-label="@L[day.IsLocked ? "PlanWeek_UnlockDay" : "PlanWeek_LockDay", day.Date.DayOfWeek.ToWeekdayName()]"
+                                    @onclick="() => _state.ToggleLock(day.Date)">
+                                <MudIcon Icon="@(day.IsLocked ? Icons.Material.Filled.Lock : Icons.Material.Outlined.LockOpen)" Color="Color.Inherit" Size="Size.Small" />
+                            </button>
+                        }
+                        else if (_state.HasPreview)
+                        {
+                            <button type="button" class="mw-plan-week-pick" data-testid="plan-week-day-pick"
+                                    aria-label="@L["PlanWeek_PickFor", day.Date.DayOfWeek.ToWeekdayName()]" @onclick="() => PlanWeekPickMealDrawer.Open(_drawer, L, day.Date)">
+                                <span class="mw-plan-week-day-meal mw-plan-day-empty" data-testid="plan-week-day-empty">@L["PlanWeek_TapToPick"]</span>
+                            </button>
+                            <button type="button" class="mw-plan-week-action" data-testid="plan-week-day-shuffle"
+                                    aria-label="@L["PlanWeek_Shuffle", day.Date.DayOfWeek.ToWeekdayName()]" disabled="@(_busy || IsBusy)"
+                                    @onclick="() => ShuffleDayAsync(day.Date)">
+                                <MudIcon Icon="@Icons.Material.Rounded.Shuffle" Color="Color.Inherit" Size="Size.Small" />
+                            </button>
+                        }
+                        else
+                        {
+                            <span class="mw-plan-week-day-meal mw-plan-day-empty" data-testid="plan-week-day-meal">@L["PlanWeek_EmptyDay"]</span>
+                        }
+                    </li>
+                }
+            </ul>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Dark" FullWidth data-testid="plan-week-save"
+                       Disabled="@(!_state.CanSave)" OnClick="SaveAsync">@L["PlanWeek_Save"]</MudButton>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "week")]
+    public string? Week { get; set; }
+
+    private string? _openedWeek;
+    private bool _hasOpened;
+
+    private bool IsBusy => _state.IsLoading || _state.IsGenerating || _state.IsSaving;
+
+    private string WeeksBackText => L.Plural("PlanWeek_Weeks", _state.Settings.WeeksBack);
+
+    private static string DayClass(PlanWeekDay day) =>
+        day.Meal is null ? "is-empty" : day.IsLocked ? "is-locked" : string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _state.CurrentSnackbar = _snackbar;
+        _state.OnStateChanged += StateHasChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_hasOpened && _openedWeek == Week) return;
+
+        _hasOpened = true;
+        _openedWeek = Week;
+        var requested = DateTime.TryParseExact(Week, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed)
+            ? parsed
+            : _time.GetLocalNow().Date;
+        await _state.Open(requested);
+    }
+
+    private Task PreviousWeek() => _state.NavigateToWeek(_state.WeekStart.AddDays(-7));
+
+    private Task NextWeek() => _state.NavigateToWeek(_state.WeekStart.AddDays(7));
+
+    private async Task SaveAsync() => await _state.Save();
+
+    private bool _busy;
+
+    private async Task ShuffleDayAsync(DateTime date)
+    {
+        _busy = true;
+        try
+        {
+            await _state.ShuffleDay(date);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>
+    /// Back to the Meal plan. With unsaved changes it asks first; the nav bar and the browser's Back leave without asking.
+    /// </summary>
+    private Task GoBackAsync()
+    {
+        if (!_state.IsDirty)
+        {
+            _navigationManager.NavigateTo("/");
+            return Task.CompletedTask;
+        }
+
+        _drawer.OpenConfirmDrawer(
+            L["PlanWeek_DiscardTitle"],
+            L["PlanWeek_DiscardText"],
+            () =>
+            {
+                _drawer.CloseDrawer();
+                _navigationManager.NavigateTo("/");
+                return Task.CompletedTask;
+            },
+            L["PlanWeek_Discard"]);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose() => _state.OnStateChanged -= StateHasChanged;
+}

@@ -8,6 +8,7 @@ public class GroceryItem
     {
         Name = string.Empty;
         Amount = string.Empty;
+        IsManual = true;
     }
 
     public GroceryItem(GroceryItemDb groceryItemDb)
@@ -16,6 +17,7 @@ public class GroceryItem
         Name = groceryItemDb.Name;
         Amount = groceryItemDb.Amount ?? string.Empty;
         IsPicked = groceryItemDb.IsPicked;
+        IsManual = groceryItemDb.IsManual;
         CreatedBy = groceryItemDb.CreatedBy;
         CreatedAt = groceryItemDb.CreatedAt;
         UpdatedAt = groceryItemDb.UpdatedAt;
@@ -26,6 +28,7 @@ public class GroceryItem
         Name = ingredient.Name;
         Amount = ingredient.Amount;
         IsPicked = false;
+        IsManual = false;
         CreatedBy = ingredient.CreatedBy;
         CreatedAt = DateTime.UtcNow;
     }
@@ -34,6 +37,8 @@ public class GroceryItem
     public string Name { get; set; }
     public string Amount { get; set; }
     public bool IsPicked { get; set; }
+    /// <summary>True for items typed by hand and items from before source links; false for items added from the meal plan.</summary>
+    public bool IsManual { get; set; }
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -49,6 +54,7 @@ public class GroceryItem
             Name = Name,
             Amount = Amount,
             IsPicked = IsPicked,
+            IsManual = IsManual,
             CreatedBy = CreatedBy,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt

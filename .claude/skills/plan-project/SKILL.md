@@ -1,12 +1,17 @@
 ---
 name: plan-project
-description: Step 2 of a MealWiz feature. Research and plan a specced Linear project, split it into tracer-bullet issues with blocking relations, then coordinate - start one implementation session per unblocked issue (max 4 locally, no limit in cloud mode), and start the next ones as PRs merge. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
+description: Step 2 of a MealWiz feature. Research a specced Linear project, split it into tracer-bullet issues with blocking relations, write a full implementation plan into every issue, then coordinate - start one Sonnet implementation session per unblocked issue that executes its plan (max 4 locally, no limit in cloud mode), and start the next ones as PRs merge. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
 ---
 
 # Plan and coordinate a feature project
 
 Step 2 of 3 (spec → **plan** → implement). This session is the project's **main session**, the **coordinator**: it
 plans, starts one session per issue, and keeps the task graph moving. It doesn't implement issues itself.
+
+**All the design happens here.** You write a full implementation plan into every issue and the user approves the
+plans here. Issue sessions then run on Sonnet at medium effort and only execute their plan: no plan mode, no
+exploring for alternatives, no design questions. A plan that leaves a decision open costs a stopped session or a
+guess, so plan deeply.
 
 Three levels: the **project** (the feature, a collection of user stories), its **issues** (one user story each, one
 session and one PR), and their **sub-issues** (`[DB]`, `[BE]`, `[FE]` layer tasks). You start sessions for issues only;
@@ -27,7 +32,8 @@ it's local mode: the desktop app on the user's machine, worktrees and one shared
 - `get_project` (the spec is its description), `list_documents project:`, `list_issues project:`. If the description
   isn't a spec yet, stop and suggest `/spec-project`.
 - `docs/agents/FEATURES.md` for the affected features, `docs/agents/ARCHITECTURE.md`, `docs/agents/TESTING.md`.
-- If the project already has issues and sessions (you're resuming), skip to step 5.
+- If the project already has issues and sessions (you're resuming), skip to step 6. If it has issues but some lack
+  an `## Implementation plan`, do step 4 for those first.
 
 ## 2. Research and explore, in parallel
 
@@ -47,20 +53,46 @@ If parallel issues share a seam, write the **Contract** document first (`save_do
 "Contract", from [references/contract-template.md](references/contract-template.md)), get the user's OK, then link it
 in a comment on each issue that uses it. The contract is binding: a session that needs it changed stops and asks you.
 
-## 4. Record the plan
+## 4. Plan every issue
+
+Write a full implementation plan for each issue, from
+[references/implementation-plan-template.md](references/implementation-plan-template.md). Meet its bar: the session
+makes no design decision.
+
+1. **Draft in parallel.** Start one **Plan** subagent per issue, all in one message, each with:
+   - the issue and its sub-issues (ids, urls, text), the spec, and the Research and Contract documents;
+   - the sibling issues in one line each, with the files they own, and what this issue's blockers will have added to
+     `dev` by the time it starts (from their issue text and the Contract);
+   - the template, and: "Read the code your steps touch (FEATURES.md first; the real files, not summaries) and the
+     prior art to copy. Return the plan, plus a separate list of the questions only the user can decide, each with a
+     recommended answer. Don't write to Linear or edit files."
+2. **Review them together** yourself; a draft is a claim. Check each against the code where it names files, members
+   or behaviour, and across issues: the same names for the same things, shared-file edits that don't collide,
+   Contract items used exactly as written, blockers that really provide what a later plan relies on, and the
+   template's bar (every name, shape, UI string and test case given).
+3. **Settle the questions** with `mw-grilling`: collect the drafts' questions and anything your review raised, ask
+   them in rounds, and fold the answers into the plans' Decisions. A decision that changes the spec goes into the
+   project description too; one that changes a shared seam goes into the Contract.
+4. **Publish.** Append each plan to its issue's description (`save_issue` with `patch`, `append`), and the
+   one-line `Plan: steps …` pointer to each sub-issue. Tell the user the plans are on the issues and summarise each in
+   one or two lines (the steps, the files, anything notable).
+
+## 5. Record the plan
 
 Post a project status update (`save_status_update`, `type: "project"`, health onTrack) with:
 - the waves: which issues start now, and what each merge unblocks;
 - links to the Research and Contract documents;
 - the verify level per issue.
 
-Then **end your turn** asking whether to start the first wave now (with `wrap_up`'s question and buttons), rather than
+Then **end your turn** asking whether the plans are approved and the first wave can start (with `wrap_up`'s question
+and buttons; offer "Approve and start" and "Change a plan"). Their yes approves the plans: sessions don't ask again.
+Ask this way rather than
 asking with AskUserQuestion. The app starts sessions only on the user's own turn, and a turn that a background report
 (research, Explore) began isn't one, so a yes given inside it turns every start into a card. Their reply is the
 request to start sessions. Tell them then that later waves start on a turn a session's report began, so they arrive as
 cards, unless they say "start the next ones" when they're back.
 
-## 5. Coordinate
+## 6. Coordinate
 
 ### Start sessions
 
@@ -71,13 +103,19 @@ cloud session has its own container and Supabase. Start the whole frontier, and 
 instead of the steps below.
 
 For each issue you start:
-1. `mark_chapter` once per wave ("Wave 2: MEA-52, MEA-53").
-2. A bold title line and one sentence, then `start_session` with:
-   - `initiation: "user_asked"`, `context: "fresh"`, `use_worktree: true`, `source_branch: "dev"`,
-     `permission_mode: "plan"` (the user approves each session's plan before code is written);
+1. **Refresh its plan** if any of its blockers merged after the plan was written: read their merged diffs
+   (`gh pr diff <n>`) against what the plan relies on (names, shapes, files). If something differs, revise the plan
+   in the issue (`save_issue` with `patch`) and add a `Revised <date> after <ID> merged: …` line. A session must never
+   start on a plan that no longer matches `dev`.
+2. `mark_chapter` once per wave ("Wave 2: MEA-52, MEA-53").
+3. A bold title line and one sentence, then `start_session` with:
+   - `initiation: "user_asked"`, `context: "fresh"`, `use_worktree: true`, `source_branch: "dev"`;
+   - `model`: the current Sonnet id (e.g. `claude-sonnet-5-5`), `effort: "medium"`. The plan carries the design, so
+     the session only needs to execute it;
+   - no `permission_mode`: the session inherits yours. Never `plan`; the plan was approved here;
    - `title: "<ID>: <short title>"`, `name: "<id>-<slug>"` (e.g. `mea-52-fav-toggle`), `branch_name` the same;
    - `prompt` and `background` from [references/session-brief.md](references/session-brief.md).
-3. Move the issue to **In Progress** (`save_issue state: "In Progress"`), and the project to **In Progress** on the
+4. Move the issue to **In Progress** (`save_issue state: "In Progress"`), and the project to **In Progress** on the
    first start.
 
 If the app refuses the start (this happens on a turn that a session's message started, rather than the user), call
@@ -96,11 +134,15 @@ Recompute the state; never assume it from memory:
      places to answer means two answers that can disagree). Tell the user in one line which session waits for them.
      Only a contract change is yours: update the Contract document, add a line to its change log, and message every
      session that uses that item.
+   - **The plan doesn't fit** (the session stopped on stop rule 8): the plan is yours. Check the session's finding
+     against the code, fix the plan in the issue (a `Revised` line), and `SendMessage` the session what changed. If
+     the fix needs a user decision, ask the user here, since the plan's decisions are made here; tell the session it
+     waits on you.
    - **Bugs it filed:** add each (id and one line) to the "Known issues" line of every brief you start from now on.
    - **Stopped mid-task** (usage limit, error): it committed WIP; tell the user and offer to resume it
      (`SendMessage` "continue") or start a fresh session on the same branch.
 3. Start the new frontier, up to 4 running.
-4. Tell the user in two or three lines: what merged, what's running, what's waiting on them (plan approvals, reviews).
+4. Tell the user in two or three lines: what merged, what's running, what's waiting on them (reviews, questions).
 
 The user may also say "next", "status" or "MEA-52 is merged"; treat that the same way.
 
@@ -120,11 +162,14 @@ create_session(
   source_url: "https://github.com/MartinSvanholm/MealWiz",
   source_revision: "dev",
   outcome_branch: "<id>-<slug>",          // e.g. mea-52-fav-toggle: the session's own branch
-  permission_mode: "plan",                // the user approves its plan in that session on claude.ai/code
   tags: ["mealwiz", "<project slug>"],
   prompt: <cloud prompt>,
   append_system_prompt: <background>)
 ```
+
+No plan mode: the plan in the issue is already approved. Refresh it first ("Refresh its plan" under Start sessions) as in local mode. If
+`create_session` takes a model or effort option, pass Sonnet and medium as in local mode; otherwise the session runs
+on the environment's default.
 
 Leave `environment_id` out: the session inherits this one's environment, whose setup script
 (`bash scripts/cloud-setup.sh`) installs the .NET 10 SDK and the Supabase CLI and starts Docker. If this session had
@@ -150,7 +195,7 @@ asks for status, `get_session` each running session (`status_bucket`) and `list_
 **Finish.** There are no worktrees to remove. `archive_session` each merged session on the user's yes; merged
 branches are deleted when their PR merges.
 
-## 6. Finish
+## 7. Finish
 
 When every issue is Done:
 1. Project status **Completed** and a final status update (what shipped, PRs, follow-up bugs filed).

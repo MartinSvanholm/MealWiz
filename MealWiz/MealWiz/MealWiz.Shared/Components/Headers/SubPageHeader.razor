@@ -1,9 +1,10 @@
+@inject IStringLocalizer<SharedResource> L
 @inject NavigationManager Navigation
 
 @* ScreenHeader with a 44px back button (surface tile) on the left. Used by Account and Import meal. *@
 <ScreenHeader Label="@Label" Title="@Title" TitleContent="@TitleContent" Actions="@Actions">
     <Leading>
-        <button type="button" class="mw-back-button" data-testid="@BackTestId" aria-label="Back" @onclick="BackAsync">
+        <button type="button" class="mw-back-button" data-testid="@BackTestId" aria-label="@L["Common_Back"]" @onclick="BackAsync">
             <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" />
         </button>
     </Leading>

@@ -1,0 +1,47 @@
+.mw-remove-meal-drawer {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 4px;
+}
+
+.mw-remove-meal-drawer-description {
+    margin: 0 16px;
+    color: var(--mw-text-muted);
+}
+
+.mw-remove-meal-drawer-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    margin: 0 16px;
+    padding: 0 6px 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-bg);
+}
+
+.mw-remove-meal-drawer-switch-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+}
+
+.mw-remove-meal-drawer-switch-label {
+    flex: 1 1 auto;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.mw-remove-meal-drawer-switch ::deep .mud-switch {
+    margin: 0;
+}

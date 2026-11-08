@@ -30,12 +30,15 @@ public class MealPlanPageTests : ComponentTestBase
     {
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(DateTime.Today, TestData.Meal("Tacos", id: 8))));
         SetupSend<RemoveMealFromMealPlan.Command, Result>(Result.Ok());
+        RenderDrawers();
         var cut = Render<MealPlanPage>();
 
         Assert.Contains("Tacos", cut.Markup);
         Assert.Empty(cut.FindAll(TestId("meal-selection-heading")));
 
         cut.Find(TestId("remove-meal-button")).Click();
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading"))));
         Assert.Equal(new RemoveMealFromMealPlan.Command(8, 1, DateTime.Today), Assert.Single(Sent<RemoveMealFromMealPlan.Command>()));
@@ -111,11 +114,15 @@ public class MealPlanPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Plan_the_week_is_shown_but_not_wired_yet()
+    public void Plan_the_week_opens_the_plan_week_page_on_the_viewed_week()
     {
         var cut = Render<MealPlanPage>();
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("plan-week-button")).HasAttribute("disabled")));
 
-        Assert.True(cut.Find(TestId("plan-week-button")).HasAttribute("disabled"));
+        cut.Find(TestId("plan-week-button")).Click();
+
+        Assert.EndsWith($"plan-week?week={ThisMonday.AddDays(7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", Navigation.Uri);
     }
 
     [Fact]

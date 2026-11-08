@@ -4,13 +4,13 @@ using MediatR;
 using Supabase;
 using static Supabase.Postgrest.Constants;
 
-namespace MealWiz.Shared.Features.GroceryList.ClearBasket;
+namespace MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
 
 /// <summary>
 /// Deletes the picked items in one request. It takes the ids the user saw in the basket, not "every picked row", so an
-/// item ticked on another device in the meantime stays.
+/// item ticked on another device in the meantime stays. Sources cascade.
 /// </summary>
-public static class ClearBasket
+public static class DeleteGroceryItems
 {
     public record Command(List<int> GroceryItemIds) : IRequest<Result>;
 

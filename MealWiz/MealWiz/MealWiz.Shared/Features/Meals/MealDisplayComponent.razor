@@ -1,6 +1,9 @@
+@using MealWiz.Shared.Features.MealPlans
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IMealsStateContainer _mealsStateContainer
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
 @implements IDisposable
 
 @* The selected day's meal on the Meal plan: a big orange card (name, ingredient count, recipe status), then the
@@ -10,17 +13,17 @@
 @if (Meal != null)
 {
     <div class="mw-meal-display">
-        <section class="mw-meal-hero" data-testid="meal-display-hero" aria-label="@($"{Day} dinner")">
+        <section class="mw-meal-hero" data-testid="meal-display-hero" aria-label="@L["DayCard_HeroAria", Day]">
             <svg class="mw-meal-hero-rings" width="190" height="190" viewBox="0 0 190 190" fill="none" aria-hidden="true">
                 <circle cx="95" cy="95" r="90"></circle>
                 <circle cx="95" cy="95" r="62"></circle>
                 <circle cx="95" cy="95" r="34"></circle>
             </svg>
             <div class="mw-meal-hero-top">
-                <span class="mw-meal-hero-day" data-testid="meal-display-day">@Day · Dinner</span>
+                <span class="mw-meal-hero-day" data-testid="meal-display-day">@L["DayCard_DayDinner", Day]</span>
                 @HeroAction
             </div>
-            <h2 class="mw-meal-hero-name" data-testid="meal-display-name">@Meal.Name</h2>
+            <h2 class="mw-meal-hero-name" data-testid="meal-display-name">@Meal.DisplayName(M)</h2>
             <p class="mw-meal-hero-summary" data-testid="meal-display-summary">@Summary</p>
             <div class="mw-meal-hero-buttons">
                 <button type="button" class="mw-hero-button mw-hero-button-dark" data-testid="swap-meal-button"
@@ -29,7 +32,7 @@
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"></path>
                     </svg>
-                    Swap meal
+                    @L["DayCard_Swap"]
                 </button>
             </div>
         </section>
@@ -38,15 +41,15 @@
         {
             <section class="mw-meal-section" data-testid="meal-display-ingredients">
                 <div class="mw-meal-section-header">
-                    <h3 class="mw-meal-section-title">Ingredients</h3>
+                    <h3 class="mw-meal-section-title">@L["DayCard_IngredientsTitle"]</h3>
                     <button type="button" class="mw-meal-link" data-testid="add-all-to-list" disabled aria-disabled="true">
-                        Add all to list
+                        @L["DayCard_AddAllToList"]
                     </button>
                 </div>
                 <ul class="mw-meal-card mw-ingredient-list">
                     @if (Meal.Ingredients.Count == 0)
                     {
-                        <li class="mw-ingredient mw-ingredient-empty" data-testid="meal-display-no-ingredients">No ingredients yet</li>
+                        <li class="mw-ingredient mw-ingredient-empty" data-testid="meal-display-no-ingredients">@L["DayCard_NoIngredients"]</li>
                     }
                     @foreach (var ingredient in Meal.Ingredients)
                     {
@@ -69,16 +72,16 @@
                         </svg>
                     </span>
                     <div class="mw-no-recipe-text">
-                        <span class="mw-no-recipe-title">No recipe yet</span>
-                        <span class="mw-no-recipe-hint">Write the steps or import from a link</span>
+                        <span class="mw-no-recipe-title">@L["DayCard_NoRecipe"]</span>
+                        <span class="mw-no-recipe-hint">@L["DayCard_NoRecipeHint"]</span>
                     </div>
-                    <button type="button" class="mw-meal-link" data-testid="meal-display-add-recipe" @onclick="EditMeal">Add</button>
+                    <button type="button" class="mw-meal-link" data-testid="meal-display-add-recipe" @onclick="EditMeal">@L["DayCard_AddRecipe"]</button>
                 </section>
             }
             else
             {
                 <section class="mw-meal-section">
-                    <h3 class="mw-meal-section-title">Recipe</h3>
+                    <h3 class="mw-meal-section-title">@L["DayCard_RecipeTitle"]</h3>
                     <ol class="mw-meal-card mw-recipe" data-testid="meal-display-recipe">
                         @foreach (var step in Meal.RecipeSteps)
                         {
@@ -98,18 +101,18 @@
 
     public Meal? Meal { get; set; }
 
-    private string Day => _mealPlanStateContainer.SelectedDate.DayOfWeek.ToString();
+    private string Day => _mealPlanStateContainer.SelectedDate.DayOfWeek.ToWeekdayName();
 
     private string Summary
     {
         get
         {
-            if (Meal is null || !Meal.IsRegular) return "Nothing to cook";
+            if (Meal is null || !Meal.IsRegular) return L["DayCard_NothingToCook"];
 
             var count = Meal.Ingredients.Count;
-            var ingredients = count == 1 ? "1 ingredient" : $"{count} ingredients";
-            var recipe = Meal.RecipeSteps.Count == 0 ? "No recipe yet" : "Recipe ready";
-            return $"{ingredients} · {recipe}";
+            var ingredients = L.Plural("DayCard_Ingredients", count);
+            var recipe = Meal.RecipeSteps.Count == 0 ? L["DayCard_NoRecipe"] : L["DayCard_RecipeReady"];
+            return L["DayCard_Summary", ingredients, recipe];
         }
     }
 

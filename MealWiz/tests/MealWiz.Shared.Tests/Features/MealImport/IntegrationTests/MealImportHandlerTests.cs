@@ -1,3 +1,4 @@
+using MealWiz.Shared.Features.MealImport;
 using MealWiz.Shared.Features.MealImport.CreateMealImport;
 using MealWiz.Shared.Features.MealImport.GetLatestMealImport;
 using MealWiz.Shared.Features.MealImport.GetMealImport;
@@ -109,15 +110,17 @@ public class MealImportHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
         var created = ResultAssert.Ok(await CreateAsync(supabase.Client, Guid.NewGuid()));
         var before = DateTime.UtcNow;
 
-        var updated = ResultAssert.Ok(await MarkFailedAsync(created.Id, "Couldn't reach the import service."));
+        var updated = ResultAssert.Ok(await MarkFailedAsync(created.Id, "Couldn't reach the import service.", MealImportErrorCode.Unreachable));
 
         Assert.NotNull(updated);
         Assert.Equal(MealImportStatus.Failed, updated.Status);
+        Assert.Equal(MealImportErrorCode.Unreachable, updated.ErrorCode);
         Assert.Equal("Couldn't reach the import service.", updated.ErrorMessage);
         Assert.Equal(supabase.UserId, updated.UpdatedBy);
         TimeAssert.CloseTo(before, updated.UpdatedAt);
         var row = await GetRowAsync(supabase.Client, created.Id);
         Assert.Equal(MealImportStatusExtensions.FailedValue, row?.Status);
+        Assert.Equal(MealImportErrorCodeExtensions.UnreachableValue, row?.ErrorCode);
     }
 
     [Fact]
@@ -125,7 +128,7 @@ public class MealImportHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var created = ResultAssert.Ok(await CreateAsync(supabase.Client, Guid.NewGuid()));
-        Assert.NotNull(ResultAssert.Ok(await MarkFailedAsync(created.Id, "First")));
+        Assert.NotNull(ResultAssert.Ok(await MarkFailedAsync(created.Id, "First", MealImportErrorCode.TimedOut)));
 
         var second = ResultAssert.Ok(await MarkFailedAsync(created.Id, "Second"));
 
@@ -133,6 +136,7 @@ public class MealImportHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
         Assert.Null(second);
         var row = await GetRowAsync(supabase.Client, created.Id);
         Assert.Equal("First", row?.ErrorMessage);
+        Assert.Equal(MealImportErrorCodeExtensions.TimedOutValue, row?.ErrorCode);
     }
 
     [Fact]
@@ -148,19 +152,21 @@ public class MealImportHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
         var row = await GetRowAsync(otherUser.Client, others.Id);
         Assert.Equal(MealImportStatusExtensions.PendingValue, row?.Status);
         Assert.Null(row?.ErrorMessage);
+        Assert.Null(row?.ErrorCode);
     }
 
     private static Task<FluentResults.Result<Shared.Features.MealImport.Models.MealImport>> CreateAsync(Client client, Guid id) =>
         new CreateMealImport.Handler(client).Handle(new CreateMealImport.Command(id, SourceUrl), CancellationToken);
 
     private Task<FluentResults.Result<Shared.Features.MealImport.Models.MealImport>> GetAsync(Guid id) =>
-        new GetMealImport.Handler(supabase.Client).Handle(new GetMealImport.Query(id), CancellationToken);
+        new GetMealImport.Handler(supabase.Client, TestLocalizer.For<MealImportResource>()).Handle(new GetMealImport.Query(id), CancellationToken);
 
     private static Task<FluentResults.Result<Shared.Features.MealImport.Models.MealImport?>> GetLatestAsync(Client client) =>
         new GetLatestMealImport.Handler(client).Handle(new GetLatestMealImport.Query(), CancellationToken);
 
-    private Task<FluentResults.Result<Shared.Features.MealImport.Models.MealImport?>> MarkFailedAsync(Guid id, string errorMessage) =>
-        new MarkMealImportFailed.Handler(supabase.Client).Handle(new MarkMealImportFailed.Command(id, errorMessage), CancellationToken);
+    private Task<FluentResults.Result<Shared.Features.MealImport.Models.MealImport?>> MarkFailedAsync(
+        Guid id, string errorMessage, MealImportErrorCode errorCode = MealImportErrorCode.Unreachable) =>
+        new MarkMealImportFailed.Handler(supabase.Client).Handle(new MarkMealImportFailed.Command(id, errorCode, errorMessage), CancellationToken);
 
     private static async Task<MealImportDb?> GetRowAsync(Client client, Guid id)
     {

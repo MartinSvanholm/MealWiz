@@ -1,3 +1,4 @@
+@inject IStringLocalizer<SharedResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 
 @* The bottom drawer every feature opens through IDrawerStateContainer: a sheet with rounded top corners, a grab
@@ -14,11 +15,11 @@
         <div class="mw-sheet-header">
             @if (_drawerStateContainer.DrawerNavigationStack.Count > 1)
             {
-                <MudIconButton data-testid="drawer-back" aria-label="Back" OnClick="_drawerStateContainer.NavigateBack" Class="mw-sheet-close" Icon="@Icons.Material.Filled.ArrowBack" />
+                <MudIconButton data-testid="drawer-back" aria-label="@L["Common_Back"]" OnClick="_drawerStateContainer.NavigateBack" Class="mw-sheet-close" Icon="@Icons.Material.Filled.ArrowBack" />
             }
             else
             {
-                <MudIconButton data-testid="drawer-close" aria-label="Close" OnClick="_drawerStateContainer.CloseDrawer" Class="mw-sheet-close" Icon="@Icons.Material.Filled.Close" />
+                <MudIconButton data-testid="drawer-close" aria-label="@L["Common_Close"]" OnClick="_drawerStateContainer.CloseDrawer" Class="mw-sheet-close" Icon="@Icons.Material.Filled.Close" />
             }
             <h2 data-testid="drawer-title" class="mw-sheet-title">@_drawerStateContainer.StateParameters.Title</h2>
             @if (_drawerStateContainer.StateParameters.HeaderAction != null)
