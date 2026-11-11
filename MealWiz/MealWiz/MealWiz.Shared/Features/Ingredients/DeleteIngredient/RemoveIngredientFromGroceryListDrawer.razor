@@ -1,0 +1,57 @@
+@inject ISender _mediator
+@inject IMealsStateContainer _mealsStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<IngredientsResource> L
+
+@* Asked after the delete confirm when the ingredient has grocery items still to buy (MEA-93). Both answers delete the
+   ingredient; Yes also deletes its items, No unlinks them so they stay as the user's own items. Closing it deletes
+   nothing. *@
+<div class="mw-remove-ingredient">
+    <p class="mw-remove-ingredient-question" data-testid="remove-ingredient-items-question">@L["RemoveIngredient_Question", Ingredient.Name]</p>
+    <p class="mw-remove-ingredient-hint" data-testid="remove-ingredient-items-hint">@L["RemoveIngredient_Hint", Ingredient.Name]</p>
+    <div class="mw-confirm-buttons">
+        <Button data-testid="remove-ingredient-items-no" Class="mw-confirm-cancel" IsDisabled="_busy" OnClick="() => Answer(remove: false)">@L["RemoveIngredient_No"]</Button>
+        <Button data-testid="remove-ingredient-items-yes" Color="Color.Primary" IsDisabled="_busy" OnClick="() => Answer(remove: true)">@L["RemoveIngredient_Yes"]</Button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Ingredient Ingredient { get; set; } = default!;
+    [Parameter] public LinkedGroceryItems Links { get; set; } = LinkedGroceryItems.Empty;
+
+    private bool _busy;
+
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<IngredientsResource> localizer, Ingredient ingredient, LinkedGroceryItems links) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Title = localizer["RemoveIngredient_Title"],
+            Content = typeof(RemoveIngredientFromGroceryListDrawer),
+            Height = "45%",
+            ContentParameters = new() { { nameof(Ingredient), ingredient }, { nameof(Links), links } }
+        });
+
+    private async Task Answer(bool remove)
+    {
+        _busy = true;
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
+
+        var result = await _mediator.Send(new DeleteIngredient.Command(Ingredient));
+        if (result.Handle(_snackbar).IsFailed)
+        {
+            _busy = false;
+            return;
+        }
+
+        // The ingredient is gone either way; a failed clean-up leaves stale links for the Groceries banner.
+        var ids = Links.ToBuy.Select(item => item.Id).ToList();
+        var settled = await _groceryListStateContainer.SettleLinkedItems(Links, remove ? ids : [], remove ? [] : ids);
+        settled.Handle(_snackbar);
+        await _mealsStateContainer.ReloadIngredientsForMealToEdit();
+
+        if (settled.IsSuccess)
+            _snackbar.Add(L[remove ? "RemoveIngredient_DeletedAndRemoved" : "DeleteIngredient_Deleted"], Severity.Success);
+        _drawerStateContainer.CloseDrawer();
+    }
+}

@@ -62,6 +62,9 @@ public class GroceryItemSourceDetailsDb : BaseModel
         [Column("name")]
         public string Name { get; set; } = string.Empty;
 
+        [Column("amount")]
+        public string? Amount { get; set; }
+
         [Column("fk_meal")]
         public int MealId { get; set; }
 

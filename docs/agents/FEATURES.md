@@ -30,6 +30,9 @@ blank. The header count stays the total. When nothing matches, `meal-list-no-mat
 meals are planned this week, or that every meal has a recipe.
 
 - **Folder:** `Features/Meals/`
+- **Texts:** `Features/Meals/MealsResource.cs` with `MealsResource.resx` / `.da.resx` (UI-03). The system meals are shown
+  by type, never by their stored English name: `Features/Meals/Models/MealDisplayName.cs`, `meal.DisplayName(L)`
+  (Leftovers/Rester, Eat Out/Spis ude; a regular meal keeps its name). Used by the pick list, Plan week and the day card.
 - **Pages:**
   - `Features/Meals/MealsPage.razor` at `/meals`: header ("N meals", add menu), search, filter chips
     (`meal-filter-all|this-week|no-recipe`), the meal grid and the "Import from a recipe link" entry
@@ -40,20 +43,24 @@ meals are planned this week, or that every meal has a recipe.
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
-  - `Features/Meals/MealDisplayComponent.razor`: used by the Meal plan page.
+  - `Features/Meals/MealDisplayComponent.razor`: the selected day's card on the Meal plan page (details under
+    MealPlans); its Add all to list opens GroceryList's merge drawer.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
     `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
     (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
   - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header.
   - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: "Delete meal" on the Edit meal page; deletes after a confirm
-    drawer, then returns to `/meals`.
+    drawer, then returns to `/meals`. If grocery items still to buy are linked to the meal's ingredients, it opens
+    `ReviewGroceryItemsDrawer` ("Remove from grocery list?", one group under the meal's name) and deletes the meal only
+    after Remove; closing the review deletes nothing. Basket items are unlinked and links on items other meals need are
+    dropped first (`LoadItemsLinkedToMeal`, `SettleLinkedItems`).
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllMeals | `Query()` → `Result<List<Meal>>` | Every meal visible to the user (own + system), regular meals last, then by name |
   | SaveMeal | `Command(Meal)` → `Result<Meal>` | Insert when `Id == 0` (sets `created_by`), otherwise update |
-  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade |
+  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade; its grocery item sources lose both links (set null) |
 
 - **State:** `Features/Meals/State/MealsStateContainer.cs` (`IMealsStateContainer`). It holds `Meals`, `MealToEdit`,
   and the pending ingredients; methods include `LoadMeals`, `ReloadIngredientsForMealToEdit` and
@@ -78,9 +85,11 @@ A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch 
 ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
 Edit Meal page, always saved from the ingredient drawer: the add row opens it ("Add ingredient") and an ingredient row
 opens it to edit ("Edit ingredient"). A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
-saved and has an id.
+saved and has an id. Deleting a saved ingredient that has to-buy grocery items asks whether to remove them too; basket
+items are unlinked silently.
 
 - **Folder:** `Features/Ingredients/`
+- **Texts:** `Features/Ingredients/IngredientsResource.cs` with `IngredientsResource.resx` / `.da.resx`.
 - **Pages:** none. The Edit Meal page hosts this feature.
 - **Components:**
   - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): name, amount
@@ -94,7 +103,13 @@ saved and has an id.
     with what was typed (empty if nothing was) and clears the row; it saves nothing itself. Enter in the name moves to
     the amount.
   - `Features/Ingredients/SaveIngredient/SaveIngredientButton.razor`: refuses an ingredient without a name.
-  - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`
+  - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`: the trash on a row (`delete-ingredient-button`)
+    and in the drawer header (`drawer-delete-ingredient`). A pending ingredient goes at once; a saved one after the red
+    confirm, then the question below when it has grocery items still to buy.
+  - `Features/Ingredients/DeleteIngredient/RemoveIngredientFromGroceryListDrawer.razor`, with `.razor.css`: "On your
+    grocery list" / "Also remove X from the grocery list?" (`remove-ingredient-items-question`, hint
+    `remove-ingredient-items-hint`). Both answers delete the ingredient first: Yes (`remove-ingredient-items-yes`) then
+    deletes the items, No (`remove-ingredient-items-no`) unlinks them. Closing it deletes nothing.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -104,7 +119,7 @@ saved and has an id.
   | DeleteIngredient | `Command(Ingredient)` → `Result` | Delete one ingredient |
 
 - **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `SaveIngredientForMealToEdit`,
-  `ReloadIngredientsForMealToEdit`).
+  `ReloadIngredientsForMealToEdit`) and `IGroceryListStateContainer` (`LoadItemsLinkedToIngredient`, `SettleLinkedItems`).
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
@@ -121,37 +136,55 @@ A weekly plan with one meal per day. The home page shows the selected week, and 
 selected week is kept in local storage under `mealplan_selected_week`. Picking a meal for a day creates that week's
 `meal_plans` row if none exists yet (`CreateMealPlan`), then inserts a `meal_plans-meals` row for the date. Dates are
 stored as `yyyy-MM-dd` strings.
+Removing a day's meal always asks first in a drawer. When the day has grocery items only it needs (still to buy, not manual, linked to the meal now on the day, no other live source), a switch, on by default, deletes them too. Shared and manual items lose that day's link and its amount (switch on, or no switch shown); with the switch off the FK nulls the link and the amount stays.
 
 - **Folder:** `Features/MealPlans/`
+- **Texts:** `Features/MealPlans/MealPlansResource.cs` with `MealPlansResource.resx` / `.da.resx`, also read by the
+  day card (`Features/Meals/MealDisplayComponent.razor`). The relative week title is
+  `Features/MealPlans/WeekTitles.cs`, `weekStart.ToRelativeWeekTitle(today, L)` ("Denne uge", "Om 3 uger").
 - **Pages:** `Features/MealPlans/MealPlanPage.razor` at `/` (with `Features/MealPlans/MealPlanPage.razor.css`):
   `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
   "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
   (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (opens `/plan-week?week=` on the viewed week) and
   the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
-  pick list for an empty day or while swapping the day's meal.
-- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate`, `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`) and `plan-week-save`. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week.
+  pick list for an empty day or while swapping the day's meal. After Plan week's Save it asks once whether to add the
+  saved week's ingredients to the grocery list (`AddWeekIngredientsPromptDrawer`, opened from `OnAfterRender` when
+  `TakeWeekIngredientsOffer()` returns the week).
+- **Pages (continued):** `Features/MealPlans/PlanWeek/PlanWeekPage.razor` at `/plan-week?week=yyyy-MM-dd` (missing or invalid = this week; a past week opens on this week), `[Authorize]`, with `.razor.css`. `SubPageHeader` (`plan-week-back` returns to `/`, `plan-week-title`, `plan-week-prev` disabled on this week, `plan-week-next`), then settings (`plan-week-weeks-back-decrease`/`-value`/`-increase`, 0-8 weeks, default 3; `plan-week-leftovers-switch`; both kept in local storage as `planweek_settings`), `plan-week-generate` (replaced by `plan-week-shuffle-all`, "Shuffle all", once a preview exists), `plan-week-fallback-note`, seven `plan-week-day` rows (`data-date`, `data-locked`; `plan-week-day-meal`, `plan-week-day-lock`; once a preview exists also `plan-week-day-pick` (opens `Features/MealPlans/PlanWeek/PlanWeekPickMealDrawer.razor`, the pick list titled "Pick a meal for <Day>"; an empty day shows `plan-week-day-empty`), `plan-week-day-shuffle` (disabled on a locked day) and `plan-week-day-clear` (disabled with a saved meal; unlocks the day)) and `plan-week-save`. Picking by hand locks the day. `plan-week-back` leaves at once, or asks "Discard this plan?" (Cancel / Discard) when the preview has unsaved changes; the nav bar leaves without asking. With no regular meals only `plan-week-empty-pool` and `plan-week-go-to-meals` show. Save navigates to `/` on the saved week and offers its ingredients. Its new texts (`PlanWeek_*`) live in `Features/MealPlans/MealPlansResource.cs` with `MealPlansResource.resx` and `MealPlansResource.da.resx`.
 - **Components:**
+  - `Features/MealPlans/PlanWeek/AddWeekIngredientsPromptDrawer.razor`, with `.razor.css`: the prompt after Save
+    (`week-ingredients-prompt`): header "Week saved", an orange cart circle (`.mw-confirm-icon-accent`, the orange
+    variant of the confirm icon circle), the question (`week-ingredients-prompt-title`) and description
+    (`week-ingredients-prompt-description`). "Add ingredients" (`week-ingredients-prompt-accept`) swaps in the merge
+    drawer titled "Week NN ingredients" for every planned date of that week; "Not now"
+    (`week-ingredients-prompt-decline`, the header X and a scrim tap) only closes. `Open(drawer, localizer, weekStart)`.
   - `Features/MealPlans/MealPlanWeekOverview.razor`, with `.razor.css`: the seven 76px day tiles (`week-day`, with
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
     day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
     moves a week. The E2E tests rely on `selected-day` and `has-meal`.
-  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`, with `.razor.css`: UI only. "Pick a meal for
+  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`: a thin wrapper over `IMealPlanStateContainer` around `Features/MealPlans/SelectMealForDate/MealPickList.razor` (with `.razor.css`), the parameter-driven list (`Heading`, `Hint`, `ExcludedMealId`, `ShowEdit`, `ShowCancel`/`OnCancel`, `Disabled`, `OnPick`) also used by the Plan week pick drawer. UI only. "Pick a meal for
     <Day>" (`meal-selection-heading`, hint `meal-selection-hint`), search (`meal-selection-search`), shuffle
     (`shuffle-meals-button`, reloads and reorders the list) and one compact list: rows `meal-list-item`, each with
     `MealTile` (Eat Out and Leftovers first, neutral; the user's meals alternate orange and green), the pick button
     `meal-selection-pick`, the name `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty:
     `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
-    left out, a pick replaces it (`SwapMealOnSelectedDate`) and Cancel (`meal-selection-cancel`) returns to the card.
+    left out and Cancel (`meal-selection-cancel`) returns to the card. A pick on a day with a planned-day id loads the grocery items and sources first (picks disabled meanwhile); items only the old meal needs (`PlannedMealGroceryItems.OnlyNeededBy`) open `SwapMealDrawer`, otherwise the pick swaps straight away (`SwapMealOnSelectedDate`). A failed load shows the error and swaps nothing.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
-    corner of the selected day's card (`remove-meal-button`).
+    corner of the selected day's card (`remove-meal-button`). It loads the grocery items and sources through MediatR, picks the ids with `PlannedMealGroceryItems.OnlyNeededBy` and the shared links with `SourceIdsOnSharedItems`, opens `RemoveMealDrawer` and is disabled while loading.
+  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the `GroceryItemsSwitch` row (prefix `remove-meal`: `remove-meal-grocery-row|label|switch`) only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; then drops this day's links on shared items (`DeleteGroceryItemSources`) unless the switch is off; a failed remove deletes nothing, a failed delete says the items stayed, a failed drop says the amounts stayed.
+  - `Features/MealPlans/SwapMealInMealPlan/SwapMealDrawer.razor`, with `.razor.css`: asks before a swap when the old meal has to-buy items only it needs (title "Swap <old> for <new>?", `swap-meal-description`, the `GroceryItemsSwitch` row with prefix `swap-meal`, Cancel `swap-meal-cancel` and the orange Swap `swap-meal-confirm`). Cancel only closes (the old meal and swap mode stay). Swap swaps first, then, with the switch on, sends `DeleteGroceryItems`; then drops the old day's links on shared items (`DeleteGroceryItemSources`); a failed swap deletes nothing and keeps the drawer open, a failed delete says the items stayed, a failed drop says the amounts stayed. A straight swap (no own items) drops those links too. `Open(drawer, localizer, mealsLocalizer, current, new, date, ids, sourceIds)`.
+  - `Features/MealPlans/Components/GroceryItemsSwitch.razor`, with `.razor.css`: the shared "Also remove N items from the grocery list" row of the remove and swap drawers (`<prefix>-grocery-row|label|switch`; texts `GroceryItems_*`, including `GroceryItems_AmountsKept`).
+  - `Features/MealPlans/MealPlansResource.cs` (+ `MealPlansResource.resx`, `MealPlansResource.da.resx`): the feature's texts (UI-03).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
-    card. Shown but not wired: `add-all-to-list` (MEA-74).
-  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
+    card. Add all to list (`add-all-to-list`) opens GroceryList's merge drawer for the selected day only
+    (`AddPlanIngredientsToGroceryListDrawer.Open`, title "Add <meal> to list"); it's disabled when no ingredient is shown
+    on the grocery list.
+  - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. `PickMeal` picks one regular meal for a single day (never the current one). Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -165,9 +198,9 @@ stored as `yyyy-MM-dd` strings.
   | SaveGeneratedWeek | `Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days)` → `Result` | Creates the plan if missing, updates days that have a row (in place), bulk-inserts the rest |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
-  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
-  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
-  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
+  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, the week-ingredients offer (`OfferWeekIngredients(weekStart)`, called by Plan week's Save, and the one-shot `TakeWeekIngredientsOffer()`, which returns the week only once it is loaded and shown and has an ingredient for the list), and swap mode:
+  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (returns `Task<bool>`: true when saved; swap mode ends when the selected day changes).
+  `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `ShuffleAll`, `ShuffleDay`, `PickMeal`, `ClearDay`, `HasSavedMeal`, `HasPreview`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.
     `MealPlan.MealOnDate` is a `Dictionary<DateTime, Meal>`. `MealPlan.PlannedMealIdOnDate` is a `Dictionary<DateTime, int>` of `meal_plans-meals` ids (a swap keeps the id); `AddMealToPlan` records the id and `RemoveMealButton` drops the date's id.
@@ -177,7 +210,7 @@ stored as `yyyy-MM-dd` strings.
 - **Tests:**
   - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
-  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`
+  - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`, `RemoveMealWithGroceryItemsTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
@@ -189,6 +222,18 @@ from their planned day yet; with everything linked it says "Everything is alread
 same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
 empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
+Dropping a planned meal's link from an item another meal or the user still needs lowers the item's amount by that
+link's amount (Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
+A banner at the top of the list ("N items are from meals no longer in your plan", `stale-items-banner`) appears when
+plan-added items come from meals that were swapped out or removed from the plan with the switch off (every source
+stale; basket and manual items never count). Review opens a drawer of those items grouped by their old meal, all
+ticked; Remove deletes the ticked items and unlinks the rest, which become manual items, so the banner goes away.
+
+A linked ingredient whose amount changed after it was added (the source's amount differs from the ingredient's current
+amount, trimmed and ignoring case; the item is still to buy; the source isn't stale) is offered again in the same
+drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all share
+a unit and the result is above zero, else an empty required field. Confirming updates the item's amount and the
+source's remembered amount, so it isn't offered again.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
@@ -199,6 +244,7 @@ every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy 
 also deletes it after the same confirm drawer; basket pills don't swipe.
 
 - **Folder:** `Features/GroceryList/`
+- **Texts:** `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` / `.da.resx`.
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
 - **Components:**
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
@@ -221,9 +267,16 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
   - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
-    off, groups same names into one row (subline "Plan X + Y · In list Z", orange field for merged rows) and shows
-    `plan-ingredients-loading`, `plan-ingredients-empty` or `plan-ingredients-all-on-list`; the button reads "Add N to
-    grocery list"; row names carry `plan-ingredient-name`.
+    off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
+    with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
+    orange field for merged rows) and shows `plan-ingredients-loading`, `plan-ingredients-empty` or
+    `plan-ingredients-all-on-list` (nothing new and nothing changed); the button reads "Add N to grocery list", or
+    "Update N on grocery list" when every row is change-only (snackbar "Grocery list updated"); row names carry
+    `plan-ingredient-name`. Opened by From meal plan (the week) and by Add all to list on the Meal plan's day card
+    (that day).
+  - `Features/GroceryList/Components/ReviewGroceryItemsDrawer.razor`, with `.razor.css`: the review drawer, opened with
+    `ReviewGroceryItemsDrawer.Open(drawer, title, groups, afterRemove)` (deleting a meal or ingredient reuses it). Its
+    button reads "Remove N items" or "Keep all" and calls `DeleteAndUnlinkGroceryItems`.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -232,23 +285,33 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | AddGroceryItem | `Command(GroceryItem)` → `Result<GroceryItem>` | Insert one item (sets `created_by`), returns the inserted row |
   | GetGroceryItemSources | `Query()` → `Result<List<GroceryItemSource>>` | Every source of the user's items, with the planned day's meal and date and the ingredient's meal and name |
   | AddPlanIngredientsToGroceryList | `Command(List<PlanIngredientToAdd> Items)` → `Result<List<GroceryItem>>` | Skips already-linked pairs, updates merged items' amount, inserts new items (is_manual false, one per name), adds a source per ingredient |
+  | UpdateLinkedGroceryAmounts | `Command(List<LinkedAmountUpdate> Updates)` → `Result` | Checks each item is the user's and still to buy and each source belongs to its item; sets each item's amount once, then each source's remembered amount |
   | UpdateGroceryItem | `Command(GroceryItem)` → `Result<int>` | Update one item, including ticking it off; fails if no row matches |
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
+  | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true; ids RLS hides are skipped |
+  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources, then lowers each to-buy item's amount by the dropped sources' amounts (`AmountHelper.Subtract`: same unit, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
-  `ClearBasket`, `Sources` and `LoadSources`.
+  `ClearBasket`, `Sources`, `LoadSources`, `StaleItems`, `DeleteAndUnlinkGroceryItems`, and for a meal or ingredient
+  being deleted `LoadItemsLinkedToMeal`, `LoadItemsLinkedToIngredient` and `SettleLinkedItems` (delete, unlink with the
+  basket, drop links and apply the lowered amounts; failures returned unreported).
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
-  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `AmountHelper.cs`.
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`, and `Subtract`, which alone tolerates a plural s: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
+  - `Features/GroceryList/Models/LinkedGroceryItems.cs`: a deleted meal's or ingredient's items sorted into `ToBuy`,
+    `InBasket` and `SourceIdsToDrop` (manual items and items another live link needs only lose its links).
+  - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs` (a null `Heading` is "Other items", resolved in the drawer).
+  - `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` and `.da.resx`: the banner and review drawer texts (UI-03).
+  - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81), and `SourceIdsOnSharedItems`, that day's live links on shared and manual to-buy items (MEA-99).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
-  - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`
+  - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
   - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
@@ -258,7 +321,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports` and subscribes to that row
 over Supabase Realtime. It then POSTs `{ jobId, url }` to the Azure Function (see
 [Functions: ScrapeRecipe](#functions-scraperecipe)), which scrapes the page and writes `succeeded` + `parsed_meal` or
-`failed` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
+`failed` + `error_code` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
 whether the row was written.
 
 On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal()`. After 30 s the page offers
@@ -266,7 +329,13 @@ On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal(
 toast if it fails. The client fails the row itself (`MarkMealImportFailed`) if the Function is unreachable or the row
 stays pending past 3 minutes. One job runs at a time.
 
+A failed row's `error_code` says why: `invalid_url`, `no_recipe_found` and `fetch_failed` (or `unknown`) from the
+Function; `unreachable` or `timed_out` from the client. The UI shows the localized message for the code
+(`ImportError_<Code>`, null or unknown = `ImportError_Unknown`) and never `error_message`, which keeps the English
+detail for diagnosis.
+
 - **Folder:** `Features/MealImport/`
+- **Texts:** `Features/MealImport/MealImportResource.cs` with `MealImportResource.resx` / `.da.resx`.
 - **Pages:** `Features/MealImport/ImportMeal/ImportMealPage.razor` at `/meals/import`: sub-page header, the failed
   alert (`import-job-error` or `import-latest-failed`), the form card (`import-form`, `import-url-input`,
   `import-submit`) and the progress card (`import-progress`). `AddMealMenu` on the Meals
@@ -278,7 +347,7 @@ stays pending past 3 minutes. One job runs at a time.
   | CreateMealImport | `Command(Guid Id, string SourceUrl)` → `Result<MealImport>` | Insert the pending row (guarded user id) |
   | GetMealImport | `Query(Guid Id)` → `Result<MealImport>` | Read one row (used to catch up after subscribing) |
   | GetLatestMealImport | `Query` → `Result<MealImport?>` | The user's newest row, for the entry-point status |
-  | MarkMealImportFailed | `Command(Guid Id, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
+  | MarkMealImportFailed | `Command(Guid Id, MealImportErrorCode ErrorCode, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
   | TriggerScrapeRecipe | `Command(Guid JobId, string Url)` → `Result` | POST to `<MealImportFunction:url>/api/ScrapeRecipe` with `x-functions-key`. Uses `HttpClient`, not Supabase |
 
 - **State:**
@@ -291,12 +360,17 @@ stays pending past 3 minutes. One job runs at a time.
   - `Features/MealImport/Models/MealImport.cs` ↔ `Features/MealImport/Models/MealImportDb.cs`, table `meal_imports`.
   - `Features/MealImport/Models/ParsedMeal.cs`: the `parsed_meal` jsonb contract.
   - `Features/MealImport/Models/MealImportStatus.cs`: `pending`, `succeeded`, `failed`.
+  - `Features/MealImport/Models/MealImportErrorCode.cs`: the `error_code` values (contract
+    `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
+    `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
   - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
     `supabase_realtime` publication.
   - `supabase/migrations/20261012120000_allow_client_to_fail_meal_imports.sql`
+  - `supabase/migrations/20261106120000_add_meal_import_error_codes.sql`: `error_code` with its check constraint, in
+    the client's update grant.
 - **Tests:**
   - unit: `Features/MealImport/UnitTests/` (Handlers, Models, State)
   - bUnit: `Features/MealImport/ComponentTests/ImportMealPageTests.cs`
@@ -379,7 +453,9 @@ The server half of MealImport, in a separate Azure Functions app (isolated worke
 doesn't reference MealWiz.Shared. `POST /api/ScrapeRecipe` (`AuthorizationLevel.Function`) takes `{ jobId, url }`. It
 loads the `meal_imports` row with the service-role key and acts only if the row is still `pending`. It always fetches
 the row's stored `source_url`, never the URL in the request body. It parses the recipe (JSON-LD, then Microdata, then
-OpenGraph), maps it to the payload, and writes the result back.
+OpenGraph), maps it to the payload, and writes the result back. A failure also writes `error_code`: `invalid_url`
+(the stored URL isn't absolute http/https), `fetch_failed` (any RecipeFetcher error: redirects, status, size cap,
+DNS, non-public host, network, timeout), `no_recipe_found` (no parser found a recipe) or `unknown` (anything else).
 
 Responses: 200 means the row is resolved; 502 means the row couldn't be read or written and is still pending, so the
 client fails it; 400 means a bad body. `MealWiz/src/MealWiz.Functions/README.md` covers local setup, the function
@@ -400,7 +476,8 @@ key, CORS and deployment.
   - `MealWiz/src/MealWiz.Functions/Shared/Ingredients/IngredientLineParser.cs`: splits "200 g flour" into amount and name.
   - `MealWiz/src/MealWiz.Functions/Shared/SupabaseAccess/ServiceRoleSupabaseClientFactory.cs`: the service-role
     client. It bypasses RLS, and exists only here.
-  - `MealWiz/src/MealWiz.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload` and `RecipeImportStatus`.
+  - `MealWiz/src/MealWiz.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload`, `RecipeImportStatus` and
+    `RecipeImportErrorCode`.
     These deliberately duplicate the Shared types (FN-01); `MealWiz/tests/Contracts/` keeps them in sync.
 - **DI:** `MealWiz/src/MealWiz.Functions/ServiceCollectionExtensions.cs`, called from `MealWiz/src/MealWiz.Functions/Program.cs`.
 - **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/`
@@ -420,9 +497,10 @@ key, CORS and deployment.
       which scrolls. A custom `Header` replaces the whole row.
     - `Components/Drawers/DrawerFooter.razor`: drawer content wraps its primary button in `<DrawerFooter>` to get
       the full-width 52px orange button at the bottom (`drawer-footer`).
+      Two buttons go in `<div class="mw-sheet-footer-pair">`; `.mw-sheet-footer-cancel` is grey and `.mw-sheet-footer-danger` is red.
     - ConfirmDrawer shows a red trash circle, the title (`confirm-drawer-title`), the description
-      (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red Delete
-      (`confirm-drawer-confirm`, runs `onConfirm`).
+      (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
+      (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
@@ -439,7 +517,7 @@ key, CORS and deployment.
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
   - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
-  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`, `ToWeekLabel`, `ToRelativeWeekTitle`), `DictionaryExtensions.cs`.
+  - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
 - **`Components/`:** generic UI.
   - `Components/NavMenu.razor`, the three tabs (Plan, also active on `/plan-week`; Groceries; Meals; `nav-meal-plan`, `nav-grocery-list`,
@@ -506,4 +584,4 @@ table and policy list.
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_message`, `updated_at` and `updated_by` (column grants); the Function writes the result with the service role |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the six codes in `meal_import_error_code.json`; the Function writes the result with the service role |

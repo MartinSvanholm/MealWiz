@@ -1,0 +1,18 @@
+@inject IStringLocalizer<MealPlansResource> L
+
+@* The "Also remove N items from the grocery list" row of the remove and swap drawers (MEA-81, MEA-98). *@
+<div class="mw-grocery-switch" data-testid="@($"{TestIdPrefix}-grocery-row")">
+    <span class="mw-grocery-switch-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" /></span>
+    <span class="mw-grocery-switch-label" data-testid="@($"{TestIdPrefix}-grocery-label")">@Label</span>
+    <MudSwitch T="bool" data-testid="@($"{TestIdPrefix}-grocery-switch")" Value="Value" ValueChanged="ValueChanged" Color="Color.Primary" aria-label="@Label" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public int Count { get; set; }
+    /// <summary>Prefix of the test ids: <c>&lt;prefix&gt;-grocery-row|label|switch</c>.</summary>
+    [Parameter, EditorRequired] public string TestIdPrefix { get; set; } = "";
+    [Parameter] public bool Value { get; set; }
+    [Parameter] public EventCallback<bool> ValueChanged { get; set; }
+
+    private string Label => L.Plural("GroceryItems_AlsoRemove", Count);
+}

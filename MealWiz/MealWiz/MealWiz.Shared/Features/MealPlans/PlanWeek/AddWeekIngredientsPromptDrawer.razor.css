@@ -1,0 +1,32 @@
+.week-ingredients-prompt {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.week-ingredients-prompt-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 24px 0;
+    text-align: center;
+}
+
+.week-ingredients-prompt-title {
+    margin: 8px 0 0;
+    color: var(--mw-text);
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.week-ingredients-prompt-description {
+    margin: 0;
+    color: var(--mw-text-muted);
+}
+
+.week-ingredients-prompt ::deep .mud-button-root.mud-button.week-ingredients-prompt-decline {
+    margin-top: 8px;
+}

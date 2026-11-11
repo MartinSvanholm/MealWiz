@@ -187,12 +187,14 @@ public sealed class E2ESupabase
     /// Resolves a pending meal_imports row the way MealWiz.Functions' ScrapeRecipeHandler does: a service-role
     /// update that only applies while the row is still pending. Realtime then pushes it to the app.
     /// </summary>
-    public async Task ResolveMealImportAsync(Guid jobId, string status, object? parsedMeal = null, string? errorMessage = null)
+    public async Task ResolveMealImportAsync(Guid jobId, string status, object? parsedMeal = null, string? errorMessage = null,
+        string? errorCode = null)
     {
         var body = JsonContent.Create(new
         {
             status,
             parsed_meal = parsedMeal,
+            error_code = errorCode,
             error_message = errorMessage,
             updated_at = DateTimeOffset.UtcNow
         });

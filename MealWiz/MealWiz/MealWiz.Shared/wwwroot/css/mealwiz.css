@@ -567,6 +567,13 @@ h1:focus {
     font-size: 16px;
 }
 
+/* Two buttons side by side in a DrawerFooter (<div class="mw-sheet-footer-pair">): a grey Cancel and the action;
+   a destructive action is red. Four classes, so they beat the orange footer button above. */
+.mw-sheet-footer-pair { display: flex; gap: 12px; }
+.mw-sheet-footer-pair .mud-button-root.mud-button { flex: 1 1 0; width: auto; }
+.mw-sheet-footer .mud-button-root.mud-button.mw-sheet-footer-cancel { background-color: var(--mw-chip-bg); color: var(--mw-text); }
+.mw-sheet-footer .mud-button-root.mud-button.mw-sheet-footer-danger { background-color: var(--mw-red); color: var(--mw-text-on-color); }
+
 /* Confirm drawer. */
 .mw-confirm {
     display: flex;
@@ -586,6 +593,12 @@ h1:focus {
     border-radius: var(--mw-radius-pill);
     background-color: color-mix(in srgb, var(--mw-red) 16%, transparent);
     color: var(--mw-red-text);
+}
+
+/* The non-destructive variant (AddWeekIngredientsPromptDrawer): orange instead of red. */
+.mw-confirm-icon.mw-confirm-icon-accent {
+    background-color: color-mix(in srgb, var(--mw-orange) 16%, transparent);
+    color: var(--mw-orange-text);
 }
 
 .mw-confirm-title {

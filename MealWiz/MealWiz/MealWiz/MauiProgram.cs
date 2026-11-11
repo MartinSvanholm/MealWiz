@@ -2,12 +2,15 @@
 using MealWiz.Providers;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
+using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Storage;
 using MudBlazor.Services;
 using Supabase;
+using System.Globalization;
 using System.Reflection;
 
 namespace MealWiz
@@ -16,6 +19,11 @@ namespace MealWiz
     {
         public static MauiApp CreateMauiApp()
         {
+            // The language is picked once, before the BlazorWebView exists: the stored choice (Preferences, same
+            // key as the web app's local storage), else the OS language.
+            CultureResolver.Apply(CultureResolver.Resolve(
+                Preferences.Default.Get<string?>(SupportedLanguages.StorageKey, null), CultureInfo.CurrentUICulture));
+
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()

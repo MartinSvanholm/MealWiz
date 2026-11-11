@@ -2,10 +2,12 @@ using FluentResults;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItem;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
+using MealWiz.Shared.Features.GroceryList.UnlinkGroceryItems;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MediatR;
 using Moq;
@@ -288,6 +290,115 @@ public class GroceryListStateContainerTests
         VerifyToast("Load failed", Severity.Error);
     }
 
+    [Fact]
+    public async Task StaleItems_ReflectsTheLoadedItemsAndSources()
+    {
+        await LoadItems(TestData.LinkedGroceryItem("Flour", 1), TestData.LinkedGroceryItem("Leeks", 2), Item(3, "Milk"));
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "Tacos"), TestData.CurrentSource(2, 2), TestData.StaleSource(3, 3, "Tacos"));
+
+        Assert.Equal([1], _container.StaleItems.Select(i => i.Id));
+    }
+
+    [Fact]
+    public async Task StaleItems_AfterTickingAnItemOff_LeavesItOut()
+    {
+        var flour = TestData.LinkedGroceryItem("Flour", 1);
+        await LoadItems(flour);
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "Tacos"));
+        SetupUpdate(Result.Ok(1));
+
+        await _container.ToggleIsPicked(flour);
+
+        Assert.Empty(_container.StaleItems);
+    }
+
+    [Fact]
+    public async Task DeleteAndUnlinkGroceryItems_Success_UnlinksThenDeletes()
+    {
+        await LoadItems(TestData.LinkedGroceryItem("Flour", 1), TestData.LinkedGroceryItem("Salsa", 2), TestData.LinkedGroceryItem("Leeks", 3));
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "T"), TestData.StaleSource(2, 2, "T"), TestData.CurrentSource(3, 3));
+        var order = new List<string>();
+        SetupUnlink(Result.Ok(), order);
+        SetupDelete(Result.Ok(), order);
+
+        var ok = await _container.DeleteAndUnlinkGroceryItems([1], [2]);
+
+        Assert.True(ok);
+        Assert.Equal(["unlink", "delete"], order);
+        Assert.Equal(["Salsa", "Leeks"], Names());
+        Assert.True(_container.GroceryList.Items.Single(i => i.Id == 2).IsManual);
+        Assert.Equal([3], _container.Sources.Select(s => s.GroceryItemId));
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task DeleteAndUnlinkGroceryItems_UnlinkFails_SendsNoDeleteAndChangesNothing()
+    {
+        await LoadItems(TestData.LinkedGroceryItem("Flour", 1), TestData.LinkedGroceryItem("Salsa", 2));
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "T"), TestData.StaleSource(2, 2, "T"));
+        SetupUnlink(Result.Fail("Unlink failed"));
+        SetupDelete(Result.Ok());
+
+        var ok = await _container.DeleteAndUnlinkGroceryItems([1], [2]);
+
+        Assert.False(ok);
+        _mediator.Verify(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal(["Flour", "Salsa"], Names());
+        Assert.False(_container.GroceryList.Items.Single(i => i.Id == 2).IsManual);
+        Assert.Equal(2, _container.Sources.Count);
+        Assert.Equal(0, _notifications);
+        VerifyToast("Unlink failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task DeleteAndUnlinkGroceryItems_DeleteFails_KeepsTheItemsButAppliesTheUnlink()
+    {
+        await LoadItems(TestData.LinkedGroceryItem("Flour", 1), TestData.LinkedGroceryItem("Salsa", 2));
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "T"), TestData.StaleSource(2, 2, "T"));
+        SetupUnlink(Result.Ok());
+        SetupDelete(Result.Fail("Delete failed"));
+
+        var ok = await _container.DeleteAndUnlinkGroceryItems([1], [2]);
+
+        Assert.False(ok);
+        Assert.Equal(["Flour", "Salsa"], Names());
+        Assert.True(_container.GroceryList.Items.Single(i => i.Id == 2).IsManual);
+        Assert.Equal([1], _container.Sources.Select(s => s.GroceryItemId));
+        Assert.Equal(1, _notifications);
+        VerifyToast("Delete failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task DeleteAndUnlinkGroceryItems_EmptyLists_SkipThoseRequests()
+    {
+        await LoadItems(TestData.LinkedGroceryItem("Flour", 1), TestData.LinkedGroceryItem("Salsa", 2));
+        await LoadSourcesAsync(TestData.StaleSource(1, 1, "T"), TestData.StaleSource(2, 2, "T"));
+
+        Assert.True(await _container.DeleteAndUnlinkGroceryItems([], []));
+        _mediator.Verify(m => m.Send(It.IsAny<UnlinkGroceryItems.Command>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mediator.Verify(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        SetupUnlink(Result.Ok());
+        Assert.True(await _container.DeleteAndUnlinkGroceryItems([], [1, 2]));
+        _mediator.Verify(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        SetupDelete(Result.Ok());
+        Assert.True(await _container.DeleteAndUnlinkGroceryItems([1], []));
+        _mediator.Verify(m => m.Send(It.IsAny<UnlinkGroceryItems.Command>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private void SetupUnlink(Result result, List<string>? order = null) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<UnlinkGroceryItems.Command>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order?.Add("unlink"))
+            .ReturnsAsync(result);
+
+    private void SetupDelete(Result result, List<string>? order = null) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>()))
+            .Callback(() => order?.Add("delete"))
+            .ReturnsAsync(result);
+
     private async Task LoadSourcesAsync(params GroceryItemSource[] sources)
     {
         _mediator
@@ -295,6 +406,162 @@ public class GroceryListStateContainerTests
             .ReturnsAsync(Result.Ok(sources.ToList()));
         await _container.LoadSources();
         _notifications = 0;
+    }
+
+    // ---- A deleted meal's or ingredient's items (MEA-93) ----
+
+    private static GroceryItemSource LinkedSource(int id, int itemId, int mealId = 5, int ingredientId = 100) =>
+        new() { Id = id, GroceryItemId = itemId, PlannedMealId = 500 + id, IngredientId = ingredientId, IngredientMealId = mealId, PlannedDayMealId = mealId };
+
+    /// <summary>An item added from the meal plan (not manual).</summary>
+    private static GroceryItem PlanItem(int id, string name, bool picked = false) => new() { Id = id, Name = name, IsPicked = picked, IsManual = false };
+
+    private void SetupSources(params GroceryItemSource[] sources) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetGroceryItemSources.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(sources.ToList()));
+
+    private void SetupDropSources(params GroceryItem[] reduced) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItemSources.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(reduced.ToList()));
+
+    private List<object> SentRequests() =>
+        _mediator.Invocations.Where(i => i.Method.Name == nameof(IMediator.Send)).Select(i => i.Arguments[0]).ToList();
+
+    [Fact]
+    public async Task LoadItemsLinkedToMeal_Success_SetsItemsAndSourcesAndReturnsTheSort()
+    {
+        SetupLoad(PlanItem(1, "rice", picked: true), PlanItem(2, "beans"));
+        SetupSources(LinkedSource(11, 1), LinkedSource(12, 2));
+
+        var links = ResultAssert.Ok(await _container.LoadItemsLinkedToMeal(5));
+
+        Assert.Equal([2], links.ToBuy.Select(i => i.Id));
+        Assert.Equal([1], links.InBasket.Select(i => i.Id));
+        Assert.Equal(new[] { "beans", "rice" }, Names());
+        Assert.Equal(2, _container.Sources.Count);
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task LoadItemsLinkedToMeal_SourcesFail_ReturnsTheFailureWithoutAToast()
+    {
+        SetupLoad(Item(2, "beans"));
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetGroceryItemSources.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<List<GroceryItemSource>>("Sources broke"));
+
+        var result = await _container.LoadItemsLinkedToMeal(5);
+
+        Assert.True(result.IsFailed);
+        Assert.Empty(_container.GroceryList.Items);
+        Assert.Equal(0, _notifications);
+        VerifyNoToast();
+    }
+
+    [Fact]
+    public async Task LoadItemsLinkedToIngredient_Success_SortsByIngredient()
+    {
+        SetupLoad(PlanItem(1, "rice"), PlanItem(2, "beans"));
+        SetupSources(LinkedSource(11, 1, ingredientId: 100), LinkedSource(12, 2, ingredientId: 101));
+
+        var links = ResultAssert.Ok(await _container.LoadItemsLinkedToIngredient(101));
+
+        Assert.Equal([2], links.ToBuy.Select(i => i.Id));
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_SendsDeleteThenUnlinkWithTheBasketThenDropSources()
+    {
+        _mediator.Setup(m => m.Send(It.IsAny<IRequest<Result>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok());
+        SetupDropSources();
+        var links = new LinkedGroceryItems([Item(1, "a")], [Item(2, "b", picked: true)], [31]);
+
+        ResultAssert.Ok(await _container.SettleLinkedItems(links, [1], [3]));
+
+        var sent = SentRequests();
+        Assert.Equal([typeof(DeleteGroceryItems.Command), typeof(UnlinkGroceryItems.Command), typeof(DeleteGroceryItemSources.Command)], sent.Select(r => r.GetType()));
+        Assert.Equal([1], ((DeleteGroceryItems.Command)sent[0]).GroceryItemIds);
+        Assert.Equal([3, 2], ((UnlinkGroceryItems.Command)sent[1]).GroceryItemIds);
+        Assert.Equal([31], ((DeleteGroceryItemSources.Command)sent[2]).SourceIds);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_NothingToDo_SendsNothing()
+    {
+        ResultAssert.Ok(await _container.SettleLinkedItems(LinkedGroceryItems.Empty, [], []));
+
+        Assert.Empty(SentRequests());
+        Assert.Equal(0, _notifications);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_DeleteFails_StopsAndReturnsIt()
+    {
+        _mediator.Setup(m => m.Send(It.IsAny<DeleteGroceryItems.Command>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Fail("Delete broke"));
+        var links = new LinkedGroceryItems([Item(1, "a")], [Item(2, "b", picked: true)], [31]);
+
+        var result = await _container.SettleLinkedItems(links, [1], []);
+
+        Assert.True(result.IsFailed);
+        Assert.Single(SentRequests());
+        VerifyNoToast();
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_Success_UpdatesItemsAndSources()
+    {
+        SetupLoad(PlanItem(1, "a"), PlanItem(2, "b", picked: true), PlanItem(3, "c"), PlanItem(4, "d"));
+        SetupSources(LinkedSource(11, 1), LinkedSource(12, 2), LinkedSource(13, 3), LinkedSource(31, 4), LinkedSource(32, 4, mealId: 6));
+        await _container.LoadItemsLinkedToMeal(5);
+        _notifications = 0;
+        _mediator.Setup(m => m.Send(It.IsAny<IRequest<Result>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok());
+        SetupDropSources();
+        var basket = _container.GroceryList.Items.Single(i => i.Id == 2);
+        var links = new LinkedGroceryItems([], [basket], [31]);
+
+        ResultAssert.Ok(await _container.SettleLinkedItems(links, [1], [3]));
+
+        Assert.DoesNotContain(_container.GroceryList.Items, i => i.Id == 1);
+        Assert.True(_container.GroceryList.Items.Single(i => i.Id == 2).IsManual);
+        Assert.True(_container.GroceryList.Items.Single(i => i.Id == 3).IsManual);
+        Assert.Equal([32], _container.Sources.Select(s => s.Id));
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_DroppedSources_AppliesTheReducedAmounts()
+    {
+        SetupLoad(PlanItem(12, "Garlic"));
+        SetupSources(LinkedSource(31, 12), LinkedSource(32, 12, mealId: 6));
+        await _container.LoadItemsLinkedToMeal(5);
+        _container.GroceryList.Items[0].Amount = "3 cloves";
+        _notifications = 0;
+        SetupDropSources(new GroceryItem { Id = 12, Name = "Garlic", Amount = "1 clove" });
+
+        ResultAssert.Ok(await _container.SettleLinkedItems(new LinkedGroceryItems([], [], [31]), [], []));
+
+        Assert.Equal("1 clove", _container.GroceryList.Items.Single(i => i.Id == 12).Amount);
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_DropSourcesFails_ReturnsItAndKeepsTheAmounts()
+    {
+        SetupLoad(PlanItem(12, "Garlic"));
+        SetupSources(LinkedSource(31, 12), LinkedSource(32, 12, mealId: 6));
+        await _container.LoadItemsLinkedToMeal(5);
+        _container.GroceryList.Items[0].Amount = "3 cloves";
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItemSources.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<List<GroceryItem>>("Drop broke"));
+
+        var result = await _container.SettleLinkedItems(new LinkedGroceryItems([], [], [31]), [], []);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal("3 cloves", _container.GroceryList.Items.Single(i => i.Id == 12).Amount);
+        VerifyNoToast();
     }
 
     private static GroceryItem Item(int id, string name, bool picked = false) => new() { Id = id, Name = name, IsPicked = picked };

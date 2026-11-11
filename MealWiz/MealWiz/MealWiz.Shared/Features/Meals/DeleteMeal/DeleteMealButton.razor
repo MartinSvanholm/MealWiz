@@ -1,8 +1,13 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
 @inject ISender _mediator
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealsResource> L
 
+@* Delete meal: asks first. When the meal still has grocery items to buy that only it needs, the review drawer opens
+   for them and the meal is deleted only after Remove (MEA-93). Basket items and links on items other meals need are
+   cleaned up silently before the delete. *@
 <MudLoadingButton
 data-testid="delete-meal-button"
 OnClick="OnDeleteClick"
@@ -10,7 +15,7 @@ ButtonVariant="ButtonVariant.Button"
 Variant="Variant.Outlined"
 Color="Color.Error"
 StartIcon="@Icons.Material.Outlined.Delete"
-FullWidth>Delete meal</MudLoadingButton>
+FullWidth>@L["DeleteMeal_Button"]</MudLoadingButton>
 
 @code {
     [Parameter]
@@ -18,16 +23,38 @@ FullWidth>Delete meal</MudLoadingButton>
 
     private void OnDeleteClick()
     {
-        _drawerStateContainer.OpenConfirmDrawer("Delete Meal?", "Are you sure you want to delete this meal? It will also be removed from any meal plans it's on.", OnConfirmDelete);
+        _drawerStateContainer.OpenConfirmDrawer(L["DeleteMeal_ConfirmTitle"], L["DeleteMeal_ConfirmText"], OnConfirmDelete);
     }
 
     private async Task OnConfirmDelete()
     {
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
+        var loaded = await _groceryListStateContainer.LoadItemsLinkedToMeal(Meal.Id);
+        if (loaded.Handle(_snackbar).IsFailed) return;
+
+        var links = loaded.Value;
+        if (links.ToBuy.Count == 0)
+        {
+            await DeleteMealAsync(links);
+            return;
+        }
+
+        // Close the confirm first: it shares the drawer state, and the review needs fresh parameters.
+        _drawerStateContainer.CloseDrawer();
+        ReviewGroceryItemsDrawer.Open(_drawerStateContainer, L["DeleteMeal_ReviewTitle"],
+            [new GroceryItemGroup(Meal.Name, links.ToBuy)], () => DeleteMealAsync(links));
+    }
+
+    private async Task DeleteMealAsync(LinkedGroceryItems links)
+    {
+        var settled = await _groceryListStateContainer.SettleLinkedItems(links, [], []);
+        if (settled.Handle(_snackbar).IsFailed) return;
+
         var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
         if (result.Handle(_snackbar).IsFailed) return;
 
         _drawerStateContainer.CloseDrawer();
-        _snackbar.Add("Meal deleted", Severity.Success);
+        _snackbar.Add(L["DeleteMeal_Deleted"], Severity.Success);
 
         // The Meals page reloads the list when it opens.
         _navigationManager.NavigateTo("/meals");

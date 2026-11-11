@@ -1,0 +1,162 @@
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
+@inject IStringLocalizer<SharedResource> S
+@implements IDisposable
+
+@* The pick list: search, shuffle, and one compact list with Eat Out and Leftovers first. Each row (meal-list-item)
+   holds the pick button (meal-selection-pick, raises OnPick) and, for the user's own meals while ShowEdit, an edit
+   button (meal-selection-edit). The Meal plan (MealSelectionList) and the Plan week pick drawer both use it. *@
+<section class="mw-pick">
+    @if (Heading is not null)
+    {
+        <div class="mw-pick-top">
+            <div class="mw-pick-heading">
+                <h2 class="mw-pick-title" data-testid="meal-selection-heading">@Heading</h2>
+                @if (Hint is not null)
+                {
+                    <span class="mw-pick-hint" data-testid="meal-selection-hint">@Hint</span>
+                }
+            </div>
+            @if (ShowCancel)
+            {
+                <button type="button" class="mw-pick-cancel" data-testid="meal-selection-cancel"
+                        @onclick="OnCancel">@S["Common_Cancel"]</button>
+            }
+        </div>
+    }
+
+    <div class="mw-pick-search">
+        <MudTextField T="string" data-testid="meal-selection-search"
+                      @bind-Value="_search"
+                      Placeholder="@L["PickMeal_Search"]"
+                      aria-label="@L["PickMeal_Search"]"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      Clearable="true"
+                      Class="mw-pick-search-field" />
+        <button type="button" class="mw-pick-shuffle" data-testid="shuffle-meals-button" aria-label="@L["PickMeal_Shuffle"]"
+                disabled="@_isShuffling" @onclick="ShuffleAsync">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"></path>
+            </svg>
+        </button>
+    </div>
+
+    @if (_shuffled.Count == 0)
+    {
+        <p class="mw-pick-empty" data-testid="meal-list-empty">@L["PickMeal_Empty"]</p>
+    }
+    else if (!FilteredMeals.Any())
+    {
+        <p class="mw-pick-no-match" data-testid="meal-list-no-match">@L["PickMeal_NoMatch", _search]</p>
+    }
+    else
+    {
+        <ul class="mw-pick-list" aria-busy="@Disabled">
+            @foreach (var (meal, index) in FilteredMeals)
+            {
+                <li class="mw-pick-row" data-testid="meal-list-item">
+                    <button type="button" class="mw-pick-button" data-testid="meal-selection-pick" disabled="@Disabled" @onclick="() => OnPick.InvokeAsync(meal)">
+                        <MealTile Name="@meal.DisplayName(M)" Neutral="@(!meal.IsRegular)" Index="index" />
+                        <span class="mw-pick-name" data-testid="meal-selection-name">@meal.DisplayName(M)</span>
+                    </button>
+                    @if (ShowEdit && meal.IsRegular)
+                    {
+                        <button type="button" class="mw-pick-edit" data-testid="meal-selection-edit"
+                                aria-label="@L["PickMeal_EditAria", meal.DisplayName(M)]" @onclick="() => EditMeal(meal)">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"></path>
+                            </svg>
+                        </button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    /// <summary>Title above the list; the whole top block (title, hint, Cancel) shows only when set.</summary>
+    [Parameter] public string? Heading { get; set; }
+    [Parameter] public string? Hint { get; set; }
+    /// <summary>A meal to leave out of the list, e.g. the one the day already has.</summary>
+    [Parameter] public int? ExcludedMealId { get; set; }
+    [Parameter] public bool ShowEdit { get; set; } = true;
+    [Parameter] public bool ShowCancel { get; set; }
+    /// <summary>Disables every pick button, e.g. while the caller checks something before it acts on a pick.</summary>
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter, EditorRequired] public EventCallback<Meal> OnPick { get; set; }
+
+    private List<Meal> _shuffled = [];
+    private bool _isShuffling;
+    private string _search = string.Empty;
+
+    /// <summary>
+    /// The meals matching the search, each with its tile index: regular meals count from 0 so their tiles alternate
+    /// orange and green; system meals are neutral and don't count. The excluded meal is left out.
+    /// </summary>
+    private IEnumerable<(Meal Meal, int Index)> FilteredMeals
+    {
+        get
+        {
+            var regularIndex = 0;
+            foreach (var meal in _shuffled.Where(m => m.Id != ExcludedMealId))
+            {
+                var index = meal.IsRegular ? regularIndex++ : 0;
+                if (string.IsNullOrWhiteSpace(_search) || meal.DisplayName(M).Contains(_search, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    yield return (meal, index);
+                }
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _mealsStateContainer.CurrentSnackbar = _snackbar;
+        _mealsStateContainer.OnStateChanged += StateHasChanged;
+
+        await _mealsStateContainer.LoadMeals();
+        Shuffle();
+    }
+
+    public void Dispose()
+    {
+        _mealsStateContainer.OnStateChanged -= StateHasChanged;
+    }
+
+    private void Shuffle()
+    {
+        var systemMeals = _mealsStateContainer.Meals.Where(m => !m.IsRegular).OrderBy(m => m.DisplayName(M), StringComparer.CurrentCulture).ToList();
+        var list = _mealsStateContainer.Meals.Where(m => m.IsRegular).ToList();
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+        _shuffled = [.. systemMeals, .. list];
+    }
+
+    private async Task ShuffleAsync()
+    {
+        _isShuffling = true;
+        await _mealsStateContainer.LoadMeals();
+        Shuffle();
+        _isShuffling = false;
+    }
+
+    private void EditMeal(Meal meal)
+    {
+        _mealsStateContainer.MealToEdit = meal;
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+}

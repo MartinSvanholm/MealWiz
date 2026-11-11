@@ -110,7 +110,7 @@ jobs:
       # One merged report over every suite. No threshold yet: it's only reported.
       - name: Merge coverage
         if: ${{ !cancelled() && hashFiles('artifacts/verify/full/**/*.cobertura.xml') != '' }}
-        uses: danielpalme/ReportGenerator-GitHub-Action@5
+        uses: danielpalme/ReportGenerator-GitHub-Action@5f3701a41d14548c9b8e575a5c235230e515cbc0 # v5
         with:
           reports: artifacts/verify/full/**/*.cobertura.xml
           targetdir: artifacts/coverage
@@ -142,3 +142,9 @@ jobs:
             MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/
           include-hidden-files: true
           if-no-files-found: ignore
+
+      # Last, so a failed job's log ends with what failed (every verify verdict above, with its FAILED test lines)
+      # instead of the upload and cleanup output.
+      - name: Show what failed
+        if: ${{ failure() && hashFiles('artifacts/verify/full/verdicts.log') != '' }}
+        run: cat artifacts/verify/full/verdicts.log

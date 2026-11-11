@@ -20,7 +20,7 @@ Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, I
 | Level | Is | Worked by |
 |---|---|---|
 | Project | a feature: a collection of user stories; its description is the spec | the main (coordinator) session, `/plan-project` |
-| Issue | one user story, a vertical slice: one branch, one PR to `dev`; the coordinator writes its implementation plan into the description | its own session (Sonnet, medium effort), started by the coordinator |
+| Issue | one user story, a vertical slice: one branch, one PR to `dev`; the coordinator writes its implementation plan into the description | its own session (Sonnet, medium effort), started by the coordinator; in a cloud container, the main session itself, one issue at a time |
 | Sub-issue | one layer task of an issue: `[DB]`, `[BE]` or `[FE]` (only when the story spans layers) | the issue's session, itself or through subagents; lands in the issue's PR |
 
 Project skills in `.claude/skills/` run the workflow:
@@ -28,9 +28,9 @@ Project skills in `.claude/skills/` run the workflow:
 | Skill | Use it to |
 |---|---|
 | `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, write a full implementation plan into each issue for the user to approve, then coordinate one Sonnet session per issue that executes its plan (max 4 at once locally; no limit in cloud mode) |
+| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, write a full implementation plan into each issue for the user to approve, then coordinate one Sonnet session per issue that executes its plan (max 4 at once locally); in a cloud container it implements the issues itself, one at a time |
 | `/implement-issue` | implement one issue and its sub-issues by executing the approved plan in the issue (feature mode, the user merges) or a group of bugs (bug mode, merges itself on green) |
-| `/fix-bugs` | diagnose the open Bug issues and write a fix plan into each one that needs it for the user to approve, group them by the files they touch, and start one Sonnet bug-mode session per group that executes the plans |
+| `/fix-bugs` | diagnose the open Bug issues and write a fix plan into each one that needs it for the user to approve, group them by the files they touch, and start one Sonnet bug-mode session per group that executes the plans (in a cloud container it fixes the groups itself, one at a time) |
 
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
 `mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
@@ -51,6 +51,8 @@ Rules for every session:
 - **Data:** PostgreSQL through Supabase, using the C# SDK directly from the client. There's no API layer, so RLS
   does all authorization. Realtime is used for meal imports.
 - **Patterns:** vertical slices, CQRS with MediatR 13, FluentResults 4 for errors, and scoped state containers.
+- **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
+  picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
 - **Server:** one Azure Functions app (`ScrapeRecipe`, isolated worker, net10.0) for meal import.
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
@@ -101,8 +103,10 @@ scripts/verify.sh local      # Linux, macOS, Git Bash
 
 In a Claude Code cloud container (Ubuntu, `CLAUDE_CODE_REMOTE=true`), `scripts/cloud-setup.sh` installs the .NET 10
 SDK and the Supabase CLI and starts Docker. Make `bash scripts/cloud-setup.sh` the environment's setup script so each
-session starts ready. Each cloud session has its own Docker and Supabase stack; the workflow skills have a cloud mode
-for that.
+session starts ready. A cloud session has its own Docker and Supabase stack. There, the workflow skills run in one
+session: it works the issues one at a time, each on its own branch from the latest `dev` with its own PR, and before
+each new issue it checks its open PRs (conflicts, CI, reviews) and merges the green ones into `dev`
+(implement-issue, "Cloud mode").
 
 Browser tests are slow and suffer most when several sessions run at once, so the full E2E suite runs in CI
 (`.github/workflows/CI.yml` runs `verify full` on every PR), and a PR merges only on green CI. Run verify in the

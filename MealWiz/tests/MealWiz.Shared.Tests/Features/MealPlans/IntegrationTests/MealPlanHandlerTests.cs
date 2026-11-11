@@ -1,3 +1,5 @@
+using MealWiz.Shared.Helpers;
+using MealWiz.Shared.Features.MealPlans;
 using System.Globalization;
 using MealWiz.Shared.Features.MealPlans.AddMealToMealPlan;
 using MealWiz.Shared.Features.MealPlans.CreateMealPlan;
@@ -52,7 +54,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
 
         var result = await CreateAsync(signedOut, new MealPlan(Week(1)));
 
-        ResultAssert.Failed(result, "Not authenticated");
+        ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
     }
 
     [Fact]
@@ -272,7 +274,7 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         var plan = await new MealPlanBuilder().ForWeekOf(Week(24)).WithMeal(Week(24), meal).InsertAsync(supabase.Client);
         var otherUser = await supabase.GetOtherUserAsync();
 
-        var result = await new SwapMealInMealPlan.Handler(otherUser.Client).Handle(
+        var result = await new SwapMealInMealPlan.Handler(otherUser.Client, TestLocalizer.For<MealPlansResource>()).Handle(
             new SwapMealInMealPlan.Command(plan.Id, Week(24), meal.Id, leftovers.Id), CancellationToken);
 
         ResultAssert.Failed(result, "Meal not found in plan");
@@ -309,13 +311,13 @@ public class MealPlanHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         new GetMealPlanByDate.Handler(supabase.Client).Handle(new GetMealPlanByDate.Query(date), CancellationToken);
 
     private Task<FluentResults.Result<int>> AddAsync(Meal meal) =>
-        new AddMealToMealPlan.Handler(supabase.Client).Handle(new AddMealToMealPlan.Command(meal), CancellationToken);
+        new AddMealToMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>()).Handle(new AddMealToMealPlan.Command(meal), CancellationToken);
 
     private Task<FluentResults.Result> RemoveAsync(int mealId, int mealPlanId, DateTime mealDate) =>
-        new RemoveMealFromMealPlan.Handler(supabase.Client).Handle(new RemoveMealFromMealPlan.Command(mealId, mealPlanId, mealDate), CancellationToken);
+        new RemoveMealFromMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>()).Handle(new RemoveMealFromMealPlan.Command(mealId, mealPlanId, mealDate), CancellationToken);
 
     private Task<FluentResults.Result> SwapAsync(int mealPlanId, DateTime mealDate, int currentMealId, int newMealId) =>
-        new SwapMealInMealPlan.Handler(supabase.Client).Handle(new SwapMealInMealPlan.Command(mealPlanId, mealDate, currentMealId, newMealId), CancellationToken);
+        new SwapMealInMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>()).Handle(new SwapMealInMealPlan.Command(mealPlanId, mealDate, currentMealId, newMealId), CancellationToken);
 
     private async Task<int> GetPlanRowIdAsync(int mealPlanId, DateTime date) =>
         (await GetPlanRowsAsync(mealPlanId)).Single(r => r.MealDate == Iso(date)).Id;

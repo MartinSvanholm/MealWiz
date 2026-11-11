@@ -1,9 +1,12 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
 @inject ISender _mediator
 @inject ISnackbar _snackbar
-@implements IDisposable
+@inject IStringLocalizer<IngredientsResource> L
 
+@* Delete ingredient: asks first. A saved ingredient with grocery items still to buy then asks whether to remove them
+   too (RemoveIngredientFromGroceryListDrawer, MEA-93); basket items are unlinked silently. *@
 <MudLoadingButton
 data-testid="@TestId"
 OnClick="OnDeleteClick"
@@ -11,7 +14,7 @@ ButtonVariant="@ButtonVariant.IconButton"
 Icon="@Icons.Material.Filled.Delete"
 Color="Color.Error"
 Size="Size.Medium"
-aria-label="@($"Delete {Ingredient.Name}")" />
+aria-label="@L["DeleteIngredient_Aria", Ingredient.Name]" />
 
 @code {
     [Parameter]
@@ -20,11 +23,6 @@ aria-label="@($"Delete {Ingredient.Name}")" />
     /// <summary>The button's data-testid; the drawer header uses its own.</summary>
     [Parameter]
     public string TestId { get; set; } = "delete-ingredient-button";
-
-    public void Dispose()
-    {
-        _drawerStateContainer.CloseDrawer();
-    }
 
     private void OnDeleteClick()
     {
@@ -35,17 +33,33 @@ aria-label="@($"Delete {Ingredient.Name}")" />
             return;
         }
 
-        _drawerStateContainer.OpenConfirmDrawer("Delete ingredient?", "Are you sure you want to delete this ingredient?", OnConfirmDelete);
+        _drawerStateContainer.OpenConfirmDrawer(L["DeleteIngredient_ConfirmTitle"], L["DeleteIngredient_ConfirmText"], OnConfirmDelete);
     }
 
     private async Task OnConfirmDelete()
     {
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
+        var loaded = await _groceryListStateContainer.LoadItemsLinkedToIngredient(Ingredient.Id);
+        if (loaded.Handle(_snackbar).IsFailed) return;
+
+        var links = loaded.Value;
+        if (links.ToBuy.Count > 0)
+        {
+            // Close the confirm first: it shares the drawer state, and the question needs fresh parameters.
+            _drawerStateContainer.CloseDrawer();
+            RemoveIngredientFromGroceryListDrawer.Open(_drawerStateContainer, L, Ingredient, links);
+            return;
+        }
+
         var result = await _mediator.Send(new DeleteIngredient.Command(Ingredient));
         if (result.Handle(_snackbar).IsFailed) return;
 
+        // The ingredient is gone either way; a failed clean-up leaves stale links for the Groceries banner.
+        var settled = await _groceryListStateContainer.SettleLinkedItems(links, [], []);
+        settled.Handle(_snackbar);
         await _mealsStateContainer.ReloadIngredientsForMealToEdit();
 
-        _snackbar.Add("Ingredient deleted.", Severity.Success);
+        if (settled.IsSuccess) _snackbar.Add(L["DeleteIngredient_Deleted"], Severity.Success);
         _drawerStateContainer.CloseDrawer();
     }
 }

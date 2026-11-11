@@ -32,6 +32,8 @@ public interface IPlanWeekStateContainer
     bool IsSaving { get; }
     bool UsedFallback { get; }
     bool IsDirty { get; }
+    /// <summary>True from a successful Generate until Open, NavigateToWeek or a successful Save: the per-day actions show.</summary>
+    bool HasPreview { get; }
     bool CanGenerate { get; }
     bool CanSave { get; }
 
@@ -43,6 +45,15 @@ public interface IPlanWeekStateContainer
     Task SetLeftoversAfterEveryMeal(bool leftoversAfterEveryMeal);
     void ToggleLock(DateTime date);
     Task Generate();
+    /// <summary>Re-rolls every unlocked day (Generate with the current locks).</summary>
+    Task ShuffleAll();
+    /// <summary>A new random regular meal for one unlocked day; unchanged when there is no other meal.</summary>
+    Task ShuffleDay(DateTime date);
+    /// <summary>Puts any meal (Eat Out and Leftovers included) on the day and locks it.</summary>
+    void PickMeal(DateTime date, Meal meal);
+    /// <summary>Empties a day and unlocks it. A day with a saved meal can't be cleared.</summary>
+    void ClearDay(DateTime date);
+    bool HasSavedMeal(DateTime date);
     /// <summary>Saves the changed days, then shows the week on the Meal plan. False when nothing was saved.</summary>
     Task<bool> Save();
 }
@@ -61,6 +72,8 @@ public class PlanWeekStateContainer(
     private bool _settingsLoaded;
     private bool _mealsLoaded;
     private Meal? _leftovers;
+    private IReadOnlyCollection<PlannedMealDate> _plannedDates = [];
+    private (DateTime WeekStart, int WeeksBack)? _inputsKey;
 
     public DateTime ThisWeekStart => timeProvider.GetLocalNow().Date.StartOfWeek().Date;
 
@@ -86,6 +99,8 @@ public class PlanWeekStateContainer(
 
     public bool IsDirty => Days.Any(d => d.IsChanged);
 
+    public bool HasPreview { get; private set; }
+
     private bool IsBusy => IsLoading || IsGenerating || IsSaving;
 
     public bool CanGenerate => !IsBusy && Days.Count == 7 && RegularMeals.Count > 0;
@@ -97,6 +112,8 @@ public class PlanWeekStateContainer(
         IsLoading = true;
         Days = [];
         UsedFallback = false;
+        HasPreview = false;
+        _inputsKey = null;
         RegularMeals = [];
         _mealsLoaded = false;
         _leftovers = null;
@@ -129,6 +146,8 @@ public class PlanWeekStateContainer(
         WeekStart = Clamp(target);
         Days = [];
         UsedFallback = false;
+        HasPreview = false;
+        _inputsKey = null;
         IsLoading = true;
         NotifyStateChanged();
 
@@ -166,26 +185,100 @@ public class PlanWeekStateContainer(
         IsGenerating = true;
         NotifyStateChanged();
 
-        var weeksBack = Settings.WeeksBack;
-        var datesResult = await mediator.Send(new GetMealPlannedDatesAction.Query(
-            WeekStart.AddDays(-7 * weeksBack), WeekStart.AddDays(7 * weeksBack + 6)));
-        if (datesResult.Handle(CurrentSnackbar).IsFailed)
+        if (!await LoadGeneratorInputsAsync())
         {
             IsGenerating = false;
             NotifyStateChanged();
             return;
         }
 
+        var weeksBack = Settings.WeeksBack;
         var locked = Days.Where(d => d.IsLocked && d.Meal != null).ToDictionary(d => d.Date, d => d.Meal!);
         var generated = WeekGenerator.Generate(
-            new WeekGeneratorInput(WeekStart, RegularMeals, datesResult.Value, locked, weeksBack,
+            new WeekGeneratorInput(WeekStart, RegularMeals, _plannedDates, locked, weeksBack,
                 Settings.LeftoversAfterEveryMeal, _leftovers),
             Random);
 
         Days = Days.Select((day, i) => day with { Meal = generated.Days[i].Meal }).ToList();
         UsedFallback = generated.UsedFallback;
+        HasPreview = true;
         IsGenerating = false;
         NotifyStateChanged();
+    }
+
+    public Task ShuffleAll() => Generate();
+
+    public async Task ShuffleDay(DateTime date)
+    {
+        var index = IndexOf(date);
+        if (index < 0 || Days[index].IsLocked) return;
+
+        if (_inputsKey != (WeekStart, Settings.WeeksBack) && !await LoadGeneratorInputsAsync()) return;
+
+        // The page may have moved on while the inputs loaded.
+        index = IndexOf(date);
+        if (index < 0 || Days[index].IsLocked) return;
+
+        var day = Days[index];
+        var monday = WeekStart;
+        var from = monday.AddDays(-7 * Settings.WeeksBack);
+        var to = monday.AddDays(6 + 7 * Settings.WeeksBack);
+        var inWindow = _plannedDates.Where(p => p.Date.Date >= from && p.Date.Date <= to).ToList();
+        var others = Days.Where((_, i) => i != index && Days[i].Meal != null).Select(d => d.Meal!).ToList();
+
+        var excluded = inWindow.Select(p => p.MealId)
+            .Concat(Days.Where((d, i) => i != index && d.IsLocked && d.Meal != null).Select(d => d.Meal!.Id))
+            .ToHashSet();
+        // Same distance rule as WeekGenerator: days between the meal's nearest use and the week. A larger distance is
+        // an earlier "last used" date, so it sorts first.
+        var lastUsed = inWindow.GroupBy(p => p.MealId).ToDictionary(
+            g => g.Key,
+            g => monday.AddDays(-g.Min(p => p.Date.Date < monday ? (monday - p.Date.Date).Days
+                : p.Date.Date > monday.AddDays(6) ? (p.Date.Date - monday.AddDays(6)).Days : 0)));
+
+        var meal = WeekGenerator.PickMeal(RegularMeals, excluded, lastUsed,
+            others.Select(m => m.Id).ToHashSet(), day.Meal?.Id, Random);
+        if (meal is null) return;
+
+        ReplaceDay(index, day with { Meal = meal });
+        NotifyStateChanged();
+    }
+
+    public void PickMeal(DateTime date, Meal meal)
+    {
+        var index = IndexOf(date);
+        if (index < 0) return;
+
+        ReplaceDay(index, Days[index] with { Meal = meal, IsLocked = true });
+        NotifyStateChanged();
+    }
+
+    public void ClearDay(DateTime date)
+    {
+        var index = IndexOf(date);
+        if (index < 0 || Days[index].Meal is null || HasSavedMeal(date)) return;
+
+        ReplaceDay(index, Days[index] with { Meal = null, IsLocked = false });
+        NotifyStateChanged();
+    }
+
+    public bool HasSavedMeal(DateTime date)
+    {
+        var index = IndexOf(date);
+        return index >= 0 && Days[index].SavedMealId is not null;
+    }
+
+    /// <summary>Loads the planned dates around the week that Generate and ShuffleDay avoid. False when the query failed.</summary>
+    private async Task<bool> LoadGeneratorInputsAsync()
+    {
+        var weeksBack = Settings.WeeksBack;
+        var datesResult = await mediator.Send(new GetMealPlannedDatesAction.Query(
+            WeekStart.AddDays(-7 * weeksBack), WeekStart.AddDays(7 * weeksBack + 6)));
+        if (datesResult.Handle(CurrentSnackbar).IsFailed) return false;
+
+        _plannedDates = datesResult.Value;
+        _inputsKey = (WeekStart, weeksBack);
+        return true;
     }
 
     public async Task<bool> Save()
@@ -208,9 +301,11 @@ public class PlanWeekStateContainer(
         }
 
         Days = Days.Select(d => d.Meal is null ? d : d with { SavedMealId = d.Meal.Id }).ToList();
+        HasPreview = false;
         NotifyStateChanged();
 
         await mealPlanState.NavigateToWeek(WeekStart);
+        mealPlanState.OfferWeekIngredients(WeekStart); // the Meal plan asks once the week has loaded (MEA-83)
         navigation.NavigateTo("/");
         return true;
     }

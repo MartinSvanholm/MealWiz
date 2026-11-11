@@ -1,0 +1,12 @@
+.mw-remove-meal-drawer {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 4px;
+}
+
+.mw-remove-meal-drawer-description {
+    margin: 0 16px;
+    color: var(--mw-text-muted);
+}

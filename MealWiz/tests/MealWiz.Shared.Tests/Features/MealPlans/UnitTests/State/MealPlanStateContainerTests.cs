@@ -8,6 +8,7 @@ using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using MediatR;
 using Moq;
 using MudBlazor;
@@ -203,8 +204,9 @@ public class MealPlanStateContainerTests
             });
         var replacement = new Meal { Id = 2, Name = "Tacos" };
 
-        await _container.SwapMealOnSelectedDate(replacement);
+        var swapped = await _container.SwapMealOnSelectedDate(replacement);
 
+        Assert.True(swapped);
         Assert.Equal(new SwapMealInMealPlan.Command(plan.Id, PastWednesday.Date, current.Id, replacement.Id), sent);
         Assert.Same(replacement, plan.MealOnDate[PastWednesday.Date]);
         Assert.Equal(PastWednesday.Date, replacement.MealDate);
@@ -235,11 +237,23 @@ public class MealPlanStateContainerTests
             .Setup(m => m.Send(It.IsAny<SwapMealInMealPlan.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Fail("Swap failed"));
 
-        await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
+        var swapped = await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
 
+        Assert.False(swapped);
         Assert.Same(current, plan.MealOnDate[PastWednesday.Date]);
         Assert.True(_container.IsSwappingMeal);
         VerifyToast("Swap failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task SwapMealOnSelectedDate_WithoutAMealOnTheDay_ReturnsFalseAndSendsNothing()
+    {
+        await NavigateToPastWeekWithoutPlan();
+
+        var swapped = await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
+
+        Assert.False(swapped);
+        _mediator.Verify(m => m.Send(It.IsAny<SwapMealInMealPlan.Command>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -289,6 +303,99 @@ public class MealPlanStateContainerTests
         _container.SelectedDate = PastWednesday;
 
         Assert.Equal(2, _notifications);
+    }
+
+    // ---- The week-ingredients offer after Plan week's Save (MEA-83) ----
+
+    private MealPlan TacosWeek(params Meal[] extra)
+    {
+        var plan = new MealPlan(PastMonday) { Id = 5 };
+        plan.MealOnDate[PastMonday] = TestData.Meal("Tacos", 8, ingredients: TestData.Ingredient("Tortillas"));
+        foreach (var meal in extra) plan.MealOnDate[meal.MealDate!.Value] = meal;
+        return plan;
+    }
+
+    private async Task LoadPastWeek(MealPlan? plan)
+    {
+        SetupLoad(Result.Ok(plan));
+        await _container.NavigateToWeek(PastWednesday);
+    }
+
+    [Fact]
+    public void TakeWeekIngredientsOffer_NoOffer_ReturnsNull() =>
+        Assert.Null(_container.TakeWeekIngredientsOffer());
+
+    [Fact]
+    public async Task TakeWeekIngredientsOffer_OfferedWeekLoaded_ReturnsItsMondayOnce()
+    {
+        await LoadPastWeek(TacosWeek());
+        _container.OfferWeekIngredients(PastWednesday);
+
+        Assert.Equal(PastMonday, _container.TakeWeekIngredientsOffer());
+        Assert.Null(_container.TakeWeekIngredientsOffer());
+    }
+
+    [Fact]
+    public async Task TakeWeekIngredientsOffer_WhileTheWeekLoads_KeepsTheOffer()
+    {
+        var load = new TaskCompletionSource<Result<MealPlan?>>();
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetMealPlanByDate.Query>(), It.IsAny<CancellationToken>()))
+            .Returns(load.Task);
+        var navigating = _container.NavigateToWeek(PastWednesday);
+        _container.OfferWeekIngredients(PastWednesday);
+
+        Assert.Null(_container.TakeWeekIngredientsOffer());
+
+        load.SetResult(Result.Ok<MealPlan?>(TacosWeek()));
+        await navigating;
+        Assert.Equal(PastMonday, _container.TakeWeekIngredientsOffer());
+    }
+
+    [Fact]
+    public async Task TakeWeekIngredientsOffer_AnotherWeekShown_DropsTheOffer()
+    {
+        await LoadPastWeek(TacosWeek());
+        _container.OfferWeekIngredients(PastWednesday.AddDays(7));
+
+        Assert.Null(_container.TakeWeekIngredientsOffer());
+
+        _container.OfferWeekIngredients(PastWednesday);
+        Assert.Equal(PastMonday, _container.TakeWeekIngredientsOffer()); // a fresh offer works; the old one is gone
+    }
+
+    [Fact]
+    public async Task TakeWeekIngredientsOffer_NothingForTheList_DropsTheOffer()
+    {
+        var eatOut = TestData.Meal("Eat Out", 2, type: MealType.EatOut);
+        eatOut.MealDate = PastMonday.AddDays(1);
+        var hidden = TestData.Meal("Toast", 3, ingredients: TestData.Ingredient("Salt", showOnGroceryList: false));
+        hidden.MealDate = PastMonday.AddDays(2);
+        var onlySystemAndHidden = new MealPlan(PastMonday) { Id = 5 };
+        onlySystemAndHidden.MealOnDate[eatOut.MealDate.Value] = eatOut;
+        onlySystemAndHidden.MealOnDate[hidden.MealDate.Value] = hidden;
+
+        foreach (var plan in new MealPlan?[] { null, onlySystemAndHidden })
+        {
+            await LoadPastWeek(plan);
+            _container.OfferWeekIngredients(PastWednesday);
+
+            Assert.Null(_container.TakeWeekIngredientsOffer());
+            Assert.Null(_container.TakeWeekIngredientsOffer());
+        }
+    }
+
+    [Fact]
+    public async Task OfferWeekIngredients_Notifies_ButTakingDoesNot()
+    {
+        await LoadPastWeek(TacosWeek());
+        _notifications = 0;
+
+        _container.OfferWeekIngredients(PastWednesday);
+        Assert.Equal(1, _notifications);
+
+        _container.TakeWeekIngredientsOffer();
+        Assert.Equal(1, _notifications);
     }
 
     private void SetupLoad(Result<MealPlan?> result) =>

@@ -103,6 +103,29 @@ public static class WeekGenerator
         return new GeneratedWeek(days, usedFallback);
     }
 
+    /// <summary>
+    /// One random regular meal for a single day: never the day's current meal, preferably not one of the other days'
+    /// meals (<paramref name="takenMealIds"/>) or an excluded one; when every candidate is excluded, the one used
+    /// longest ago (<paramref name="lastUsed"/>). Null when no other regular meal exists.
+    /// </summary>
+    public static Meal? PickMeal(IReadOnlyList<Meal> pool, IReadOnlySet<int> excludedMealIds,
+        IReadOnlyDictionary<int, DateTime> lastUsed, IReadOnlySet<int> takenMealIds, int? currentMealId, Random random)
+    {
+        var eligible = pool.Where(m => m.IsRegular && m.Id != currentMealId).DistinctBy(m => m.Id).OrderBy(m => m.Id).ToList();
+        if (eligible.Count == 0) return null;
+
+        var candidates = eligible.Where(m => !takenMealIds.Contains(m.Id)).ToList();
+        if (candidates.Count == 0) candidates = eligible;
+
+        var fresh = candidates.Where(m => !excludedMealIds.Contains(m.Id)).ToList();
+        if (fresh.Count > 0) return fresh[random.Next(fresh.Count)];
+
+        return candidates
+            .OrderBy(m => lastUsed.TryGetValue(m.Id, out var date) ? date : DateTime.MinValue)
+            .ThenBy(m => m.Id)
+            .First();
+    }
+
     private static List<Meal> Shuffle(IEnumerable<Meal> meals, Random random)
     {
         var list = meals.ToList();

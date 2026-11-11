@@ -85,6 +85,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
 
         var client = await CreateSignedOutClientAsync();
         await client.Auth.SignIn(email, password);
+        await WaitUntilTokenIsAcceptedAsync(client.Auth.CurrentSession?.AccessToken);
 
         return new TestUser(created.Id, email, password, client);
     }
@@ -122,6 +123,52 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         using var verified = await browser.GetAsync(link.ActionLink);
         return verified.Headers.Location
             ?? throw new InvalidOperationException($"Following the reset link returned {(int)verified.StatusCode} without a redirect.");
+    }
+
+    /// <summary>
+    /// MEA-55: GoTrue stamps a new token's <c>iat</c> with the current whole second, and PostgREST checks it against a
+    /// clock it refreshes about once a second, so a token used within its first second can be rejected with PGRST303
+    /// "JWT issued at future". Waiting until a little over a second past <c>iat</c> before the first query avoids it.
+    /// </summary>
+    internal static readonly TimeSpan TokenSettleTime = TimeSpan.FromMilliseconds(1200);
+
+    /// <summary>How long to wait before <paramref name="accessToken"/> is safe to send; zero if it can't be read.</summary>
+    internal static TimeSpan DelayUntilTokenIsAccepted(string? accessToken, DateTimeOffset now)
+    {
+        if (TryReadIssuedAt(accessToken) is not { } issuedAt) return TimeSpan.Zero;
+
+        var delay = issuedAt + TokenSettleTime - now;
+        return delay > TimeSpan.Zero ? delay : TimeSpan.Zero;
+    }
+
+    private static async Task WaitUntilTokenIsAcceptedAsync(string? accessToken)
+    {
+        var delay = DelayUntilTokenIsAccepted(accessToken, DateTimeOffset.UtcNow);
+        if (delay > TimeSpan.Zero) await Task.Delay(delay);
+    }
+
+    private static DateTimeOffset? TryReadIssuedAt(string? accessToken)
+    {
+        var parts = accessToken?.Split('.');
+        if (parts is not { Length: 3 }) return null;
+
+        try
+        {
+            var payload = parts[1].Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            using var json = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
+            return json.RootElement.TryGetProperty("iat", out var iat) && iat.TryGetInt64(out var seconds)
+                ? DateTimeOffset.FromUnixTimeSeconds(seconds)
+                : null;
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Deletes a user the test created itself (e.g. through sign-up) together with the fixture's own.</summary>

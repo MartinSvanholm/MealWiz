@@ -2,6 +2,7 @@ using System.Globalization;
 using FluentResults;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
 using Supabase.Postgrest.Responses;
 
@@ -11,7 +12,7 @@ public static class SwapMealInMealPlan
 {
     public record Command(int MealPlanId, DateTime MealDate, int CurrentMealId, int NewMealId) : IRequest<Result>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient, IStringLocalizer<MealPlansResource> localizer) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
@@ -30,9 +31,9 @@ public static class SwapMealInMealPlan
             if (result.IsFailed) return result.ToResult();
 
             // RLS hides other users' rows, so they also end up here.
-            if (result.Value.Models.Count == 0) return Result.Fail("Meal not found in plan");
+            if (result.Value.Models.Count == 0) return Result.Fail(localizer["MealPlan_MealNotInPlan"]);
 
-            return Result.Ok().WithSuccess("Meal swapped");
+            return Result.Ok().WithSuccess(localizer["MealPlan_MealSwapped"]);
         }
     }
 }

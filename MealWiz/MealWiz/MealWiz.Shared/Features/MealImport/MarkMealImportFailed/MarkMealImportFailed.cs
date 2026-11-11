@@ -16,7 +16,9 @@ namespace MealWiz.Shared.Features.MealImport.MarkMealImportFailed;
 public static class MarkMealImportFailed
 {
     /// <returns>The updated row, or null when it was no longer pending (the Function already resolved it).</returns>
-    public record Command(Guid Id, string ErrorMessage) : IRequest<Result<Models.MealImport?>>;
+    /// <param name="ErrorCode">Why it failed: <see cref="MealImportErrorCode.Unreachable"/> or <see cref="MealImportErrorCode.TimedOut"/>.</param>
+    /// <param name="ErrorMessage">English detail for diagnosis; never shown.</param>
+    public record Command(Guid Id, MealImportErrorCode ErrorCode, string ErrorMessage) : IRequest<Result<Models.MealImport?>>;
 
     public class Handler(Client supabaseClient) : IRequestHandler<Command, Result<Models.MealImport?>>
     {
@@ -30,6 +32,7 @@ public static class MarkMealImportFailed
                 .Where(r => r.Id == request.Id)
                 .Filter(r => r.Status, Operator.Equals, MealImportStatusExtensions.PendingValue)
                 .Set(r => r.Status, MealImportStatusExtensions.FailedValue)
+                .Set(r => r.ErrorCode!, request.ErrorCode.ToDbValue())
                 .Set(r => r.ErrorMessage!, request.ErrorMessage)
                 .Set(r => r.UpdatedAt!, DateTime.UtcNow)
                 .Set(r => r.UpdatedBy!, new Guid(userId))

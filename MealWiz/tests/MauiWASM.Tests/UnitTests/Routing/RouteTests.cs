@@ -4,6 +4,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace MauiWASM.Tests.UnitTests.Routing;
@@ -39,6 +40,7 @@ public partial class RouteTests
     {
         using var context = new BunitContext();
         context.AddAuthorization();
+        context.Services.AddLocalization(); // App's route texts come from the shared resource
         context.ComponentFactories.AddStub<Router>();
 
         var router = context.Render<App>().FindComponent<Stub<Router>>().Instance.Parameters;

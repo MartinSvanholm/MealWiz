@@ -27,10 +27,15 @@ public interface IMealPlanStateContainer
     void NotifyStateChanged();
     Task LoadMealPlan();
     Task NavigateToWeek(DateTime targetDate);
+    /// <summary>Called by Plan week's Save once the saved week is loaded: the Meal plan then asks to add its ingredients (MEA-83).</summary>
+    void OfferWeekIngredients(DateTime weekStart);
+    /// <summary>The offered week's Monday, once, when that week is loaded and shown and has something for the list; else null.</summary>
+    DateTime? TakeWeekIngredientsOffer();
     Task AddMealToPlan(Meal meal);
     void StartSwap();
     void CancelSwap();
-    Task SwapMealOnSelectedDate(Meal meal);
+    /// <summary>Swaps the selected day's meal. True when saved; false (error already shown) otherwise.</summary>
+    Task<bool> SwapMealOnSelectedDate(Meal meal);
     Meal? GetMealFromSelectedDate();
     bool DateHasMeal(DateTime dateTime);
 }
@@ -96,6 +101,29 @@ public class MealPlanStateContainer(
         NotifyStateChanged();
     }
 
+    private DateTime? weekIngredientsOffer;
+
+    public void OfferWeekIngredients(DateTime weekStart)
+    {
+        weekIngredientsOffer = weekStart.StartOfWeek().Date;
+        NotifyStateChanged();
+    }
+
+    // Runs from OnAfterRender, so it must never notify.
+    public DateTime? TakeWeekIngredientsOffer()
+    {
+        if (weekIngredientsOffer is not { } week) return null;
+        if (IsLoadingWeek) return null; // keep it: a later render takes it
+
+        weekIngredientsOffer = null;
+        if (SelectedWeekStart != week || MealPlan is null) return null;
+
+        var end = week.AddDays(7);
+        var hasSomethingForTheList = MealPlan.MealOnDate.Any(kvp =>
+            kvp.Key >= week && kvp.Key < end && kvp.Value.Ingredients.Any(i => i.ShowOnGroceryList));
+        return hasSomethingForTheList ? week : null;
+    }
+
     public async Task AddMealToPlan(Meal meal)
     {
         if (MealPlan is null)
@@ -130,20 +158,21 @@ public class MealPlanStateContainer(
         NotifyStateChanged();
     }
 
-    public async Task SwapMealOnSelectedDate(Meal meal)
+    public async Task<bool> SwapMealOnSelectedDate(Meal meal)
     {
         var current = GetMealFromSelectedDate();
-        if (MealPlan is null || current is null) return;
+        if (MealPlan is null || current is null) return false;
 
         var date = SelectedDate.Date;
         var result = await mediator.Send(new SwapMealInMealPlanAction.Command(MealPlan.Id, date, current.Id, meal.Id));
-        if (result.Handle(CurrentSnackbar).IsFailed) return;
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
 
         meal.MealDate = date;
         meal.MealPlan = MealPlan;
         MealPlan.MealOnDate[date] = meal;
         IsSwappingMeal = false;
         NotifyStateChanged();
+        return true;
     }
 
     public Meal? GetMealFromSelectedDate()

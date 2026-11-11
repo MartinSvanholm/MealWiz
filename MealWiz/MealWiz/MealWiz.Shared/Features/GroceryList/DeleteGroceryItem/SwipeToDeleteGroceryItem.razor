@@ -1,5 +1,7 @@
 @using System.Globalization
+@using MealWiz.Shared.Features.GroceryList
 @implements IHandleEvent
+@inject IStringLocalizer<GroceryListResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 
@@ -88,7 +90,7 @@
         var delete = _swiping && _offset <= -DeleteDistance;
         Reset();
         if (delete)
-            ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, GroceryItem);
+            ConfirmDeleteGroceryItem.Open(_drawerStateContainer, _groceryListStateContainer, L, GroceryItem);
     }
 
     private void OnPointerCancel(PointerEventArgs e)

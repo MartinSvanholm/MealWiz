@@ -61,6 +61,10 @@ public class MealPlanJourneyTests : E2ETestBase
 
         // Remove one
         await Page.GetByTestId("remove-meal-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Remove Leftovers?");
+        await Expect(Drawer.GetByTestId("remove-meal-grocery-row")).ToHaveCountAsync(0);
+        await Drawer.GetByTestId("remove-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("meal-selection-heading")).ToBeVisibleAsync();
         await Expect(Day(1)).Not.ToHaveClassAsync(HasMeal);
 
@@ -77,12 +81,12 @@ public class MealPlanJourneyTests : E2ETestBase
     }
 
     [Fact]
-    public async Task PlanWeek_GeneratesWithLeftoversAroundALockedDay_AndSaves()
+    public async Task PlanWeek_GeneratesWithLeftoversAroundALockedDay_AndSaves_AndAddsItsIngredients()
     {
-        await Supabase.InsertMealAsync(User, "E2E Chili");
-        await Supabase.InsertMealAsync(User, "E2E Curry");
-        await Supabase.InsertMealAsync(User, "E2E Pasta");
-        var stew = await Supabase.InsertMealAsync(User, "E2E Stew");
+        // One distinct ingredient per meal, none a substring of another, for the grocery steps after Save (MEA-83).
+        foreach (var name in new[] { "Chili", "Curry", "Pasta", "Tacos" })
+            await Supabase.InsertMealAsync(User, $"E2E {name}", new SeedIngredient($"{name} spice", "1 tsp"));
+        var stew = await Supabase.InsertMealAsync(User, "E2E Stew", new SeedIngredient("Stew spice", "1 tsp"));
 
         await LoginAsync();
         await Page.GetByTestId("week-next").ClickAsync();
@@ -111,14 +115,80 @@ public class MealPlanJourneyTests : E2ETestBase
         }
 
         Assert.Equal(3, cooked.Distinct().Count());
-        Assert.All(cooked, name => Assert.Contains(name, new[] { "E2E Chili", "E2E Curry", "E2E Pasta" }));
+        Assert.All(cooked, name => Assert.Contains(name, new[] { "E2E Chili", "E2E Curry", "E2E Pasta", "E2E Tacos" }));
         await Expect(Page.GetByTestId("plan-week-fallback-note")).ToHaveCountAsync(0);
+
+        // Adjust the preview (MEA-80): shuffle, pick and clear a day, then back and Cancel.
+        var unlocked = Page.Locator("[data-testid=plan-week-day][data-locked=false]")
+            .Filter(new() { HasNot = Page.GetByText("Leftovers", new() { Exact = true }) });
+        await Expect(unlocked).ToHaveCountAsync(3);
+        ILocator ByDate(string d) => Page.Locator($"[data-testid=plan-week-day][data-date='{d}']");
+
+        var shuffledDate = (await unlocked.Nth(0).GetAttributeAsync("data-date"))!;
+        var before = (await ByDate(shuffledDate).GetByTestId("plan-week-day-meal").InnerTextAsync()).Trim();
+        await ByDate(shuffledDate).GetByTestId("plan-week-day-shuffle").ClickAsync();
+        await Expect(ByDate(shuffledDate).GetByTestId("plan-week-day-meal")).Not.ToHaveTextAsync(before);
+
+        var pickedDate = (await unlocked.Nth(1).GetAttributeAsync("data-date"))!;
+        await ByDate(pickedDate).GetByTestId("plan-week-day-pick").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToContainTextAsync("Pick a meal for");
+        await Expect(Drawer.GetByTestId("meal-list-item").Filter(new() { HasText = "Leftovers" })).ToBeVisibleAsync();
+        await Drawer.GetByTestId("meal-list-item").Filter(new() { HasText = "Eat Out" }).GetByTestId("meal-selection-pick").ClickAsync();
+        await Expect(ByDate(pickedDate).GetByTestId("plan-week-day-meal")).ToHaveTextAsync("Eat Out");
+        await Expect(ByDate(pickedDate)).ToHaveAttributeAsync("data-locked", "true");
+
+        var clearedDate = (await unlocked.Nth(1).GetAttributeAsync("data-date"))!;
+        Assert.NotEqual(pickedDate, clearedDate);
+        await ByDate(clearedDate).GetByTestId("plan-week-day-clear").ClickAsync();
+        await Expect(ByDate(clearedDate).GetByTestId("plan-week-day-empty")).ToBeVisibleAsync();
+
+        await Page.GetByTestId("plan-week-back").ClickAsync();
+        await Expect(ConfirmDrawer.GetByTestId("confirm-drawer-title")).ToHaveTextAsync("Discard this plan?");
+        await Expect(ConfirmDrawer.GetByTestId("confirm-drawer-confirm")).ToHaveTextAsync("Discard");
+        await ConfirmDrawer.GetByTestId("confirm-drawer-cancel").ClickAsync();
+        await Expect(ConfirmDrawer).ToHaveCountAsync(0);
+        await Expect(ByDate(pickedDate).GetByTestId("plan-week-day-meal")).ToHaveTextAsync("Eat Out");
+        await Expect(ByDate(clearedDate).GetByTestId("plan-week-day-empty")).ToBeVisibleAsync();
 
         await Page.GetByTestId("plan-week-save").ClickAsync();
 
         await Expect(Page).ToHaveURLAsync(UrlFor(""));
         await Expect(Page.GetByTestId("meal-plan-week-title")).ToHaveTextAsync("Next week");
-        await Expect(Page.GetByTestId("week-day-meal-indicator")).ToHaveCountAsync(7);
+        await Expect(Page.GetByTestId("week-day-meal-indicator")).ToHaveCountAsync(6);
+
+        // The saved week offers its ingredients (MEA-83): accept, add them, and see them once on the list.
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Week saved");
+        await Expect(Drawer.GetByTestId("week-ingredients-prompt-title")).ToHaveTextAsync("Add this week's ingredients to the grocery list?");
+        // The header label ("Week NN · Month") is upper-cased by CSS; only its number is used.
+        var week = Regex.Match(await Page.GetByTestId("screen-header-label").InnerTextAsync(), @"\d+").Value;
+        await Drawer.GetByTestId("week-ingredients-prompt-accept").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync($"Week {week} ingredients");
+        await Expect(Drawer.GetByTestId("plan-ingredient-item").First).ToBeVisibleAsync();
+        var names = (await Drawer.GetByTestId("plan-ingredient-name").AllInnerTextsAsync()).Select(n => n.Trim()).ToList();
+        Assert.NotEmpty(names);
+        Assert.Equal(names.Count, names.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex("grocerylist"));
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(names.Count);
+        foreach (var name in names)
+            await Expect(Row("grocery-item", name)).ToHaveCountAsync(1);
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredients-all-on-list")).ToBeVisibleAsync();
+        await Drawer.GetByTestId("drawer-close").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Page.ReloadAsync();
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(names.Count);
+
+        // Back on the Meal plan the week stays the one last shown.
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToHaveTextAsync("Next week");
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Page.Locator($"[data-testid=week-day][data-date='{pickedDate}']").ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Eat Out");
+        await Expect(Page.Locator($"[data-testid=week-day][data-date='{clearedDate}']")).Not.ToHaveClassAsync(new System.Text.RegularExpressions.Regex("has-meal"));
         await Day(1).ClickAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Leftovers");
         await Day(2).ClickAsync();
@@ -173,6 +243,67 @@ public class MealPlanJourneyTests : E2ETestBase
             ["E2E Fresh 1", "E2E Fresh 2", "E2E Fresh 3", "E2E Fresh 4", "E2E Fresh 5", "E2E Fresh 6", "E2E Old"],
             names.Select(n => n.Trim()).Order().ToArray());
         await Expect(Page.GetByTestId("plan-week-fallback-note")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task AddAllToList_AddsOnlyThatDaysMeal_AndThenSaysEverythingIsOnTheList()
+    {
+        const string tacos = "E2E Tacos";
+        const string soup = "E2E Carrot soup";
+        await Supabase.InsertMealAsync(User, tacos,
+            new SeedIngredient("Tortillas", "8"), new SeedIngredient("Minced beef", "500 g"),
+            new SeedIngredient("Salt", "1 tsp", ShowOnGroceryList: false));
+        await Supabase.InsertMealAsync(User, soup, new SeedIngredient("Carrots", "6"));
+
+        await LoginAsync();
+        await AssignAsync(day: 0, tacos);
+        await AssignAsync(day: 1, soup);
+
+        // Add all to list opens the merge drawer for that day's meal only, without the hidden ingredient
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
+        await Page.GetByTestId("add-all-to-list").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add E2E Tacos to list");
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        await Expect(Row("plan-ingredient-item", "Tortillas")).ToBeVisibleAsync();
+        await Expect(Row("plan-ingredient-item", "Minced beef")).ToBeVisibleAsync();
+        await Expect(Row("plan-ingredient-item", "Salt")).ToHaveCountAsync(0);
+        await Expect(Row("plan-ingredient-item", "Carrots")).ToHaveCountAsync(0);
+        await Expect(Drawer.GetByTestId("plan-ingredients-confirm")).ToContainTextAsync("Add 2 to grocery list");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        // They are on the list, and only they
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex("grocerylist"));
+        await Expect(Row("grocery-item", "Tortillas").GetByTestId("grocery-item-amount")).ToHaveTextAsync("8");
+        await Expect(Row("grocery-item", "Minced beef").GetByTestId("grocery-item-amount")).ToHaveTextAsync("500 g");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Row("grocery-item", "Carrots")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Salt")).ToHaveCountAsync(0);
+
+        // Pressing it again: everything is already on the list
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex("/$"));
+        await OpenAllOnListAsync(tacos);
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(0);
+        await Drawer.GetByTestId("drawer-close").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        // Saved, not just held in memory
+        await Page.ReloadAsync();
+        await OpenAllOnListAsync(tacos);
+    }
+
+    /// <summary>Selects the first day (the selected day defaults to today after a navigation) and opens Add all to list, which should say everything is on the list.</summary>
+    private async Task OpenAllOnListAsync(string meal)
+    {
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(meal);
+        await Page.GetByTestId("add-all-to-list").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredients-all-on-list")).ToContainTextAsync("Everything is already on your list");
     }
 
     private ILocator PlanDay(int index) => Page.GetByTestId("plan-week-day").Nth(index);

@@ -1,15 +1,17 @@
 @* The ingredient drawer's content: name and amount side by side, the "Add to grocery list" switch row, and the Save
    button in the footer. The drawer header's delete action comes from IngredientCard (HeaderAction). The fields edit a
    copy that Save applies, so closing without saving changes nothing (MEA-77). *@
+@inject IStringLocalizer<IngredientsResource> L
+
 <div class="mw-ingredient-drawer">
     <div class="mw-ingredient-drawer-fields">
         <div class="mw-field">
-            <label class="mw-field-label" for="ingredient-name">Name</label>
+            <label class="mw-field-label" for="ingredient-name">@L["IngredientDrawer_Name"]</label>
             <MudTextField data-testid="ingredient-name-input" InputId="ingredient-name" @bind-Value="_draft.Name" Variant="Variant.Outlined"
                           OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
         </div>
         <div class="mw-field">
-            <label class="mw-field-label" for="ingredient-amount">Amount</label>
+            <label class="mw-field-label" for="ingredient-amount">@L["IngredientDrawer_Amount"]</label>
             <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
                           Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
         </div>
@@ -19,7 +21,7 @@
             <MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" />
         </span>
         <MudSwitch T="bool" data-testid="ingredient-show-on-grocery-list-switch" @bind-Value="_draft.ShowOnGroceryList"
-                   Label="Add to grocery list" LabelPlacement="Placement.Start" Color="Color.Primary" />
+                   Label="@L["IngredientDrawer_AddToGroceryList"]" LabelPlacement="Placement.Start" Color="Color.Primary" />
     </div>
     <DrawerFooter>
         <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" Changes="_draft" />

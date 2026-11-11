@@ -1,13 +1,13 @@
-@using System.Globalization
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ILocalStorageService _localStorage
+@inject IStringLocalizer<MealPlansResource> L
 @implements IDisposable
 
 @* The week's seven day tiles. Week navigation (prev/next) is in MealPlanPage's header; swiping the strip moves a
    week too. Test hooks: week-day (+ data-date, and the selected-day / has-meal / empty-day / current-day classes),
    week-day-meal-indicator on a planned day, week-day-empty ("+") on an empty one. *@
 <MudSwipeArea OnSwipeEnd="HandleSwipe" Style="width: 100%">
-    <nav class="mw-week-strip" aria-label="Days of the week">
+    <nav class="mw-week-strip" aria-label="@L["WeekStrip_Aria"]">
         @for (int i = 0; i < 7; i++)
         {
             var date = GetDateForDay(i);
@@ -17,9 +17,9 @@
             <button type="button" data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd")"
                     class="@GetDayContainerClass(date, isSelected, hasMeal)"
                     aria-pressed="@(isSelected ? "true" : "false")"
-                    aria-label="@date.ToString("dddd d MMMM", CultureInfo.InvariantCulture)"
+                    aria-label="@date.ToFullDate()"
                     @onclick="() => _mealPlanStateContainer.SelectedDate = date">
-                <span class="day-name" data-testid="week-day-name">@date.ToString("ddd", CultureInfo.InvariantCulture).ToUpperInvariant()</span>
+                <span class="day-name" data-testid="week-day-name">@date.ToDayTag()</span>
                 <span class="day" data-testid="week-day-date">@date.Day</span>
                 @if (hasMeal)
                 {

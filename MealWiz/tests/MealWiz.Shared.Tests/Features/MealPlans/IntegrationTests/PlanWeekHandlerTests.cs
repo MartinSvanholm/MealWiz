@@ -1,3 +1,4 @@
+using MealWiz.Shared.Features.MealPlans;
 using System.Globalization;
 using MealWiz.Shared.Features.MealPlans.GetMealPlannedDates;
 using MealWiz.Shared.Features.MealPlans.Models;
@@ -175,7 +176,7 @@ public class PlanWeekHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var signedOut = await supabase.CreateSignedOutClientAsync();
 
-        var result = await new SaveGeneratedWeek.Handler(signedOut)
+        var result = await new SaveGeneratedWeek.Handler(signedOut, TestLocalizer.For<MealPlansResource>())
             .Handle(new SaveGeneratedWeek.Command(Week(10), [new SaveGeneratedWeek.PlannedDay(Week(10), 1)]), CancellationToken);
 
         ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
@@ -213,7 +214,7 @@ public class PlanWeekHandlerTests(LocalSupabaseFixture supabase) : IClassFixture
         new GetMealPlannedDates.Handler(supabase.Client).Handle(new GetMealPlannedDates.Query(from, to), CancellationToken);
 
     private Task<FluentResults.Result> SaveAsync(DateTime weekStart, params (DateTime Date, int MealId)[] days) =>
-        new SaveGeneratedWeek.Handler(supabase.Client).Handle(
+        new SaveGeneratedWeek.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>()).Handle(
             new SaveGeneratedWeek.Command(weekStart, days.Select(d => new SaveGeneratedWeek.PlannedDay(d.Date, d.MealId)).ToList()),
             CancellationToken);
 

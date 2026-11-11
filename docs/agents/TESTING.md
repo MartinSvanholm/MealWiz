@@ -20,12 +20,13 @@ adds every E2E journey.
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
 | `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list (10 cases) | smoke | Docker + Chromium |
+| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list, deleting a meal with grocery items (12 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
-- **Logs:** under `artifacts/verify/<level>/`.
+- **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
+  `--only` adds to it, a full run starts it over).
 - **Supabase:** at local, smoke and full, verify starts local Supabase if it isn't running and sets
   `REQUIRE_SUPABASE=true`, so a test that can't reach the stack fails instead of skipping. Without that variable (plain
   `dotnet test`, or `fast`), Supabase-backed tests skip with a reason.
@@ -39,7 +40,8 @@ adds every E2E journey.
   Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
-  ends with `--check-complete`, which fails if a step never ran.
+  ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
+  the end of the job log names the failed steps and tests.
 
 ## Which tests for which change
 
@@ -55,6 +57,8 @@ only on green CI. While iterating, run just the project or class you're touching
 | A state container | Unit test in `Features/<F>/UnitTests/State/`, with `IMediator` mocked | fast, then local |
 | A model or its mapping | Unit test in `Features/<F>/UnitTests/Models/` | fast, then local |
 | A helper or service | Unit test in `Helpers/UnitTests/` or `Services/<Svc>/UnitTests/` | fast, then local |
+| UI text or a `.resx` | English and Danish values; `ResourceCompletenessTests` checks them. bUnit asserts the English text | fast, then local |
+| Localization setup (`Localization/`) | Unit test in `Localization/UnitTests/` | fast, then local |
 | DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
 | A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
 | Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
@@ -97,7 +101,8 @@ set to a few minutes. Everything else is `E2E` only.
 Features/<Feature>/UnitTests/{Models,State,Handlers}/
 Features/<Feature>/ComponentTests/
 Features/<Feature>/IntegrationTests/<Feature>HandlerTests.cs
-Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Theme/UnitTests/   Services/<Svc>/UnitTests/
+Components/ComponentTests/   Layout/ComponentTests/   Helpers/UnitTests/   Localization/UnitTests/   Theme/UnitTests/
+Services/<Svc>/UnitTests/
 TestInfrastructure/
 ```
 
@@ -110,6 +115,9 @@ TestInfrastructure/
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
     `SnackbarMessages`, `CurrentPath`.
+  - It registers the real localization (`AddLocalization()`, `MealWizMudLocalizer`), so components render their
+    English resource texts. `ComponentTestBase(echoResourceKeys: true)` swaps in `EchoStringLocalizerFactory`, whose
+    localizers return `[Key]`: assert `[Nav_Plan]` to prove a text comes from a resource (`ShellTextTests`).
 - `LocalSupabaseFixture.cs` is shared per class through `IClassFixture`.
   - It creates a throwaway user (`shared-tests-<guid>@mealwiz.test`) and signs it in with the **anon key**, so every
     query goes through RLS.
@@ -117,12 +125,18 @@ TestInfrastructure/
     `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `FollowPasswordResetLinkAsync()` (where a reset
     email's link lands, made with the admin API so no email is sent), `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
+  - After each sign-in it waits until the token is a little over a second old (`DelayUntilTokenIsAccepted`), so
+    PostgREST doesn't reject it with PGRST303 "JWT issued at future" (MEA-55).
 - `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder` (whose `InsertAsync` fills `PlannedMealIdOnDate`). Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
   `ClientExtensions` adds `CurrentUserId()` and `UniqueSuffix()`.
 - `TestData.cs` provides in-memory models for unit and bUnit tests.
 - `ResultAssert.cs`: `Ok(result)` returns the value; `Failed(result[, message])`. A failure message includes the errors.
 - `TimeAssert.cs`: `CloseTo(expected, actual)`, with one minute of tolerance.
+- `CultureScope.cs`: `using var _ = CultureScope.Use("da");` runs the rest of the test in Danish (current culture and
+  UI culture, this async flow only).
+- `TestLocalizer.cs`: `TestLocalizer.For<MealsResource>()` is the real resource localizer, for tests that construct a
+  handler or state container themselves (handlers that return localized messages take one).
 - `AuthTestHelper.cs`: `RoutedPage(typeof(Page))` renders a page with the real `[Authorize]` wiring.
 
 **Integration test shape:**
@@ -236,6 +250,18 @@ an UPDATE or DELETE policy may not change effective access, and `policies_are` i
 `meal_plans_duplicates_cleanup.test.sql` tests a migration's one-off data clean-up rather than a table. It drops the
 constraints inside its transaction, recreates duplicates, runs the migration's statements (copied verbatim, since
 migrations never change after merging) and checks what is left.
+
+### Language: tests run in English
+
+Every test project has an `xunit.runner.json` with `"culture": "en-US"`, which sets the default culture and UI
+culture for the whole run, so English assertions hold on a Danish machine. E2E browser contexts get
+`Locale = "en-US"` (`E2ETestBase`), because the app picks its language from the browser's. There are no Danish
+bUnit or E2E render tests. Danish is covered by:
+
+- `Localization/UnitTests/ResourceCompletenessTests.cs` (`shared-unit`): every resource embedded in MealWiz.Shared
+  has a `da` satellite with the same keys, no empty value, the same `{n}` placeholders, and `_One`/`_Other` plural
+  pairs. A new `.resx` is picked up automatically; it fails until the `.da.resx` is complete.
+- Unit tests that need Danish output (dates, messages) wrap the call in `CultureScope.Use("da")`.
 
 ## Writing a new test
 

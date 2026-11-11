@@ -51,12 +51,14 @@ public class MealImportJourneyTests : E2ETestBase
     [Fact]
     public async Task FailedImport_ArrivesOverRealtime_AndShowsTheReason()
     {
-        const string reason = "Could not find recipe data on the page.";
+        // The page shows the message for the row's error_code, never the Function's English error_message.
+        const string detail = "Could not find recipe data on the page.";
         var jobId = await StartImportAsync(acknowledgeWith: 200);
 
-        await Supabase.ResolveMealImportAsync(jobId, "failed", errorMessage: reason);
+        await Supabase.ResolveMealImportAsync(jobId, "failed", errorMessage: detail, errorCode: "no_recipe_found");
 
-        await Expect(Page.GetByTestId("import-job-error")).ToContainTextAsync(reason);
+        await Expect(Page.GetByTestId("import-job-error")).ToContainTextAsync("We couldn't find a recipe on that page.");
+        await Expect(Page.GetByTestId("import-job-error")).Not.ToContainTextAsync(detail);
         await Expect(Page.GetByTestId("import-submit")).ToHaveTextAsync("Try again");
         await Expect(Page).ToHaveURLAsync(UrlFor("meals/import"));
     }
