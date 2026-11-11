@@ -47,6 +47,7 @@ public abstract class ComponentTestBase : BunitContext
     protected Mock<ILocalStorageService> LocalStorage { get; } = new();
     protected Mock<IMealImportStateContainer> MealImport { get; } = new();
     protected Mock<IThemeService> Theme { get; } = new();
+    protected Mock<ILanguagePreference> Language { get; } = new();
 
     protected DrawerStateContainer Drawer { get; } = new();
     protected MealsStateContainer Meals { get; }
@@ -94,6 +95,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton(LocalStorage.Object);
         Services.AddSingleton(MealImport.Object);
         Services.AddSingleton(Theme.Object);
+        Services.AddSingleton(Language.Object);
         Services.AddSingleton<IDrawerStateContainer>(Drawer);
         Services.AddSingleton<IMealsStateContainer>(Meals);
         Services.AddSingleton<IGroceryListStateContainer>(GroceryList);
