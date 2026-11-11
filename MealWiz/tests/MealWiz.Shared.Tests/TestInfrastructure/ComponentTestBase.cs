@@ -18,6 +18,7 @@ using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Localization;
+using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
 using MediatR;
@@ -106,6 +107,8 @@ public abstract class ComponentTestBase : BunitContext
                 Random = new Random(1)
             });
         Services.AddSingleton(_ => new Supabase.Client("http://localhost", "test-key"));
+        // The startup gate in Routes starts it; with no stored session it is done at once.
+        Services.AddSingleton(sp => new SessionKeeper(sp.GetRequiredService<Supabase.Client>(), new EmptySessionPersistence(), Time));
 
         // Registered up front because bUnit allows no registrations once a service has been resolved (below).
         // Anonymous until a test calls Auth.SetAuthorized(...).
@@ -194,4 +197,11 @@ public abstract class ComponentTestBase : BunitContext
 
     /// <summary>Clicks Confirm in the confirm drawer.</summary>
     protected void Confirm() => ConfirmDrawerHost.Find(TestId("confirm-drawer-confirm")).Click();
+}
+
+internal sealed class EmptySessionPersistence : Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>
+{
+    public void SaveSession(Supabase.Gotrue.Session session) { }
+    public void DestroySession() { }
+    public Supabase.Gotrue.Session? LoadSession() => null;
 }

@@ -38,6 +38,62 @@ public class AuthJourneyTests : E2ETestBase
     }
 
     [Fact]
+    public async Task ExpiredAccessToken_IsRefreshedOnStartup_AndTheUserLandsInTheApp()
+    {
+        await LoginAsync();
+        var before = await StoredSessionAsync("access_token");
+
+        await RewriteStoredSessionAsync("s.created_at = new Date(Date.now() - 2 * 3600 * 1000).toISOString();");
+        await Page.ReloadAsync();
+
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor(""));
+        Assert.NotEqual(before, await StoredSessionAsync("access_token"));
+    }
+
+    [Fact]
+    public async Task RevokedRefreshToken_SendsTheUserToLogin()
+    {
+        await LoginAsync();
+
+        await RewriteStoredSessionAsync(
+            "s.created_at = new Date(Date.now() - 2 * 3600 * 1000).toISOString(); s.refresh_token = 'not-a-real-refresh-token';");
+        await Page.ReloadAsync();
+
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await Expect(Page.GetByTestId("login-email")).ToBeVisibleAsync();
+        Assert.Null(await Page.EvaluateAsync<string?>("() => localStorage.getItem('SUPABASE_SESSION')"));
+    }
+
+    [Fact]
+    public async Task Logout_ReloadsOnLogin_KeepsDarkMode_AndCannotBeGoneBackFrom()
+    {
+        await LoginAsync();
+        await Page.GetByTestId("account-button").ClickAsync();
+        await Page.GetByTestId("dark-mode-switch").ClickAsync();
+        await Expect(Page.GetByTestId("theme-root")).ToHaveAttributeAsync("data-theme", "dark");
+
+        await Page.GetByTestId("logout-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await Expect(Page.GetByTestId("login-email")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("theme-root")).ToHaveAttributeAsync("data-theme", "dark");
+
+        await Page.GoBackAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+
+        await GoToAsync("");
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+    }
+
+    /// <summary>Blazored.LocalStorage stores the session JSON as a JSON string, so it is parsed twice.</summary>
+    private Task RewriteStoredSessionAsync(string mutation) => Page.EvaluateAsync(
+        $"() => {{ const s = JSON.parse(JSON.parse(localStorage.getItem('SUPABASE_SESSION'))); {mutation} " +
+        "localStorage.setItem('SUPABASE_SESSION', JSON.stringify(JSON.stringify(s))); }");
+
+    private Task<string?> StoredSessionAsync(string field) => Page.EvaluateAsync<string?>(
+        $"() => JSON.parse(JSON.parse(localStorage.getItem('SUPABASE_SESSION')))['{field}']");
+
+    [Fact]
     public async Task NewVisitor_CreatesAnAccountFromLogin_AndStaysSignedInAcrossAReload()
     {
         var email = $"e2e-signup-{Guid.NewGuid():N}@mealwiz.test";

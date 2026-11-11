@@ -381,9 +381,9 @@ detail for diagnosis.
 
 ## Authentication
 
-Email and password sign-in, self sign-up and password reset by email through Supabase Auth. After login, sign-up,
-password reset or logout the handler asks the `AuthenticationStateProvider` to re-read the session. Unauthenticated
-users hitting an `[Authorize]` page are sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted
+password reset or logout the handler asks the `AuthenticationStateProvider` to re-read the session (logout goes through
+`SessionKeeper` instead, below). Unauthenticated users hitting an `[Authorize]` page are sent to `/login` by
+`Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
 per host (see [Hosts](#hosts)).
 
 - **Folder:** `Features/Authentication/`
@@ -422,15 +422,16 @@ per host (see [Hosts](#hosts)).
   |---|---|---|
   | Login | `Command(string Email, string Password)` → `Result<Session?>` | `SignInWithPassword`, then refresh auth state |
   | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
-  | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
+  | Logout | `Command()` → `Result` | `SignOut`, then `SessionKeeper.SignOutLocallyAsync()`; a failed sign-out changes nothing. The button then reloads the app fully on `/login` |
   | RequestPasswordReset | `Command(string Email, string RedirectTo)` → `Result` | `ResetPasswordForEmail` with the redirect (implicit flow) |
   | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`Features/Authentication/ResetPassword/ResetLink.cs`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password (signs out again if it's refused), then refresh auth state |
 
-- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.
+- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token and  notifies on the SDK's auth events and `SessionKeeper.Changed` (reading the state never notifies). Signed in means a  session with a refresh token that the keeper hasn't ended.  `Services/Authentication/SessionKeeper.cs` (singleton) replaces the SDK's refresh (`AutoRefreshToken` is off, the  SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access token  expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry after  15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises  `SessionRejected`. `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`  wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced reload  on `/login` when the session is rejected.
 - **Tests:**
   - bUnit: `Features/Authentication/ComponentTests/`
   - integration: `Features/Authentication/IntegrationTests/AuthenticationHandlerTests.cs`
-  - unit: `Services/Authentication/UnitTests/CustomAuthStateProviderTests.cs`
+  - unit: `Services/Authentication/UnitTests/` (`CustomAuthStateProviderTests.cs`, `SessionKeeperTests.cs`, `RefreshFailureTests.cs`)
+  - bUnit: `Services/Authentication/ComponentTests/SessionGateTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/AuthJourneyTests.cs`
 
 ## Account
@@ -442,7 +443,7 @@ The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored
 - **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back
   `account-back` to `/`), a profile card with a green avatar (`account-avatar`, the email's initial) and "Signed in as"
   the email (`account-email`, the access token's `email` claim from the cascading `AuthenticationState`), a settings
-  group with the Dark mode row (`dark-mode-switch`) and the `LogoutButton`. Styles in
+  group with the Dark mode row (`dark-mode-switch`) and the `LogoutButton` (a full reload on `/login`). Styles in
   `Features/Account/AccountPage.razor.css`.
 - **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
 - **Tests:** bUnit: `Features/Account/ComponentTests/AccountPageTests.cs`
@@ -502,7 +503,7 @@ key, CORS and deployment.
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
-- **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
+- **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
