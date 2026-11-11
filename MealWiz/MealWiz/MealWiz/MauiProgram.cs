@@ -10,6 +10,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Storage;
 using MudBlazor.Services;
 using Supabase;
+using Supabase.Gotrue.Interfaces;
+using Client = Supabase.Client;
+using Session = Supabase.Gotrue.Session;
 using System.Globalization;
 using System.Reflection;
 
@@ -47,7 +50,7 @@ namespace MealWiz
                 .Build();
             builder.Configuration.AddConfiguration(config);
 
-            builder.Services.AddBlazoredLocalStorage();
+            builder.Services.AddBlazoredLocalStorageAsSingleton();
             builder.Services.AddMudServices();
             builder.Services.RegisterScopedServices();
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
@@ -61,22 +64,16 @@ namespace MealWiz
 
             string supabaseUrl = builder.Configuration["Supabase:url"];
             string supabaseKey = builder.Configuration["Supabase:key"];
-            builder.Services.AddScoped(provider =>
+            // One client, persistence and session keeper for the whole app. The SDK's own refresh is off:
+            // SessionKeeper loads, refreshes and schedules (it is started by the SessionGate).
+            builder.Services.AddSingleton<IGotrueSessionPersistence<Session>>(_ => new CustomSupabaseSessionProvider());
+            builder.Services.AddSingleton(provider => new Client(supabaseUrl, supabaseKey, new SupabaseOptions
             {
-                var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
-                {
-                    AutoRefreshToken = true,
-                    AutoConnectRealtime = true,
-                    SessionHandler = new CustomSupabaseSessionProvider()
-                });
-
-                var initTask = Task.Run(client.InitializeAsync);
-                initTask.Wait();
-
-                client.Auth.LoadSession();
-
-                return client;
-            });
+                AutoRefreshToken = false,
+                AutoConnectRealtime = false,
+                SessionHandler = provider.GetRequiredService<IGotrueSessionPersistence<Session>>()
+            }));
+            builder.Services.AddSingleton<SessionKeeper>();
 
             ResultHelper.SetDefaultCatchHandler();
 
