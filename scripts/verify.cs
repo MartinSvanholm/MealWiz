@@ -350,6 +350,9 @@ int Finish(int exitCode)
 
     if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } jobSummary)
         File.AppendAllLines(jobSummary, ["```", .. report, "```", ""]);
+    // Every run's verdict in one file, so CI can print them all as the last lines of a failed job's log (that's what
+    // a log tail shows; the job summary isn't readable from the log).
+    File.AppendAllLines(Path.Combine(outDir, "verdicts.log"), [.. report, ""]);
     return exitCode;
 }
 

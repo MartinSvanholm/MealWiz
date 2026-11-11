@@ -25,7 +25,8 @@ adds every E2E journey.
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
-- **Logs:** under `artifacts/verify/<level>/`.
+- **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
+  `--only` adds to it, a full run starts it over).
 - **Supabase:** at local, smoke and full, verify starts local Supabase if it isn't running and sets
   `REQUIRE_SUPABASE=true`, so a test that can't reach the stack fails instead of skipping. Without that variable (plain
   `dotnet test`, or `fast`), Supabase-backed tests skip with a reason.
@@ -39,7 +40,8 @@ adds every E2E journey.
   Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
-  ends with `--check-complete`, which fails if a step never ran.
+  ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
+  the end of the job log names the failed steps and tests.
 
 ## Which tests for which change
 
