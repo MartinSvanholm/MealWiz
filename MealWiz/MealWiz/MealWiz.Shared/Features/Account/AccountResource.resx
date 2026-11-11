@@ -42,4 +42,34 @@
   <data name="ChangePassword_Same" xml:space="preserve">
     <value>Choose a password different from your current one.</value>
   </data>
+  <data name="ChangeEmail_Title" xml:space="preserve">
+    <value>Change email</value>
+  </data>
+  <data name="ChangeEmail_New" xml:space="preserve">
+    <value>New email</value>
+  </data>
+  <data name="ChangeEmail_Submit" xml:space="preserve">
+    <value>Change email</value>
+  </data>
+  <data name="ChangeEmail_Pending" xml:space="preserve">
+    <value>Waiting for confirmation of {0}. Click the links we sent to both addresses.</value>
+  </data>
+  <data name="ChangeEmail_Exists" xml:space="preserve">
+    <value>That email already belongs to another account.</value>
+  </data>
+  <data name="ChangeEmail_Invalid" xml:space="preserve">
+    <value>Enter a valid email address.</value>
+  </data>
+  <data name="EmailChange_ConfirmOther" xml:space="preserve">
+    <value>Confirmed. Now click the link we sent to your other address.</value>
+  </data>
+  <data name="EmailChange_Done" xml:space="preserve">
+    <value>Your email has changed.</value>
+  </data>
+  <data name="EmailChange_Invalid" xml:space="preserve">
+    <value>This link is invalid or has expired. Ask for a new change on the Account page.</value>
+  </data>
+  <data name="EmailChange_AccountLink" xml:space="preserve">
+    <value>Go to your account</value>
+  </data>
 </root>

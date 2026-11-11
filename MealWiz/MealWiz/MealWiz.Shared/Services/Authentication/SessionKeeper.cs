@@ -72,6 +72,12 @@ public class SessionKeeper : IDisposable
         }
     }
 
+    /// <summary>
+    /// Refreshes the session now (e.g. after the email changed, so the new access token carries the new address),
+    /// with the same failure rules as the timer: a transient failure keeps the session and backs off, a rejection ends it.
+    /// </summary>
+    public virtual Task RefreshNowAsync() => RefreshAsync();
+
     public async Task SignOutLocallyAsync()
     {
         StopTimer();
