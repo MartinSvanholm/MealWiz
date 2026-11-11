@@ -122,6 +122,8 @@ TestInfrastructure/
   - It exposes `Client`, `UserId`, `GetOtherUserAsync()` (a second user, for cross-user checks),
     `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
+  - After each sign-in it waits until the token is a little over a second old (`DelayUntilTokenIsAccepted`), so
+    PostgREST doesn't reject it with PGRST303 "JWT issued at future" (MEA-55).
 - `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder` (whose `InsertAsync` fills `PlannedMealIdOnDate`). Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
   `ClientExtensions` adds `CurrentUserId()` and `UniqueSuffix()`.
