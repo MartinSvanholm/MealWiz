@@ -161,6 +161,11 @@
 }
 
 .mw-pick-shuffle:focus-visible,
+.mw-pick-button:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
 .mw-pick-button:focus-visible,
 .mw-pick-edit:focus-visible {
     outline: 2px solid var(--mw-orange-text);

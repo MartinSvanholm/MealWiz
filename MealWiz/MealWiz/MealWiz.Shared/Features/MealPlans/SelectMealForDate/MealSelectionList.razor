@@ -1,4 +1,9 @@
+@using GetAllGroceryItemsAction = MealWiz.Shared.Features.GroceryList.GetAllGroceryItems.GetAllGroceryItems
+@using GetGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.GetGroceryItemSources.GetGroceryItemSources
+@using MealWiz.Shared.Features.GroceryList.Models
 @inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IMediator _mediator
+@inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
 @inject IStringLocalizer<MealPlansResource> L
 @inject IStringLocalizer<MealsResource> M
@@ -6,9 +11,10 @@
 
 @* The pick-a-meal state of the Meal plan: MealPickList wired to the selected day. For a day with no meal a pick adds
    the meal; while swapping (IsSwappingMeal) it replaces the day's meal, which is left out, and Cancel goes back to the
-   card. *@
+   card. A swap first checks the old meal's grocery items and asks in SwapMealDrawer when it has items only it needs
+   (MEA-98). *@
 <MealPickList Heading="@Heading" Hint="@Hint" ExcludedMealId="@CurrentMeal?.Id"
-              ShowCancel="@(CurrentMeal is not null)" OnCancel="_mealPlanStateContainer.CancelSwap" OnPick="AssignMeal" />
+              Disabled="_checkingGroceryItems" ShowCancel="@(CurrentMeal is not null)" OnCancel="_mealPlanStateContainer.CancelSwap" OnPick="AssignMeal" />
 
 @code {
     private DayOfWeek Day => _mealPlanStateContainer.SelectedDate.DayOfWeek;
@@ -27,16 +33,51 @@
 
     public void Dispose() => _mealPlanStateContainer.OnStateChanged -= StateHasChanged;
 
+    private bool _checkingGroceryItems;
+
     private async Task AssignMeal(Meal meal)
     {
         _mealPlanStateContainer.CurrentSnackbar = _snackbar;
-        if (CurrentMeal is not null)
-        {
-            await _mealPlanStateContainer.SwapMealOnSelectedDate(meal);
-        }
-        else
+        if (CurrentMeal is not { } current)
         {
             await _mealPlanStateContainer.AddMealToPlan(meal);
+            return;
         }
+
+        if (_checkingGroceryItems) return;
+
+        var date = _mealPlanStateContainer.SelectedDate.Date;
+        if (_mealPlanStateContainer.MealPlan is not { } plan || !plan.PlannedMealIdOnDate.TryGetValue(date, out var plannedMealId))
+        {
+            await _mealPlanStateContainer.SwapMealOnSelectedDate(meal);
+            return;
+        }
+
+        // Which items only the old meal needs is decided now: after the swap its sources are stale.
+        _checkingGroceryItems = true;
+        var items = await _mediator.Send(new GetAllGroceryItemsAction.Query());
+        if (items.Handle(_snackbar).IsFailed)
+        {
+            _checkingGroceryItems = false;
+            return;
+        }
+
+        var sources = await _mediator.Send(new GetGroceryItemSourcesAction.Query());
+        if (sources.Handle(_snackbar).IsFailed)
+        {
+            _checkingGroceryItems = false;
+            return;
+        }
+
+        _checkingGroceryItems = false;
+
+        var ids = PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id);
+        if (ids.Count == 0)
+        {
+            await _mealPlanStateContainer.SwapMealOnSelectedDate(meal);
+            return;
+        }
+
+        SwapMealDrawer.Open(_drawerStateContainer, L, M, current, meal, date, ids);
     }
 }

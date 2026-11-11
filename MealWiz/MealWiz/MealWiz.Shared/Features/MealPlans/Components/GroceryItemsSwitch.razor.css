@@ -1,0 +1,34 @@
+.mw-grocery-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    margin: 0 16px;
+    padding: 0 6px 0 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-bg);
+}
+
+.mw-grocery-switch-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-chip-bg);
+    color: var(--mw-green-text);
+}
+
+.mw-grocery-switch-label {
+    flex: 1 1 auto;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.mw-grocery-switch ::deep .mud-switch {
+    margin: 0;
+}
