@@ -20,6 +20,20 @@ Standing rules:
   checking it isn't there already.
 - Never poll. Run verify in the background and wait for its notice.
 
+**Cloud mode.** In a Claude Code cloud container (`CLAUDE_CODE_REMOTE` is `true`) the steps are the same, with these
+changes:
+- **Set up once:** if `dotnet --list-sdks` shows no 10.x SDK, or `supabase` isn't on PATH, run
+  `bash scripts/cloud-setup.sh`. Use `scripts/verify.sh`.
+- **GitHub goes through the GitHub MCP tools**; there is no `gh` CLI. Where a step says `gh pr list`, use
+  `list_pull_requests`; `gh pr view` → `pull_request_read`; `gh pr create` → `create_pull_request`, then
+  `subscribe_pr_activity` so CI results and the user's review comments wake you; failed CI → `get_job_logs`.
+- **The session may have been opened on another branch.** Check out `project/<slug>` from `origin` before anything
+  else, and push only to it.
+- **Screenshots** use the pre-installed Playwright Chromium (don't install another).
+- **A push refused with 403**, or a blocked host, isn't fixable from here: read the matching `read_documentation`
+  page, tell the user what it says, and stop.
+- You report to the user only; there is no coordinator to message.
+
 ## 1. Read
 
 1. `get_project`: the spec, and the branch on its first line. `list_issues project:`: every issue must be **Done**
