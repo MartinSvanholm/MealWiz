@@ -3,12 +3,14 @@ using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
+using MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Tests.TestInfrastructure.Builders;
@@ -103,6 +105,52 @@ public class RemoveMealWithGroceryItemsTests(LocalSupabaseFixture supabase) : IC
         var items = await GetItemsAsync();
         Assert.Contains(items, i => i.Id == setup.Spaghetti.Id);
         Assert.Contains(items, i => i.Id == manualGarlic.Id);
+    }
+
+    // ---- Dropping the day's links on shared items lowers their amount (MEA-99) ----
+
+    private async Task<List<int>> SharedLinksAsync(int plannedMealId) =>
+        PlannedMealGroceryItems.SourceIdsOnSharedItems(plannedMealId, await GetItemsAsync(), ResultAssert.Ok(await GetSourcesAsync()));
+
+    private Task<FluentResults.Result<List<GroceryItem>>> DropAsync(List<int> sourceIds) =>
+        new DeleteGroceryItemSources.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>())
+            .Handle(new DeleteGroceryItemSources.Command(sourceIds), CancellationToken);
+
+    [Fact]
+    public async Task RemoveThenDropSharedLinks_ReducesTheSharedItemsAmount()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var monday = Week(10);
+        var setup = await PlanPastaAndSoupSharingGarlicAsync(monday);
+        var own = (await OnlyNeededByAsync(setup.PastaDay)).ConvertAll(i => i.Id);
+        var shared = await SharedLinksAsync(setup.PastaDay);
+        Assert.Single(shared);
+
+        ResultAssert.Ok(await RemoveAsync(setup, monday));
+        ResultAssert.Ok(await DeleteAsync(own));
+        ResultAssert.Ok(await DropAsync(shared));
+
+        var garlic = (await GetItemsAsync()).Single(i => i.Id == setup.Garlic.Id);
+        Assert.Equal("1 clove", garlic.Amount);
+        var sources = ResultAssert.Ok(await GetSourcesAsync()).Where(s => s.GroceryItemId == setup.Garlic.Id).ToList();
+        Assert.Equal(setup.SoupDay, Assert.Single(sources).PlannedMealId);
+        Assert.DoesNotContain(await GetItemsAsync(), i => i.Id == setup.Spaghetti.Id);
+    }
+
+    [Fact]
+    public async Task SwapThenDropSharedLinks_ReducesTheSharedItemsAmount()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var monday = Week(11);
+        var setup = await PlanPastaAndSoupSharingGarlicAsync(monday);
+        var tacos = await new MealBuilder().WithName("Tacos").WithIngredient(i => i.WithName("Tortillas").WithAmount("8")).InsertAsync(supabase.Client);
+        var shared = await SharedLinksAsync(setup.PastaDay);
+
+        ResultAssert.Ok(await new SwapMealInMealPlan.Handler(supabase.Client, TestLocalizer.For<MealPlansResource>())
+            .Handle(new SwapMealInMealPlan.Command(setup.Plan.Id, monday, setup.Pasta.Id, tacos.Id), CancellationToken));
+        ResultAssert.Ok(await DropAsync(shared));
+
+        Assert.Equal("1 clove", (await GetItemsAsync()).Single(i => i.Id == setup.Garlic.Id).Amount);
     }
 
     /// <summary>

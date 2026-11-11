@@ -172,4 +172,8 @@
     <value>Meal saved</value>
     <comment>Toast after saving a meal</comment>
   </data>
+  <data name="DeleteMeal_ReviewTitle" xml:space="preserve">
+    <value>Remove from grocery list?</value>
+    <comment>Title of the review drawer for a deleted meal's grocery items</comment>
+  </data>
 </root>

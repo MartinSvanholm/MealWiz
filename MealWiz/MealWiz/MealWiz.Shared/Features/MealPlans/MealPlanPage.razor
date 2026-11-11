@@ -1,11 +1,13 @@
 @page "/"
 @using System.Globalization
 @using System.Security.Claims
+@using MealWiz.Shared.Features.MealPlans.PlanWeek
 @using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize]
 @implements IDisposable
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ISnackbar _snackbar
+@inject IDrawerStateContainer _drawerStateContainer
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealPlansResource> L
 
@@ -94,6 +96,13 @@
         var user = (await AuthenticationState).User;
         var name = user.FindFirst("email")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name;
         UserInitial = name?.Trim() is { Length: > 0 } n ? n[..1].ToUpperInvariant() : null;
+    }
+
+    // After Plan week's Save: ask once, when the saved week has loaded (MEA-83).
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (_mealPlanStateContainer.TakeWeekIngredientsOffer() is { } weekStart)
+            AddWeekIngredientsPromptDrawer.Open(_drawerStateContainer, L, weekStart);
     }
 
     private DateTime WeekStart => _mealPlanStateContainer.SelectedWeekStart;

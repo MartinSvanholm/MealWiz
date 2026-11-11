@@ -52,11 +52,11 @@
     <value>{0} comes off {1}'s plan.</value>
     <comment>{0} is the meal name, {1} the weekday name</comment>
   </data>
-  <data name="RemoveMeal_AlsoRemove_One" xml:space="preserve">
+  <data name="GroceryItems_AlsoRemove_One" xml:space="preserve">
     <value>Also remove {0} item from the grocery list</value>
     <comment>Switch in the remove-meal drawer; also its aria-label</comment>
   </data>
-  <data name="RemoveMeal_AlsoRemove_Other" xml:space="preserve">
+  <data name="GroceryItems_AlsoRemove_Other" xml:space="preserve">
     <value>Also remove {0} items from the grocery list</value>
     <comment>Switch in the remove-meal drawer; also its aria-label</comment>
   </data>
@@ -64,15 +64,15 @@
     <value>Remove</value>
     <comment>Red button of the remove-meal drawer</comment>
   </data>
-  <data name="RemoveMeal_ItemsRemoved_One" xml:space="preserve">
+  <data name="GroceryItems_Removed_One" xml:space="preserve">
     <value>{0} item removed from the grocery list</value>
     <comment>Toast after the meal and its grocery item were removed</comment>
   </data>
-  <data name="RemoveMeal_ItemsRemoved_Other" xml:space="preserve">
+  <data name="GroceryItems_Removed_Other" xml:space="preserve">
     <value>{0} items removed from the grocery list</value>
     <comment>Toast after the meal and its grocery items were removed</comment>
   </data>
-  <data name="RemoveMeal_ItemsNotRemoved" xml:space="preserve">
+  <data name="GroceryItems_NotRemoved" xml:space="preserve">
     <value>The grocery items couldn't be removed. They're still on your grocery list.</value>
     <comment>Toast when the meal was removed but deleting its grocery items failed</comment>
   </data>
@@ -264,6 +264,10 @@
   <data name="DayCard_AddAllToList" xml:space="preserve">
     <value>Add all to list</value>
   </data>
+  <data name="DayCard_AddAllTitle" xml:space="preserve">
+    <value>Add {0} to list</value>
+    <comment>Title of the merge drawer opened by Add all to list; {0} is the meal name</comment>
+  </data>
   <data name="DayCard_NoIngredients" xml:space="preserve">
     <value>No ingredients yet</value>
   </data>
@@ -294,5 +298,40 @@
   <data name="DayCard_Summary" xml:space="preserve">
     <value>{0} · {1}</value>
     <comment>{0} is the ingredient count, {1} the recipe status</comment>
+  </data>
+  <data name="WeekPrompt_Header" xml:space="preserve">
+    <value>Week saved</value>
+    <comment>Title of the drawer that offers to add the saved week's ingredients to the grocery list</comment>
+  </data>
+  <data name="WeekPrompt_Question" xml:space="preserve">
+    <value>Add this week's ingredients to the grocery list?</value>
+  </data>
+  <data name="WeekPrompt_Description" xml:space="preserve">
+    <value>You'll see only what isn't on your list yet, and can change the amounts before adding.</value>
+  </data>
+  <data name="WeekPrompt_Accept" xml:space="preserve">
+    <value>Add ingredients</value>
+  </data>
+  <data name="WeekPrompt_Decline" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="WeekPrompt_DrawerTitle" xml:space="preserve">
+    <value>Week {0} ingredients</value>
+    <comment>Title of the merge drawer opened from the prompt; {0} is the ISO week number</comment>
+  </data>
+  <data name="SwapMeal_Title" xml:space="preserve">
+    <value>Swap {0} for {1}?</value>
+    <comment>Title of the drawer that asks before a swap; {0} is the old meal, {1} the new one</comment>
+  </data>
+  <data name="SwapMeal_Description" xml:space="preserve">
+    <value>{0} goes on {1}'s plan.</value>
+    <comment>{0} is the new meal, {1} the weekday name</comment>
+  </data>
+  <data name="SwapMeal_Confirm" xml:space="preserve">
+    <value>Swap</value>
+  </data>
+  <data name="GroceryItems_AmountsKept" xml:space="preserve">
+    <value>The shared grocery items couldn't be updated. They keep their old amounts.</value>
+    <comment>Error after removing or swapping a meal when the amounts of items other meals still need couldn't be lowered</comment>
   </data>
 </root>

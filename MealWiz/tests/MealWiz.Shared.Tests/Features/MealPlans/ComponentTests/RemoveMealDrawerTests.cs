@@ -3,6 +3,8 @@ using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
+using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.Meals;
 using MealWiz.Shared.Features.MealPlans;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
@@ -156,6 +158,91 @@ public class RemoveMealDrawerTests : ComponentTestBase
         Assert.True(MealPlan.SelectedDateHasMeal);
         Assert.Empty(SentRequests);
     }
+
+    // ---- This day's links on shared items are dropped so their amounts go down (MEA-99) ----
+
+    private void OpenWithSharedLinks(int[] groceryItemIds, int[] sourceIds)
+    {
+        var localizer = Services.GetRequiredService<IStringLocalizer<MealPlansResource>>();
+        var mealsLocalizer = Services.GetRequiredService<IStringLocalizer<MealsResource>>();
+        DrawerHost.InvokeAsync(() => RemoveMealDrawer.Open(Drawer, localizer, mealsLocalizer, _tacos, _date, groceryItemIds, sourceIds));
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
+    }
+
+    [Fact]
+    public void With_the_switch_on_it_drops_this_days_links_on_shared_items_after_deleting()
+    {
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal(
+            [typeof(RemoveMealFromMealPlan.Command), typeof(DeleteGroceryItems.Command), typeof(DeleteGroceryItemSources.Command)],
+            SentRequests.Select(r => r.GetType()));
+        Assert.Equal([31], Assert.Single(Sent<DeleteGroceryItemSources.Command>()).SourceIds);
+    }
+
+    [Fact]
+    public void With_the_switch_off_it_drops_no_links()
+    {
+        OpenWithSharedLinks([11], [31]);
+        DrawerHost.Find(InputOf("remove-meal-grocery-switch")).Change(false);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Empty(Sent<DeleteGroceryItemSources.Command>());
+    }
+
+    [Fact]
+    public void Without_own_items_it_still_drops_the_links_on_shared_items()
+    {
+        OpenWithSharedLinks([], [31]);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal([31], Assert.Single(Sent<DeleteGroceryItemSources.Command>()).SourceIds);
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
+    }
+
+    [Fact]
+    public void A_failed_remove_drops_no_links()
+    {
+        SetupSend<RemoveMealFromMealPlan.Command, Result>(Result.Fail("Could not remove the meal"));
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.Contains("Could not remove the meal", SnackbarMessages));
+        Assert.Empty(Sent<DeleteGroceryItemSources.Command>());
+    }
+
+    [Fact]
+    public void A_failed_link_drop_says_the_amounts_stayed_and_closes()
+    {
+        SetupSend<DeleteGroceryItemSources.Command, Result<List<GroceryItem>>>(Result.Fail<List<GroceryItem>>("boom"));
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Contains("The shared grocery items couldn't be updated. They keep their old amounts.", SnackbarMessages);
+        Assert.DoesNotContain("boom", SnackbarMessages);
+    }
+
+    [Fact]
+    public void A_failed_item_delete_still_drops_the_links()
+    {
+        SetupSend<DeleteGroceryItems.Command, Result>(Result.Fail("boom"));
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Single(Sent<DeleteGroceryItemSources.Command>());
+    }
 }
 
 /// <summary>The drawer's texts come from the resource, not from literals (UI-03).</summary>
@@ -175,7 +262,7 @@ public class RemoveMealDrawerResourceTests() : ComponentTestBase(echoResourceKey
         DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
         Assert.Equal("[RemoveMeal_Title]", DrawerHost.Find(TestId("drawer-title")).TextContent);
         Assert.Equal("[RemoveMeal_Description]", DrawerHost.Find(TestId("remove-meal-description")).TextContent);
-        Assert.Equal("[RemoveMeal_AlsoRemove_One]", DrawerHost.Find(TestId("remove-meal-grocery-label")).TextContent);
+        Assert.Equal("[GroceryItems_AlsoRemove_One]", DrawerHost.Find(TestId("remove-meal-grocery-label")).TextContent);
         Assert.Equal("[Common_Cancel]", DrawerHost.Find(TestId("remove-meal-cancel")).TextContent.Trim());
         Assert.Equal("[RemoveMeal_Confirm]", DrawerHost.Find(TestId("remove-meal-confirm")).TextContent.Trim());
     }

@@ -88,6 +88,61 @@ public class MealJourneyTests : E2ETestBase
     }
 
     [Fact]
+    public async Task Meal_DeletedWithItemsOnTheList_AsksAboutTheIngredient_AndReviewsTheItems()
+    {
+        const string tacos = "E2E Tacos";
+        await Supabase.InsertMealAsync(User, tacos,
+            new SeedIngredient("Tortillas", "8"), new SeedIngredient("Minced beef", "400 g"), new SeedIngredient("Salsa", "1 jar"));
+        await LoginAsync();
+
+        // Plan the tacos on the first day and put their ingredients on the grocery list
+        await Page.GetByTestId("week-day").First.ClickAsync();
+        await Expect(Page.GetByTestId("week-day").First).ToHaveClassAsync(new System.Text.RegularExpressions.Regex(@"\bselected-day\b"));
+        await Row("meal-list-item", tacos).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(3);
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(3);
+
+        // Delete the salsa: it asks about the grocery list, and No keeps the item
+        await Page.GetByTestId("nav-meals").ClickAsync();
+        await Row("meal-list-item", tacos).ClickAsync();
+        await Expect(Page.GetByTestId("ingredient-card")).ToHaveCountAsync(3);
+        await Row("ingredient-card", "Salsa").GetByTestId("delete-ingredient-button").ClickAsync();
+        await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
+        await Expect(Drawer.GetByTestId("remove-ingredient-items-question")).ToHaveTextAsync("Also remove Salsa from the grocery list?");
+        await Drawer.GetByTestId("remove-ingredient-items-no").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("ingredient-card", "Salsa")).ToHaveCountAsync(0);
+
+        // Delete the meal: the review lists its two items; keep the beef and remove the tortillas
+        await Page.GetByTestId("delete-meal-button").ClickAsync();
+        await ConfirmDrawer.GetByTestId("confirm-drawer-confirm").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Remove from grocery list?");
+        await Expect(Drawer.GetByTestId("review-item")).ToHaveCountAsync(2);
+        await Drawer.GetByTestId("review-item").Filter(new() { HasText = "Minced beef" }).GetByTestId("review-item-checkbox").ClickAsync();
+        await Drawer.GetByTestId("review-items-confirm").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
+        await Expect(Row("meal-list-item", tacos)).ToHaveCountAsync(0);
+
+        // The beef and the salsa stay as ordinary items, with no banner about old meals
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Row("grocery-item", "Minced beef")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Tortillas")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Minced beef")).ToBeVisibleAsync();
+        await Expect(Row("grocery-item", "Tortillas")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
     public async Task Meal_OnShortPhone_ShowsLastIngredientAndDrawerSaveButton()
     {
         const string name = "E2E Paella";

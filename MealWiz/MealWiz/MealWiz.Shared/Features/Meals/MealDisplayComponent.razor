@@ -1,6 +1,7 @@
 @using MealWiz.Shared.Features.MealPlans
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IMealsStateContainer _mealsStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealPlansResource> L
 @inject IStringLocalizer<MealsResource> M
@@ -8,8 +9,8 @@
 
 @* The selected day's meal on the Meal plan: a big orange card (name, ingredient count, recipe status), then the
    ingredients and the recipe, or a "No recipe yet" prompt. System meals (Eat Out, Leftovers) show only the card.
-   Swap meal starts the Meal plan's swap mode (the page then shows the pick list). Add all to list (MEA-74) is shown
-   but not wired yet. *@
+   Swap meal starts the Meal plan's swap mode (the page then shows the pick list). Add all to list opens GroceryList's
+   merge drawer for the selected day only (MEA-74). *@
 @if (Meal != null)
 {
     <div class="mw-meal-display">
@@ -42,7 +43,8 @@
             <section class="mw-meal-section" data-testid="meal-display-ingredients">
                 <div class="mw-meal-section-header">
                     <h3 class="mw-meal-section-title">@L["DayCard_IngredientsTitle"]</h3>
-                    <button type="button" class="mw-meal-link" data-testid="add-all-to-list" disabled aria-disabled="true">
+                    <button type="button" class="mw-meal-link" data-testid="add-all-to-list"
+                            disabled="@(!HasGroceryIngredients)" @onclick="AddAllToList">
                         @L["DayCard_AddAllToList"]
                     </button>
                 </div>
@@ -134,6 +136,17 @@
         Meal = _mealPlanStateContainer.GetMealFromSelectedDate();
 
         InvokeAsync(StateHasChanged);
+    }
+
+    private bool HasGroceryIngredients => Meal?.Ingredients.Any(i => i.ShowOnGroceryList) == true;
+
+    private void AddAllToList()
+    {
+        if (Meal is null || !HasGroceryIngredients) return;
+
+        // SelectedDate can carry a time of day; the drawer matches the plan's midnight keys.
+        AddPlanIngredientsToGroceryListDrawer.Open(
+            _drawerStateContainer, L["DayCard_AddAllTitle", Meal.Name], [_mealPlanStateContainer.SelectedDate.Date]);
     }
 
     private void EditMeal()

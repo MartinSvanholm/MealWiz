@@ -1,5 +1,7 @@
 using Bunit;
 using FluentResults;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
@@ -93,6 +95,38 @@ public class RemoveMealButtonTests : ComponentTestBase
         Assert.False(cut.Find(TestId("remove-meal-button")).HasAttribute("disabled"));
     }
 
-    private static GroceryItemSource Live(int itemId, int plannedMealId) =>
-        new() { GroceryItemId = itemId, PlannedMealId = plannedMealId, IngredientId = 1, PlannedDayMealId = 7, IngredientMealId = 7 };
+    [Fact]
+    public void Passes_this_days_links_on_shared_and_manual_items_to_the_drawer()
+    {
+        PlanTacos();
+        SetupSend<RemoveMealFromMealPlan.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
+        SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>
+        {
+            TestData.GroceryItem("Pasta", id: 11, isManual: false),
+            TestData.GroceryItem("Garlic", id: 12, isManual: false),
+            TestData.GroceryItem("Milk", id: 13, isManual: true),
+            TestData.GroceryItem("Basil", id: 14, isPicked: true, isManual: false),
+            TestData.GroceryItem("Oil", id: 15, isManual: false),
+        }));
+        var staleOil = Live(15, 501, id: 26);
+        staleOil.PlannedDayMealId = 9;
+        SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>
+        {
+            Live(11, 501, id: 21), Live(12, 501, id: 22), Live(12, 502, id: 23), Live(13, 501, id: 24), Live(14, 501, id: 25), staleOil
+        }));
+        RenderDrawers();
+        var cut = Render<RemoveMealButton>();
+
+        cut.Find(TestId("remove-meal-button")).Click();
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
+        DrawerHost.Find(TestId("remove-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal([11], Assert.Single(Sent<DeleteGroceryItems.Command>()).GroceryItemIds);
+        Assert.Equal([22, 24], Assert.Single(Sent<DeleteGroceryItemSources.Command>()).SourceIds);
+    }
+
+    private static GroceryItemSource Live(int itemId, int plannedMealId, int id = 0) =>
+        new() { Id = id, GroceryItemId = itemId, PlannedMealId = plannedMealId, IngredientId = 1, PlannedDayMealId = 7, IngredientMealId = 7 };
 }

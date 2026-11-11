@@ -1,3 +1,4 @@
+@using DeleteGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources.DeleteGroceryItemSources
 @using DeleteGroceryItemsAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItems.DeleteGroceryItems
 @using MealWiz.Shared.Features.Meals.Models
 @inject IMediator _mediator
@@ -15,11 +16,7 @@
     <p class="mw-remove-meal-drawer-description" data-testid="remove-meal-description">@L["RemoveMeal_Description", Meal.DisplayName(M), MealDate.DayOfWeek.ToWeekdayName()]</p>
     @if (GroceryItemIds.Count > 0)
     {
-        <div class="mw-remove-meal-drawer-switch" data-testid="remove-meal-grocery-row">
-            <span class="mw-remove-meal-drawer-switch-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" /></span>
-            <span class="mw-remove-meal-drawer-switch-label" data-testid="remove-meal-grocery-label">@SwitchLabel</span>
-            <MudSwitch T="bool" data-testid="remove-meal-grocery-switch" @bind-Value="_alsoRemoveGroceryItems" Color="Color.Primary" aria-label="@SwitchLabel" />
-        </div>
+        <GroceryItemsSwitch Count="GroceryItemIds.Count" TestIdPrefix="remove-meal" @bind-Value="_alsoRemoveGroceryItems" />
     }
     <DrawerFooter>
         <div class="mw-sheet-footer-pair">
@@ -37,14 +34,15 @@
     [Parameter] public DateTime MealDate { get; set; }
     /// <summary>The grocery items only this planned day needs (PlannedMealGroceryItems.OnlyNeededBy).</summary>
     [Parameter] public IReadOnlyList<int> GroceryItemIds { get; set; } = [];
+    /// <summary>This day's links on shared and manual items (PlannedMealGroceryItems.SourceIdsOnSharedItems), dropped so their amounts go down (MEA-99).</summary>
+    [Parameter] public IReadOnlyList<int> SourceIdsToDrop { get; set; } = [];
 
     private bool _alsoRemoveGroceryItems = true;
     private bool _removing;
 
-    private string SwitchLabel => L.Plural("RemoveMeal_AlsoRemove", GroceryItemIds.Count);
-
     public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer,
-        IStringLocalizer<MealsResource> mealsLocalizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds) =>
+        IStringLocalizer<MealsResource> mealsLocalizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds,
+        IReadOnlyList<int>? sourceIdsToDrop = null) =>
         drawer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(RemoveMealDrawer),
@@ -54,7 +52,8 @@
             {
                 { nameof(Meal), meal },
                 { nameof(MealDate), mealDate },
-                { nameof(GroceryItemIds), groceryItemIds }
+                { nameof(GroceryItemIds), groceryItemIds },
+                { nameof(SourceIdsToDrop), sourceIdsToDrop ?? [] }
             }
         });
 
@@ -84,10 +83,21 @@
             var deleted = await _mediator.Send(new DeleteGroceryItemsAction.Command(GroceryItemIds.ToList()));
             // Not Handle(): the meal is already gone, so this says the items stayed rather than echoing the raw error.
             _snackbar.Add(
-                deleted.IsSuccess ? L.Plural("RemoveMeal_ItemsRemoved", GroceryItemIds.Count) : L["RemoveMeal_ItemsNotRemoved"],
+                deleted.IsSuccess ? L.Plural("GroceryItems_Removed", GroceryItemIds.Count) : L["GroceryItems_NotRemoved"],
                 deleted.IsSuccess ? Severity.Success : Severity.Error);
         }
 
+        // With the switch on (or no switch shown) this day's links on shared items go too, lowering their amounts.
+        if ((GroceryItemIds.Count == 0 || _alsoRemoveGroceryItems) && SourceIdsToDrop.Count > 0)
+            await DropSharedLinksAsync();
+
         _drawerStateContainer.CloseDrawer();
+    }
+
+    private async Task DropSharedLinksAsync()
+    {
+        var dropped = await _mediator.Send(new DeleteGroceryItemSourcesAction.Command(SourceIdsToDrop.ToList()));
+        // Not Handle(): the meal is already gone, so this says the amounts stayed rather than echoing the raw error (ARCH-06).
+        if (dropped.IsFailed) _snackbar.Add(L["GroceryItems_AmountsKept"], Severity.Error);
     }
 }
