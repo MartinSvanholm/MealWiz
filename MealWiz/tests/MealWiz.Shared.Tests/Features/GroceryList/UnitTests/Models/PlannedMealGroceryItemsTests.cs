@@ -63,4 +63,48 @@ public class PlannedMealGroceryItemsTests
     [Fact]
     public void OnlyNeededBy_KeepsTheOrderOfTheItems()
         => Assert.Equal([3, 1, 2], Ids([PlanItem(3), PlanItem(1), PlanItem(2)], Source(1, ThisDay), Source(2, ThisDay), Source(3, ThisDay)));
+
+    // ---- SourceIdsOnSharedItems (MEA-99) ----
+
+    private static GroceryItemSource SourceWithId(int id, int itemId, int? plannedMealId, bool stale = false)
+    {
+        var source = Source(itemId, plannedMealId, stale);
+        source.Id = id;
+        return source;
+    }
+
+    private static List<int> SharedIds(IEnumerable<GroceryItem> items, params GroceryItemSource[] sources)
+        => PlannedMealGroceryItems.SourceIdsOnSharedItems(ThisDay, items, sources);
+
+    [Fact]
+    public void SourceIdsOnSharedItems_ItemAlsoLinkedToAnotherLivePlannedDay_ReturnsThisDaysSource()
+        => Assert.Equal([21], SharedIds([PlanItem(1)], SourceWithId(21, 1, ThisDay), SourceWithId(22, 1, OtherDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_ManualItemWithASourceFromThisDay_ReturnsIt()
+        => Assert.Equal([21], SharedIds([PlanItem(1, isManual: true)], SourceWithId(21, 1, ThisDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_ItemOnlyThisDayNeeds_ReturnsNothing()
+        => Assert.Empty(SharedIds([PlanItem(1)], SourceWithId(21, 1, ThisDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_PickedItem_ReturnsNothing()
+        => Assert.Empty(SharedIds([PlanItem(1, isPicked: true)], SourceWithId(21, 1, ThisDay), SourceWithId(22, 1, OtherDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_ThisDaysSourceIsStale_ReturnsNothing()
+        => Assert.Empty(SharedIds([PlanItem(1)], SourceWithId(21, 1, ThisDay, stale: true), SourceWithId(22, 1, OtherDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_OnlyOtherDaysSources_ReturnsNothing()
+        => Assert.Empty(SharedIds([PlanItem(1)], SourceWithId(22, 1, OtherDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_TwoSourcesFromThisDayOnASharedItem_ReturnsBoth()
+        => Assert.Equal([21, 23], SharedIds([PlanItem(1)], SourceWithId(21, 1, ThisDay), SourceWithId(22, 1, OtherDay), SourceWithId(23, 1, ThisDay)));
+
+    [Fact]
+    public void SourceIdsOnSharedItems_SourceOfAnItemNotOnTheList_IsIgnored()
+        => Assert.Empty(SharedIds([PlanItem(1)], SourceWithId(21, 9, ThisDay), SourceWithId(22, 9, OtherDay)));
 }
