@@ -51,6 +51,10 @@
     <value>Clear</value>
     <comment>Clears a search field (MudBlazor aria-label)</comment>
   </data>
+  <data name="Forgot_OpensInBrowser" xml:space="preserve">
+    <value>The link opens in your browser.</value>
+    <comment>Note on the forgot-password confirmation in the app: the emailed link opens the web app</comment>
+  </data>
   <data name="Account_Logout" xml:space="preserve">
     <value>Log out</value>
     <comment>Button on the Account page that signs the user out</comment>

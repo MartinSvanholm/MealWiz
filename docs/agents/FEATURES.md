@@ -411,6 +411,7 @@ per host (see [Hosts](#hosts)).
     have an account? Log in" (`signup-login`). Passwords that don't match are caught on the page. With a session
     back it goes to the meal plan; without one (the Supabase project requires email confirmation) it shows a
     check-your-email note (`signup-check-email`). Supabase enforces the password minimum (6 locally).
+- **Email links:** `Features/Authentication/EmailLinks/EmailLinkBuilder.cs` (scoped) builds the absolute URL an email link opens: the web head uses its own base URL, MAUI the `WebApp:url` setting (`EmailLinkOptions`, registered per head); `OpensInBrowser` is true when one is configured. Forgot password uses it, and in MAUI its check-your-email note adds "The link opens in your browser." (`forgot-opens-in-browser`). `Features/Authentication/GotrueErrorCode.cs` reads `error_code` from a GoTrue error body (`weak_password`, `same_password`, `email_exists`, `validation_failed`). `Features/Authentication/SupabaseAuthSettings.cs` (url + anon key, both heads) is for the two direct GoTrue calls of the Account handlers.
 - **Components:** `Features/Authentication/AuthShell.razor`, the signed-out screens' frame (rings, logo tile, title
   and tagline; test ids `<prefix>-page`, `<prefix>-title`, `<prefix>-tagline`). Its
   `Features/Authentication/AuthShell.razor.css` also styles the pages' `mw-auth-*` form classes.
@@ -433,7 +434,7 @@ per host (see [Hosts](#hosts)).
   SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access
   token expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry
   after 15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises
-  `SessionRejected`. `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
+  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
   wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
   reload on `/login` when the session is rejected.
 - **Tests:**
@@ -446,16 +447,38 @@ per host (see [Hosts](#hosts)).
 ## Account
 
 The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
-`mealwiz.theme`) and logout. No handlers, no tables.
+`mealwiz.theme`), change password, change email and logout. No tables.
 
 - **Folder:** `Features/Account/`
 - **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back
   `account-back` to `/`), a profile card with a green avatar (`account-avatar`, the email's initial) and "Signed in as"
   the email (`account-email`, the access token's `email` claim from the cascading `AuthenticationState`), a settings
-  group with the Dark mode row (`dark-mode-switch`) and the `LogoutButton` (a full reload on `/login`). Styles in
-  `Features/Account/AccountPage.razor.css`.
+  group with the Dark mode row (`dark-mode-switch`), the two forms below and the `LogoutButton` (a full reload on
+  `/login`). Styles in `Features/Account/AccountPage.razor.css`.
+  `Features/Account/EmailChangePage.razor` at `/email-change` (public, no `[Authorize]`): where the email-change links
+  land. From the URL fragment it shows `email-change-confirm-other` (`message=`: click the other address's link),
+  `email-change-done` (`type=email_change` with a token) or `email-change-invalid`, each with a link to the Account page
+  (`email-change-account-link`); the fragment is removed from the address bar and the link's own session is not
+  adopted. On done it calls `SessionKeeper.RefreshNowAsync()` when this browser is signed in, so the Account page shows
+  the new address.
+- **Components:** `Features/Account/ChangePassword/ChangePasswordForm.razor` (`change-password-new`,
+  `change-password-repeat`, `change-password-submit`; a mismatch is caught on the page) and
+  `Features/Account/ChangeEmail/ChangeEmailForm.razor` (`change-email-new`, `change-email-submit`, and the pending note
+  `account-email-pending` loaded on init).
+- **Handlers:**
+
+  | Handler | Request → result | Does |
+  |---|---|---|
+  | ChangePassword | `Command(string NewPassword)` → `Result` | `Auth.Update` on the current session (GoTrue keeps it and revokes the others); `weak_password` and `same_password` have their own messages |
+  | ChangeEmail | `Command(string NewEmail)` → `Result` | `PUT /auth/v1/user` with `HttpClient` (the SDK sends no redirect) and a `redirect_to` header from `EmailLinkBuilder.Build("email-change")`; GoTrue emails both addresses; `email_exists` and `validation_failed` have their own messages |
+  | GetPendingEmailChange | `Query()` → `Result<string?>` | `GET /auth/v1/user`, reads `new_email` (the SDK's `User` drops it); null when none |
+
+- **Texts:** `Features/Account/AccountResource.resx` / `.da.resx` (marker `AccountResource.cs`).
 - **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
-- **Tests:** bUnit: `Features/Account/ComponentTests/AccountPageTests.cs`
+- **Tests:**
+  - bUnit: `Features/Account/ComponentTests/` (`AccountPageTests`, `ChangePasswordFormTests`, `ChangeEmailFormTests`, `EmailChangePageTests`)
+  - integration: `Features/Account/IntegrationTests/AccountHandlerTests.cs` (GoTrue and Mailpit)
+  - E2E: `AuthJourneyTests` (change password; change email)
 
 ## Functions: ScrapeRecipe
 

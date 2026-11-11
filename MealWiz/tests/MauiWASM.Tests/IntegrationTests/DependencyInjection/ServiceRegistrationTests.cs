@@ -56,6 +56,7 @@ public class ServiceRegistrationTests
             typeof(AuthenticationStateProvider),
             typeof(Supabase.Client),
             typeof(SessionKeeper),
+            typeof(MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder),
             typeof(MealImportFunctionOptions),
             typeof(TimeProvider),
             typeof(HttpClient),

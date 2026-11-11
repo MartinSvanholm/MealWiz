@@ -1,0 +1,66 @@
+@page "/email-change"
+@using System.Web
+@using MealWiz.Shared.Services.Authentication
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject SessionKeeper _sessionKeeper
+@inject IStringLocalizer<AccountResource> L
+
+@* Reached from an email-change link, in any browser and signed in or not (so no [Authorize]). The link's own session
+   is not adopted: it would sign this browser in as the user, or replace another session (Research gotcha 5). *@
+<AuthShell TestIdPrefix="email-change">
+    <div class="mw-auth-form">
+        <p class="mw-auth-note" data-testid="@StateTestId">@L[StateTextKey]</p>
+        <p class="mw-auth-switch">
+            <a class="mw-auth-link" href="account" data-testid="email-change-account-link">@L["EmailChange_AccountLink"]</a>
+        </p>
+    </div>
+</AuthShell>
+
+@code {
+    private enum LinkState { ConfirmOther, Done, Invalid }
+
+    private LinkState State { get; set; } = LinkState.Invalid;
+
+    private string StateTestId => State switch
+    {
+        LinkState.ConfirmOther => "email-change-confirm-other",
+        LinkState.Done => "email-change-done",
+        _ => "email-change-invalid"
+    };
+
+    private string StateTextKey => State switch
+    {
+        LinkState.ConfirmOther => "EmailChange_ConfirmOther",
+        LinkState.Done => "EmailChange_Done",
+        _ => "EmailChange_Invalid"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var link = new Uri(_navigationManager.Uri);
+        State = Read(link);
+
+        // Keep the tokens out of the address bar and the history.
+        if (link.Fragment.Length > 0)
+            _navigationManager.NavigateTo("email-change", replace: true);
+
+        // This browser's own session (if any) still carries the old address: take a new access token.
+        if (State == LinkState.Done && (await _authenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+            await _sessionKeeper.RefreshNowAsync();
+    }
+
+    private static LinkState Read(Uri link)
+    {
+        var fragment = HttpUtility.ParseQueryString(link.Fragment.TrimStart('#'));
+
+        if (fragment["error"] is not null || fragment["error_description"] is not null)
+            return LinkState.Invalid;
+        if (!string.IsNullOrEmpty(fragment["message"]))
+            return LinkState.ConfirmOther;
+        if (fragment["type"] == "email_change" && !string.IsNullOrEmpty(fragment["access_token"]))
+            return LinkState.Done;
+        return LinkState.Invalid;
+    }
+}

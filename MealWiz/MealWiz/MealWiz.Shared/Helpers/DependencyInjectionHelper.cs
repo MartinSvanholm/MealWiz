@@ -21,6 +21,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<IPlanWeekStateContainer, PlanWeekStateContainer>();
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
+        services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
         services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
 

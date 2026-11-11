@@ -184,6 +184,50 @@ public sealed class SessionKeeperTests : IDisposable
         await Task.Delay(100);
     }
 
+    [Fact]
+    public async Task RefreshNow_refreshes_a_valid_session_at_once()
+    {
+        Store(createdAgo: TimeSpan.FromMinutes(5));
+        var keeper = Keeper(out var client);
+        await keeper.StartAsync();
+
+        await keeper.RefreshNowAsync();
+
+        Assert.Equal(1, _endpoint.Requests);
+        Assert.Equal("new-access", client.Auth.CurrentSession?.AccessToken);
+        Assert.False(keeper.IsSignedOut);
+    }
+
+    [Fact]
+    public async Task RefreshNow_keeps_the_session_when_the_refresh_fails_for_now()
+    {
+        Store(createdAgo: TimeSpan.FromMinutes(5));
+        var keeper = Keeper(out var client);
+        await keeper.StartAsync();
+        _endpoint.Respond(503);
+
+        await keeper.RefreshNowAsync();
+
+        Assert.False(keeper.IsSignedOut);
+        Assert.Equal("old-access", client.Auth.CurrentSession?.AccessToken);
+    }
+
+    [Fact]
+    public async Task RefreshNow_ends_the_session_when_the_server_rejects_it()
+    {
+        Store(createdAgo: TimeSpan.FromMinutes(5));
+        var keeper = Keeper(out _);
+        await keeper.StartAsync();
+        _endpoint.Respond(400);
+        var rejected = 0;
+        keeper.SessionRejected += () => rejected++;
+
+        await keeper.RefreshNowAsync();
+
+        Assert.True(keeper.IsSignedOut);
+        Assert.Equal(1, rejected);
+    }
+
     private SessionKeeper Keeper(out Client client)
     {
         client = new Client(_endpoint.Url, "test-anon-key", new SupabaseOptions

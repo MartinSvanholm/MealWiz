@@ -33,6 +33,10 @@ public static class ServiceCollectionExtensions
             configuration["MealImportFunction:url"] ?? string.Empty,
             configuration["MealImportFunction:key"]));
 
+        services.AddSingleton(new MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkOptions(null)); // links point at this app
+        services.AddSingleton(new MealWiz.Shared.Features.Authentication.SupabaseAuthSettings(
+            configuration["Supabase:url"] ?? string.Empty, configuration["Supabase:key"] ?? string.Empty));
+
         string supabaseUrl = configuration["Supabase:url"] ?? string.Empty;
         string? supabaseKey = configuration["Supabase:key"];
 
