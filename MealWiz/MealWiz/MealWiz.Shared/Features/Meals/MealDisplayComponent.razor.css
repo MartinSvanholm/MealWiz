@@ -133,6 +133,7 @@
 
 .mw-meal-link:disabled {
     cursor: default;
+    color: var(--mw-text-muted);
 }
 
 .mw-meal-link:not(:disabled):hover {
