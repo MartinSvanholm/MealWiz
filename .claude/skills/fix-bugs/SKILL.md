@@ -99,11 +99,11 @@ into a card. Their reply is the request to start sessions.
 
 ## 5. Start the group sessions
 
-**Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start each group with `create_session` and check its record right
-after, exactly as `plan-project` describes under "Cloud mode" (Sonnet and medium if `create_session` takes them),
-with the cloud changes in [references/bug-brief.md](references/bug-brief.md). There is no limit of 4
-there, since each session has its own Supabase; groups that share a file still wait for each other. Being woken,
-GitHub checks and cleanup work as that section says.
+**Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start no sessions. Work the groups yourself, one at a time and in
+the order above, each in bug mode with the [implement-issue](../implement-issue/SKILL.md) skill's
+[Cloud mode](../implement-issue/SKILL.md#cloud-mode): before each group, check every open PR from this session and
+merge the green ones into `dev`; then branch the group from the latest `origin/dev` and open its own PR. A group that
+shares a file with an unmerged group waits for that merge. Skip the rest of this step and step 6.
 
 **At most 4 run at once** locally. For each group that can start:
 
