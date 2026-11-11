@@ -107,4 +107,13 @@ public class MealPickListTests : ComponentTestBase
 
         Assert.Equal(1, cancelled);
     }
+
+    [Fact]
+    public void Disabled_disables_every_pick_button()
+    {
+        var cut = Render<MealPickList>(p => p.Add(x => x.Disabled, true).Add(x => x.OnPick, _ => { }));
+
+        Assert.All(cut.FindAll(TestId("meal-selection-pick")), b => Assert.True(b.HasAttribute("disabled")));
+        Assert.NotEmpty(cut.FindAll(TestId("meal-selection-pick")));
+    }
 }

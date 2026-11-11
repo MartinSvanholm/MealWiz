@@ -1,0 +1,79 @@
+@using DeleteGroceryItemsAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItems.DeleteGroceryItems
+@using MealWiz.Shared.Features.Meals.Models
+@inject IMediator _mediator
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<MealPlansResource> L
+@inject IStringLocalizer<MealsResource> M
+@inject IStringLocalizer<SharedResource> S
+
+@* Asks before a swap when the old meal has to-buy items only it needs (MEA-98); the switch (on by default) deletes
+   them after the swap. Opened by MealSelectionList through Open; swapping happens here because a successful swap
+   unmounts the pick list. *@
+<div class="mw-swap-meal-drawer">
+    <p class="mw-swap-meal-drawer-description" data-testid="swap-meal-description">@L["SwapMeal_Description", NewMeal.DisplayName(M), MealDate.DayOfWeek.ToWeekdayName()]</p>
+    <GroceryItemsSwitch Count="GroceryItemIds.Count" TestIdPrefix="swap-meal" @bind-Value="_alsoRemoveGroceryItems" />
+    <DrawerFooter>
+        <div class="mw-sheet-footer-pair">
+            <MudButton data-testid="swap-meal-cancel" Variant="Variant.Filled" Class="mw-sheet-footer-cancel" Disabled="_swapping" OnClick="Cancel">@S["Common_Cancel"]</MudButton>
+            <Button data-testid="swap-meal-confirm" IsLoading="_swapping" OnClick="SwapAsync">@L["SwapMeal_Confirm"]</Button>
+        </div>
+    </DrawerFooter>
+</div>
+
+@code {
+    public const string DrawerHeight = "calc(312px + env(safe-area-inset-bottom))";
+
+    [Parameter] public Meal CurrentMeal { get; set; } = default!;
+    [Parameter] public Meal NewMeal { get; set; } = default!;
+    [Parameter] public DateTime MealDate { get; set; }
+    /// <summary>The grocery items only the old planned day needs (PlannedMealGroceryItems.OnlyNeededBy), taken before the swap.</summary>
+    [Parameter] public IReadOnlyList<int> GroceryItemIds { get; set; } = [];
+
+    private bool _alsoRemoveGroceryItems = true;
+    private bool _swapping;
+
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer,
+        IStringLocalizer<MealsResource> mealsLocalizer, Meal currentMeal, Meal newMeal, DateTime mealDate,
+        IReadOnlyList<int> groceryItemIds) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(SwapMealDrawer),
+            Title = localizer["SwapMeal_Title", currentMeal.DisplayName(mealsLocalizer), newMeal.DisplayName(mealsLocalizer)],
+            Height = DrawerHeight,
+            ContentParameters = new()
+            {
+                { nameof(CurrentMeal), currentMeal },
+                { nameof(NewMeal), newMeal },
+                { nameof(MealDate), mealDate },
+                { nameof(GroceryItemIds), groceryItemIds }
+            }
+        });
+
+    private void Cancel() => _drawerStateContainer.CloseDrawer();
+
+    private async Task SwapAsync()
+    {
+        _swapping = true;
+        _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+
+        // The container reports a failed swap itself; the meal stays on the day and nothing is deleted.
+        if (!await _mealPlanStateContainer.SwapMealOnSelectedDate(NewMeal))
+        {
+            _swapping = false;
+            return;
+        }
+
+        if (_alsoRemoveGroceryItems && GroceryItemIds.Count > 0)
+        {
+            var deleted = await _mediator.Send(new DeleteGroceryItemsAction.Command(GroceryItemIds.ToList()));
+            // Not Handle(): the meal is already swapped, so this says the items stayed rather than echoing the raw error (ARCH-06).
+            _snackbar.Add(
+                deleted.IsSuccess ? L.Plural("GroceryItems_Removed", GroceryItemIds.Count) : L["GroceryItems_NotRemoved"],
+                deleted.IsSuccess ? Severity.Success : Severity.Error);
+        }
+
+        _drawerStateContainer.CloseDrawer();
+    }
+}

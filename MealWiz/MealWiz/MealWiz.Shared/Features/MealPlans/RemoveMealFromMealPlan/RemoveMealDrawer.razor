@@ -15,11 +15,7 @@
     <p class="mw-remove-meal-drawer-description" data-testid="remove-meal-description">@L["RemoveMeal_Description", Meal.DisplayName(M), MealDate.DayOfWeek.ToWeekdayName()]</p>
     @if (GroceryItemIds.Count > 0)
     {
-        <div class="mw-remove-meal-drawer-switch" data-testid="remove-meal-grocery-row">
-            <span class="mw-remove-meal-drawer-switch-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" /></span>
-            <span class="mw-remove-meal-drawer-switch-label" data-testid="remove-meal-grocery-label">@SwitchLabel</span>
-            <MudSwitch T="bool" data-testid="remove-meal-grocery-switch" @bind-Value="_alsoRemoveGroceryItems" Color="Color.Primary" aria-label="@SwitchLabel" />
-        </div>
+        <GroceryItemsSwitch Count="GroceryItemIds.Count" TestIdPrefix="remove-meal" @bind-Value="_alsoRemoveGroceryItems" />
     }
     <DrawerFooter>
         <div class="mw-sheet-footer-pair">
@@ -40,8 +36,6 @@
 
     private bool _alsoRemoveGroceryItems = true;
     private bool _removing;
-
-    private string SwitchLabel => L.Plural("RemoveMeal_AlsoRemove", GroceryItemIds.Count);
 
     public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer,
         IStringLocalizer<MealsResource> mealsLocalizer, Meal meal, DateTime mealDate, IReadOnlyList<int> groceryItemIds) =>
@@ -84,7 +78,7 @@
             var deleted = await _mediator.Send(new DeleteGroceryItemsAction.Command(GroceryItemIds.ToList()));
             // Not Handle(): the meal is already gone, so this says the items stayed rather than echoing the raw error.
             _snackbar.Add(
-                deleted.IsSuccess ? L.Plural("RemoveMeal_ItemsRemoved", GroceryItemIds.Count) : L["RemoveMeal_ItemsNotRemoved"],
+                deleted.IsSuccess ? L.Plural("GroceryItems_Removed", GroceryItemIds.Count) : L["GroceryItems_NotRemoved"],
                 deleted.IsSuccess ? Severity.Success : Severity.Error);
         }
 
