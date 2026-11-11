@@ -330,4 +330,8 @@
   <data name="SwapMeal_Confirm" xml:space="preserve">
     <value>Swap</value>
   </data>
+  <data name="GroceryItems_AmountsKept" xml:space="preserve">
+    <value>The shared grocery items couldn't be updated. They keep their old amounts.</value>
+    <comment>Error after removing or swapping a meal when the amounts of items other meals still need couldn't be lowered</comment>
+  </data>
 </root>

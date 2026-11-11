@@ -1,3 +1,4 @@
+@using DeleteGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources.DeleteGroceryItemSources
 @using GetAllGroceryItemsAction = MealWiz.Shared.Features.GroceryList.GetAllGroceryItems.GetAllGroceryItems
 @using GetGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.GetGroceryItemSources.GetGroceryItemSources
 @using MealWiz.Shared.Features.GroceryList.Models
@@ -72,12 +73,18 @@
         _checkingGroceryItems = false;
 
         var ids = PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id);
+        var sourceIds = PlannedMealGroceryItems.SourceIdsOnSharedItems(plannedMealId, items.Value, sources.Value);
         if (ids.Count == 0)
         {
-            await _mealPlanStateContainer.SwapMealOnSelectedDate(meal);
+            // No switch to ask with: the old day's links on shared items go, lowering their amounts (MEA-99).
+            if (await _mealPlanStateContainer.SwapMealOnSelectedDate(meal) && sourceIds.Count > 0)
+            {
+                var dropped = await _mediator.Send(new DeleteGroceryItemSourcesAction.Command(sourceIds));
+                if (dropped.IsFailed) _snackbar.Add(L["GroceryItems_AmountsKept"], Severity.Error);
+            }
             return;
         }
 
-        SwapMealDrawer.Open(_drawerStateContainer, L, M, current, meal, date, ids);
+        SwapMealDrawer.Open(_drawerStateContainer, L, M, current, meal, date, ids, sourceIds);
     }
 }

@@ -87,4 +87,42 @@ public class AmountHelperTests
     [InlineData("1 pack", "200 g", "250 g")]
     public void Adjust_ReturnsNull(string? item, string? old, string? @new) =>
         Assert.Null(AmountHelper.Adjust(item, old, @new));
+
+    // ---- Subtract (MEA-99) ----
+
+    [Theory]
+    [InlineData("3 cloves", "2 cloves", "1 clove")]
+    [InlineData("3 cloves", "1 clove", "2 cloves")]
+    [InlineData("3 clove", "1 cloves", "2 clove")]
+    [InlineData("500 g", "200 g", "300 g")]
+    [InlineData("500g", "200 g", "300 g")]
+    [InlineData("2,5 dl", "1 dl", "1,5 dl")]
+    [InlineData("2.75 dl", "1,25 dl", "1.5 dl")]
+    [InlineData("1 L", "0.5 l", "0.5 L")]
+    [InlineData("5", "2", "3")]
+    [InlineData("5 stk.", "2 stk", "3 stk.")]
+    [InlineData("3 Cups", "2 cups", "1 Cup")]
+    [InlineData("3 tbs", "2 tbs", "1 tbs")]
+    [InlineData("3 glass", "2 glass", "1 glass")]
+    public void Subtract_SameUnit_Subtracts(string item, string removed, string expected) =>
+        Assert.Equal(expected, AmountHelper.Subtract(item, removed));
+
+    [Theory]
+    [InlineData("500 g", "0.5 kg")]
+    [InlineData("500 g", "500 g")]
+    [InlineData("200 g", "300 g")]
+    [InlineData("3", "2 g")]
+    [InlineData("3 cloves", "")]
+    [InlineData("3 cloves", null)]
+    [InlineData(null, "2 cloves")]
+    [InlineData("", "1 clove")]
+    [InlineData("1/2 tsp", "1 tsp")]
+    [InlineData("2-3 dl", "1 dl")]
+    [InlineData("3 gs", "1 g")]
+    public void Subtract_ReturnsNull(string? item, string? removed) =>
+        Assert.Null(AmountHelper.Subtract(item, removed));
+
+    [Fact]
+    public void The_plural_tolerance_is_for_Subtract_only() =>
+        Assert.Null(AmountHelper.SuggestTotal(["2 cloves", "1 clove"]));
 }

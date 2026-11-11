@@ -39,7 +39,7 @@ public abstract class DeleteIngredientWithItemsTestBase : ComponentTestBase
         SetupSend<DeleteIngredient.Command, Result>(Result.Ok());
         SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
         SetupSend<UnlinkGroceryItems.Command, Result>(Result.Ok());
-        SetupSend<DeleteGroceryItemSources.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItemSources.Command, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<GetIngredientsByMealId.Query, Result<List<Ingredient>>>(Result.Ok(new List<Ingredient>()));
         RenderDrawers();
     }

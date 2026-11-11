@@ -203,10 +203,12 @@ public class GroceryListStateContainer(
             if (unlinked.IsFailed) return unlinked;
         }
 
+        List<GroceryItem> reduced = [];
         if (links.SourceIdsToDrop.Count > 0)
         {
             var dropped = await mediator.Send(new DeleteGroceryItemSources.DeleteGroceryItemSources.Command([.. links.SourceIdsToDrop]));
-            if (dropped.IsFailed) return dropped;
+            if (dropped.IsFailed) return dropped.ToResult();
+            reduced = dropped.Value;
         }
 
         if (deleteItemIds.Count == 0 && unlink.Count == 0 && links.SourceIdsToDrop.Count == 0) return Result.Ok();
@@ -215,6 +217,14 @@ public class GroceryListStateContainer(
         foreach (var item in GroceryList.Items.Where(item => unlink.Contains(item.Id))) item.IsManual = true;
         Sources.RemoveAll(source => deleteItemIds.Contains(source.GroceryItemId) || unlink.Contains(source.GroceryItemId)
                                     || links.SourceIdsToDrop.Contains(source.Id));
+        // Dropping a link lowers the item's amount by the link's (MEA-99).
+        foreach (var changed in reduced)
+        {
+            var item = GroceryList.Items.Find(i => i.Id == changed.Id);
+            if (item is null) continue;
+            item.Amount = changed.Amount;
+            item.UpdatedAt = changed.UpdatedAt;
+        }
         NotifyStateChanged();
         return Result.Ok();
     }

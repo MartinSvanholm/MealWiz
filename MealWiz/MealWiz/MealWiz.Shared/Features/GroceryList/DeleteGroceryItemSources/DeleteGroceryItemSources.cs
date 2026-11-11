@@ -1,29 +1,79 @@
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using Supabase;
+using Supabase.Postgrest.Responses;
 using static Supabase.Postgrest.Constants;
 
 namespace MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 
 /// <summary>
-/// Deletes the given grocery item sources in one request, keeping their items (MEA-93): a deleted meal's or
-/// ingredient's links on items another planned meal or the user still needs. Ids RLS hides are skipped.
+/// Drops the given grocery item sources and lowers each to-buy item's amount by theirs (MEA-93, MEA-99): a deleted or
+/// removed meal's links on items another planned meal or the user still needs. Ids RLS hides are skipped.
+/// The sources are deleted before the amounts change, so a failure can only leave an amount too high and a retry
+/// can't subtract twice. Returns the items whose amount changed.
 /// </summary>
 public static class DeleteGroceryItemSources
 {
-    public record Command(List<int> SourceIds) : IRequest<Result>;
+    public record Command(List<int> SourceIds) : IRequest<Result<List<GroceryItem>>>;
 
-    public class Handler(Client supabaseClient) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer)
+        : IRequestHandler<Command, Result<List<GroceryItem>>>
     {
-        public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Result<List<GroceryItem>>> Handle(Command request, CancellationToken cancellationToken)
         {
-            if (request.SourceIds.Count == 0) return Result.Ok();
+            if (request.SourceIds.Count == 0) return Result.Ok(new List<GroceryItem>());
 
-            return await Result.Try(async Task () => await supabaseClient
+            var sourcesResult = await Result.Try(async Task<ModeledResponse<GroceryItemSourceDb>> () => await supabaseClient
                 .From<GroceryItemSourceDb>()
                 .Filter(x => x.Id, Operator.In, request.SourceIds)
+                .Get(cancellationToken));
+            if (sourcesResult.IsFailed) return sourcesResult.ToResult<List<GroceryItem>>();
+
+            var sources = sourcesResult.Value.Models.OrderBy(s => s.Id).ToList();
+            if (sources.Count == 0) return Result.Ok(new List<GroceryItem>());
+
+            var itemIds = sources.Select(s => s.GroceryItemId).Distinct().ToList();
+            var itemsResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
+                .From<GroceryItemDb>()
+                .Filter(x => x.Id, Operator.In, itemIds)
+                .Get(cancellationToken));
+            if (itemsResult.IsFailed) return itemsResult.ToResult<List<GroceryItem>>();
+
+            // Basket items keep their amount; manual items are lowered too (a plan amount was merged into them).
+            var changes = new List<(int Id, string Amount)>();
+            foreach (var item in itemsResult.Value.Models.Where(i => !i.IsPicked).OrderBy(i => i.Id))
+            {
+                var amount = item.Amount;
+                foreach (var source in sources.Where(s => s.GroceryItemId == item.Id))
+                    amount = AmountHelper.Subtract(amount, source.Amount) ?? amount;
+
+                if (amount is not null && amount != item.Amount) changes.Add((item.Id, amount));
+            }
+
+            var deleted = await Result.Try(async Task () => await supabaseClient
+                .From<GroceryItemSourceDb>()
+                .Filter(x => x.Id, Operator.In, sources.Select(s => s.Id).ToList())
                 .Delete(cancellationToken: cancellationToken));
+            if (deleted.IsFailed) return deleted.ToResult<List<GroceryItem>>();
+
+            var updated = new List<GroceryItem>();
+            foreach (var (id, amount) in changes)
+            {
+                var updateResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
+                    .From<GroceryItemDb>()
+                    .Where(x => x.Id == id)
+                    .Set(x => x.Amount!, amount)
+                    .Set(x => x.UpdatedAt!, DateTime.UtcNow)
+                    .Update(cancellationToken: cancellationToken));
+                if (updateResult.IsFailed) return updateResult.ToResult<List<GroceryItem>>();
+                if (updateResult.Value.Models.Count == 0) return Result.Fail<List<GroceryItem>>(localizer["LinkedAmounts_ItemNotFound"]);
+
+                updated.Add(new GroceryItem(updateResult.Value.Models[0]));
+            }
+
+            return Result.Ok(updated);
         }
     }
 }

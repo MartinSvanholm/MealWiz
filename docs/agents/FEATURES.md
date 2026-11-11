@@ -136,7 +136,7 @@ A weekly plan with one meal per day. The home page shows the selected week, and 
 selected week is kept in local storage under `mealplan_selected_week`. Picking a meal for a day creates that week's
 `meal_plans` row if none exists yet (`CreateMealPlan`), then inserts a `meal_plans-meals` row for the date. Dates are
 stored as `yyyy-MM-dd` strings.
-Removing a day's meal always asks first in a drawer. When the day has grocery items only it needs (still to buy, not manual, linked to the meal now on the day, no other live source), a switch, on by default, deletes them too. Shared items just lose that day's link, because the FK nulls it.
+Removing a day's meal always asks first in a drawer. When the day has grocery items only it needs (still to buy, not manual, linked to the meal now on the day, no other live source), a switch, on by default, deletes them too. Shared and manual items lose that day's link and its amount (switch on, or no switch shown); with the switch off the FK nulls the link and the amount stays.
 
 - **Folder:** `Features/MealPlans/`
 - **Texts:** `Features/MealPlans/MealPlansResource.cs` with `MealPlansResource.resx` / `.da.resx`, also read by the
@@ -171,10 +171,10 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
     left out and Cancel (`meal-selection-cancel`) returns to the card. A pick on a day with a planned-day id loads the grocery items and sources first (picks disabled meanwhile); items only the old meal needs (`PlannedMealGroceryItems.OnlyNeededBy`) open `SwapMealDrawer`, otherwise the pick swaps straight away (`SwapMealOnSelectedDate`). A failed load shows the error and swaps nothing.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
-    corner of the selected day's card (`remove-meal-button`). It loads the grocery items and sources through MediatR, picks the ids with `PlannedMealGroceryItems.OnlyNeededBy`, opens `RemoveMealDrawer` and is disabled while loading.
-  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the `GroceryItemsSwitch` row (prefix `remove-meal`: `remove-meal-grocery-row|label|switch`) only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; a failed remove deletes nothing, a failed delete says the items stayed.
-  - `Features/MealPlans/SwapMealInMealPlan/SwapMealDrawer.razor`, with `.razor.css`: asks before a swap when the old meal has to-buy items only it needs (title "Swap <old> for <new>?", `swap-meal-description`, the `GroceryItemsSwitch` row with prefix `swap-meal`, Cancel `swap-meal-cancel` and the orange Swap `swap-meal-confirm`). Cancel only closes (the old meal and swap mode stay). Swap swaps first, then, with the switch on, sends `DeleteGroceryItems`; a failed swap deletes nothing and keeps the drawer open, a failed delete says the items stayed. `Open(drawer, localizer, mealsLocalizer, current, new, date, ids)`.
-  - `Features/MealPlans/Components/GroceryItemsSwitch.razor`, with `.razor.css`: the shared "Also remove N items from the grocery list" row of the remove and swap drawers (`<prefix>-grocery-row|label|switch`; texts `GroceryItems_*`).
+    corner of the selected day's card (`remove-meal-button`). It loads the grocery items and sources through MediatR, picks the ids with `PlannedMealGroceryItems.OnlyNeededBy` and the shared links with `SourceIdsOnSharedItems`, opens `RemoveMealDrawer` and is disabled while loading.
+  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the `GroceryItemsSwitch` row (prefix `remove-meal`: `remove-meal-grocery-row|label|switch`) only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; then drops this day's links on shared items (`DeleteGroceryItemSources`) unless the switch is off; a failed remove deletes nothing, a failed delete says the items stayed, a failed drop says the amounts stayed.
+  - `Features/MealPlans/SwapMealInMealPlan/SwapMealDrawer.razor`, with `.razor.css`: asks before a swap when the old meal has to-buy items only it needs (title "Swap <old> for <new>?", `swap-meal-description`, the `GroceryItemsSwitch` row with prefix `swap-meal`, Cancel `swap-meal-cancel` and the orange Swap `swap-meal-confirm`). Cancel only closes (the old meal and swap mode stay). Swap swaps first, then, with the switch on, sends `DeleteGroceryItems`; then drops the old day's links on shared items (`DeleteGroceryItemSources`); a failed swap deletes nothing and keeps the drawer open, a failed delete says the items stayed, a failed drop says the amounts stayed. A straight swap (no own items) drops those links too. `Open(drawer, localizer, mealsLocalizer, current, new, date, ids, sourceIds)`.
+  - `Features/MealPlans/Components/GroceryItemsSwitch.razor`, with `.razor.css`: the shared "Also remove N items from the grocery list" row of the remove and swap drawers (`<prefix>-grocery-row|label|switch`; texts `GroceryItems_*`, including `GroceryItems_AmountsKept`).
   - `Features/MealPlans/MealPlansResource.cs` (+ `MealPlansResource.resx`, `MealPlansResource.da.resx`): the feature's texts (UI-03).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
@@ -222,6 +222,8 @@ from their planned day yet; with everything linked it says "Everything is alread
 same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
 empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
+Dropping a planned meal's link from an item another meal or the user still needs lowers the item's amount by that
+link's amount (Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
 A banner at the top of the list ("N items are from meals no longer in your plan", `stale-items-banner`) appears when
 plan-added items come from meals that were swapped out or removed from the plan with the switch off (every source
 stale; basket and manual items never count). Review opens a drawer of those items grouped by their old meal, all
@@ -288,24 +290,24 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
   | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true; ids RLS hides are skipped |
-  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result` | Delete the given sources and keep their items; ids RLS hides are skipped |
+  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources, then lowers each to-buy item's amount by the dropped sources' amounts (`AmountHelper.Subtract`: same unit, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
   `ClearBasket`, `Sources`, `LoadSources`, `StaleItems`, `DeleteAndUnlinkGroceryItems`, and for a meal or ingredient
   being deleted `LoadItemsLinkedToMeal`, `LoadItemsLinkedToIngredient` and `SettleLinkedItems` (delete, unlink with the
-  basket, drop links; failures returned unreported).
+  basket, drop links and apply the lowered amounts; failures returned unreported).
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
-  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`, and `Subtract`, which alone tolerates a plural s: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
   - `Features/GroceryList/Models/LinkedGroceryItems.cs`: a deleted meal's or ingredient's items sorted into `ToBuy`,
     `InBasket` and `SourceIdsToDrop` (manual items and items another live link needs only lose its links).
   - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs` (a null `Heading` is "Other items", resolved in the drawer).
   - `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` and `.da.resx`: the banner and review drawer texts (UI-03).
-  - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81).
+  - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81), and `SourceIdsOnSharedItems`, that day's live links on shared and manual to-buy items (MEA-99).
 - **Tests:**
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`

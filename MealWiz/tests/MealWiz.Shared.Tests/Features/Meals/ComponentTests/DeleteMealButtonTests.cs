@@ -114,7 +114,7 @@ public class DeleteMealButtonTests : ComponentTestBase
         SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(sources));
         SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
         SetupSend<UnlinkGroceryItems.Command, Result>(Result.Ok());
-        SetupSend<DeleteGroceryItemSources.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItemSources.Command, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<DeleteMeal.Command, Result>(Result.Ok());
         RenderDrawers();
         return Render<DeleteMealButton>(p => p.Add(b => b.Meal, TestData.Meal("Tacos", id: 5)));

@@ -19,4 +19,23 @@ public static class PlannedMealGroceryItems
             return live.Any(s => s.PlannedMealId == plannedMealId) && live.All(s => s.PlannedMealId == plannedMealId);
         }).ToList();
     }
+
+    /// <summary>
+    /// This planned day's live sources on to-buy items it doesn't alone need (shared or manual items): the links the
+    /// remove and swap drawers drop so those items' amounts go down (MEA-99). In source order.
+    /// </summary>
+    public static List<int> SourceIdsOnSharedItems(int plannedMealId, IEnumerable<GroceryItem> items, IEnumerable<GroceryItemSource> sources)
+    {
+        var itemList = items.ToList();
+        var sourceList = sources.ToList();
+        var onlyThisDay = OnlyNeededBy(plannedMealId, itemList, sourceList).Select(i => i.Id).ToHashSet();
+        var byId = itemList.ToDictionary(i => i.Id);
+
+        return sourceList
+            .Where(s => s.PlannedMealId == plannedMealId && !s.IsStale
+                        && byId.TryGetValue(s.GroceryItemId, out var item)
+                        && !item.IsPicked && !onlyThisDay.Contains(item.Id))
+            .Select(s => s.Id)
+            .ToList();
+    }
 }

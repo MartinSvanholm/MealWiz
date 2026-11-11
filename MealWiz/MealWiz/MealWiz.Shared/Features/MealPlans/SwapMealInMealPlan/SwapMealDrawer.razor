@@ -1,3 +1,4 @@
+@using DeleteGroceryItemSourcesAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources.DeleteGroceryItemSources
 @using DeleteGroceryItemsAction = MealWiz.Shared.Features.GroceryList.DeleteGroceryItems.DeleteGroceryItems
 @using MealWiz.Shared.Features.Meals.Models
 @inject IMediator _mediator
@@ -30,13 +31,15 @@
     [Parameter] public DateTime MealDate { get; set; }
     /// <summary>The grocery items only the old planned day needs (PlannedMealGroceryItems.OnlyNeededBy), taken before the swap.</summary>
     [Parameter] public IReadOnlyList<int> GroceryItemIds { get; set; } = [];
+    /// <summary>The old day's links on shared and manual items, taken before the swap; dropped with the switch on (MEA-99).</summary>
+    [Parameter] public IReadOnlyList<int> SourceIdsToDrop { get; set; } = [];
 
     private bool _alsoRemoveGroceryItems = true;
     private bool _swapping;
 
     public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer,
         IStringLocalizer<MealsResource> mealsLocalizer, Meal currentMeal, Meal newMeal, DateTime mealDate,
-        IReadOnlyList<int> groceryItemIds) =>
+        IReadOnlyList<int> groceryItemIds, IReadOnlyList<int>? sourceIdsToDrop = null) =>
         drawer.OpenDrawer(new DrawerStateParameters
         {
             Content = typeof(SwapMealDrawer),
@@ -47,7 +50,8 @@
                 { nameof(CurrentMeal), currentMeal },
                 { nameof(NewMeal), newMeal },
                 { nameof(MealDate), mealDate },
-                { nameof(GroceryItemIds), groceryItemIds }
+                { nameof(GroceryItemIds), groceryItemIds },
+                { nameof(SourceIdsToDrop), sourceIdsToDrop ?? [] }
             }
         });
 
@@ -72,6 +76,13 @@
             _snackbar.Add(
                 deleted.IsSuccess ? L.Plural("GroceryItems_Removed", GroceryItemIds.Count) : L["GroceryItems_NotRemoved"],
                 deleted.IsSuccess ? Severity.Success : Severity.Error);
+        }
+
+        if (_alsoRemoveGroceryItems && SourceIdsToDrop.Count > 0)
+        {
+            var dropped = await _mediator.Send(new DeleteGroceryItemSourcesAction.Command(SourceIdsToDrop.ToList()));
+            // Not Handle(): the swap already succeeded, so this says the amounts stayed (ARCH-06).
+            if (dropped.IsFailed) _snackbar.Add(L["GroceryItems_AmountsKept"], Severity.Error);
         }
 
         _drawerStateContainer.CloseDrawer();
