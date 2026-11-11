@@ -40,28 +40,6 @@ find go in Linear with the Bug label and no project. Windows: PowerShell 5.1, so
 to a file (git commit -F, gh pr create --body-file).
 ```
 
-## Cloud mode
-
-In cloud mode ([plan-project](../SKILL.md#cloud-mode)) use the same `prompt` with these changes, and pass the
-`background` as `append_system_prompt`:
-
-- Add this paragraph before the plan paragraph at the end:
-
-  ```
-  You run in your own Claude Code cloud container, in cloud mode (see the skill). Your branch is <id>-<slug>, made
-  from dev: check `git branch --show-current` first, and if it says dev, run `git checkout -b <id>-<slug>`. Never
-  commit to dev. If `dotnet` or `supabase` is missing, run `bash scripts/cloud-setup.sh` first. You have your own
-  Supabase stack, so verify with `scripts/verify.sh`.
-  ```
-- And this one after it:
-
-  ```
-  The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it a
-  one-line report every time you're blocked or unblocked, open your PR, merge, or get stuck, as the skill says.
-  ```
-- In `background`, replace the last sentence ("Windows: PowerShell 5.1, …") with: "Linux cloud container (bash),
-  with its own Docker and Supabase; GitHub through the GitHub MCP tools, no gh CLI."
-
 ## Call shape (local mode)
 
 ```

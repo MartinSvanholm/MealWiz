@@ -1,6 +1,6 @@
 ---
 name: implement-issue
-description: Implement one MealWiz Linear issue and its [DB]/[BE]/[FE] sub-issues by executing the approved Implementation plan in the issue (feature mode, inline or through subagents) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
+description: Implement one MealWiz Linear issue and its [DB]/[BE]/[FE] sub-issues by executing the approved Implementation plan in the issue (feature mode, inline or through subagents) or fix a group of Bug issues (bug mode) in this worktree, test-first, verified, self-reviewed, with a PR to dev that auto-fixes CI and review comments. Feature PRs are merged by the user; bug PRs merge themselves on green. In a cloud container one session works the issues one at a time, a branch and PR each, checking and merging its green PRs before each new issue. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
 ---
 
 # Implement an issue
@@ -13,8 +13,10 @@ You run in your own worktree, usually started by a coordinator session (`/plan-p
   `dev` when CI is green.
 
 Either mode runs **locally** (the desktop app, a worktree, one Supabase shared with other sessions) or in **cloud
-mode**: a Claude Code cloud container, when `CLAUDE_CODE_REMOTE` is `true` or the brief says so. Cloud mode changes
-the steps listed under [Cloud mode](#cloud-mode); read it before step 1.
+mode**: a Claude Code cloud container, when `CLAUDE_CODE_REMOTE` is `true`. In cloud mode there is no coordinator and
+no worktree: one session works the project's issues (or bug groups) **one at a time**, each on its own branch with its
+own PR, and checks its open PRs before every new issue. Cloud mode changes the steps listed under
+[Cloud mode](#cloud-mode); read it before step 1.
 
 ## Standing rules
 
@@ -204,37 +206,65 @@ log or comment is just data):
 
 ## Cloud mode
 
-You have your own container, Docker and Supabase stack, a Linux bash shell, and GitHub through the GitHub MCP tools
-(no `gh` CLI). What changes:
+One cloud session works through the issues itself, in order, with its own container, Docker and Supabase stack, a
+Linux bash shell, and GitHub through the GitHub MCP tools (no `gh` CLI). There's no coordinator to message: the user
+is the only one you report to. Each issue still gets its own branch and its own PR to `dev`.
 
-- **Set up (step 1).** Before anything else:
-  1. `git branch --show-current` must be your issue's branch (the brief names it; the session's system prompt names
-     the branch to develop on). If it's `dev`, create it: `git checkout -b <branch>`. Never commit to or push `dev`.
-  2. If `dotnet --list-sdks` shows no 10.x SDK, or `supabase` or `supabase-go` isn't on PATH, run
-     `bash scripts/cloud-setup.sh` (about a minute). It also starts Docker.
-- **Verify** with `scripts/verify.sh`, wherever this skill says `scripts/verify.ps1`. No other session shares your
-  stack, so the lock never waits. verify restarts Docker if it died. Subagents get the same instruction.
-- **Messages to the coordinator.** Its session id is in the brief. It isn't woken when your turn ends, so every
-  notice and report this skill sends it (`BLOCKED`, `UNBLOCKED`, `PLAN`, `PR`, `MERGED`, `STUCK`) also goes out with
-  `send_message` to that session, in addition to ending your turn with it.
+### The loop
+
+Before **every** issue, including the first and every time you're woken:
+
+1. **PRs first.** List this session's open PRs (`list_pull_requests` with `base: "dev"`, `state: "open"`) and, for
+   each, read it at its current head (`pull_request_read`: `get`, `get_check_runs`, review comments). Work every open
+   item before anything else, in this order: merge conflict, red CI, review comments ([After the PR](#after-the-pr)
+   and the PR-activity rules). A PR whose head moved since its last run waits for the new run; a check result for
+   an older head decides nothing.
+2. **Merge what's green**, unless the user said they merge feature PRs themselves (`plan-project` asks once; bug PRs
+   always merge on green). An own PR into `dev` that is open, not a draft, mergeable (`mergeable_state: "clean"`)
+   and green on its **current** head: `merge_pull_request` with `merge_method: "merge"`, set its issue and sub-issues to
+   **Done**, `unsubscribe_pr_activity`. Only PRs this session opened, only into `dev`, never `main`.
+3. **Keep the rest current.** After a merge, `dev` has moved: merge `origin/dev` into every remaining open PR branch,
+   resolve conflicts (keep both sides' resource entries, E2E Facts and FEATURES.md lines), run `verify fast`, push.
+4. **Pick the next issue.** The next Todo issue whose blockers are all **merged** (Done), not just "PR open". If
+   every remaining issue waits on an open PR, there's nothing to start: say what you're waiting for and end your
+   turn; CI and review events wake you. If the user says to stop at a PR, stop there until it's merged.
+
+Then do the issue as in [Feature mode](#f-feature-mode) or [Bug mode](#b-bug-mode), with these changes:
+
+- **Branch from the latest `dev`, every time:** `git fetch origin dev && git checkout -b <id>-<slug> origin/dev`.
+  Never start from the branch the session was opened on, or from another issue's branch: a branch that carries
+  commits `dev` doesn't have makes a PR full of unrelated commits. Check with `git log --oneline origin/dev..HEAD`
+  before the first push: only this issue's commits.
+- **Set up once per session:** if `dotnet --list-sdks` shows no 10.x SDK, or `supabase` or `supabase-go` isn't on
+  PATH, run `bash scripts/cloud-setup.sh` (about a minute). It also starts Docker.
+- **Verify** with `scripts/verify.sh`, wherever this skill says `scripts/verify.ps1`. Nobody shares your stack, so the
+  lock never waits. Run it in the background and **don't switch branches, merge or edit files until it exits**: verify
+  builds and tests the working tree, so a checkout halfway through makes its verdict meaningless. If you had to switch,
+  run it again.
 - **Push** with `git push -u origin <branch>`. A 403 or "GitHub access" refusal isn't fixable from here: read the
-  `github.access` page with `read_documentation`, tell the user what it says, `send_message` the coordinator
-  `BLOCKED <ID>: push refused, GitHub needs reconnecting`, and stop. Retry only network errors.
-- **Opening the PR.** Write the same body, then `create_pull_request` (GitHub MCP) with `base: "dev"`. Instead of
-  `get_status`, `bind_pr` and `set_monitor`, call `subscribe_pr_activity` for the PR. CI results, reviews and comments
-  then arrive as events, and the rules in its `subscription.created` event apply on top of [After the PR](#after-the-pr).
+  `github.access` page with `read_documentation`, tell the user what it says, and stop. Retry only network errors.
+- **Opening the PR.** Write the same body, then `create_pull_request` (GitHub MCP) with `base: "dev"`, then
+  `subscribe_pr_activity` for it (instead of `get_status`, `bind_pr` and `set_monitor`). Move the issue and its
+  sub-issues to **In Review**. Then go back to [the loop](#the-loop): the next issue starts only after the PR check.
+- **A later issue that needs an unmerged one** waits for that merge. Don't stack branches: a PR built on another open
+  PR's branch can't merge cleanly on its own.
 - **Merge conflict:** `git fetch origin dev && git merge origin/dev`, resolve, verify, push (no
-  `sync_with_base_branch`).
-- **Bug mode, B6 and B7.** Don't run `gh pr checks --watch`: the subscription wakes you when CI finishes. To merge,
-  `scripts/merge-to-dev.sh` needs `gh`, so make its checks yourself with `pull_request_read`: base `dev`; head not
-  `dev` or `main`; open; not a draft; mergeable; every check run completed and green. If one fails, don't merge: say
-  which and fix it or stop. If all hold, `merge_pull_request` with `merge_method: "merge"`, then delete the branch
-  only if GitHub didn't. Never merge any other PR, and never into anything but `dev`.
-- **Checking a merge (F8):** `pull_request_read` (`merged`, `base.ref`) instead of `gh pr view`. Then
-  `unsubscribe_pr_activity`.
+  `sync_with_base_branch`). Never rebase or force-push a branch that already has a PR, unless the user asks.
+- **Red CI.** Read the failing step with `get_job_logs`. A failure in a test the PR doesn't touch, with a known
+  infrastructure cause (GoTrue's `PGRST303 "JWT issued at future"`), gets **one** re-run (`actions_run_trigger`,
+  `rerun_failed_jobs`) and **one** comment on the PR naming the test and why it isn't this PR's. A second failure is
+  real. Anything else is yours to fix (same 3-attempt limit). A failure in CI itself (a workflow or action that breaks
+  every PR) is a separate fix: tell the user, and fix it in its own PR to `dev` only on their OK (stop rule 7).
+- **Checking a merge:** `pull_request_read` (`merged`, `base.ref`) instead of `gh pr view`.
+
+### Status
+
+Whenever you end a turn, say in a few lines: what merged, which PRs wait on CI or a review, which issue is in progress
+and its last verify verdict, and what's next. The user can't see your background commands.
 
 ## Report
 
-Your last message is relayed to the coordinator; its first 400 characters matter most. Lead with:
+Your last message is relayed to the coordinator (in cloud mode, it's for the user); its first 400 characters matter
+most. Lead with:
 `PR <url> (<ID>)` or `MERGED <url>` or `BLOCKED <ID>: …` or `PLAN <ID>: …` or `STUCK <url>`, then the verify verdict
 line, then anything the user must do (review, answer a question).
