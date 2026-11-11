@@ -163,6 +163,56 @@ public class AuthJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
     }
 
+    [Fact]
+    public async Task SignedInUser_ChangesThePassword_AndLogsInWithTheNewOne()
+    {
+        var newPassword = Guid.NewGuid().ToString("N");
+        await LoginAsync();
+        await Page.GetByTestId("account-button").ClickAsync();
+
+        await FillAsync(Page.GetByTestId("change-password-new"), newPassword);
+        await FillAsync(Page.GetByTestId("change-password-repeat"), newPassword);
+        await Page.GetByTestId("change-password-submit").ClickAsync();
+        await Expect(Page.GetByText("Password changed")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("account-page")).ToBeVisibleAsync(); // still signed in
+
+        await Page.GetByTestId("logout-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await FillAsync(Page.GetByTestId("login-email"), User.Email);
+        await FillAsync(Page.GetByTestId("login-password"), newPassword);
+        await Page.GetByTestId("login-submit").ClickAsync();
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
+    }
+
+    // The local GoTrue applies the change on the first click of the new address's link (autoconfirm), so the "click
+    // the other address's link" state is covered by component tests.
+    [Fact]
+    public async Task SignedInUser_ChangesTheEmail_FromTheEmailLink_AndLogsInWithTheNewAddress()
+    {
+        var newEmail = $"e2e-changed-{Guid.NewGuid():N}@mealwiz.test";
+        await LoginAsync();
+        await Page.GetByTestId("account-button").ClickAsync();
+
+        await FillAsync(Page.GetByTestId("change-email-new"), newEmail);
+        await Page.GetByTestId("change-email-submit").ClickAsync();
+        await Expect(Page.GetByTestId("account-email-pending")).ToContainTextAsync(newEmail);
+
+        await Page.GotoAsync(await Supabase.ReadEmailChangeLinkAsync(newEmail));
+        await Expect(Page.GetByTestId("email-change-done")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("email-change"));
+
+        await Page.GetByTestId("email-change-account-link").ClickAsync();
+        await Expect(Page.GetByTestId("account-email")).ToHaveTextAsync(newEmail);
+        await Expect(Page.GetByTestId("account-email-pending")).ToHaveCountAsync(0);
+
+        await Page.GetByTestId("logout-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await FillAsync(Page.GetByTestId("login-email"), newEmail);
+        await FillAsync(Page.GetByTestId("login-password"), User.Password);
+        await Page.GetByTestId("login-submit").ClickAsync();
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToBeVisibleAsync();
+    }
+
     /// <summary>The new user's id is only known to the app, from the session it stored in localStorage.</summary>
     private async Task DeleteSignedInUserAfterTheTestAsync(string email, string password)
     {

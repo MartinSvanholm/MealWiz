@@ -145,6 +145,7 @@ for which change; the verify skill explains how to read failures.
   - Development points at local Supabase on `127.0.0.1:54321`.
   - Production's Function key stays empty in git; `deploy.yml` injects it.
 - **MAUI:** always loads the embedded `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
+  Its `WebApp:url` (the web app, `http://localhost:5053/` in Development) is where email links open; the web head leaves it out and links to itself.
 - **Functions:** a gitignored `local.settings.json`, copied from
   `MealWiz/src/MealWiz.Functions/local.settings.json.example`. Its README covers keys, CORS and deployment.
 - Only the anon key may reach a client (SEC-01).

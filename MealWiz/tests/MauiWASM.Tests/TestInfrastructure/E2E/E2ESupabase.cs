@@ -112,6 +112,33 @@ public sealed class E2ESupabase
         return link.ActionLink;
     }
 
+    /// <summary>
+    /// The link in the email GoTrue sent to <paramref name="address"/> for a pending email change, read from the local
+    /// Mailpit ([inbucket] port in supabase/config.toml). The admin API's <c>generate_link</c> can't stand in: its
+    /// change links confirm the whole change on the first click.
+    /// </summary>
+    public async Task<string> ReadEmailChangeLinkAsync(string address)
+    {
+        using var mailpit = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:54324/"), Timeout = TimeSpan.FromSeconds(10) };
+        var link = new System.Text.RegularExpressions.Regex(@"https?://\S+/auth/v1/verify\?\S+");
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var search = await mailpit.GetFromJsonAsync<JsonElement>($"api/v1/search?query={Uri.EscapeDataString($"to:\"{address}\"")}");
+            foreach (var summary in search.GetProperty("messages").EnumerateArray())
+            {
+                var message = await mailpit.GetFromJsonAsync<JsonElement>($"api/v1/message/{summary.GetProperty("ID").GetString()}");
+                var sentToIt = message.GetProperty("To").EnumerateArray().Any(t => t.GetProperty("Address").GetString() == address);
+                var match = link.Match(message.GetProperty("Text").GetString() ?? string.Empty);
+                if (sentToIt && match.Success)
+                    return match.Value;
+            }
+
+            await Task.Delay(200);
+        }
+
+        throw new InvalidOperationException($"No email change link for {address} arrived in Mailpit.");
+    }
+
     /// <summary>Deletes the user. Every row it owns goes with it, since the created_by foreign keys cascade.</summary>
     public async Task DeleteUserAsync(E2EUser user)
     {

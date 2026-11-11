@@ -209,7 +209,10 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
   It is the only level that catches broken JS interop, routing, session persistence and Realtime. The journeys are
   `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
   `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
-  refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept).
+  refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
+  email from the Account page. The local GoTrue applies an email change on the first click of the new address's link
+  (autoconfirm), so the E2E reads that link from Mailpit, which every local and CI stack now runs (the `generate_link` admin
+  API confirms on the first click too); the "click the other link" state is covered by bUnit.
 - **E2E infrastructure** (`TestInfrastructure/E2E/`):
   - `E2EEnvironment` publishes the app once per run, hosts it with `E2EAppHost` (which serves a Development
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
