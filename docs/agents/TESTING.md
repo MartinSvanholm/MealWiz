@@ -45,9 +45,11 @@ adds every E2E journey.
 
 ## Which tests for which change
 
-Run `scripts/verify.ps1 local` before calling any app change done, with `--e2e <class>` where the table names a
-journey (one class per run; run it again for a second one). CI runs everything else (`verify full`), and a PR merges
-only on green CI. While iterating, run just the project or class you're touching:
+The Level column is the lowest verify level that runs those tests. Who runs it depends on the flow (CLAUDE.md,
+"Verifying changes"): an issue or bug session runs `fast`, plus `local --only <steps>` for the Supabase-backed steps
+its new tests live in; CI runs `verify full` on every PR, and a PR merges only on green CI; the ship session
+(`/ship-project`) runs `verify full` on the whole project before its PR to `dev`. A change made outside that flow
+runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a journey (one class per run). While iterating, run just the project or class you're touching:
 `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
 
 | You changed | Add or update | Run at least |

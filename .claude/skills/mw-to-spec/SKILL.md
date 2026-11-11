@@ -48,12 +48,12 @@ errors, signed-out, phone vs desktop).
 The decisions made, for example:
 - the features (vertical slices) built or changed, and new handlers, pages or state containers by role
 - schema changes: tables, columns, RLS (DB-01)
-- contracts between parts: payloads, Function endpoints, config keys
+- shapes shared between parts: payloads, Function endpoints, config keys
 - architectural choices and the ARCHITECTURE.md rules they lean on
 
 ## Testing decisions
 
-- The agreed seams, each with its suite (`shared-unit`, `shared-integration`, bUnit, `e2e`, `db`, …) and verify level.
+- The agreed seams, each with its suite (`shared-unit`, `shared-integration`, bUnit, `e2e`, `db`, …).
 - Prior art: similar tests that already exist.
 - A good test checks behaviour through the public interface, not the implementation.
 

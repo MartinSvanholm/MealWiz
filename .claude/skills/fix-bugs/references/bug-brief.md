@@ -19,10 +19,11 @@ Other groups running in parallel own: <their files>. Don't edit those; if your f
 
 <Known issues filed during this run: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
 
-Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
+Verify with `fast`, plus only the step that holds a bug's red test when it isn't a unit or bUnit test
+(`local --only <step>`, or `local --e2e <class>` for a bug pinned by an E2E test). CI runs `verify full` on the PR.
 
 Merge rule, written by the user for this flow: when CI is green on your PR to dev, merge it yourself without asking
-(`scripts/merge-to-dev.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
+(`scripts/merge-pr.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
 cleared it.
 ```
 

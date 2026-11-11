@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run MealWiz's one-command verification (build, unit/bUnit, integration, Playwright E2E, pgTAP) and triage what fails. Use before saying any code change is done, and whenever asked to verify, test, or check that the app still works.
+description: Run MealWiz's one-command verification (build, unit/bUnit, integration, Playwright E2E, pgTAP) at the level your role calls for and triage what fails. Use before saying any code change is done, and whenever asked to verify, test, or check that the app still works.
 ---
 
 # Verify a change
@@ -13,13 +13,15 @@ change needs, and how to write them is in `docs/agents/TESTING.md`.
 
 | Level | Runs | When |
 |-------|------|------|
-| `fast` | docs check + build + unit and bUnit tests, no Docker | while iterating |
-| `local` | `fast` + local Supabase + integration tests + `supabase test db` (pgTAP RLS tests), no browser tests | **before saying a change is done** |
-| `local --e2e <class>` | `local` + one E2E class, e.g. `MealPlanJourneyTests` | when TESTING.md names a journey for your change, or a bug is pinned by an E2E test |
+| `fast` | docs check + build + unit and bUnit tests, no Docker, no lock | **issue and bug sessions, before the PR** |
+| `local --only <steps>` | just the named Supabase-backed steps, e.g. `shared-integration`, `db` | an issue or bug session whose plan names a migration, an RLS change or new integration tests |
+| `local --e2e <class>` | `local` + one E2E class, e.g. `MealPlanJourneyTests` | a bug pinned by an E2E test |
+| `local` | `fast` + local Supabase + integration tests + `supabase test db` (pgTAP RLS tests), no browser tests | work outside the project flow (a change made by hand, with no ship session behind it) |
 | `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | the browser smoke set, when asked |
-| `full` | `smoke` + all E2E journeys + pgTAP | what CI runs on every PR; locally only when asked |
+| `full` | `smoke` + all E2E journeys + pgTAP | **the ship session (`/ship-project`), once per project**; CI on every PR |
 
-The full E2E suite is CI's job: a PR merges only on green CI, so running it locally too only repeats it, slowly.
+Who runs what: an issue session runs `fast` so it never holds the shared Supabase stack for long; CI runs `full` on
+its PR into the project branch; the ship session runs `full` on the whole project before the PR to `dev`.
 
 ## 2. Run it
 

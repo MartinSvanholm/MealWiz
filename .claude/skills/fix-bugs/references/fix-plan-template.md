@@ -39,5 +39,6 @@ what it does to existing rows, the new signature, the visible behaviour change. 
 - `docs/agents/TESTING.md` "Bugs currently pinned by tests": <the row to remove>. `docs/agents/FEATURES.md`: <lines>.
 
 ### Verify
-`scripts/verify.ps1 local <--e2e Class>` (exit 0).
+`scripts/verify.ps1 fast` (exit 0)<, plus `local --only <step>` or `local --e2e <Class>` when the red test isn't a
+unit or bUnit test>. CI runs the rest.
 ```

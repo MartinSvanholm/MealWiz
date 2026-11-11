@@ -1,6 +1,6 @@
 ---
 name: fix-bugs
-description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
+description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first with the fast checks, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
 ---
 
 # Fix bugs
@@ -121,8 +121,8 @@ Tell the user once, with the first wave: groups that wait for a merge start late
 began, so they arrive as cards to click. Or the user can say "start the next ones" whenever they're back, and you start
 every group that is unblocked by then directly.
 
-Tell the user once: each session will ask the app to approve `set_monitor` the first time, unless they've allowed it.
-`.claude/settings.json` pre-approves `scripts/merge-to-dev.sh` (which only merges green PRs into `dev`), `gh pr view` and
+`.claude/settings.json` pre-approves `scripts/merge-pr.sh` (which only merges green bug PRs into `dev` and green issue
+PRs into a project branch), `gh pr view` and
 `gh pr checks`. It deliberately doesn't pre-approve `gh pr merge`, which could merge a release PR into `main`.
 
 ## 6. Every time you're woken
@@ -147,5 +147,5 @@ Tell the user once: each session will ask the app to approve `set_monitor` the f
 ## 7. Finish
 
 When every group is merged, stuck or cancelled: summarise (bug → PR → result), list the bugs filed along the way,
-and offer cleanup as in `plan-project` step 7 (archive merged sessions on the user's yes, then remove their
+and offer cleanup as in `plan-project` step 6 (archive merged sessions on the user's yes, then remove their
 worktrees, then `git branch -d` merged branches).
