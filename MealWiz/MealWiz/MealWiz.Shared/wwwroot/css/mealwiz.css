@@ -595,6 +595,12 @@ h1:focus {
     color: var(--mw-red-text);
 }
 
+/* The non-destructive variant (AddWeekIngredientsPromptDrawer): orange instead of red. */
+.mw-confirm-icon.mw-confirm-icon-accent {
+    background-color: color-mix(in srgb, var(--mw-orange) 16%, transparent);
+    color: var(--mw-orange-text);
+}
+
 .mw-confirm-title {
     flex: 0 0 auto;
     max-width: 100%;

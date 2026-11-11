@@ -255,4 +255,22 @@
   <data name="DayCard_Summary" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
+  <data name="WeekPrompt_Header" xml:space="preserve">
+    <value>Ugen er gemt</value>
+  </data>
+  <data name="WeekPrompt_Question" xml:space="preserve">
+    <value>Vil du lægge ugens ingredienser på indkøbslisten?</value>
+  </data>
+  <data name="WeekPrompt_Description" xml:space="preserve">
+    <value>Du ser kun det, der ikke allerede er på listen, og kan rette mængderne, før du tilføjer.</value>
+  </data>
+  <data name="WeekPrompt_Accept" xml:space="preserve">
+    <value>Tilføj ingredienser</value>
+  </data>
+  <data name="WeekPrompt_Decline" xml:space="preserve">
+    <value>Ikke nu</value>
+  </data>
+  <data name="WeekPrompt_DrawerTitle" xml:space="preserve">
+    <value>Ingredienser til uge {0}</value>
+  </data>
 </root>

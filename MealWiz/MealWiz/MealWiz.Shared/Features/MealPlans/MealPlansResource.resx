@@ -295,4 +295,24 @@
     <value>{0} · {1}</value>
     <comment>{0} is the ingredient count, {1} the recipe status</comment>
   </data>
+  <data name="WeekPrompt_Header" xml:space="preserve">
+    <value>Week saved</value>
+    <comment>Title of the drawer that offers to add the saved week's ingredients to the grocery list</comment>
+  </data>
+  <data name="WeekPrompt_Question" xml:space="preserve">
+    <value>Add this week's ingredients to the grocery list?</value>
+  </data>
+  <data name="WeekPrompt_Description" xml:space="preserve">
+    <value>You'll see only what isn't on your list yet, and can change the amounts before adding.</value>
+  </data>
+  <data name="WeekPrompt_Accept" xml:space="preserve">
+    <value>Add ingredients</value>
+  </data>
+  <data name="WeekPrompt_Decline" xml:space="preserve">
+    <value>Not now</value>
+  </data>
+  <data name="WeekPrompt_DrawerTitle" xml:space="preserve">
+    <value>Week {0} ingredients</value>
+    <comment>Title of the merge drawer opened from the prompt; {0} is the ISO week number</comment>
+  </data>
 </root>

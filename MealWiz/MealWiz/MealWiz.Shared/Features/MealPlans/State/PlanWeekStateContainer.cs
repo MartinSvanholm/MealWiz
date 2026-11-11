@@ -305,6 +305,7 @@ public class PlanWeekStateContainer(
         NotifyStateChanged();
 
         await mealPlanState.NavigateToWeek(WeekStart);
+        mealPlanState.OfferWeekIngredients(WeekStart); // the Meal plan asks once the week has loaded (MEA-83)
         navigation.NavigateTo("/");
         return true;
     }

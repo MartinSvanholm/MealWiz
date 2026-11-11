@@ -1,0 +1,55 @@
+@using System.Globalization
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<MealPlansResource> L
+
+@* After Plan week's Save, the Meal plan asks once whether to add the saved week's ingredients to the grocery list
+   (MEA-83). "Add ingredients" swaps in the merge drawer for every planned day of the week; "Not now" (or the header X
+   or a scrim tap) only closes. Opened by MealPlanPage through Open. *@
+<div class="week-ingredients-prompt" data-testid="week-ingredients-prompt">
+    <div class="week-ingredients-prompt-body">
+        <div class="mw-confirm-icon mw-confirm-icon-accent" aria-hidden="true">
+            <MudIcon Icon="@Icons.Material.Outlined.AddShoppingCart" Color="Color.Inherit" />
+        </div>
+        <h2 class="week-ingredients-prompt-title" data-testid="week-ingredients-prompt-title">@L["WeekPrompt_Question"]</h2>
+        <p class="week-ingredients-prompt-description" data-testid="week-ingredients-prompt-description">@L["WeekPrompt_Description"]</p>
+    </div>
+    <DrawerFooter>
+        <MudButton data-testid="week-ingredients-prompt-accept" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="Accept">@L["WeekPrompt_Accept"]</MudButton>
+        <MudButton data-testid="week-ingredients-prompt-decline" Variant="Variant.Filled" FullWidth="true" Class="mw-sheet-footer-cancel week-ingredients-prompt-decline" OnClick="Decline">@L["WeekPrompt_Decline"]</MudButton>
+    </DrawerFooter>
+</div>
+
+@code {
+    public const string DrawerHeight = "calc(440px + env(safe-area-inset-bottom))";
+
+    [Parameter, EditorRequired] public DateTime WeekStart { get; set; }
+
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<MealPlansResource> localizer, DateTime weekStart) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(AddWeekIngredientsPromptDrawer),
+            Title = localizer["WeekPrompt_Header"],
+            Height = DrawerHeight,
+            ContentParameters = new() { { nameof(WeekStart), weekStart.Date } }
+        });
+
+    private void Accept()
+    {
+        // Read the plan at click time: the week overview re-navigates on mount and replaces the plan object.
+        var end = WeekStart.AddDays(7);
+        var dates = _mealPlanStateContainer.MealPlan?.MealOnDate.Keys
+            .Where(d => d >= WeekStart && d < end).OrderBy(d => d).ToList() ?? [];
+        if (dates.Count == 0)
+        {
+            _drawerStateContainer.CloseDrawer();
+            return;
+        }
+
+        // Swaps the open drawer's content in place; closing first would animate the sheet out and in.
+        AddPlanIngredientsToGroceryListDrawer.Open(
+            _drawerStateContainer, L["WeekPrompt_DrawerTitle", ISOWeek.GetWeekOfYear(WeekStart)], dates);
+    }
+
+    private void Decline() => _drawerStateContainer.CloseDrawer();
+}
