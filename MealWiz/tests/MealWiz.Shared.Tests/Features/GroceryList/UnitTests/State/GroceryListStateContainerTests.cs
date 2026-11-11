@@ -421,6 +421,11 @@ public class GroceryListStateContainerTests
             .Setup(m => m.Send(It.IsAny<GetGroceryItemSources.Query>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok(sources.ToList()));
 
+    private void SetupDropSources(params GroceryItem[] reduced) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItemSources.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(reduced.ToList()));
+
     private List<object> SentRequests() =>
         _mediator.Invocations.Where(i => i.Method.Name == nameof(IMediator.Send)).Select(i => i.Arguments[0]).ToList();
 
@@ -470,6 +475,7 @@ public class GroceryListStateContainerTests
     public async Task SettleLinkedItems_SendsDeleteThenUnlinkWithTheBasketThenDropSources()
     {
         _mediator.Setup(m => m.Send(It.IsAny<IRequest<Result>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok());
+        SetupDropSources();
         var links = new LinkedGroceryItems([Item(1, "a")], [Item(2, "b", picked: true)], [31]);
 
         ResultAssert.Ok(await _container.SettleLinkedItems(links, [1], [3]));
@@ -511,6 +517,7 @@ public class GroceryListStateContainerTests
         await _container.LoadItemsLinkedToMeal(5);
         _notifications = 0;
         _mediator.Setup(m => m.Send(It.IsAny<IRequest<Result>>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok());
+        SetupDropSources();
         var basket = _container.GroceryList.Items.Single(i => i.Id == 2);
         var links = new LinkedGroceryItems([], [basket], [31]);
 
@@ -521,6 +528,40 @@ public class GroceryListStateContainerTests
         Assert.True(_container.GroceryList.Items.Single(i => i.Id == 3).IsManual);
         Assert.Equal([32], _container.Sources.Select(s => s.Id));
         Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_DroppedSources_AppliesTheReducedAmounts()
+    {
+        SetupLoad(PlanItem(12, "Garlic"));
+        SetupSources(LinkedSource(31, 12), LinkedSource(32, 12, mealId: 6));
+        await _container.LoadItemsLinkedToMeal(5);
+        _container.GroceryList.Items[0].Amount = "3 cloves";
+        _notifications = 0;
+        SetupDropSources(new GroceryItem { Id = 12, Name = "Garlic", Amount = "1 clove" });
+
+        ResultAssert.Ok(await _container.SettleLinkedItems(new LinkedGroceryItems([], [], [31]), [], []));
+
+        Assert.Equal("1 clove", _container.GroceryList.Items.Single(i => i.Id == 12).Amount);
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task SettleLinkedItems_DropSourcesFails_ReturnsItAndKeepsTheAmounts()
+    {
+        SetupLoad(PlanItem(12, "Garlic"));
+        SetupSources(LinkedSource(31, 12), LinkedSource(32, 12, mealId: 6));
+        await _container.LoadItemsLinkedToMeal(5);
+        _container.GroceryList.Items[0].Amount = "3 cloves";
+        _mediator
+            .Setup(m => m.Send(It.IsAny<DeleteGroceryItemSources.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<List<GroceryItem>>("Drop broke"));
+
+        var result = await _container.SettleLinkedItems(new LinkedGroceryItems([], [], [31]), [], []);
+
+        Assert.True(result.IsFailed);
+        Assert.Equal("3 cloves", _container.GroceryList.Items.Single(i => i.Id == 12).Amount);
+        VerifyNoToast();
     }
 
     private static GroceryItem Item(int id, string name, bool picked = false) => new() { Id = id, Name = name, IsPicked = picked };
