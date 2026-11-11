@@ -203,8 +203,9 @@ public class MealPlanStateContainerTests
             });
         var replacement = new Meal { Id = 2, Name = "Tacos" };
 
-        await _container.SwapMealOnSelectedDate(replacement);
+        var swapped = await _container.SwapMealOnSelectedDate(replacement);
 
+        Assert.True(swapped);
         Assert.Equal(new SwapMealInMealPlan.Command(plan.Id, PastWednesday.Date, current.Id, replacement.Id), sent);
         Assert.Same(replacement, plan.MealOnDate[PastWednesday.Date]);
         Assert.Equal(PastWednesday.Date, replacement.MealDate);
@@ -235,11 +236,23 @@ public class MealPlanStateContainerTests
             .Setup(m => m.Send(It.IsAny<SwapMealInMealPlan.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Fail("Swap failed"));
 
-        await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
+        var swapped = await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
 
+        Assert.False(swapped);
         Assert.Same(current, plan.MealOnDate[PastWednesday.Date]);
         Assert.True(_container.IsSwappingMeal);
         VerifyToast("Swap failed", Severity.Error);
+    }
+
+    [Fact]
+    public async Task SwapMealOnSelectedDate_WithoutAMealOnTheDay_ReturnsFalseAndSendsNothing()
+    {
+        await NavigateToPastWeekWithoutPlan();
+
+        var swapped = await _container.SwapMealOnSelectedDate(new Meal { Id = 2 });
+
+        Assert.False(swapped);
+        _mediator.Verify(m => m.Send(It.IsAny<SwapMealInMealPlan.Command>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

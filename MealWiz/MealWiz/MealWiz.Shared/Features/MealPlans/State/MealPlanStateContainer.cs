@@ -30,7 +30,8 @@ public interface IMealPlanStateContainer
     Task AddMealToPlan(Meal meal);
     void StartSwap();
     void CancelSwap();
-    Task SwapMealOnSelectedDate(Meal meal);
+    /// <summary>Swaps the selected day's meal. True when saved; false (error already shown) otherwise.</summary>
+    Task<bool> SwapMealOnSelectedDate(Meal meal);
     Meal? GetMealFromSelectedDate();
     bool DateHasMeal(DateTime dateTime);
 }
@@ -130,20 +131,21 @@ public class MealPlanStateContainer(
         NotifyStateChanged();
     }
 
-    public async Task SwapMealOnSelectedDate(Meal meal)
+    public async Task<bool> SwapMealOnSelectedDate(Meal meal)
     {
         var current = GetMealFromSelectedDate();
-        if (MealPlan is null || current is null) return;
+        if (MealPlan is null || current is null) return false;
 
         var date = SelectedDate.Date;
         var result = await mediator.Send(new SwapMealInMealPlanAction.Command(MealPlan.Id, date, current.Id, meal.Id));
-        if (result.Handle(CurrentSnackbar).IsFailed) return;
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
 
         meal.MealDate = date;
         meal.MealPlan = MealPlan;
         MealPlan.MealOnDate[date] = meal;
         IsSwappingMeal = false;
         NotifyStateChanged();
+        return true;
     }
 
     public Meal? GetMealFromSelectedDate()
