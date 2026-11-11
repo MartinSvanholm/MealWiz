@@ -27,6 +27,10 @@ public interface IMealPlanStateContainer
     void NotifyStateChanged();
     Task LoadMealPlan();
     Task NavigateToWeek(DateTime targetDate);
+    /// <summary>Called by Plan week's Save once the saved week is loaded: the Meal plan then asks to add its ingredients (MEA-83).</summary>
+    void OfferWeekIngredients(DateTime weekStart);
+    /// <summary>The offered week's Monday, once, when that week is loaded and shown and has something for the list; else null.</summary>
+    DateTime? TakeWeekIngredientsOffer();
     Task AddMealToPlan(Meal meal);
     void StartSwap();
     void CancelSwap();
@@ -95,6 +99,29 @@ public class MealPlanStateContainer(
 
         IsLoadingWeek = false;
         NotifyStateChanged();
+    }
+
+    private DateTime? weekIngredientsOffer;
+
+    public void OfferWeekIngredients(DateTime weekStart)
+    {
+        weekIngredientsOffer = weekStart.StartOfWeek().Date;
+        NotifyStateChanged();
+    }
+
+    // Runs from OnAfterRender, so it must never notify.
+    public DateTime? TakeWeekIngredientsOffer()
+    {
+        if (weekIngredientsOffer is not { } week) return null;
+        if (IsLoadingWeek) return null; // keep it: a later render takes it
+
+        weekIngredientsOffer = null;
+        if (SelectedWeekStart != week || MealPlan is null) return null;
+
+        var end = week.AddDays(7);
+        var hasSomethingForTheList = MealPlan.MealOnDate.Any(kvp =>
+            kvp.Key >= week && kvp.Key < end && kvp.Value.Ingredients.Any(i => i.ShowOnGroceryList));
+        return hasSomethingForTheList ? week : null;
     }
 
     public async Task AddMealToPlan(Meal meal)
