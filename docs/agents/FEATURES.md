@@ -49,14 +49,17 @@ meals are planned this week, or that every meal has a recipe.
     (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
   - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header.
   - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: "Delete meal" on the Edit meal page; deletes after a confirm
-    drawer, then returns to `/meals`.
+    drawer, then returns to `/meals`. If grocery items still to buy are linked to the meal's ingredients, it opens
+    `ReviewGroceryItemsDrawer` ("Remove from grocery list?", one group under the meal's name) and deletes the meal only
+    after Remove; closing the review deletes nothing. Basket items are unlinked and links on items other meals need are
+    dropped first (`LoadItemsLinkedToMeal`, `SettleLinkedItems`).
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetAllMeals | `Query()` → `Result<List<Meal>>` | Every meal visible to the user (own + system), regular meals last, then by name |
   | SaveMeal | `Command(Meal)` → `Result<Meal>` | Insert when `Id == 0` (sets `created_by`), otherwise update |
-  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade |
+  | DeleteMeal | `Command(int MealId)` → `Result` | Delete by id; its ingredients and planned days cascade; its grocery item sources lose both links (set null) |
 
 - **State:** `Features/Meals/State/MealsStateContainer.cs` (`IMealsStateContainer`). It holds `Meals`, `MealToEdit`,
   and the pending ingredients; methods include `LoadMeals`, `ReloadIngredientsForMealToEdit` and
@@ -81,7 +84,8 @@ A meal's ingredients: name, amount, and a "show on grocery list" flag (a switch 
 ingredients with it off are left out when the plan's ingredients go on the grocery list). They're edited only from the
 Edit Meal page, always saved from the ingredient drawer: the add row opens it ("Add ingredient") and an ingredient row
 opens it to edit ("Edit ingredient"). A new meal's ingredients are kept as pending in `IMealsStateContainer` until the meal is
-saved and has an id.
+saved and has an id. Deleting a saved ingredient that has to-buy grocery items asks whether to remove them too; basket
+items are unlinked silently.
 
 - **Folder:** `Features/Ingredients/`
 - **Texts:** `Features/Ingredients/IngredientsResource.cs` with `IngredientsResource.resx` / `.da.resx`.
@@ -98,7 +102,13 @@ saved and has an id.
     with what was typed (empty if nothing was) and clears the row; it saves nothing itself. Enter in the name moves to
     the amount.
   - `Features/Ingredients/SaveIngredient/SaveIngredientButton.razor`: refuses an ingredient without a name.
-  - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`
+  - `Features/Ingredients/DeleteIngredient/DeleteIngredientButton.razor`: the trash on a row (`delete-ingredient-button`)
+    and in the drawer header (`drawer-delete-ingredient`). A pending ingredient goes at once; a saved one after the red
+    confirm, then the question below when it has grocery items still to buy.
+  - `Features/Ingredients/DeleteIngredient/RemoveIngredientFromGroceryListDrawer.razor`, with `.razor.css`: "On your
+    grocery list" / "Also remove X from the grocery list?" (`remove-ingredient-items-question`, hint
+    `remove-ingredient-items-hint`). Both answers delete the ingredient first: Yes (`remove-ingredient-items-yes`) then
+    deletes the items, No (`remove-ingredient-items-no`) unlinks them. Closing it deletes nothing.
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -108,7 +118,7 @@ saved and has an id.
   | DeleteIngredient | `Command(Ingredient)` → `Result` | Delete one ingredient |
 
 - **State:** none of its own. It uses `IMealsStateContainer` (pending ingredients, `SaveIngredientForMealToEdit`,
-  `ReloadIngredientsForMealToEdit`).
+  `ReloadIngredientsForMealToEdit`) and `IGroceryListStateContainer` (`LoadItemsLinkedToIngredient`, `SettleLinkedItems`).
 - **Models:** `Features/Ingredients/Models/Ingredient.cs` ↔ `Features/Ingredients/Models/IngredientDb.cs`, table
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
@@ -264,16 +274,21 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
   | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true; ids RLS hides are skipped |
+  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result` | Delete the given sources and keep their items; ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
-  `ClearBasket`, `Sources`, `LoadSources`, `StaleItems` and `DeleteAndUnlinkGroceryItems`.
+  `ClearBasket`, `Sources`, `LoadSources`, `StaleItems`, `DeleteAndUnlinkGroceryItems`, and for a meal or ingredient
+  being deleted `LoadItemsLinkedToMeal`, `LoadItemsLinkedToIngredient` and `SettleLinkedItems` (delete, unlink with the
+  basket, drop links; failures returned unreported).
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
   - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
+  - `Features/GroceryList/Models/LinkedGroceryItems.cs`: a deleted meal's or ingredient's items sorted into `ToBuy`,
+    `InBasket` and `SourceIdsToDrop` (manual items and items another live link needs only lose its links).
   - `Features/GroceryList/Models/StaleGroceryItems.cs` (the stale rule and the grouping by old meal) and `Features/GroceryList/Models/GroceryItemGroup.cs` (a null `Heading` is "Other items", resolved in the drawer).
   - `Features/GroceryList/GroceryListResource.cs` with `GroceryListResource.resx` and `.da.resx`: the banner and review drawer texts (UI-03).
   - `Features/GroceryList/Models/PlannedMealGroceryItems.cs`: static `OnlyNeededBy(plannedMealId, items, sources)`, the items only one planned day needs (MEA-81).
