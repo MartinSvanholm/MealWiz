@@ -1,3 +1,4 @@
+using MealWiz.Functions.Functions.DeleteAccount;
 using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
 using MealWiz.Functions.Shared.Fetching;
@@ -28,6 +29,9 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IServiceRoleSupabaseClientFactory, ServiceRoleSupabaseClientFactory>();
         services.AddScoped<IScrapeRecipeHandler, ScrapeRecipeHandler>();
+
+        services.AddHttpClient(DeleteAccountHandler.HttpClientName);
+        services.AddScoped<IDeleteAccountHandler, DeleteAccountHandler>();
 
         return services;
     }

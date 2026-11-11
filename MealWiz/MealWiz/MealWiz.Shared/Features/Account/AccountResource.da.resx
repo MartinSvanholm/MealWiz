@@ -72,4 +72,31 @@
   <data name="EmailChange_AccountLink" xml:space="preserve">
     <value>Gå til din konto</value>
   </data>
+  <data name="DeleteAccount_Open" xml:space="preserve">
+    <value>Slet konto</value>
+  </data>
+  <data name="DeleteAccount_Warning" xml:space="preserve">
+    <value>Dette sletter din konto og alle dine måltider, planer, indkøbslister og importer. Det kan ikke fortrydes.</value>
+  </data>
+  <data name="DeleteAccount_Password" xml:space="preserve">
+    <value>Nuværende adgangskode</value>
+  </data>
+  <data name="DeleteAccount_PasswordPlaceholder" xml:space="preserve">
+    <value>Indtast din adgangskode</value>
+  </data>
+  <data name="DeleteAccount_Confirm" xml:space="preserve">
+    <value>Slet min konto</value>
+  </data>
+  <data name="DeleteAccount_Cancel" xml:space="preserve">
+    <value>Annuller</value>
+  </data>
+  <data name="DeleteAccount_WrongPassword" xml:space="preserve">
+    <value>Adgangskoden er forkert.</value>
+  </data>
+  <data name="DeleteAccount_SessionExpired" xml:space="preserve">
+    <value>Din session er udløbet. Log ind igen.</value>
+  </data>
+  <data name="DeleteAccount_Failed" xml:space="preserve">
+    <value>Kontoen kunne ikke slettes. Prøv igen senere.</value>
+  </data>
 </root>
