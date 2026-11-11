@@ -72,4 +72,31 @@
   <data name="EmailChange_AccountLink" xml:space="preserve">
     <value>Go to your account</value>
   </data>
+  <data name="DeleteAccount_Open" xml:space="preserve">
+    <value>Delete account</value>
+  </data>
+  <data name="DeleteAccount_Warning" xml:space="preserve">
+    <value>This deletes your account and all your meals, plans, grocery lists and imports. It can't be undone.</value>
+  </data>
+  <data name="DeleteAccount_Password" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="DeleteAccount_PasswordPlaceholder" xml:space="preserve">
+    <value>Enter your password</value>
+  </data>
+  <data name="DeleteAccount_Confirm" xml:space="preserve">
+    <value>Delete my account</value>
+  </data>
+  <data name="DeleteAccount_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="DeleteAccount_WrongPassword" xml:space="preserve">
+    <value>That password isn't right.</value>
+  </data>
+  <data name="DeleteAccount_SessionExpired" xml:space="preserve">
+    <value>Your session has expired. Log in again.</value>
+  </data>
+  <data name="DeleteAccount_Failed" xml:space="preserve">
+    <value>Couldn't delete your account. Try again later.</value>
+  </data>
 </root>

@@ -107,6 +107,18 @@ Not implemented. This would replace the function key with real per-user auth:
 4. The trigger can then drop to `AuthorizationLevel.Anonymous`, and the key, the GitHub secret and the workflow step
    can go away.
 
+## DeleteAccount
+
+`POST /api/DeleteAccount` deletes the signed-in user's account and everything they own (the `created_by` foreign
+keys cascade). Same Function app, same host key (`x-functions-key`) and same CORS entry as `ScrapeRecipe`; it reuses
+`Supabase:Url` and `Supabase:ServiceRoleKey`, so there is nothing new to configure locally or in production.
+
+- Request: `Authorization: Bearer <the user's access token>`, body `{ "password": "…" }`.
+- It asks GoTrue who the token belongs to, checks the password (a password grant for that user), and only then
+  calls the admin delete. Core Tools doesn't enforce the key locally.
+- Responses: `204` deleted, `400` missing body or blank password, `401` missing or invalid token, `403` wrong
+  password (nothing deleted), `502` any other GoTrue failure (logged, not returned).
+
 ## Tests
 
 Tests live in `MealWiz/tests/MealWiz.Functions.Tests`, mirroring this project's layout with a folder per test type:

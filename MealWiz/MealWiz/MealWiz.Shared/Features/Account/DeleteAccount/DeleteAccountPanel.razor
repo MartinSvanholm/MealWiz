@@ -1,0 +1,75 @@
+@using MealWiz.Shared.Features.Account.DeleteAccount
+@inject ISender _mediator
+@inject NavigationManager _navigation
+@inject IStringLocalizer<AccountResource> L
+
+<section class="mw-account-section mw-account-delete" data-testid="delete-account-section">
+    @if (!IsOpen)
+    {
+        <Button data-testid="delete-account-open" OnClick="Open" Color="Color.Error" Variant="Variant.Outlined" Class="mw-account-delete-button">@L["DeleteAccount_Open"]</Button>
+    }
+    else
+    {
+        <div class="mw-account-delete-panel" data-testid="delete-account-panel">
+            <p class="mw-account-delete-warning">@L["DeleteAccount_Warning"]</p>
+            <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
+                <div class="mw-auth-field">
+                    <label class="mw-auth-label" for="delete-account-password-input">@L["DeleteAccount_Password"]</label>
+                    <TextField data-testid="delete-account-password" @bind-Value="Password" InputId="delete-account-password-input"
+                               Placeholder="@L["DeleteAccount_PasswordPlaceholder"].Value" Required InputType="InputType.Password"
+                               OnKeyDown="EnterKey.Then(Delete)" />
+                </div>
+                @if (Error is not null)
+                {
+                    <p class="mw-account-delete-error" role="alert" data-testid="delete-account-error">@Error</p>
+                }
+                <Button data-testid="delete-account-confirm" OnClick="Delete" Color="Color.Error" Class="mw-account-delete-button" IsLoading="IsLoading">@L["DeleteAccount_Confirm"]</Button>
+                <Button data-testid="delete-account-cancel" OnClick="Cancel" Color="Color.Default" Variant="Variant.Outlined" Class="mw-account-delete-button">@L["DeleteAccount_Cancel"]</Button>
+            </CustomForm>
+        </div>
+    }
+</section>
+
+@code {
+    private bool IsOpen { get; set; }
+    private string? Password { get; set; }
+    private string? Error { get; set; }
+    private bool IsValid { get; set; }
+    private bool IsLoading { get; set; }
+    private CustomForm Form { get; set; } = default!;
+
+    private void Open() => IsOpen = true;
+
+    private void Cancel()
+    {
+        IsOpen = false;
+        Password = null;
+        Error = null;
+    }
+
+    private async Task Delete()
+    {
+        IsLoading = true;
+        Error = null;
+
+        try
+        {
+            await Form.Validate();
+            if (!IsValid) return;
+
+            var result = await _mediator.Send(new DeleteAccount.Command(Password!));
+            if (result.IsFailed)
+            {
+                Error = result.Errors[0].Message;
+                return;
+            }
+
+            // The user is gone: reload from scratch before anything loads data with the dead token.
+            _navigation.NavigateTo("/login", forceLoad: true);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

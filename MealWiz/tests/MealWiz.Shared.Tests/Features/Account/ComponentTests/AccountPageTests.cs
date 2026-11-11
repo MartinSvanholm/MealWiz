@@ -16,6 +16,7 @@ public class AccountPageTests : ComponentTestBase
 
         Assert.Contains("Dark mode", cut.Markup);
         Assert.NotNull(cut.Find(TestId("logout-button")));
+        Assert.NotNull(cut.Find(TestId("delete-account-open")));
     }
 
     [Fact]

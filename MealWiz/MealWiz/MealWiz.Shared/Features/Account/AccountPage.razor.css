@@ -167,3 +167,30 @@
     font-size: 14px;
     color: var(--mw-text-muted);
 }
+
+/* Delete account: a red outlined button below Log out that opens an inline confirm panel. */
+.mw-account-delete ::deep .mw-account-delete-button {
+    width: 100%;
+    height: 50px;
+    border-width: 1.5px;
+    font-size: 15px;
+}
+
+.mw-account ::deep .mw-account-delete-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mw-account ::deep .mw-account-delete-warning {
+    margin: 0;
+    font-size: 14px;
+    color: var(--mw-text-muted);
+}
+
+.mw-account ::deep .mw-account-delete-error {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
