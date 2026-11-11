@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Auth_Tagline" xml:space="preserve">
+    <value>Planlæg ugen. Handl én gang.</value>
+  </data>
+  <data name="Auth_Email" xml:space="preserve">
+    <value>E-mail</value>
+  </data>
+  <data name="Auth_EmailPlaceholder" xml:space="preserve">
+    <value>dig@eksempel.dk</value>
+  </data>
+  <data name="Auth_Password" xml:space="preserve">
+    <value>Adgangskode</value>
+  </data>
+  <data name="Auth_RepeatPassword" xml:space="preserve">
+    <value>Gentag adgangskode</value>
+  </data>
+  <data name="Auth_RepeatPasswordPlaceholder" xml:space="preserve">
+    <value>Den samme adgangskode igen</value>
+  </data>
+  <data name="Auth_PasswordsDontMatch" xml:space="preserve">
+    <value>Adgangskoderne er ikke ens</value>
+  </data>
+  <data name="Auth_LogIn" xml:space="preserve">
+    <value>Log ind</value>
+  </data>
+  <data name="Login_PasswordPlaceholder" xml:space="preserve">
+    <value>Din adgangskode</value>
+  </data>
+  <data name="Login_ForgotPassword" xml:space="preserve">
+    <value>Glemt adgangskode?</value>
+  </data>
+  <data name="Login_NoAccount" xml:space="preserve">
+    <value>Ingen konto endnu?</value>
+  </data>
+  <data name="Login_CreateOne" xml:space="preserve">
+    <value>Opret en</value>
+  </data>
+  <data name="SignUp_PasswordPlaceholder" xml:space="preserve">
+    <value>Vælg en adgangskode</value>
+  </data>
+  <data name="SignUp_Submit" xml:space="preserve">
+    <value>Opret konto</value>
+  </data>
+  <data name="SignUp_HaveAccount" xml:space="preserve">
+    <value>Har du allerede en konto?</value>
+  </data>
+  <data name="SignUp_CheckEmail" xml:space="preserve">
+    <value>Tjek din e-mail: vi har sendt et link til {0}, så du kan bekræfte din konto.</value>
+  </data>
+  <data name="SignUp_Confirmed" xml:space="preserve">
+    <value>Bekræftet?</value>
+  </data>
+  <data name="Forgot_Intro" xml:space="preserve">
+    <value>Skriv din kontos e-mail, så sender vi dig et link, hvor du kan vælge en ny adgangskode.</value>
+  </data>
+  <data name="Forgot_Submit" xml:space="preserve">
+    <value>Send link</value>
+  </data>
+  <data name="Forgot_Remembered" xml:space="preserve">
+    <value>Kan du huske den?</value>
+  </data>
+  <data name="Forgot_CheckEmail" xml:space="preserve">
+    <value>Tjek din e-mail: hvis der er en konto for {0}, har vi sendt et link, hvor du kan vælge en ny adgangskode.</value>
+  </data>
+  <data name="Forgot_BackToLogIn" xml:space="preserve">
+    <value>Tilbage til log ind</value>
+  </data>
+  <data name="Reset_NewPassword" xml:space="preserve">
+    <value>Ny adgangskode</value>
+  </data>
+  <data name="Reset_NewPasswordPlaceholder" xml:space="preserve">
+    <value>Vælg en ny adgangskode</value>
+  </data>
+  <data name="Reset_Submit" xml:space="preserve">
+    <value>Gem adgangskode</value>
+  </data>
+  <data name="Reset_LinkInvalid" xml:space="preserve">
+    <value>Linket er ugyldigt eller udløbet. Bed om et nyt.</value>
+  </data>
+  <data name="Reset_RequestAgain" xml:space="preserve">
+    <value>Send et nyt link</value>
+  </data>
+  <data name="Logout_Button" xml:space="preserve">
+    <value>Log ud</value>
+  </data>
+</root>

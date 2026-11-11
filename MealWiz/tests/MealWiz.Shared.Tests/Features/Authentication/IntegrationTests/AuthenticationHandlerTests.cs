@@ -1,3 +1,4 @@
+using MealWiz.Shared.Features.Authentication;
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
 using MealWiz.Shared.Features.Authentication.Logout;
@@ -109,7 +110,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
         var newPassword = Guid.NewGuid().ToString("N");
 
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, newPassword), CancellationToken);
 
         var session = ResultAssert.Ok(result);
@@ -130,7 +131,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
         var link = new Uri($"{ResetPasswordRedirect}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
 
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, Guid.NewGuid().ToString("N")), CancellationToken);
 
         ResultAssert.Failed(result);
@@ -146,7 +147,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
 
         // Below the minimum of 6 in supabase/config.toml.
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, "short"), CancellationToken);
 
         ResultAssert.Failed(result);
