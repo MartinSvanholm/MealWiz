@@ -3,6 +3,8 @@ using FluentResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
+using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.Meals;
 using MealWiz.Shared.Features.MealPlans;
 using MealWiz.Shared.Features.MealPlans.SwapMealInMealPlan;
@@ -139,6 +141,66 @@ public class SwapMealDrawerTests : ComponentTestBase
         Assert.Same(_pasta, MealPlan.GetMealFromSelectedDate());
         Assert.True(MealPlan.IsSwappingMeal);
         Assert.Empty(SentRequests);
+    }
+
+    // ---- The old day's links on shared items are dropped with the switch on (MEA-99) ----
+
+    private void OpenWithSharedLinks(int[] ids, int[] sourceIds)
+    {
+        var localizer = Services.GetRequiredService<IStringLocalizer<MealPlansResource>>();
+        var mealsLocalizer = Services.GetRequiredService<IStringLocalizer<MealsResource>>();
+        DrawerHost.InvokeAsync(() => SwapMealDrawer.Open(Drawer, localizer, mealsLocalizer, _pasta, _tacos, _date, ids, sourceIds));
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("swap-meal-confirm"))));
+    }
+
+    [Fact]
+    public void With_the_switch_on_it_drops_this_days_links_on_shared_items_after_swapping()
+    {
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("swap-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal(
+            [typeof(SwapMealInMealPlan.Command), typeof(DeleteGroceryItems.Command), typeof(DeleteGroceryItemSources.Command)],
+            SentRequests.Select(r => r.GetType()));
+        Assert.Equal([31], Assert.Single(Sent<DeleteGroceryItemSources.Command>()).SourceIds);
+    }
+
+    [Fact]
+    public void With_the_switch_off_it_drops_no_links()
+    {
+        OpenWithSharedLinks([11], [31]);
+        DrawerHost.Find(InputOf("swap-meal-grocery-switch")).Change(false);
+
+        DrawerHost.Find(TestId("swap-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Empty(Sent<DeleteGroceryItemSources.Command>());
+    }
+
+    [Fact]
+    public void A_failed_swap_drops_no_links()
+    {
+        SetupSend<SwapMealInMealPlan.Command, Result>(Result.Fail("Meal not found in plan"));
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("swap-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.Contains("Meal not found in plan", SnackbarMessages));
+        Assert.Empty(Sent<DeleteGroceryItemSources.Command>());
+    }
+
+    [Fact]
+    public void A_failed_link_drop_says_the_amounts_stayed_and_closes()
+    {
+        SetupSend<DeleteGroceryItemSources.Command, Result<List<GroceryItem>>>(Result.Fail<List<GroceryItem>>("boom"));
+        OpenWithSharedLinks([11], [31]);
+
+        DrawerHost.Find(TestId("swap-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Contains("The shared grocery items couldn't be updated. They keep their old amounts.", SnackbarMessages);
     }
 }
 

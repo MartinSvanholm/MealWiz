@@ -46,10 +46,13 @@
 
         _loading = false;
 
-        var ids = _mealPlanStateContainer.MealPlan.PlannedMealIdOnDate.TryGetValue(date, out var plannedMealId)
-            ? PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id)
-            : [];
+        List<int> ids = [], sourceIds = [];
+        if (_mealPlanStateContainer.MealPlan?.PlannedMealIdOnDate.TryGetValue(date, out var plannedMealId) == true)
+        {
+            ids = PlannedMealGroceryItems.OnlyNeededBy(plannedMealId, items.Value, sources.Value).ConvertAll(i => i.Id);
+            sourceIds = PlannedMealGroceryItems.SourceIdsOnSharedItems(plannedMealId, items.Value, sources.Value);
+        }
 
-        RemoveMealDrawer.Open(_drawerStateContainer, L, M, meal, date, ids);
+        RemoveMealDrawer.Open(_drawerStateContainer, L, M, meal, date, ids, sourceIds);
     }
 }

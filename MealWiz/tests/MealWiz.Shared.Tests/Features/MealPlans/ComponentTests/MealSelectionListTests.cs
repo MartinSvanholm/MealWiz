@@ -1,6 +1,7 @@
 using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.Models;
@@ -336,5 +337,36 @@ public class MealSelectionListTests : ComponentTestBase
         cut.WaitForAssertion(() => Assert.All(cut.FindAll(TestId("meal-selection-pick")), b => Assert.True(b.HasAttribute("disabled"))));
         load.SetResult(Result.Ok(new List<GroceryItem>()));
         cut.WaitForAssertion(() => Assert.False(MealPlan.IsSwappingMeal));
+    }
+
+    // ---- The old day's links on shared items are dropped on a swap (MEA-99) ----
+
+    [Fact]
+    public void Swapping_without_own_items_swaps_straight_and_drops_this_days_links_on_shared_items()
+    {
+        PlanPastaWithGroceryItems(withOwnItem: false);
+        var cut = Render<MealSelectionList>();
+
+        PickTacos(cut);
+
+        cut.WaitForAssertion(() => Assert.Single(Sent<DeleteGroceryItemSources.Command>()));
+        Assert.False(Drawer.IsDrawerOpen);
+        Assert.Equal([typeof(SwapMealInMealPlan.Command), typeof(DeleteGroceryItemSources.Command)],
+            SentRequests.Where(r => r is SwapMealInMealPlan.Command or DeleteGroceryItemSources.Command).Select(r => r.GetType()));
+        Assert.Equal([22], Sent<DeleteGroceryItemSources.Command>()[0].SourceIds);
+    }
+
+    [Fact]
+    public void Swapping_with_own_items_passes_the_shared_links_to_the_drawer()
+    {
+        PlanPastaWithGroceryItems();
+        var cut = Render<MealSelectionList>();
+        PickTacos(cut);
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("swap-meal-confirm"))));
+
+        DrawerHost.Find(TestId("swap-meal-confirm")).Click();
+
+        DrawerHost.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal([22], Assert.Single(Sent<DeleteGroceryItemSources.Command>()).SourceIds);
     }
 }

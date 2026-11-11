@@ -285,4 +285,7 @@
   <data name="SwapMeal_Confirm" xml:space="preserve">
     <value>Skift</value>
   </data>
+  <data name="GroceryItems_AmountsKept" xml:space="preserve">
+    <value>De delte varer på indkøbslisten kunne ikke opdateres. De beholder deres gamle mængder.</value>
+  </data>
 </root>

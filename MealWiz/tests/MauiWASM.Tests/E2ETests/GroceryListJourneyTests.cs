@@ -201,7 +201,7 @@ public class GroceryListJourneyTests : E2ETestBase
     }
 
     [Fact]
-    public async Task GroceryList_RemovingAPlannedMeal_RemovesItsOwnItems_AndKeepsSharedOnes()
+    public async Task GroceryList_RemovingAPlannedMeal_RemovesItsOwnItems_AndReducesSharedOnes()
     {
         const string pasta = "E2E Garlic pasta";
         const string soup = "E2E Tomato soup";
@@ -249,18 +249,18 @@ public class GroceryListJourneyTests : E2ETestBase
 
         await Page.GetByTestId("nav-grocery-list").ClickAsync();
         await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 clove");
         await Expect(Row("grocery-item", "Tomatoes")).ToBeVisibleAsync();
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
 
         await Page.ReloadAsync();
         await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 clove");
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
     }
 
     [Fact]
-    public async Task GroceryList_SwappingAPlannedMeal_AsksAndRemovesItsOwnItems_AndKeepsSharedOnes()
+    public async Task GroceryList_SwappingAPlannedMeal_AsksAndRemovesItsOwnItems_AndReducesSharedOnes()
     {
         const string pasta = "E2E Garlic pasta";
         const string soup = "E2E Tomato soup";
@@ -322,16 +322,16 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(salad);
 
-        // Only the pasta's own item went; the shared garlic stays
+        // Only the pasta's own item went; the shared garlic stays, less the pasta's 2 cloves (MEA-99)
         await Page.GetByTestId("nav-grocery-list").ClickAsync();
         await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 clove");
         await Expect(Row("grocery-item", "Tomatoes")).ToBeVisibleAsync();
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
 
         await Page.ReloadAsync();
         await Expect(Row("grocery-item", "Spaghetti")).ToHaveCountAsync(0);
-        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("3 cloves");
+        await Expect(Row("grocery-item", "Garlic").GetByTestId("grocery-item-amount")).ToHaveTextAsync("1 clove");
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
     }
 
