@@ -1,9 +1,13 @@
-﻿@inject IDrawerStateContainer _drawerStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
 @inject ISender _mediator
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealsResource> L
 
+@* Delete meal: asks first. When the meal still has grocery items to buy that only it needs, the review drawer opens
+   for them and the meal is deleted only after Remove (MEA-93). Basket items and links on items other meals need are
+   cleaned up silently before the delete. *@
 <MudLoadingButton
 data-testid="delete-meal-button"
 OnClick="OnDeleteClick"
@@ -24,6 +28,28 @@ FullWidth>@L["DeleteMeal_Button"]</MudLoadingButton>
 
     private async Task OnConfirmDelete()
     {
+        _groceryListStateContainer.CurrentSnackbar = _snackbar;
+        var loaded = await _groceryListStateContainer.LoadItemsLinkedToMeal(Meal.Id);
+        if (loaded.Handle(_snackbar).IsFailed) return;
+
+        var links = loaded.Value;
+        if (links.ToBuy.Count == 0)
+        {
+            await DeleteMealAsync(links);
+            return;
+        }
+
+        // Close the confirm first: it shares the drawer state, and the review needs fresh parameters.
+        _drawerStateContainer.CloseDrawer();
+        ReviewGroceryItemsDrawer.Open(_drawerStateContainer, L["DeleteMeal_ReviewTitle"],
+            [new GroceryItemGroup(Meal.Name, links.ToBuy)], () => DeleteMealAsync(links));
+    }
+
+    private async Task DeleteMealAsync(LinkedGroceryItems links)
+    {
+        var settled = await _groceryListStateContainer.SettleLinkedItems(links, [], []);
+        if (settled.Handle(_snackbar).IsFailed) return;
+
         var result = await _mediator.Send(new DeleteMeal.Command(Meal.Id));
         if (result.Handle(_snackbar).IsFailed) return;
 

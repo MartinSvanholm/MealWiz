@@ -1,5 +1,11 @@
 using Bunit;
 using FluentResults;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
+using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
+using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
+using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
+using MealWiz.Shared.Features.GroceryList.Models;
+using MealWiz.Shared.Features.GroceryList.UnlinkGroceryItems;
 using MealWiz.Shared.Features.Meals.DeleteMeal;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Tests.TestInfrastructure;
@@ -86,5 +92,112 @@ public class DeleteMealButtonTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.False(Drawer.IsConfirmDrawerOpen));
         Assert.Single(Sent<DeleteMeal.Command>());
+    }
+
+    // ---- A meal with grocery items still to buy is reviewed first (MEA-93) ----
+
+    private static GroceryItemSource LinkedTo(int mealId, int id, int itemId) =>
+        new() { Id = id, GroceryItemId = itemId, PlannedMealId = 500 + id, IngredientId = 100 + id, IngredientMealId = mealId, PlannedDayMealId = mealId };
+
+    /// <summary>Tortillas (1) and Salsa (2) are still to buy for meal 5; Beef (3) is in the basket.</summary>
+    private IRenderedComponent<DeleteMealButton> RenderWithLinkedItems(bool withToBuy = true)
+    {
+        var items = new List<GroceryItem> { TestData.LinkedGroceryItem("Beef", 3, isPicked: true) };
+        var sources = new List<GroceryItemSource> { LinkedTo(5, 13, 3) };
+        if (withToBuy)
+        {
+            items.AddRange([TestData.LinkedGroceryItem("Tortillas", 1), TestData.LinkedGroceryItem("Salsa", 2)]);
+            sources.AddRange([LinkedTo(5, 11, 1), LinkedTo(5, 12, 2)]);
+        }
+
+        SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(items));
+        SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(sources));
+        SetupSend<DeleteGroceryItems.Command, Result>(Result.Ok());
+        SetupSend<UnlinkGroceryItems.Command, Result>(Result.Ok());
+        SetupSend<DeleteGroceryItemSources.Command, Result>(Result.Ok());
+        SetupSend<DeleteMeal.Command, Result>(Result.Ok());
+        RenderDrawers();
+        return Render<DeleteMealButton>(p => p.Add(b => b.Meal, TestData.Meal("Tacos", id: 5)));
+    }
+
+    private void ConfirmDelete(IRenderedComponent<DeleteMealButton> cut)
+    {
+        cut.Find(TestId("delete-meal-button")).Click();
+        Confirm();
+    }
+
+    [Fact]
+    public void Confirming_with_items_to_buy_opens_the_review_instead_of_deleting()
+    {
+        var cut = RenderWithLinkedItems();
+
+        ConfirmDelete(cut);
+
+        DrawerHost.WaitForAssertion(() => Assert.Equal(2, DrawerHost.FindAll(TestId("review-item")).Count));
+        Assert.True(Drawer.IsDrawerOpen);
+        Assert.False(Drawer.IsConfirmDrawerOpen);
+        Assert.Equal("Remove from grocery list?", Drawer.StateParameters.Title);
+        Assert.Equal("Tacos", DrawerHost.Find(TestId("review-group-heading")).TextContent.Trim());
+        Assert.Empty(Sent<DeleteMeal.Command>());
+    }
+
+    [Fact]
+    public void Remove_in_the_review_deletes_the_meal_and_returns_to_meals()
+    {
+        var cut = RenderWithLinkedItems();
+        ConfirmDelete(cut);
+        DrawerHost.WaitForAssertion(() => Assert.Equal(2, DrawerHost.FindAll(TestId("review-item")).Count));
+
+        DrawerHost.Find(TestId("review-items-confirm")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("meals", CurrentPath));
+        Assert.Equal(
+            [typeof(GetAllGroceryItems.Query), typeof(GetGroceryItemSources.Query), typeof(DeleteGroceryItems.Command), typeof(UnlinkGroceryItems.Command), typeof(DeleteMeal.Command)],
+            SentRequests.Select(r => r.GetType()));
+        Assert.Equal([1, 2], Assert.Single(Sent<DeleteGroceryItems.Command>()).GroceryItemIds);
+        Assert.Equal([3], Assert.Single(Sent<UnlinkGroceryItems.Command>()).GroceryItemIds);
+        Assert.Equal(5, Assert.Single(Sent<DeleteMeal.Command>()).MealId);
+        Assert.Contains("Meal deleted", SnackbarMessages);
+    }
+
+    [Fact]
+    public void Closing_the_review_deletes_nothing()
+    {
+        var cut = RenderWithLinkedItems();
+        ConfirmDelete(cut);
+        DrawerHost.WaitForAssertion(() => Assert.Equal(2, DrawerHost.FindAll(TestId("review-item")).Count));
+
+        DrawerHost.Find(TestId("drawer-close")).Click();
+
+        Assert.False(Drawer.IsDrawerOpen);
+        Assert.Equal([typeof(GetAllGroceryItems.Query), typeof(GetGroceryItemSources.Query)], SentRequests.Select(r => r.GetType()));
+    }
+
+    [Fact]
+    public void Confirming_without_items_to_buy_unlinks_the_basket_and_deletes()
+    {
+        var cut = RenderWithLinkedItems(withToBuy: false);
+
+        ConfirmDelete(cut);
+
+        cut.WaitForAssertion(() => Assert.Equal("meals", CurrentPath));
+        Assert.Equal([3], Assert.Single(Sent<UnlinkGroceryItems.Command>()).GroceryItemIds);
+        Assert.Empty(Sent<DeleteGroceryItems.Command>());
+        Assert.Single(Sent<DeleteMeal.Command>());
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void A_failed_load_keeps_the_confirmation_open()
+    {
+        RenderWithLinkedItems();
+        SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Fail<List<GroceryItemSource>>("Sources broke"));
+        var cut = Render<DeleteMealButton>(p => p.Add(b => b.Meal, TestData.Meal("Tacos", id: 5)));
+
+        ConfirmDelete(cut);
+
+        cut.WaitForAssertion(() => Assert.Contains("Sources broke", SnackbarMessages));
+        Assert.True(Drawer.IsConfirmDrawerOpen);
+        Assert.Empty(Sent<DeleteMeal.Command>());
     }
 }

@@ -132,4 +132,7 @@
   <data name="SaveMeal_Saved" xml:space="preserve">
     <value>Måltid gemt</value>
   </data>
+  <data name="DeleteMeal_ReviewTitle" xml:space="preserve">
+    <value>Fjern fra indkøbslisten?</value>
+  </data>
 </root>

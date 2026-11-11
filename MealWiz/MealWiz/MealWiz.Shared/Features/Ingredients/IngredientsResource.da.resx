@@ -57,4 +57,22 @@
   <data name="SaveIngredient_NameRequired" xml:space="preserve">
     <value>Giv ingrediensen et navn.</value>
   </data>
+  <data name="RemoveIngredient_Title" xml:space="preserve">
+    <value>På din indkøbsliste</value>
+  </data>
+  <data name="RemoveIngredient_Question" xml:space="preserve">
+    <value>Skal {0} også fjernes fra indkøbslisten?</value>
+  </data>
+  <data name="RemoveIngredient_Hint" xml:space="preserve">
+    <value>{0} slettes fra måltidet uanset hvad.</value>
+  </data>
+  <data name="RemoveIngredient_No" xml:space="preserve">
+    <value>Nej, behold den</value>
+  </data>
+  <data name="RemoveIngredient_Yes" xml:space="preserve">
+    <value>Ja, fjern den</value>
+  </data>
+  <data name="RemoveIngredient_DeletedAndRemoved" xml:space="preserve">
+    <value>Ingrediens slettet og fjernet fra indkøbslisten.</value>
+  </data>
 </root>
