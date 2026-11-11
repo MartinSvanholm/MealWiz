@@ -264,6 +264,10 @@
   <data name="DayCard_AddAllToList" xml:space="preserve">
     <value>Add all to list</value>
   </data>
+  <data name="DayCard_AddAllTitle" xml:space="preserve">
+    <value>Add {0} to list</value>
+    <comment>Title of the merge drawer opened by Add all to list; {0} is the meal name</comment>
+  </data>
   <data name="DayCard_NoIngredients" xml:space="preserve">
     <value>No ingredients yet</value>
   </data>

@@ -225,6 +225,9 @@
   <data name="DayCard_AddAllToList" xml:space="preserve">
     <value>Tilføj alle til listen</value>
   </data>
+  <data name="DayCard_AddAllTitle" xml:space="preserve">
+    <value>Tilføj {0} til listen</value>
+  </data>
   <data name="DayCard_NoIngredients" xml:space="preserve">
     <value>Ingen ingredienser endnu</value>
   </data>
