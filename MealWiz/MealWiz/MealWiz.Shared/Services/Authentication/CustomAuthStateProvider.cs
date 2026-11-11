@@ -19,7 +19,6 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
     {
         _client = client;
         _keeper = keeper;
-        _client.Auth.AddStateChangedListener((_, _) => Notify());
         _keeper.Changed += Notify;
     }
 

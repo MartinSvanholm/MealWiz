@@ -426,7 +426,16 @@ per host (see [Hosts](#hosts)).
   | RequestPasswordReset | `Command(string Email, string RedirectTo)` → `Result` | `ResetPasswordForEmail` with the redirect (implicit flow) |
   | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`Features/Authentication/ResetPassword/ResetLink.cs`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password (signs out again if it's refused), then refresh auth state |
 
-- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token and  notifies on the SDK's auth events and `SessionKeeper.Changed` (reading the state never notifies). Signed in means a  session with a refresh token that the keeper hasn't ended.  `Services/Authentication/SessionKeeper.cs` (singleton) replaces the SDK's refresh (`AutoRefreshToken` is off, the  SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access token  expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry after  15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises  `SessionRejected`. `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`  wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced reload  on `/login` when the session is rejected.
+- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token and
+  notifies on `SessionKeeper.Changed` (which also relays the SDK's auth events); reading the state never notifies.
+  Signed in means a session with a refresh token that the keeper hasn't ended.
+  `Services/Authentication/SessionKeeper.cs` (singleton) replaces the SDK's refresh (`AutoRefreshToken` is off, and the
+  SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access
+  token expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry
+  after 15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises
+  `SessionRejected`. `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
+  wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
+  reload on `/login` when the session is rejected.
 - **Tests:**
   - bUnit: `Features/Authentication/ComponentTests/`
   - integration: `Features/Authentication/IntegrationTests/AuthenticationHandlerTests.cs`

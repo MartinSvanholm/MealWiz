@@ -49,6 +49,20 @@ public sealed class SessionKeeperTests : IDisposable
     }
 
     [Fact]
+    public async Task A_lifetime_of_decades_does_not_break_the_timer()
+    {
+        // SetSession (sign-up, password reset) stores an absolute expiry as the lifetime.
+        Store(createdAgo: TimeSpan.FromMinutes(5));
+        _persistence.Saved!.ExpiresIn = 1_700_000_000;
+        var keeper = Keeper(out _);
+
+        await keeper.StartAsync();
+
+        Assert.False(keeper.IsSignedOut);
+        Assert.Equal(0, _endpoint.Requests);
+    }
+
+    [Fact]
     public async Task Nothing_stored_means_signed_out_without_a_rejection()
     {
         var keeper = Keeper(out _);

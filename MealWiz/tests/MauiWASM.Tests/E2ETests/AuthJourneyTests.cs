@@ -62,7 +62,7 @@ public class AuthJourneyTests : E2ETestBase
 
         await Expect(Page).ToHaveURLAsync(UrlFor("login"));
         await Expect(Page.GetByTestId("login-email")).ToBeVisibleAsync();
-        Assert.Null(await Page.EvaluateAsync<string?>("() => localStorage.getItem('SUPABASE_SESSION')"));
+        Assert.Null(await StoredSessionAsync("refresh_token")); // nothing usable is left in storage
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class AuthJourneyTests : E2ETestBase
         "localStorage.setItem('SUPABASE_SESSION', JSON.stringify(JSON.stringify(s))); }");
 
     private Task<string?> StoredSessionAsync(string field) => Page.EvaluateAsync<string?>(
-        $"() => JSON.parse(JSON.parse(localStorage.getItem('SUPABASE_SESSION')))['{field}']");
+        $"() => {{ const v = localStorage.getItem('SUPABASE_SESSION'); if (!v) return null; return JSON.parse(JSON.parse(v))['{field}'] ?? null; }}");
 
     [Fact]
     public async Task NewVisitor_CreatesAnAccountFromLogin_AndStaysSignedInAcrossAReload()

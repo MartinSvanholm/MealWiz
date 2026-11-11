@@ -57,6 +57,26 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
     }
 
     [Fact]
+    public async Task Login_AfterAStartWithNoSession_MakesTheAuthStateAuthenticated()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var persistence = new MemoryPersistence();
+        var client = await supabase.CreateSignedOutClientAsync(persistence);
+        var keeper = new SessionKeeper(client, persistence, TimeProvider.System);
+        var provider = new CustomAuthStateProvider(client, keeper);
+        await keeper.StartAsync();
+        Assert.True(keeper.IsSignedOut);
+        var notified = new List<bool>();
+        provider.AuthenticationStateChanged += async task => notified.Add((await task).User.Identity?.IsAuthenticated == true);
+
+        await client.Auth.SignIn(supabase.User.Email, supabase.User.Password);
+
+        Assert.False(keeper.IsSignedOut);
+        Assert.True((await provider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
+        Assert.Contains(true, notified);
+    }
+
+    [Fact]
     public async Task Logout_SignsOutAndClearsTheStoredSession()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);

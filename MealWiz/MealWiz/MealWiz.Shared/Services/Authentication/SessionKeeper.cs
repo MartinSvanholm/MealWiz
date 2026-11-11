@@ -14,6 +14,7 @@ public class SessionKeeper : IDisposable
     private static readonly TimeSpan DueMargin = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan FirstRetry = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan MaxRetry = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan MaxDelay = TimeSpan.FromDays(1);
 
     private readonly Client _client;
     private readonly IGotrueSessionPersistence<Session> _persistence;
@@ -33,23 +34,26 @@ public class SessionKeeper : IDisposable
     }
 
     // A sign-in after startup (login, password reset) starts the keeping; a sign-out through the SDK ends it.
+    // The auth state provider listens to Changed only, so it never reads this state before it is updated.
     private void OnAuthStateChanged(IGotrueClient<User, Session> sender, Constants.AuthState state)
     {
-        if (_start is null)
-            return; // StartAsync decides on its own once it has loaded the stored session
-
-        switch (state)
+        if (_start is not null) // before that, StartAsync decides on its own once it has loaded the stored session
         {
-            case Constants.AuthState.SignedIn:
-                IsSignedOut = false;
-                _backoff = FirstRetry;
-                ScheduleNext();
-                break;
-            case Constants.AuthState.SignedOut:
-                IsSignedOut = true;
-                StopTimer();
-                break;
+            switch (state)
+            {
+                case Constants.AuthState.SignedIn:
+                    IsSignedOut = false;
+                    _backoff = FirstRetry;
+                    ScheduleNext();
+                    break;
+                case Constants.AuthState.SignedOut:
+                    IsSignedOut = true;
+                    StopTimer();
+                    break;
+            }
         }
+
+        Changed?.Invoke();
     }
 
     public bool IsSignedOut { get; private set; }
@@ -154,7 +158,9 @@ public class SessionKeeper : IDisposable
                 return;
 
             _timer?.Dispose();
-            _timer = _time.CreateTimer(_ => _ = RefreshAsync(), null, delay, Timeout.InfiniteTimeSpan);
+            // Capped: a timer can not wait longer than ~49 days, and SetSession (sign-up, password reset) stores an
+            // absolute expiry as the lifetime, which would otherwise ask for decades.
+            _timer = _time.CreateTimer(_ => _ = RefreshAsync(), null, delay > MaxDelay ? MaxDelay : delay, Timeout.InfiniteTimeSpan);
         }
     }
 
