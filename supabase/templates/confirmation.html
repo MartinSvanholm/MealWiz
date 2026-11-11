@@ -1,0 +1,14 @@
+{{/* Sign-up confirmation. Danish when the user signed up in Danish (user_metadata.lang, set by the SignUp handler),
+     English otherwise, including users from before the language was stored. The hosted project's template is pasted
+     from this file by hand (Supabase dashboard, Authentication, Emails). */}}
+{{ if eq (print .Data.lang) "da" }}
+<h2>Bekræft din e-mail</h2>
+<p>Velkommen til MealWiz! Tryk på linket for at bekræfte din konto:</p>
+<p><a href="{{ .ConfirmationURL }}">Bekræft min e-mail</a></p>
+<p>Har du ikke oprettet en konto, kan du se bort fra denne e-mail.</p>
+{{ else }}
+<h2>Confirm your email</h2>
+<p>Welcome to MealWiz! Follow this link to confirm your account:</p>
+<p><a href="{{ .ConfirmationURL }}">Confirm my email</a></p>
+<p>If you didn't create an account, you can ignore this email.</p>
+{{ end }}

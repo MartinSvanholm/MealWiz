@@ -1,3 +1,6 @@
+using Supabase.Gotrue;
+using FluentResults;
+using System.Globalization;
 using MealWiz.Shared.Features.Authentication;
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
@@ -83,6 +86,36 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         Assert.Equal(email, session.User.Email);
         Assert.Equal(session.User.Id, client.Auth.CurrentUser?.Id);
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+    }
+
+    // The confirmation and password-reset emails pick their language from user_metadata.lang (supabase/templates/).
+    [Theory]
+    [InlineData("da", "da")]
+    [InlineData("en", "en")]
+    [InlineData("de", "en")]
+    public async Task SignUp_StoresTheActiveLanguageInTheUserMetadata(string uiCulture, string expectedLang)
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var email = $"signup-lang-{Guid.NewGuid():N}@mealwiz.test";
+
+        var previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+        Result<Session?> result;
+        try
+        {
+            result = await new SignUp.Handler(client, _authStateProvider.Object)
+                .Handle(new SignUp.Command(email, Guid.NewGuid().ToString("N")), CancellationToken);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+
+        var session = ResultAssert.Ok(result);
+        supabase.DeleteOnDispose(Guid.Parse(session!.User!.Id!));
+        var user = await client.Auth.GetUser(session.AccessToken!);
+        Assert.Equal(expectedLang, user?.UserMetadata["lang"]?.ToString());
     }
 
     [Fact]
