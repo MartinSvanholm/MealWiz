@@ -144,16 +144,18 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     `data-date` and the classes `selected-day`, `has-meal` or `empty-day`, and `current-day`). A planned day shows the
     day dot (`week-day-meal-indicator`), an empty one a dashed tile with "+" (`week-day-empty`). Swiping the strip
     moves a week. The E2E tests rely on `selected-day` and `has-meal`.
-  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`: a thin wrapper over `IMealPlanStateContainer` around `Features/MealPlans/SelectMealForDate/MealPickList.razor` (with `.razor.css`), the parameter-driven list (`Heading`, `Hint`, `ExcludedMealId`, `ShowEdit`, `ShowCancel`/`OnCancel`, `OnPick`) also used by the Plan week pick drawer. UI only. "Pick a meal for
+  - `Features/MealPlans/SelectMealForDate/MealSelectionList.razor`: a thin wrapper over `IMealPlanStateContainer` around `Features/MealPlans/SelectMealForDate/MealPickList.razor` (with `.razor.css`), the parameter-driven list (`Heading`, `Hint`, `ExcludedMealId`, `ShowEdit`, `ShowCancel`/`OnCancel`, `Disabled`, `OnPick`) also used by the Plan week pick drawer. UI only. "Pick a meal for
     <Day>" (`meal-selection-heading`, hint `meal-selection-hint`), search (`meal-selection-search`), shuffle
     (`shuffle-meals-button`, reloads and reorders the list) and one compact list: rows `meal-list-item`, each with
     `MealTile` (Eat Out and Leftovers first, neutral; the user's meals alternate orange and green), the pick button
     `meal-selection-pick`, the name `meal-selection-name` and, on regular meals, `meal-selection-edit`. Empty:
     `meal-list-empty`. In swap mode (`IsSwappingMeal`) the heading reads "Swap the meal for <Day>", the day's meal is
-    left out, a pick replaces it (`SwapMealOnSelectedDate`) and Cancel (`meal-selection-cancel`) returns to the card.
+    left out and Cancel (`meal-selection-cancel`) returns to the card. A pick on a day with a planned-day id loads the grocery items and sources first (picks disabled meanwhile); items only the old meal needs (`PlannedMealGroceryItems.OnlyNeededBy`) open `SwapMealDrawer`, otherwise the pick swaps straight away (`SwapMealOnSelectedDate`). A failed load shows the error and swaps nothing.
   - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealButton.razor`, with `.razor.css`: the dark round button in the
     corner of the selected day's card (`remove-meal-button`). It loads the grocery items and sources through MediatR, picks the ids with `PlannedMealGroceryItems.OnlyNeededBy`, opens `RemoveMealDrawer` and is disabled while loading.
-  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the switch row `remove-meal-grocery-row` with `remove-meal-grocery-label` and `remove-meal-grocery-switch` only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; a failed remove deletes nothing, a failed delete says the items stayed.
+  - `Features/MealPlans/RemoveMealFromMealPlan/RemoveMealDrawer.razor`, with `.razor.css`: the drawer content (title, `remove-meal-description`, the `GroceryItemsSwitch` row (prefix `remove-meal`: `remove-meal-grocery-row|label|switch`) only when there are items, Cancel `remove-meal-cancel` and the red Remove `remove-meal-confirm`). It removes the planned day first, then sends `DeleteGroceryItems`; a failed remove deletes nothing, a failed delete says the items stayed.
+  - `Features/MealPlans/SwapMealInMealPlan/SwapMealDrawer.razor`, with `.razor.css`: asks before a swap when the old meal has to-buy items only it needs (title "Swap <old> for <new>?", `swap-meal-description`, the `GroceryItemsSwitch` row with prefix `swap-meal`, Cancel `swap-meal-cancel` and the orange Swap `swap-meal-confirm`). Cancel only closes (the old meal and swap mode stay). Swap swaps first, then, with the switch on, sends `DeleteGroceryItems`; a failed swap deletes nothing and keeps the drawer open, a failed delete says the items stayed. `Open(drawer, localizer, mealsLocalizer, current, new, date, ids)`.
+  - `Features/MealPlans/Components/GroceryItemsSwitch.razor`, with `.razor.css`: the shared "Also remove N items from the grocery list" row of the remove and swap drawers (`<prefix>-grocery-row|label|switch`; texts `GroceryItems_*`).
   - `Features/MealPlans/MealPlansResource.cs` (+ `MealPlansResource.resx`, `MealPlansResource.da.resx`): the feature's texts (UI-03).
   - The selected day's card lives in `Features/Meals/MealDisplayComponent.razor` (with `.razor.css`; listed under
     Meals): the orange card (`meal-display-name`, `meal-display-day`, `meal-display-summary`), the ingredients
@@ -176,7 +178,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
   `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, and swap mode:
-  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (swap mode ends when the selected day changes).
+  `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (returns `Task<bool>`: true when saved; swap mode ends when the selected day changes).
   `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `ShuffleAll`, `ShuffleDay`, `PickMeal`, `ClearDay`, `HasSavedMeal`, `HasPreview`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
   - `Features/MealPlans/Models/MealPlan.cs` ↔ `Features/MealPlans/Models/MealPlanDb.cs`, table `meal_plans`.

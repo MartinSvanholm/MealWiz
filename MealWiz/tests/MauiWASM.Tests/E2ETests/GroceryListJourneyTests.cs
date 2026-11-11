@@ -167,6 +167,7 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(penne);
         await Page.GetByTestId("swap-meal-button").ClickAsync();
         await Row("meal-list-item", salad).ClickAsync();
+        await ConfirmSwapKeepingItemsAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(salad);
 
         // Only the salad's ingredients are new; tomatoes merge into the item already on the list
@@ -365,6 +366,7 @@ public class GroceryListJourneyTests : E2ETestBase
         await Page.GetByTestId("swap-meal-button").ClickAsync();
         await Expect(Page.GetByTestId("meal-selection-heading")).ToContainTextAsync("Swap the meal for");
         await Row("meal-list-item", "Eat Out").ClickAsync();
+        await ConfirmSwapKeepingItemsAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync("Eat Out");
 
         await Page.GetByTestId("nav-grocery-list").ClickAsync();
@@ -398,6 +400,18 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
         await Expect(Row("grocery-item", "Salsa")).ToBeVisibleAsync();
         await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+    }
+
+    /// <summary>
+    /// A swap whose old meal has items only it needs asks first (MEA-98). These tests want those items to stay on the
+    /// list as stale links, so they answer with the switch off.
+    /// </summary>
+    private async Task ConfirmSwapKeepingItemsAsync()
+    {
+        await Expect(Drawer.GetByTestId("swap-meal-confirm")).ToBeVisibleAsync();
+        await Drawer.Locator("input[data-testid=swap-meal-grocery-switch], [data-testid=swap-meal-grocery-switch] input").UncheckAsync();
+        await Drawer.GetByTestId("swap-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
     }
 
     private ILocator Day(int index) => Page.GetByTestId("week-day").Nth(index);
