@@ -174,17 +174,29 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     /// <summary>Deletes a user the test created itself (e.g. through sign-up) together with the fixture's own.</summary>
     public void DeleteOnDispose(Guid userId) => _createdUserIds.Add(userId);
 
+    /// <summary>Deletes a user right away through the admin API, so its sessions stop being valid on the server.</summary>
+    public async Task DeleteUserNowAsync(Guid userId)
+    {
+        using var http = CreateAdminHttpClient();
+        using var response = await http.DeleteAsync($"auth/v1/admin/users/{userId}");
+        response.EnsureSuccessStatusCode();
+    }
+
     /// <summary>
     /// A client with the anon key and no session, like the app before sign-in. Use it for the signed-out paths and
     /// for signing in through a handler.
     /// </summary>
-    public async Task<Client> CreateSignedOutClientAsync()
+    public async Task<Client> CreateSignedOutClientAsync(Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>? persistence = null)
     {
-        var client = new Client(_credentials.Url, _credentials.AnonKey, new SupabaseOptions
+        var options = new SupabaseOptions
         {
             AutoRefreshToken = false,
             AutoConnectRealtime = false
-        });
+        };
+        if (persistence is not null)
+            options.SessionHandler = persistence;
+
+        var client = new Client(_credentials.Url, _credentials.AnonKey, options);
         await client.InitializeAsync();
         return client;
     }

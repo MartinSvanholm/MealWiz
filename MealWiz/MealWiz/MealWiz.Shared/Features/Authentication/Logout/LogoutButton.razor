@@ -1,10 +1,11 @@
 @inject ISender _mediator
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
+@inject IStringLocalizer<SharedResource> L
 
 <MudButton data-testid="logout-button" OnClick="OnLogoutClick" Variant="Variant.Outlined" Color="Color.Error"
            StartIcon="@Icons.Material.Filled.Logout" FullWidth="true">
-    Log out
+    @L["Account_Logout"]
 </MudButton>
 
 @code {
@@ -15,7 +16,8 @@
         result.Handle(_snackbar);
 
         if (result.IsSuccess) {
-            _navigationManager.Refresh();
+            // A full reload, so nothing of the previous user stays in memory. Dark mode and language live in storage.
+            _navigationManager.NavigateTo("/login", forceLoad: true);
         }
     }
 }

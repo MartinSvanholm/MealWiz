@@ -51,6 +51,10 @@
     <value>Clear</value>
     <comment>Clears a search field (MudBlazor aria-label)</comment>
   </data>
+  <data name="Account_Logout" xml:space="preserve">
+    <value>Log out</value>
+    <comment>Button on the Account page that signs the user out</comment>
+  </data>
   <data name="Route_Authorizing" xml:space="preserve">
     <value>Authorizing...</value>
     <comment>Shown while the sign-in state loads</comment>

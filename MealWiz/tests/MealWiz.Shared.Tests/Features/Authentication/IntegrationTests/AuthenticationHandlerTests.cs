@@ -5,7 +5,12 @@ using MealWiz.Shared.Features.Authentication.ResetPassword;
 using MealWiz.Shared.Features.Authentication.SignUp;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
+using MealWiz.Shared.Services.Authentication;
 using Moq;
+using Supabase;
+using Supabase.Gotrue;
+using Supabase.Gotrue.Interfaces;
+using Client = Supabase.Client;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Authentication.IntegrationTests;
@@ -52,18 +57,69 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
     }
 
     [Fact]
-    public async Task Logout_SignsOutAndRefreshesTheAuthState()
+    public async Task Logout_SignsOutAndClearsTheStoredSession()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
-        var client = await supabase.CreateSignedOutClientAsync();
-        await client.Auth.SignIn(supabase.User.Email, supabase.User.Password);
-        Assert.NotNull(client.Auth.CurrentSession);
+        var (client, persistence, keeper) = await SignedInClientAsync(supabase.User.Email, supabase.User.Password);
 
-        var result = await new Logout.Handler(client, _authStateProvider.Object).Handle(new Logout.Command(), CancellationToken);
+        var result = await new Logout.Handler(client, keeper).Handle(new Logout.Command(), CancellationToken);
 
         ResultAssert.Ok(result);
         Assert.Null(client.Auth.CurrentSession);
-        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+        Assert.True(persistence.Destroyed);
+        Assert.True(keeper.IsSignedOut);
+    }
+
+    // The server refuses the sign-out of a deleted user (its token is dead), but the local sign-out still works.
+    [Fact]
+    public async Task LocalSignOut_ClearsTheSessionEvenForAUserDeletedOnTheServer()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var (client, persistence, keeper) = await SignedInClientAsync(user.Email, user.Password);
+        await supabase.DeleteUserNowAsync(user.Id);
+
+        await keeper.SignOutLocallyAsync();
+
+        Assert.True(keeper.IsSignedOut);
+        Assert.True(persistence.Destroyed);
+        var state = await new CustomAuthStateProvider(client, keeper).GetAuthenticationStateAsync();
+        Assert.False(state.User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task Logout_WhenTheServerRefusesTheSignOut_FailsAndKeepsTheSession()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var (client, persistence, keeper) = await SignedInClientAsync(user.Email, user.Password);
+        await supabase.DeleteUserNowAsync(user.Id);
+
+        var result = await new Logout.Handler(client, keeper).Handle(new Logout.Command(), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.False(persistence.Destroyed);
+        Assert.False(keeper.IsSignedOut);
+    }
+
+    private async Task<(Client Client, MemoryPersistence Persistence, SessionKeeper Keeper)> SignedInClientAsync(string email, string password)
+    {
+        var persistence = new MemoryPersistence();
+        var client = await supabase.CreateSignedOutClientAsync(persistence);
+        await client.Auth.SignIn(email, password);
+        Assert.NotNull(client.Auth.CurrentSession);
+        var keeper = new SessionKeeper(client, persistence, TimeProvider.System);
+        await keeper.StartAsync();
+        return (client, persistence, keeper);
+    }
+
+    private sealed class MemoryPersistence : IGotrueSessionPersistence<Session>
+    {
+        private Session? _session;
+        public bool Destroyed { get; private set; }
+        public void SaveSession(Session session) { _session = session; Destroyed = false; }
+        public void DestroySession() { _session = null; Destroyed = true; }
+        public Session? LoadSession() => _session;
     }
 
     [Fact]
