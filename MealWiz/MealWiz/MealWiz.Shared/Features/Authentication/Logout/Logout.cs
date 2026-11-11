@@ -1,6 +1,6 @@
 ﻿using FluentResults;
 using MediatR;
-using Microsoft.AspNetCore.Components.Authorization;
+using MealWiz.Shared.Services.Authentication;
 using Supabase;
 
 namespace MealWiz.Shared.Features.Authentication.Logout;
@@ -9,15 +9,15 @@ public static class Logout
 {
     public record Command() : IRequest<Result>;
 
-    public class Handler(Client supabaseClient, AuthenticationStateProvider authenticationStateProvider) : IRequestHandler<Command, Result>
+    public class Handler(Client supabaseClient, SessionKeeper sessionKeeper) : IRequestHandler<Command, Result>
     {
-        private readonly Client _supabaseClient = supabaseClient;
-
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
-            var result = await Result.Try(() => _supabaseClient.Auth.SignOut());
+            var result = await Result.Try(() => supabaseClient.Auth.SignOut());
 
-            await authenticationStateProvider.GetAuthenticationStateAsync();
+            // On failure nothing changes: the user stays signed in and sees the error.
+            if (result.IsSuccess)
+                await sessionKeeper.SignOutLocallyAsync();
 
             return result;
         }

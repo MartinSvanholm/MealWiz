@@ -1,6 +1,8 @@
 ﻿@using MealWiz.Shared.Localization
 @using Microsoft.Extensions.Localization
+@using MealWiz.Shared.Services.Authentication
 @inject IStringLocalizer<SharedResource> L
+<SessionGate>
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(MealWiz.Shared._Imports).Assembly}">
         <Found Context="routeData">
@@ -22,3 +24,4 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+</SessionGate>

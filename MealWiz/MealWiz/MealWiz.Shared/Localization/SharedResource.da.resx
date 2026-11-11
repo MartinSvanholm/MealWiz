@@ -45,6 +45,9 @@
   <data name="Common_Clear" xml:space="preserve">
     <value>Ryd</value>
   </data>
+  <data name="Account_Logout" xml:space="preserve">
+    <value>Log ud</value>
+  </data>
   <data name="Route_Authorizing" xml:space="preserve">
     <value>Godkender...</value>
   </data>

@@ -1,6 +1,8 @@
 ﻿@inject IStringLocalizer<SharedResource> L
 @using MealWiz.Shared.Layout
+@using MealWiz.Shared.Services.Authentication
 @using Microsoft.AspNetCore.Components.Authorization
+<SessionGate>
 <CascadingAuthenticationState>
     <Router AppAssembly="typeof(Layout.MainLayout).Assembly">
         <Found Context="routeData">
@@ -22,3 +24,4 @@
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+</SessionGate>
