@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/account"
 @using System.Security.Claims
+@using MealWiz.Shared.Features.Account.ChangePassword
 @using MealWiz.Shared.Theme
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IThemeService ThemeService
@@ -43,6 +44,8 @@
                 </div>
             </div>
         </section>
+
+        <ChangePasswordForm />
 
         <div class="mw-account-logout">
             <LogoutButton />

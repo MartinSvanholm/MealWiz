@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ChangePassword_Title" xml:space="preserve">
+    <value>Skift adgangskode</value>
+  </data>
+  <data name="ChangePassword_New" xml:space="preserve">
+    <value>Ny adgangskode</value>
+  </data>
+  <data name="ChangePassword_NewPlaceholder" xml:space="preserve">
+    <value>Vælg en ny adgangskode</value>
+  </data>
+  <data name="ChangePassword_Repeat" xml:space="preserve">
+    <value>Gentag adgangskode</value>
+  </data>
+  <data name="ChangePassword_RepeatPlaceholder" xml:space="preserve">
+    <value>Den samme adgangskode igen</value>
+  </data>
+  <data name="ChangePassword_Submit" xml:space="preserve">
+    <value>Skift adgangskode</value>
+  </data>
+  <data name="ChangePassword_Mismatch" xml:space="preserve">
+    <value>Adgangskoderne er ikke ens</value>
+  </data>
+  <data name="ChangePassword_Done" xml:space="preserve">
+    <value>Adgangskoden er skiftet</value>
+  </data>
+  <data name="ChangePassword_Weak" xml:space="preserve">
+    <value>Brug mindst 6 tegn.</value>
+  </data>
+  <data name="ChangePassword_Same" xml:space="preserve">
+    <value>Vælg en adgangskode, der er anderledes end din nuværende.</value>
+  </data>
+</root>
