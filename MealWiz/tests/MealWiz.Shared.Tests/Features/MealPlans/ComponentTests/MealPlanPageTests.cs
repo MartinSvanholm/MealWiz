@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.MealPlans;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
 using MealWiz.Shared.Features.MealPlans.Models;
 using MealWiz.Shared.Features.MealPlans.RemoveMealFromMealPlan;
+using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Moq;
@@ -143,5 +144,70 @@ public class MealPlanPageTests : ComponentTestBase
         cut.Find(TestId("account-button")).Click();
 
         Assert.Equal("account", CurrentPath);
+    }
+
+    // ---- The prompt after Plan week's Save (MEA-83) ----
+
+    private void PlanTacosThisWeek(bool withIngredient = true) =>
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(
+            DateTime.Today,
+            withIngredient ? TestData.Meal("Tacos", id: 8, ingredients: TestData.Ingredient("Tortillas", "8", id: 81)) : TestData.Meal("Eat Out", id: 8, type: MealType.EatOut))));
+
+    [Fact]
+    public void After_saving_a_week_the_meal_plan_asks_to_add_its_ingredients()
+    {
+        PlanTacosThisWeek();
+        RenderDrawers();
+        MealPlan.OfferWeekIngredients(ThisMonday);
+
+        Render<MealPlanPage>();
+
+        DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("week-ingredients-prompt"))));
+        Assert.Equal("Week saved", Drawer.StateParameters.Title);
+    }
+
+    [Fact]
+    public void The_prompt_opens_only_once()
+    {
+        PlanTacosThisWeek();
+        RenderDrawers();
+        MealPlan.OfferWeekIngredients(ThisMonday);
+        var cut = Render<MealPlanPage>();
+        DrawerHost.WaitForAssertion(() => Assert.True(Drawer.IsDrawerOpen));
+        DrawerHost.Find(TestId("week-ingredients-prompt-decline")).Click();
+        Assert.False(Drawer.IsDrawerOpen);
+
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("week-next")).HasAttribute("disabled")));
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("week-prev")).HasAttribute("disabled")));
+        cut.Find(TestId("week-prev")).Click();
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("week-prev")).HasAttribute("disabled")));
+
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void Without_a_save_the_meal_plan_asks_nothing()
+    {
+        PlanTacosThisWeek();
+        RenderDrawers();
+
+        var cut = Render<MealPlanPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Tacos", cut.Markup));
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void A_saved_week_with_nothing_for_the_list_asks_nothing()
+    {
+        PlanTacosThisWeek(withIngredient: false);
+        RenderDrawers();
+        MealPlan.OfferWeekIngredients(ThisMonday);
+
+        var cut = Render<MealPlanPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Eat Out", cut.Markup));
+        Assert.False(Drawer.IsDrawerOpen);
     }
 }

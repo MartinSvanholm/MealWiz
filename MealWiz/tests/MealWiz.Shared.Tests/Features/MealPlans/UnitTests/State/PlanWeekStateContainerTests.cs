@@ -52,6 +52,7 @@ public class PlanWeekStateContainerTests
         SetupWeek(null);
         SetupPlannedDates([]);
         _mealPlanState.Setup(m => m.NavigateToWeek(It.IsAny<DateTime>())).Returns(Task.CompletedTask).Callback<DateTime>(d => _calls.Add($"meal-plan:{d:yyyy-MM-dd}"));
+        _mealPlanState.Setup(m => m.OfferWeekIngredients(It.IsAny<DateTime>())).Callback<DateTime>(d => _calls.Add($"offer:{d:yyyy-MM-dd}"));
         _navigation.OnNavigate = uri => _calls.Add($"navigate:{uri}");
     }
 
@@ -402,7 +403,8 @@ public class PlanWeekStateContainerTests
         var saved = await _container.Save();
 
         Assert.True(saved);
-        Assert.Equal([$"meal-plan:{NextMonday:yyyy-MM-dd}", "navigate:"], _calls);
+        // The offer comes after the week is loaded and before the Meal plan page is shown (MEA-83).
+        Assert.Equal([$"meal-plan:{NextMonday:yyyy-MM-dd}", $"offer:{NextMonday:yyyy-MM-dd}", "navigate:"], _calls);
         Assert.False(_container.IsDirty);
         Assert.False(_container.IsSaving);
         VerifyToast("Week saved", Severity.Success);
@@ -418,7 +420,7 @@ public class PlanWeekStateContainerTests
         var saved = await _container.Save();
 
         Assert.False(saved);
-        Assert.Empty(_calls);
+        Assert.Empty(_calls); // no navigation and no offer
         Assert.True(_container.IsDirty);
         Assert.True(_container.CanSave);
         Assert.False(_container.IsSaving);
