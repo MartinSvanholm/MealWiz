@@ -224,6 +224,49 @@ public class AuthJourneyTests : E2ETestBase
         DeleteAfterTheTest(new E2EUser(Guid.Parse(id!), email, password));
     }
 
+    // The Function isn't running in E2E, so the route plays it: it deletes the user through the admin API (as the
+    // Function would) and answers 204. The app must then drop its session and reload on /login.
+    [Fact]
+    public async Task SignedInUser_DeletesTheAccount_AndCannotLogInAgain()
+    {
+        await Page.RouteAsync($"**{E2EAppHost.FunctionsPath}/api/DeleteAccount", async route =>
+        {
+            await Supabase.DeleteUserAsync(User);
+            await route.FulfillAsync(new RouteFulfillOptions { Status = 204 });
+        });
+        await LoginAsync();
+        await Page.GetByTestId("account-button").ClickAsync();
+
+        await Page.GetByTestId("delete-account-open").ClickAsync();
+        await FillAsync(Page.GetByTestId("delete-account-password"), User.Password);
+        await Page.GetByTestId("delete-account-confirm").ClickAsync();
+
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+        await FillAsync(Page.GetByTestId("login-email"), User.Email);
+        await FillAsync(Page.GetByTestId("login-password"), User.Password);
+        await Page.GetByTestId("login-submit").ClickAsync();
+        await Expect(Page.Locator(".mud-snackbar")).ToBeVisibleAsync(); // the login error
+        await Expect(Page.GetByTestId("meal-plan-week-title")).ToHaveCountAsync(0);
+        await Expect(Page).ToHaveURLAsync(UrlFor("login"));
+    }
+
+    [Fact]
+    public async Task SignedInUser_EntersTheWrongPassword_SeesAnErrorAndStaysOnTheAccountPage()
+    {
+        await Page.RouteAsync($"**{E2EAppHost.FunctionsPath}/api/DeleteAccount", route =>
+            route.FulfillAsync(new RouteFulfillOptions { Status = 403 }));
+        await LoginAsync();
+        await Page.GetByTestId("account-button").ClickAsync();
+
+        await Page.GetByTestId("delete-account-open").ClickAsync();
+        await FillAsync(Page.GetByTestId("delete-account-password"), "not-my-password");
+        await Page.GetByTestId("delete-account-confirm").ClickAsync();
+
+        await Expect(Page.GetByTestId("delete-account-error")).ToHaveTextAsync("That password isn't right.");
+        await Expect(Page.GetByTestId("account-page")).ToBeVisibleAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("account"));
+    }
+
     [Fact]
     public async Task SignedOutVisitor_IsSentToLogin()
     {

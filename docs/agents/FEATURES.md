@@ -447,7 +447,7 @@ per host (see [Hosts](#hosts)).
 ## Account
 
 The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
-`mealwiz.theme`), change password, change email and logout. No tables.
+`mealwiz.theme`), change password, change email, logout and delete account. No tables.
 
 - **Folder:** `Features/Account/`
 - **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back
@@ -464,7 +464,9 @@ The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored
 - **Components:** `Features/Account/ChangePassword/ChangePasswordForm.razor` (`change-password-new`,
   `change-password-repeat`, `change-password-submit`; a mismatch is caught on the page) and
   `Features/Account/ChangeEmail/ChangeEmailForm.razor` (`change-email-new`, `change-email-submit`, and the pending note
-  `account-email-pending` loaded on init).
+  `account-email-pending` loaded on init) and `Features/Account/DeleteAccount/DeleteAccountPanel.razor` (a red outlined
+  `delete-account-open` below Log out opens an inline panel: `delete-account-password`, `delete-account-confirm`,
+  `delete-account-cancel`; a failure shows in `delete-account-error`; success is `NavigateTo("/login", forceLoad: true)`).
 - **Handlers:**
 
   | Handler | Request → result | Does |
@@ -472,13 +474,29 @@ The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored
   | ChangePassword | `Command(string NewPassword)` → `Result` | `Auth.Update` on the current session (GoTrue keeps it and revokes the others); `weak_password` and `same_password` have their own messages |
   | ChangeEmail | `Command(string NewEmail)` → `Result` | `PUT /auth/v1/user` with `HttpClient` (the SDK sends no redirect) and a `redirect_to` header from `EmailLinkBuilder.Build("email-change")`; GoTrue emails both addresses; `email_exists` and `validation_failed` have their own messages |
   | GetPendingEmailChange | `Query()` → `Result<string?>` | `GET /auth/v1/user`, reads `new_email` (the SDK's `User` drops it); null when none |
+  | DeleteAccount | `Command(string Password)` → `Result` | `POST {MealImportFunction:Url}/api/DeleteAccount` with the session's bearer token, the password and `x-functions-key`; 204 → `SessionKeeper.SignOutLocallyAsync()` (never `SignOut`, the user is gone), 403 / 401 / anything else → their own messages and no sign-out |
 
 - **Texts:** `Features/Account/AccountResource.resx` / `.da.resx` (marker `AccountResource.cs`).
 - **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
 - **Tests:**
-  - bUnit: `Features/Account/ComponentTests/` (`AccountPageTests`, `ChangePasswordFormTests`, `ChangeEmailFormTests`, `EmailChangePageTests`)
+  - bUnit: `Features/Account/ComponentTests/` (`AccountPageTests`, `ChangePasswordFormTests`, `ChangeEmailFormTests`, `EmailChangePageTests`, `DeleteAccountPanelTests`)
   - integration: `Features/Account/IntegrationTests/AccountHandlerTests.cs` (GoTrue and Mailpit)
-  - E2E: `AuthJourneyTests` (change password; change email)
+  - unit: `Features/Account/UnitTests/DeleteAccountTests.cs` (stubbed Function)
+  - E2E: `AuthJourneyTests` (change password; change email; delete account with the Function stubbed by a route)
+
+## Functions: DeleteAccount
+
+The other function in the same app. `POST /api/DeleteAccount` (`AuthorizationLevel.Function`) takes the caller's access
+token as `Authorization: Bearer` and `{ password }`. With the service-role key it asks GoTrue who the token belongs to,
+checks the password with a password grant, and only then hard-deletes the user (admin API); the `created_by` foreign
+keys cascade to every row the user owns. Responses: 204 deleted, 400 bad body or blank password, 401 missing or invalid
+token, 403 wrong password (nothing deleted), 502 any other GoTrue failure (logged, not returned). It reuses
+`Supabase:Url` and `Supabase:ServiceRoleKey`; there is no new setting.
+
+- **Function:** `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountFunction.cs` (the HTTP trigger, outcome → status) and
+  `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountHandler.cs` (`IDeleteAccountHandler` → `DeleteAccountOutcome`, a named `HttpClient`).
+- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/UnitTests/` and `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/IntegrationTests/`;
+  pgTAP `supabase/tests/database/delete_account_cascade.test.sql`.
 
 ## Functions: ScrapeRecipe
 
