@@ -175,7 +175,7 @@ public class RemoveMealDrawerResourceTests() : ComponentTestBase(echoResourceKey
         DrawerHost.WaitForAssertion(() => Assert.NotEmpty(DrawerHost.FindAll(TestId("remove-meal-confirm"))));
         Assert.Equal("[RemoveMeal_Title]", DrawerHost.Find(TestId("drawer-title")).TextContent);
         Assert.Equal("[RemoveMeal_Description]", DrawerHost.Find(TestId("remove-meal-description")).TextContent);
-        Assert.Equal("[RemoveMeal_AlsoRemove_One]", DrawerHost.Find(TestId("remove-meal-grocery-label")).TextContent);
+        Assert.Equal("[GroceryItems_AlsoRemove_One]", DrawerHost.Find(TestId("remove-meal-grocery-label")).TextContent);
         Assert.Equal("[Common_Cancel]", DrawerHost.Find(TestId("remove-meal-cancel")).TextContent.Trim());
         Assert.Equal("[RemoveMeal_Confirm]", DrawerHost.Find(TestId("remove-meal-confirm")).TextContent.Trim());
     }
