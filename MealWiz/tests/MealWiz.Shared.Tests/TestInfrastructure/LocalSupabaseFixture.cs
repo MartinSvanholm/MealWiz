@@ -103,6 +103,29 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// What the user's browser ends up on after clicking a password reset email's link: the admin API makes the link
+    /// without sending an email, and following it returns GoTrue's redirect to <paramref name="redirectTo"/> with the
+    /// recovery session in the fragment. GoTrue redirects to the Site URL instead if the allow list lacks it.
+    /// </summary>
+    public async Task<Uri> FollowPasswordResetLinkAsync(string email, string redirectTo)
+    {
+        using var http = CreateAdminHttpClient();
+        using var response = await http.PostAsJsonAsync("auth/v1/admin/generate_link", new GenerateLinkRequest("recovery", email, redirectTo));
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException($"Generating a reset link for {email} failed: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+        }
+
+        var link = await response.Content.ReadFromJsonAsync<GeneratedLink>()
+            ?? throw new InvalidOperationException($"Generating a reset link for {email} returned no link.");
+
+        using var browser = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
+        using var verified = await browser.GetAsync(link.ActionLink);
+        return verified.Headers.Location
+            ?? throw new InvalidOperationException($"Following the reset link returned {(int)verified.StatusCode} without a redirect.");
+    }
+
+    /// <summary>
     /// MEA-55: GoTrue stamps a new token's <c>iat</c> with the current whole second, and PostgREST checks it against a
     /// clock it refreshes about once a second, so a token used within its first second can be rejected with PGRST303
     /// "JWT issued at future". Waiting until a little over a second past <c>iat</c> before the first query avoids it.
@@ -329,6 +352,13 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         [property: JsonPropertyName("email_confirm")] bool EmailConfirm);
 
     private sealed record CreatedUser([property: JsonPropertyName("id")] Guid Id);
+
+    private sealed record GenerateLinkRequest(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("redirect_to")] string RedirectTo);
+
+    private sealed record GeneratedLink([property: JsonPropertyName("action_link")] string ActionLink);
 }
 
 /// <summary>A throwaway user, its password, and a <see cref="Supabase.Client"/> signed in as it with the anon key.</summary>
