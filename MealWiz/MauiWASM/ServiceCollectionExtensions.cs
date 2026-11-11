@@ -33,7 +33,9 @@ public static class ServiceCollectionExtensions
             configuration["MealImportFunction:url"] ?? string.Empty,
             configuration["MealImportFunction:key"]));
 
-        string supabaseUrl = configuration["Supabase:url"] ?? string.Empty;
+        services.AddSingleton(new MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkOptions(null)); // links point at this app
+
+        string supabaseUrl =configuration["Supabase:url"] ?? string.Empty;
         string? supabaseKey = configuration["Supabase:key"];
 
         // One client, one persistence and one session keeper for the whole app (the keeper outlives pages and

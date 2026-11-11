@@ -62,7 +62,10 @@ namespace MealWiz
                 builder.Configuration["MealImportFunction:url"] ?? string.Empty,
                 builder.Configuration["MealImportFunction:key"]));
 
-            string supabaseUrl = builder.Configuration["Supabase:url"];
+            // An email's link can't open this app, so it opens the web app (decision Q7).
+            builder.Services.AddSingleton(new MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkOptions(builder.Configuration["WebApp:url"]));
+
+            string supabaseUrl =builder.Configuration["Supabase:url"];
             string supabaseKey = builder.Configuration["Supabase:key"];
             // One client, persistence and session keeper for the whole app. The SDK's own refresh is off:
             // SessionKeeper loads, refreshes and schedules (it is started by the SessionGate).

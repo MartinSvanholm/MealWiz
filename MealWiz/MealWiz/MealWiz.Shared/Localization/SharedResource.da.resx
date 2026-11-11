@@ -45,6 +45,9 @@
   <data name="Common_Clear" xml:space="preserve">
     <value>Ryd</value>
   </data>
+  <data name="Forgot_OpensInBrowser" xml:space="preserve">
+    <value>Linket åbner i din browser.</value>
+  </data>
   <data name="Account_Logout" xml:space="preserve">
     <value>Log ud</value>
   </data>

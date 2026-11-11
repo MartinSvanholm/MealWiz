@@ -49,6 +49,9 @@ public abstract class ComponentTestBase : BunitContext
     protected Mock<IMealImportStateContainer> MealImport { get; } = new();
     protected Mock<IThemeService> Theme { get; } = new();
 
+    /// <summary>The email link options the builder is created with (the web head's unless a test sets them).</summary>
+    protected MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkOptions EmailLinks { get; set; } = new(null);
+
     protected DrawerStateContainer Drawer { get; } = new();
     protected MealsStateContainer Meals { get; }
     protected GroceryListStateContainer GroceryList { get; }
@@ -107,6 +110,9 @@ public abstract class ComponentTestBase : BunitContext
                 Random = new Random(1)
             });
         Services.AddSingleton(_ => new Supabase.Client("http://localhost", "test-key"));
+        // The web head's link options; a test of the MAUI head sets EmailLinks before rendering.
+        Services.AddSingleton(_ => EmailLinks);
+        Services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>();
         // The startup gate in Routes starts it; with no stored session it is done at once.
         Services.AddSingleton(sp => new SessionKeeper(sp.GetRequiredService<Supabase.Client>(), new EmptySessionPersistence(), Time));
 

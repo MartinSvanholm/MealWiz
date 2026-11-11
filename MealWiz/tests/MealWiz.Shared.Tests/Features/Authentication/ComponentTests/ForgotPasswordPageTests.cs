@@ -40,6 +40,33 @@ public class ForgotPasswordPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void The_opens_in_browser_note_is_not_shown_on_the_web()
+    {
+        SetupSend<RequestPasswordReset.Command, Result>(Result.Ok());
+        var cut = Render<ForgotPasswordPage>();
+
+        cut.Find(InputOf("forgot-email")).Input("me@example.com");
+        cut.Find(TestId("forgot-submit")).Click();
+
+        cut.WaitForAssertion(() => cut.Find(TestId("forgot-check-email")));
+        Assert.Empty(cut.FindAll(TestId("forgot-opens-in-browser")));
+    }
+
+    [Fact]
+    public void In_the_app_the_link_is_the_web_apps_and_the_note_says_it_opens_in_the_browser()
+    {
+        EmailLinks = new("https://web.example.com/");
+        SetupSend<RequestPasswordReset.Command, Result>(Result.Ok());
+        var cut = Render<ForgotPasswordPage>();
+
+        cut.Find(InputOf("forgot-email")).Input("me@example.com");
+        cut.Find(TestId("forgot-submit")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("The link opens in your browser.", cut.Find(TestId("forgot-opens-in-browser")).TextContent.Trim()));
+        Assert.Equal("https://web.example.com/reset-password", Assert.Single(Sent<RequestPasswordReset.Command>()).RedirectTo);
+    }
+
+    [Fact]
     public void Enter_in_the_email_sends_the_link()
     {
         SetupSend<RequestPasswordReset.Command, Result>(Result.Ok());
