@@ -245,6 +245,67 @@ public class MealPlanJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("plan-week-fallback-note")).ToHaveCountAsync(0);
     }
 
+    [Fact]
+    public async Task AddAllToList_AddsOnlyThatDaysMeal_AndThenSaysEverythingIsOnTheList()
+    {
+        const string tacos = "E2E Tacos";
+        const string soup = "E2E Carrot soup";
+        await Supabase.InsertMealAsync(User, tacos,
+            new SeedIngredient("Tortillas", "8"), new SeedIngredient("Minced beef", "500 g"),
+            new SeedIngredient("Salt", "1 tsp", ShowOnGroceryList: false));
+        await Supabase.InsertMealAsync(User, soup, new SeedIngredient("Carrots", "6"));
+
+        await LoginAsync();
+        await AssignAsync(day: 0, tacos);
+        await AssignAsync(day: 1, soup);
+
+        // Add all to list opens the merge drawer for that day's meal only, without the hidden ingredient
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(tacos);
+        await Page.GetByTestId("add-all-to-list").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add E2E Tacos to list");
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(2);
+        await Expect(Row("plan-ingredient-item", "Tortillas")).ToBeVisibleAsync();
+        await Expect(Row("plan-ingredient-item", "Minced beef")).ToBeVisibleAsync();
+        await Expect(Row("plan-ingredient-item", "Salt")).ToHaveCountAsync(0);
+        await Expect(Row("plan-ingredient-item", "Carrots")).ToHaveCountAsync(0);
+        await Expect(Drawer.GetByTestId("plan-ingredients-confirm")).ToContainTextAsync("Add 2 to grocery list");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        // They are on the list, and only they
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex("grocerylist"));
+        await Expect(Row("grocery-item", "Tortillas").GetByTestId("grocery-item-amount")).ToHaveTextAsync("8");
+        await Expect(Row("grocery-item", "Minced beef").GetByTestId("grocery-item-amount")).ToHaveTextAsync("500 g");
+        await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Row("grocery-item", "Carrots")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Salt")).ToHaveCountAsync(0);
+
+        // Pressing it again: everything is already on the list
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex("/$"));
+        await OpenAllOnListAsync(tacos);
+        await Expect(Drawer.GetByTestId("plan-ingredient-item")).ToHaveCountAsync(0);
+        await Drawer.GetByTestId("drawer-close").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        // Saved, not just held in memory
+        await Page.ReloadAsync();
+        await OpenAllOnListAsync(tacos);
+    }
+
+    /// <summary>Selects the first day (the selected day defaults to today after a navigation) and opens Add all to list, which should say everything is on the list.</summary>
+    private async Task OpenAllOnListAsync(string meal)
+    {
+        await Day(0).ClickAsync();
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(meal);
+        await Page.GetByTestId("add-all-to-list").ClickAsync();
+        await Expect(Drawer.GetByTestId("plan-ingredients-all-on-list")).ToContainTextAsync("Everything is already on your list");
+    }
+
     private ILocator PlanDay(int index) => Page.GetByTestId("plan-week-day").Nth(index);
 
     private ILocator LeftoversSwitch =>

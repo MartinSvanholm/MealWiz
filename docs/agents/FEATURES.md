@@ -43,7 +43,8 @@ meals are planned this week, or that every meal has a recipe.
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
-  - `Features/Meals/MealDisplayComponent.razor`: used by the Meal plan page.
+  - `Features/Meals/MealDisplayComponent.razor`: the selected day's card on the Meal plan page (details under
+    MealPlans); its Add all to list opens GroceryList's merge drawer.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
     `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
     (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
@@ -168,7 +169,9 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     (`meal-display-ingredient`) and the recipe (`meal-display-recipe`), or the "No recipe yet" card
     (`meal-display-no-recipe`) whose Add (`meal-display-add-recipe`) opens Edit meal. System meals show only the card.
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
-    card. Shown but not wired: `add-all-to-list` (MEA-74).
+    card. Add all to list (`add-all-to-list`) opens GroceryList's merge drawer for the selected day only
+    (`AddPlanIngredientsToGroceryListDrawer.Open`, title "Add <meal> to list"); it's disabled when no ingredient is shown
+    on the grocery list.
   - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. `PickMeal` picks one regular meal for a single day (never the current one). Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
@@ -255,7 +258,8 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     orange field for merged rows) and shows `plan-ingredients-loading`, `plan-ingredients-empty` or
     `plan-ingredients-all-on-list` (nothing new and nothing changed); the button reads "Add N to grocery list", or
     "Update N on grocery list" when every row is change-only (snackbar "Grocery list updated"); row names carry
-    `plan-ingredient-name`.
+    `plan-ingredient-name`. Opened by From meal plan (the week) and by Add all to list on the Meal plan's day card
+    (that day).
   - `Features/GroceryList/Components/ReviewGroceryItemsDrawer.razor`, with `.razor.css`: the review drawer, opened with
     `ReviewGroceryItemsDrawer.Open(drawer, title, groups, afterRemove)` (deleting a meal or ingredient reuses it). Its
     button reads "Remove N items" or "Keep all" and calls `DeleteAndUnlinkGroceryItems`.
