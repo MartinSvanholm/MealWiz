@@ -1,4 +1,5 @@
 @page "/login"
+@inject IStringLocalizer<AuthenticationResource> L
 @inject ISender _mediator
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
@@ -7,24 +8,24 @@
 <AuthShell TestIdPrefix="login">
     <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
         <div class="mw-auth-field">
-            <label class="mw-auth-label" for="@EmailInputId" data-testid="login-email-label">Email</label>
-            <TextField data-testid="login-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="you@example.com"
+            <label class="mw-auth-label" for="@EmailInputId" data-testid="login-email-label">@L["Auth_Email"]</label>
+            <TextField data-testid="login-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="@L["Auth_EmailPlaceholder"].Value"
                        Required InputType="InputType.Email"
                        OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
         </div>
         <div class="mw-auth-field">
             <div class="mw-auth-label-row">
-                <label class="mw-auth-label" for="@PasswordInputId" data-testid="login-password-label">Password</label>
-                <a class="mw-auth-link" href="forgot-password" data-testid="login-forgot-password">Forgot password?</a>
+                <label class="mw-auth-label" for="@PasswordInputId" data-testid="login-password-label">@L["Auth_Password"]</label>
+                <a class="mw-auth-link" href="forgot-password" data-testid="login-forgot-password">@L["Login_ForgotPassword"]</a>
             </div>
             <TextField @ref="PasswordField" data-testid="login-password" @bind-Value="Password" InputId="@PasswordInputId"
-                       Placeholder="Your password" Required InputType="InputType.Password"
+                       Placeholder="@L["Login_PasswordPlaceholder"].Value" Required InputType="InputType.Password"
                        OnKeyDown="EnterKey.Then(Login)" />
         </div>
-        <Button data-testid="login-submit" OnClick="Login" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">Log in</Button>
+        <Button data-testid="login-submit" OnClick="Login" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">@L["Auth_LogIn"]</Button>
         <p class="mw-auth-switch">
-            No account yet?
-            <a class="mw-auth-link" href="signup" data-testid="login-create-account">Create one</a>
+            @L["Login_NoAccount"]
+            <a class="mw-auth-link" href="signup" data-testid="login-create-account">@L["Login_CreateOne"]</a>
         </p>
     </CustomForm>
 </AuthShell>

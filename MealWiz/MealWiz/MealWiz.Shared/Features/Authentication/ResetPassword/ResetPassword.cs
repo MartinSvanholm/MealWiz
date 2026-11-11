@@ -1,6 +1,7 @@
 using FluentResults;
 using MediatR;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Extensions.Localization;
 using Supabase.Gotrue;
 using Client = Supabase.Client;
 
@@ -15,7 +16,7 @@ public static class ResetPassword
     /// </summary>
     public record Command(Uri ResetLink, string NewPassword) : IRequest<Result<Session?>>;
 
-    public class Handler(Client supabaseClient, AuthenticationStateProvider authenticationStateProvider) : IRequestHandler<Command, Result<Session?>>
+    public class Handler(Client supabaseClient, AuthenticationStateProvider authenticationStateProvider, IStringLocalizer<AuthenticationResource> L) : IRequestHandler<Command, Result<Session?>>
     {
         private readonly Client _supabaseClient = supabaseClient;
 
@@ -23,7 +24,7 @@ public static class ResetPassword
         {
             var tokens = ResetLink.Read(request.ResetLink);
             if (tokens.IsFailed)
-                return tokens.ToResult<Session?>();
+                return Result.Fail<Session?>(L["Reset_LinkInvalid"]);
 
             var result = await Result.Try(() => SetNewPasswordAsync(tokens.Value, request.NewPassword));
 

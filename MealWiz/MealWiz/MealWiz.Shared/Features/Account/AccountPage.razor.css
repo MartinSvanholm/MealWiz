@@ -125,3 +125,16 @@
     border-width: 1.5px;
     font-size: 15px;
 }
+
+/* The language dropdown: a native select, so phones show their own picker. */
+.mw-account-select {
+    flex: none;
+    min-height: var(--mw-touch);
+    padding: 0 12px;
+    border-radius: var(--mw-radius-s);
+    border: 1px solid var(--mw-border);
+    background: var(--mw-surface);
+    color: var(--mw-text);
+    font: inherit;
+    font-size: 15px;
+}

@@ -1,3 +1,7 @@
+using Supabase.Gotrue;
+using FluentResults;
+using System.Globalization;
+using MealWiz.Shared.Features.Authentication;
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
 using MealWiz.Shared.Features.Authentication.Logout;
@@ -84,6 +88,36 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
     }
 
+    // The confirmation and password-reset emails pick their language from user_metadata.lang (supabase/templates/).
+    [Theory]
+    [InlineData("da", "da")]
+    [InlineData("en", "en")]
+    [InlineData("de", "en")]
+    public async Task SignUp_StoresTheActiveLanguageInTheUserMetadata(string uiCulture, string expectedLang)
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var email = $"signup-lang-{Guid.NewGuid():N}@mealwiz.test";
+
+        var previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+        Result<Session?> result;
+        try
+        {
+            result = await new SignUp.Handler(client, _authStateProvider.Object)
+                .Handle(new SignUp.Command(email, Guid.NewGuid().ToString("N")), CancellationToken);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+
+        var session = ResultAssert.Ok(result);
+        supabase.DeleteOnDispose(Guid.Parse(session!.User!.Id!));
+        var user = await client.Auth.GetUser(session.AccessToken!);
+        Assert.Equal(expectedLang, user?.UserMetadata["lang"]?.ToString());
+    }
+
     [Fact]
     public async Task SignUp_EmailAlreadyRegistered_FailsWithoutSigningIn()
     {
@@ -109,7 +143,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
         var newPassword = Guid.NewGuid().ToString("N");
 
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, newPassword), CancellationToken);
 
         var session = ResultAssert.Ok(result);
@@ -130,7 +164,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
         var link = new Uri($"{ResetPasswordRedirect}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
 
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, Guid.NewGuid().ToString("N")), CancellationToken);
 
         ResultAssert.Failed(result);
@@ -146,7 +180,7 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         var client = await supabase.CreateSignedOutClientAsync();
 
         // Below the minimum of 6 in supabase/config.toml.
-        var result = await new ResetPassword.Handler(client, _authStateProvider.Object)
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
             .Handle(new ResetPassword.Command(link, "short"), CancellationToken);
 
         ResultAssert.Failed(result);

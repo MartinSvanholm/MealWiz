@@ -1,3 +1,4 @@
+@inject IStringLocalizer<AuthenticationResource> L
 @* The signed-out screens' frame: background rings, logo tile, title and tagline above the page's form.
    It also styles the form's mw-auth-* classes, so Login and Sign up look the same. *@
 <div class="mw-auth" data-testid="@TestId">
@@ -11,7 +12,7 @@
         </span>
         <div>
             <h1 class="mw-auth-title" data-testid="@($"{TestIdPrefix}-title")">MealWiz</h1>
-            <p class="mw-auth-tagline" data-testid="@($"{TestIdPrefix}-tagline")">Plan the week. Shop once.</p>
+            <p class="mw-auth-tagline" data-testid="@($"{TestIdPrefix}-tagline")">@L["Auth_Tagline"]</p>
         </div>
     </div>
 

@@ -4,6 +4,7 @@ using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.Authentication;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -21,8 +22,9 @@ namespace MealWiz
         {
             // The language is picked once, before the BlazorWebView exists: the stored choice (Preferences, same
             // key as the web app's local storage), else the OS language.
+            var deviceCulture = CultureInfo.CurrentUICulture;
             CultureResolver.Apply(CultureResolver.Resolve(
-                Preferences.Default.Get<string?>(SupportedLanguages.StorageKey, null), CultureInfo.CurrentUICulture));
+                Preferences.Default.Get<string?>(SupportedLanguages.StorageKey, null), deviceCulture));
 
             var builder = MauiApp.CreateBuilder();
             builder
@@ -50,6 +52,8 @@ namespace MealWiz
             builder.Services.AddBlazoredLocalStorage();
             builder.Services.AddMudServices();
             builder.Services.RegisterScopedServices();
+            builder.Services.AddScoped<ILanguagePreference>(provider =>
+                new PreferencesLanguagePreference(provider.GetRequiredService<NavigationManager>(), deviceCulture));
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();

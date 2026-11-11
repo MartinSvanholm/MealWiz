@@ -597,8 +597,10 @@ and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is 
   `en` or `da`, as a **plain string, not JSON**. No key means "Device default"; any other value is ignored. Web: local
   storage, written with Blazored `SetItemAsStringAsync` (not `SetItemAsync`, which JSON-encodes it to `"da"`) and
   removed with `RemoveItemAsync`; `Program.cs` and `MealWiz/MauiWASM/wwwroot/index.html` read it raw. MAUI:
-  `Preferences.Default` string under the same key. A change saves the choice, calls `CultureResolver.Apply` and
-  reloads with `NavigateTo(Navigation.Uri, forceLoad: true)`: the web app loads the Danish satellite only at startup.
+  `Preferences.Default` string under the same key. Read and change it only through `ILanguagePreference`
+  (`Localization/ILanguagePreference.cs`; one implementation per host): `SetAsync` saves the choice and reloads with
+  `NavigateTo(Navigation.Uri, forceLoad: true)`, because the web app loads the Danish satellite only at startup. The
+  MAUI implementation calls `CultureResolver.Apply` before reloading, since `MauiProgram` doesn't run again.
 - **`<html lang>`:** the web `index.html` sets it before Blazor boots, from the stored choice or the browser
   language; the MAUI `index.html` from the device language. `Layout/MainLayout.razor` sets it from the UI culture
   after its first render, so the C# culture always wins.
