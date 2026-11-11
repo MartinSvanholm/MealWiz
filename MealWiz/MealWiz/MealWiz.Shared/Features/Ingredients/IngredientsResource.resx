@@ -72,4 +72,25 @@
     <value>Give the ingredient a name.</value>
     <comment>Warning when saving without a name</comment>
   </data>
+  <data name="RemoveIngredient_Title" xml:space="preserve">
+    <value>On your grocery list</value>
+    <comment>Title of the drawer that asks about a deleted ingredient's grocery items</comment>
+  </data>
+  <data name="RemoveIngredient_Question" xml:space="preserve">
+    <value>Also remove {0} from the grocery list?</value>
+    <comment>{0} is the ingredient name</comment>
+  </data>
+  <data name="RemoveIngredient_Hint" xml:space="preserve">
+    <value>{0} is deleted from the meal either way.</value>
+    <comment>{0} is the ingredient name</comment>
+  </data>
+  <data name="RemoveIngredient_No" xml:space="preserve">
+    <value>No, keep it</value>
+  </data>
+  <data name="RemoveIngredient_Yes" xml:space="preserve">
+    <value>Yes, remove it</value>
+  </data>
+  <data name="RemoveIngredient_DeletedAndRemoved" xml:space="preserve">
+    <value>Ingredient deleted and removed from the grocery list.</value>
+  </data>
 </root>

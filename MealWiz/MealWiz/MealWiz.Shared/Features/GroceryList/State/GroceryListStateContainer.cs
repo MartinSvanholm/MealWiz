@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Features.GroceryList.Models;
+﻿using FluentResults;
+using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
 using MudBlazor;
@@ -30,6 +31,16 @@ public interface IGroceryListStateContainer
     /// <paramref name="deleteIds"/>. False when a request failed (the toast is shown).
     /// </summary>
     Task<bool> DeleteAndUnlinkGroceryItems(List<int> deleteIds, List<int> unlinkIds);
+    /// <summary>Loads the items and sources and sorts the items linked to the meal (MEA-93). Failures come back unreported.</summary>
+    Task<Result<LinkedGroceryItems>> LoadItemsLinkedToMeal(int mealId);
+    /// <summary>Loads the items and sources and sorts the items linked to the ingredient (MEA-93). Failures come back unreported.</summary>
+    Task<Result<LinkedGroceryItems>> LoadItemsLinkedToIngredient(int ingredientId);
+    /// <summary>
+    /// Settles a deleted meal's or ingredient's items: deletes <paramref name="deleteItemIds"/>, unlinks
+    /// <paramref name="unlinkItemIds"/> and the basket items, then drops the links on items still needed. Stops at the
+    /// first failure and returns it unreported.
+    /// </summary>
+    Task<Result> SettleLinkedItems(LinkedGroceryItems links, IReadOnlyCollection<int> deleteItemIds, IReadOnlyCollection<int> unlinkItemIds);
 }
 
 public class GroceryListStateContainer(
@@ -153,5 +164,58 @@ public class GroceryListStateContainer(
 
         if (changed) NotifyStateChanged();
         return true;
+    }
+
+    public Task<Result<LinkedGroceryItems>> LoadItemsLinkedToMeal(int mealId) =>
+        LoadLinked((items, sources) => LinkedGroceryItems.ForMeal(mealId, items, sources));
+
+    public Task<Result<LinkedGroceryItems>> LoadItemsLinkedToIngredient(int ingredientId) =>
+        LoadLinked((items, sources) => LinkedGroceryItems.ForIngredient(ingredientId, items, sources));
+
+    private async Task<Result<LinkedGroceryItems>> LoadLinked(Func<List<GroceryItem>, List<GroceryItemSource>, LinkedGroceryItems> sort)
+    {
+        var items = await mediator.Send(new GetAllGroceryItems.GetAllGroceryItems.Query());
+        if (items.IsFailed) return items.ToResult<LinkedGroceryItems>();
+
+        var sources = await mediator.Send(new GetGroceryItemSources.GetGroceryItemSources.Query());
+        if (sources.IsFailed) return sources.ToResult<LinkedGroceryItems>();
+
+        groceryList.Items = items.Value.OrderBy(item => item.IsPicked).ToList();
+        Sources = sources.Value;
+        NotifyStateChanged();
+
+        return Result.Ok(sort(groceryList.Items, Sources));
+    }
+
+    public async Task<Result> SettleLinkedItems(LinkedGroceryItems links, IReadOnlyCollection<int> deleteItemIds, IReadOnlyCollection<int> unlinkItemIds)
+    {
+        var unlink = unlinkItemIds.Concat(links.InBasket.Select(item => item.Id)).Distinct().ToList();
+
+        if (deleteItemIds.Count > 0)
+        {
+            var deleted = await mediator.Send(new DeleteGroceryItems.DeleteGroceryItems.Command([.. deleteItemIds]));
+            if (deleted.IsFailed) return deleted;
+        }
+
+        if (unlink.Count > 0)
+        {
+            var unlinked = await mediator.Send(new UnlinkGroceryItems.UnlinkGroceryItems.Command(unlink));
+            if (unlinked.IsFailed) return unlinked;
+        }
+
+        if (links.SourceIdsToDrop.Count > 0)
+        {
+            var dropped = await mediator.Send(new DeleteGroceryItemSources.DeleteGroceryItemSources.Command([.. links.SourceIdsToDrop]));
+            if (dropped.IsFailed) return dropped;
+        }
+
+        if (deleteItemIds.Count == 0 && unlink.Count == 0 && links.SourceIdsToDrop.Count == 0) return Result.Ok();
+
+        GroceryList.Items.RemoveAll(item => deleteItemIds.Contains(item.Id));
+        foreach (var item in GroceryList.Items.Where(item => unlink.Contains(item.Id))) item.IsManual = true;
+        Sources.RemoveAll(source => deleteItemIds.Contains(source.GroceryItemId) || unlink.Contains(source.GroceryItemId)
+                                    || links.SourceIdsToDrop.Contains(source.Id));
+        NotifyStateChanged();
+        return Result.Ok();
     }
 }
