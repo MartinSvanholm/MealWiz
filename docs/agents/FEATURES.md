@@ -437,6 +437,12 @@ per host (see [Hosts](#hosts)).
   `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
   wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
   reload on `/login` when the session is rejected.
+- **Texts:** `Features/Authentication/AuthenticationResource.cs` (the signed-out pages, AuthShell and Log out). A bad
+  reset link always shows `Reset_LinkInvalid`; GoTrue's English reason is never shown.
+- **Emails:** SignUp stores the app's language as `user_metadata.lang`. The confirmation and password-reset emails,
+  `supabase/templates/confirmation.html` and `supabase/templates/recovery.html` (subjects in `supabase/config.toml`),
+  are Danish for `da` and English otherwise. Locally they need Mailpit, which verify leaves out. The hosted project's
+  templates and subjects are pasted from these files by hand (Supabase dashboard, Authentication, Emails).
 - **Tests:**
   - bUnit: `Features/Authentication/ComponentTests/`
   - integration: `Features/Authentication/IntegrationTests/AuthenticationHandlerTests.cs`
@@ -447,7 +453,15 @@ per host (see [Hosts](#hosts)).
 ## Account
 
 The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
-`mealwiz.theme`), change password, change email, logout and delete account. No tables.
+`mealwiz.theme`), the language dropdown, change password, change email, logout and delete account. No tables.
+Texts: `Features/Account/AccountResource.cs`.
+
+The language dropdown (`language-select`, a native select so phones show their own picker) lists Device default, then
+`SupportedLanguages.All` by native name, with the stored choice preselected. A change goes through
+`ILanguagePreference` (`Localization/ILanguagePreference.cs`): it saves the code (Device default removes it) and reloads
+the page in the new language. Web: `Localization/LocalStorageLanguagePreference.cs`, registered in
+`MealWiz/MauiWASM/ServiceCollectionExtensions.cs`. MAUI: `MealWiz/MealWiz/MealWiz/Providers/PreferencesLanguagePreference.cs`,
+which also applies the culture in-process, since a reload there doesn't re-run `MauiProgram`.
 
 - **Folder:** `Features/Account/`
 - **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back

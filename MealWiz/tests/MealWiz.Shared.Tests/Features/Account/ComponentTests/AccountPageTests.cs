@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Bunit;
 using MealWiz.Shared.Features.Account;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using MealWiz.Shared.Localization;
 using Moq;
 using Xunit;
 
@@ -66,5 +67,69 @@ public class AccountPageTests : ComponentTestBase
         cut.Find(TestId("account-back")).Click();
 
         Assert.Equal("", CurrentPath);
+    }
+
+    [Fact]
+    public void The_language_dropdown_lists_device_default_then_each_language_in_its_own_name()
+    {
+        var cut = Render<AccountPage>();
+
+        var options = cut.Find(TestId("language-select")).QuerySelectorAll("option");
+
+        Assert.Equal(["", "en", "da"], options.Select(o => o.GetAttribute("value")));
+        Assert.Equal(["Device default", "English", "Dansk"], options.Select(o => o.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void The_language_dropdown_preselects_device_default_when_nothing_is_stored()
+    {
+        Language.Setup(l => l.GetAsync()).ReturnsAsync((string?)null);
+
+        var cut = Render<AccountPage>();
+
+        cut.WaitForAssertion(() => Assert.Equal("", cut.Find(TestId("language-select")).GetAttribute("value")));
+    }
+
+    [Fact]
+    public void The_language_dropdown_preselects_the_stored_language()
+    {
+        Language.Setup(l => l.GetAsync()).ReturnsAsync("da");
+
+        var cut = Render<AccountPage>();
+
+        cut.WaitForAssertion(() => Assert.Equal("da", cut.Find(TestId("language-select")).GetAttribute("value")));
+    }
+
+    [Fact]
+    public void Picking_a_language_saves_it_through_the_language_preference()
+    {
+        var cut = Render<AccountPage>();
+
+        cut.Find(TestId("language-select")).Change("da");
+
+        Language.Verify(l => l.SetAsync("da"), Times.Once);
+    }
+
+    [Fact]
+    public void Picking_device_default_clears_the_stored_choice()
+    {
+        Language.Setup(l => l.GetAsync()).ReturnsAsync("da");
+        var cut = Render<AccountPage>();
+
+        cut.Find(TestId("language-select")).Change("");
+
+        Language.Verify(l => l.SetAsync(null), Times.Once);
+    }
+
+    [Fact]
+    public void Picking_the_language_that_is_already_chosen_does_not_reload()
+    {
+        Language.Setup(l => l.GetAsync()).ReturnsAsync("da");
+        var cut = Render<AccountPage>();
+        cut.WaitForAssertion(() => Assert.Equal("da", cut.Find(TestId("language-select")).GetAttribute("value")));
+
+        cut.Find(TestId("language-select")).Change("da");
+
+        Language.Verify(l => l.SetAsync(It.IsAny<string?>()), Times.Never);
     }
 }

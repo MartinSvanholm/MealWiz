@@ -1,3 +1,4 @@
+using MealWiz.Shared.Localization;
 using Blazored.LocalStorage;
 using MauiWASM.Provider;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.AddBlazoredLocalStorageAsSingleton();
         services.AddMudServices();
         services.RegisterScopedServices();
+        services.AddScoped<ILanguagePreference, LocalStorageLanguagePreference>();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MealWiz.Shared._Imports).Assembly));
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddAuthorizationCore();

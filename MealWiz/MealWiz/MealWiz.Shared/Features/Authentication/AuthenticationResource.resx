@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Auth_Tagline" xml:space="preserve">
+    <value>Plan the week. Shop once.</value>
+  </data>
+  <data name="Auth_Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="Auth_EmailPlaceholder" xml:space="preserve">
+    <value>you@example.com</value>
+  </data>
+  <data name="Auth_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Auth_RepeatPassword" xml:space="preserve">
+    <value>Repeat password</value>
+  </data>
+  <data name="Auth_RepeatPasswordPlaceholder" xml:space="preserve">
+    <value>The same password again</value>
+  </data>
+  <data name="Auth_PasswordsDontMatch" xml:space="preserve">
+    <value>Passwords don't match</value>
+  </data>
+  <data name="Auth_LogIn" xml:space="preserve">
+    <value>Log in</value>
+  </data>
+  <data name="Login_PasswordPlaceholder" xml:space="preserve">
+    <value>Your password</value>
+  </data>
+  <data name="Login_ForgotPassword" xml:space="preserve">
+    <value>Forgot password?</value>
+  </data>
+  <data name="Login_NoAccount" xml:space="preserve">
+    <value>No account yet?</value>
+  </data>
+  <data name="Login_CreateOne" xml:space="preserve">
+    <value>Create one</value>
+  </data>
+  <data name="SignUp_PasswordPlaceholder" xml:space="preserve">
+    <value>Choose a password</value>
+  </data>
+  <data name="SignUp_Submit" xml:space="preserve">
+    <value>Create account</value>
+  </data>
+  <data name="SignUp_HaveAccount" xml:space="preserve">
+    <value>Already have an account?</value>
+  </data>
+  <data name="SignUp_CheckEmail" xml:space="preserve">
+    <value>Check your email: we sent a link to {0} to confirm your account.</value>
+  </data>
+  <data name="SignUp_Confirmed" xml:space="preserve">
+    <value>Confirmed?</value>
+  </data>
+  <data name="Forgot_Intro" xml:space="preserve">
+    <value>Enter your account's email and we'll send you a link to choose a new password.</value>
+  </data>
+  <data name="Forgot_Submit" xml:space="preserve">
+    <value>Send reset link</value>
+  </data>
+  <data name="Forgot_Remembered" xml:space="preserve">
+    <value>Remembered it?</value>
+  </data>
+  <data name="Forgot_CheckEmail" xml:space="preserve">
+    <value>Check your email: if there's an account for {0}, we've sent it a link to choose a new password.</value>
+  </data>
+  <data name="Forgot_BackToLogIn" xml:space="preserve">
+    <value>Back to log in</value>
+  </data>
+  <data name="Reset_NewPassword" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="Reset_NewPasswordPlaceholder" xml:space="preserve">
+    <value>Choose a new password</value>
+  </data>
+  <data name="Reset_Submit" xml:space="preserve">
+    <value>Set password</value>
+  </data>
+  <data name="Reset_LinkInvalid" xml:space="preserve">
+    <value>This reset link is invalid or has expired. Ask for a new one.</value>
+  </data>
+  <data name="Reset_RequestAgain" xml:space="preserve">
+    <value>Send a new link</value>
+  </data>
+  <data name="Logout_Button" xml:space="preserve">
+    <value>Log out</value>
+  </data>
+</root>

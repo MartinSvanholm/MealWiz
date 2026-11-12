@@ -63,6 +63,7 @@ public class ServiceRegistrationTests
             typeof(IStringLocalizerFactory),
             typeof(IStringLocalizer<SharedResource>),
             typeof(MudLocalizer),
+            typeof(ILanguagePreference),
         ]);
 
         await using var provider = BuildProvider();

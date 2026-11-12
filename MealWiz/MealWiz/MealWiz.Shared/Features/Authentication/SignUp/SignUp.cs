@@ -1,4 +1,6 @@
+using System.Globalization;
 using FluentResults;
+using MealWiz.Shared.Localization;
 using MediatR;
 using Microsoft.AspNetCore.Components.Authorization;
 using Supabase.Gotrue;
@@ -20,7 +22,18 @@ public static class SignUp
 
         public async Task<Result<Session?>> Handle(Command request, CancellationToken cancellationToken)
         {
-            var result = await Result.Try(() => _supabaseClient.Auth.SignUp(request.Email, request.Password));
+            // The confirmation and password-reset emails pick their language from user_metadata.lang
+            // (supabase/templates/); the app's culture is always a supported language, English as the fallback.
+            var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            var options = new SignUpOptions
+            {
+                Data = new Dictionary<string, object>
+                {
+                    ["lang"] = SupportedLanguages.IsSupported(lang) ? lang : SupportedLanguages.DefaultCode,
+                },
+            };
+
+            var result = await Result.Try(() => _supabaseClient.Auth.SignUp(request.Email, request.Password, options));
 
             // gotrue-csharp only keeps a sign-up session when the user comes back with ConfirmedAt set, which an
             // auto-confirmed sign-up doesn't, so adopt the session ourselves (this also persists it).

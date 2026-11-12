@@ -1,11 +1,11 @@
+@inject IStringLocalizer<AuthenticationResource> L
 @inject ISender _mediator
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
-@inject IStringLocalizer<SharedResource> L
 
 <MudButton data-testid="logout-button" OnClick="OnLogoutClick" Variant="Variant.Outlined" Color="Color.Error"
            StartIcon="@Icons.Material.Filled.Logout" FullWidth="true">
-    @L["Account_Logout"]
+    @L["Logout_Button"]
 </MudButton>
 
 @code {

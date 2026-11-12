@@ -104,7 +104,8 @@ public class ResetPasswordPageTests : ComponentTestBase
         Navigation.NavigateTo("reset-password#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
         var cut = Render<ResetPasswordPage>();
 
-        Assert.Contains("Email link is invalid or has expired", cut.Find(TestId("reset-expired")).TextContent);
+        // GoTrue's English reason isn't shown: every bad link gets the one localized message.
+        Assert.Equal(InvalidLink, cut.Find(TestId("reset-expired")).TextContent.Trim());
         Assert.Equal("forgot-password", cut.Find(TestId("reset-request-again")).GetAttribute("href"));
         Assert.Empty(cut.FindAll(TestId("reset-submit")));
     }
@@ -115,9 +116,11 @@ public class ResetPasswordPageTests : ComponentTestBase
         Navigation.NavigateTo("reset-password");
         var cut = Render<ResetPasswordPage>();
 
-        Assert.Contains(ResetLink.InvalidLinkMessage, cut.Find(TestId("reset-expired")).TextContent);
+        Assert.Equal(InvalidLink, cut.Find(TestId("reset-expired")).TextContent.Trim());
         Assert.Empty(cut.FindAll(TestId("reset-submit")));
     }
+
+    private const string InvalidLink = "This reset link is invalid or has expired. Ask for a new one.";
 
     private static void Fill(IRenderedComponent<ResetPasswordPage> cut, string password, string repeat)
     {

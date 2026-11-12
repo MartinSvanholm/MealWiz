@@ -98,5 +98,23 @@
   </data>
   <data name="DeleteAccount_Failed" xml:space="preserve">
     <value>Couldn't delete your account. Try again later.</value>
+  <data name="Account_Label" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="Account_Title" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Account_SignedInAs" xml:space="preserve">
+    <value>Signed in as</value>
+  </data>
+  <data name="Account_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Account_DarkMode" xml:space="preserve">
+    <value>Dark mode</value>
+  </data>
+  <data name="Account_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
   </data>
 </root>

@@ -7,10 +7,12 @@
 @using MealWiz.Shared.Theme
 @using Microsoft.AspNetCore.Components.Authorization
 @inject IThemeService ThemeService
+@inject ILanguagePreference LanguagePreference
+@inject IStringLocalizer<AccountResource> L
 @implements IDisposable
 
 <div class="mw-page mw-account" data-testid="account-page">
-    <SubPageHeader Label="Profile" Title="Account" BackHref="/" BackTestId="account-back" />
+    <SubPageHeader Label="@L["Account_Label"]" Title="@L["Account_Title"]" BackHref="/" BackTestId="account-back" />
 
     <div class="mw-account-body">
         <section class="mw-account-profile" data-testid="account-profile">
@@ -25,24 +27,38 @@
                 }
             </span>
             <div class="mw-account-profile-text">
-                <span class="mw-account-profile-caption">Signed in as</span>
+                <span class="mw-account-profile-caption">@L["Account_SignedInAs"]</span>
                 <span class="mw-account-email" data-testid="account-email">@Email</span>
             </div>
         </section>
 
         <section class="mw-account-section">
-            <h2 class="mw-account-section-title">Settings</h2>
+            <h2 class="mw-account-section-title">@L["Account_Settings"]</h2>
             <div class="mw-account-group">
                 <div class="mw-account-row">
                     <span class="mw-account-row-icon" aria-hidden="true">
                         <MudIcon Icon="@Icons.Material.Outlined.DarkMode" Color="Color.Inherit" />
                     </span>
-                    <span class="mw-account-row-label">Dark mode</span>
+                    <span class="mw-account-row-label">@L["Account_DarkMode"]</span>
                     <MudSwitch T="bool" data-testid="dark-mode-switch"
                                Value="ThemeService.IsDarkMode"
                                ValueChanged="OnToggleDarkMode"
                                Color="Color.Primary"
-                               aria-label="Dark mode" />
+                               aria-label="@L["Account_DarkMode"]" />
+                </div>
+                <div class="mw-account-row">
+                    <span class="mw-account-row-icon" aria-hidden="true">
+                        <MudIcon Icon="@Icons.Material.Outlined.Translate" Color="Color.Inherit" />
+                    </span>
+                    <label class="mw-account-row-label" for="language-select">@L["Account_Language"]</label>
+                    <select id="language-select" class="mw-account-select" data-testid="language-select"
+                            value="@_language" @onchange="OnLanguageChanged">
+                        <option value="">@L["Account_LanguageDeviceDefault"]</option>
+                        @foreach (var language in SupportedLanguages.All)
+                        {
+                            <option value="@language.Code" lang="@language.Code">@language.NativeName</option>
+                        }
+                    </select>
                 </div>
             </div>
         </section>
@@ -79,6 +95,21 @@
     // The theme is read from local storage after the first render, so on a direct load of /account the switch has to
     // follow ThemeService.OnChange (MEA-71).
     protected override void OnInitialized() => ThemeService.OnChange += OnThemeChanged;
+
+    /// <summary>The stored language code, or "" for Device default (the first option).</summary>
+    private string _language = string.Empty;
+
+    protected override async Task OnInitializedAsync() => _language = await LanguagePreference.GetAsync() ?? string.Empty;
+
+    // Saving reloads the app in the new language (ILanguagePreference); picking the current choice does nothing.
+    private async Task OnLanguageChanged(ChangeEventArgs e)
+    {
+        var picked = e.Value as string ?? string.Empty;
+        if (picked == _language) return;
+
+        _language = picked;
+        await LanguagePreference.SetAsync(picked.Length == 0 ? null : picked);
+    }
 
     public void Dispose() => ThemeService.OnChange -= OnThemeChanged;
 

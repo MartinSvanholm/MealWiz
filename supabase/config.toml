@@ -242,6 +242,16 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# MEA-106: bilingual sign-up and password-reset emails. They branch on user_metadata.lang, which sign-up sets. The
+# hosted project's templates and subjects are pasted from these files by hand (no automated sync).
+[auth.email.template.confirmation]
+subject = "{{ if eq (print .Data.lang) \"da\" }}Bekræft din e-mail til MealWiz{{ else }}Confirm your MealWiz email{{ end }}"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "{{ if eq (print .Data.lang) \"da\" }}Nulstil din adgangskode til MealWiz{{ else }}Reset your MealWiz password{{ end }}"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

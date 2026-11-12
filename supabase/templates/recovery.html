@@ -1,0 +1,14 @@
+{{/* Password reset. Danish when the user signed up in Danish (user_metadata.lang, set by the SignUp handler),
+     English otherwise, including users from before the language was stored. The hosted project's template is pasted
+     from this file by hand (Supabase dashboard, Authentication, Emails). */}}
+{{ if eq (print .Data.lang) "da" }}
+<h2>Nulstil din adgangskode</h2>
+<p>Tryk på linket for at vælge en ny adgangskode til MealWiz:</p>
+<p><a href="{{ .ConfirmationURL }}">Vælg en ny adgangskode</a></p>
+<p>Har du ikke bedt om det, kan du se bort fra denne e-mail.</p>
+{{ else }}
+<h2>Reset your password</h2>
+<p>Follow this link to choose a new password for MealWiz:</p>
+<p><a href="{{ .ConfirmationURL }}">Choose a new password</a></p>
+<p>If you didn't ask for this, you can ignore this email.</p>
+{{ end }}

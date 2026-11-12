@@ -1,4 +1,5 @@
 @page "/signup"
+@inject IStringLocalizer<AuthenticationResource> L
 @inject ISender _mediator
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
@@ -9,11 +10,11 @@
     {
         <div class="mw-auth-form">
             <p class="mw-auth-note" data-testid="signup-check-email">
-                Check your email: we sent a link to @ConfirmationEmail to confirm your account.
+                @L["SignUp_CheckEmail", ConfirmationEmail]
             </p>
             <p class="mw-auth-switch">
-                Confirmed?
-                <a class="mw-auth-link" href="login" data-testid="signup-login">Log in</a>
+                @L["SignUp_Confirmed"]
+                <a class="mw-auth-link" href="login" data-testid="signup-login">@L["Auth_LogIn"]</a>
             </p>
         </div>
     }
@@ -21,27 +22,27 @@
     {
         <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
             <div class="mw-auth-field">
-                <label class="mw-auth-label" for="@EmailInputId" data-testid="signup-email-label">Email</label>
-                <TextField data-testid="signup-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="you@example.com"
+                <label class="mw-auth-label" for="@EmailInputId" data-testid="signup-email-label">@L["Auth_Email"]</label>
+                <TextField data-testid="signup-email" @bind-Value="Email" InputId="@EmailInputId" Placeholder="@L["Auth_EmailPlaceholder"].Value"
                            Required InputType="InputType.Email"
                            OnKeyDown="EnterKey.Then(() => PasswordField.FocusAsync())" />
             </div>
             <div class="mw-auth-field">
-                <label class="mw-auth-label" for="@PasswordInputId" data-testid="signup-password-label">Password</label>
+                <label class="mw-auth-label" for="@PasswordInputId" data-testid="signup-password-label">@L["Auth_Password"]</label>
                 <TextField @ref="PasswordField" data-testid="signup-password" @bind-Value="Password" InputId="@PasswordInputId"
-                           Placeholder="Choose a password" Required InputType="InputType.Password"
+                           Placeholder="@L["SignUp_PasswordPlaceholder"].Value" Required InputType="InputType.Password"
                            OnKeyDown="EnterKey.Then(() => PasswordRepeatField.FocusAsync())" />
             </div>
             <div class="mw-auth-field">
-                <label class="mw-auth-label" for="@PasswordRepeatInputId" data-testid="signup-password-repeat-label">Repeat password</label>
+                <label class="mw-auth-label" for="@PasswordRepeatInputId" data-testid="signup-password-repeat-label">@L["Auth_RepeatPassword"]</label>
                 <TextField @ref="PasswordRepeatField" data-testid="signup-password-repeat" @bind-Value="PasswordRepeat"
-                           InputId="@PasswordRepeatInputId" Placeholder="The same password again" Required
+                           InputId="@PasswordRepeatInputId" Placeholder="@L["Auth_RepeatPasswordPlaceholder"].Value" Required
                            InputType="InputType.Password" OnKeyDown="EnterKey.Then(SignUp)" />
             </div>
-            <Button data-testid="signup-submit" OnClick="SignUp" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">Create account</Button>
+            <Button data-testid="signup-submit" OnClick="SignUp" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">@L["SignUp_Submit"]</Button>
             <p class="mw-auth-switch">
-                Already have an account?
-                <a class="mw-auth-link" href="login" data-testid="signup-login">Log in</a>
+                @L["SignUp_HaveAccount"]
+                <a class="mw-auth-link" href="login" data-testid="signup-login">@L["Auth_LogIn"]</a>
             </p>
         </CustomForm>
     }
@@ -75,7 +76,7 @@
 
             if (Password != PasswordRepeat)
             {
-                _snackbar.Add("Passwords don't match", Severity.Error);
+                _snackbar.Add(L["Auth_PasswordsDontMatch"], Severity.Error);
                 return;
             }
 
