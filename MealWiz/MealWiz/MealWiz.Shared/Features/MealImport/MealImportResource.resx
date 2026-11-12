@@ -52,6 +52,12 @@
     <value>The AI service is unavailable right now. Please try again later.</value>
     <comment>A failed picture import, error_code ai_unavailable</comment>
   </data>
+  <data name="Import_PictureUploadFailed" xml:space="preserve">
+    <value>We couldn't upload the pictures. Please try again.</value>
+  </data>
+  <data name="Import_HintTooLong" xml:space="preserve">
+    <value>The hint can be at most {0} characters.</value>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Please enter a valid meal URL (starting with http:// or https://).</value>
     <comment>Validation error on the URL field</comment>

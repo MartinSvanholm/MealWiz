@@ -42,6 +42,12 @@
   <data name="ImportError_AiUnavailable" xml:space="preserve">
     <value>AI-tjenesten er ikke tilgængelig lige nu. Prøv igen senere.</value>
   </data>
+  <data name="Import_PictureUploadFailed" xml:space="preserve">
+    <value>Vi kunne ikke uploade billederne. Prøv igen.</value>
+  </data>
+  <data name="Import_HintTooLong" xml:space="preserve">
+    <value>Hintet må højst være på {0} tegn.</value>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Indtast et gyldigt link til måltidet (der starter med http:// eller https://).</value>
   </data>

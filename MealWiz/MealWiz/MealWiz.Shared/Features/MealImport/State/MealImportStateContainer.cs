@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentResults;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -45,6 +46,12 @@ public interface IMealImportStateContainer
     void NotifyStateChanged();
     Task LoadLatestImport();
     Task<Result> StartImport(string url);
+
+    /// <summary>
+    /// Starts a picture job: uploads the (already shrunk) JPEGs, inserts the pending row with the app language, then asks
+    /// the AnalyzeMealPicture Function. From there it behaves like <see cref="StartImport"/>. One job at a time.
+    /// </summary>
+    Task<Result> StartPictureImport(IReadOnlyList<byte[]> pictures);
 
     /// <summary>
     /// Hands the running job over to the container, which then saves a success (no review step) or toasts a failure.
@@ -128,34 +135,72 @@ public class MealImportStateContainer(
         if (!MealImportJobHelper.TryNormalizeMealUrl(url, out var sourceUrl)) return Result.Fail(localizer["Import_InvalidUrl"]);
 
         var jobId = Guid.NewGuid();
+        BeginSubmitting();
 
+        var createResult = await mediator.Send(new CreateMealImport.CreateMealImport.Command(jobId, sourceUrl));
+        if (createResult.IsFailed) return FailSubmitting(createResult.Errors.First().Message, createResult.ToResult());
+
+        return await AwaitResult(jobId, createResult.Value,
+            () => mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl)));
+    }
+
+    public async Task<Result> StartPictureImport(IReadOnlyList<byte[]> pictures)
+    {
+        if (IsImportInProgress) return Result.Fail(localizer["Import_AlreadyInProgress"]);
+
+        var jobId = Guid.NewGuid();
+        BeginSubmitting();
+
+        // The upload comes before the row insert: the Function rejects a row older than 5 minutes.
+        var uploadResult = await mediator.Send(new UploadMealImportPictures.UploadMealImportPictures.Command(jobId, pictures));
+        if (uploadResult.IsFailed) return FailSubmitting(uploadResult.Errors.First().Message, uploadResult.ToResult());
+
+        var paths = uploadResult.Value;
+        var createResult = await mediator.Send(new CreatePictureMealImport.CreatePictureMealImport.Command(
+            jobId, paths, MealImportJobHelper.LanguageFor(CultureInfo.CurrentUICulture), Hint: null));
+        if (createResult.IsFailed)
+        {
+            // Best effort: nothing else refers to these pictures.
+            await mediator.Send(new DeleteMealImportPictures.DeleteMealImportPictures.Command(paths));
+            return FailSubmitting(createResult.Errors.First().Message, createResult.ToResult());
+        }
+
+        return await AwaitResult(jobId, createResult.Value,
+            () => mediator.Send(new TriggerAnalyzeMealPicture.TriggerAnalyzeMealPicture.Command(jobId)));
+    }
+
+    private void BeginSubmitting()
+    {
         CurrentImport = null;
         JobErrorMessage = null;
         CanContinueInBackground = false;
         IsRunningInBackground = false;
         JobStatus = MealImportJobStatus.Submitting;
         NotifyStateChanged();
+    }
 
-        var createResult = await mediator.Send(new CreateMealImport.CreateMealImport.Command(jobId, sourceUrl));
-        if (createResult.IsFailed)
-        {
-            JobErrorMessage = createResult.Errors.First().Message;
-            JobStatus = MealImportJobStatus.Failed;
+    private Result FailSubmitting(string message, Result failure)
+    {
+        JobErrorMessage = message;
+        JobStatus = MealImportJobStatus.Failed;
 
-            // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
-            if (IsRunningInBackground)
-                snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
+        // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
+        if (IsRunningInBackground)
+            snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
 
-            NotifyStateChanged();
-            return createResult.ToResult();
-        }
+        NotifyStateChanged();
+        return failure;
+    }
 
+    /// <summary>The part of a job that is the same for links and pictures, once its pending row exists.</summary>
+    private async Task<Result> AwaitResult(Guid jobId, Models.MealImport created, Func<Task<Result>> trigger)
+    {
         lock (jobLock) activeJobId = jobId;
-        CurrentImport = createResult.Value;
-        LatestImport = createResult.Value;
+        CurrentImport = created;
+        LatestImport = created;
 
         // Subscribe before the Function runs so its write-back can't be missed. If subscribing fails we
-        // carry on anyway: the row is re-read once the Function has acked (see RunScrape).
+        // carry on anyway: the row is re-read once the Function has acked (see RunTrigger).
         var subscribeResult = await realtimeSubscriber.Subscribe(jobId, update => Track(OnRowUpdated(jobId, update)));
         if (subscribeResult.IsSuccess)
             subscription = subscribeResult.Value;
@@ -164,7 +209,7 @@ public class MealImportStateContainer(
         NotifyStateChanged();
 
         StartJobTimers(jobId);
-        Track(RunScrape(jobId, sourceUrl));
+        Track(RunTrigger(jobId, trigger));
 
         return Result.Ok();
     }
@@ -216,11 +261,11 @@ public class MealImportStateContainer(
     /// job via <see cref="FailPendingJob"/>.</item>
     /// </list>
     /// </summary>
-    private async Task RunScrape(Guid jobId, string sourceUrl)
+    private async Task RunTrigger(Guid jobId, Func<Task<Result>> trigger)
     {
         try
         {
-            var triggerResult = await mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl));
+            var triggerResult = await trigger();
             if (!IsActive(jobId)) return;
 
             if (await TryResolveFromRow(jobId)) return;
