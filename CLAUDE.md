@@ -40,6 +40,10 @@ it fixes the groups itself, one at a time.
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
 `mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
 
+A SessionStart hook (`.claude/hooks/sync-dev.sh`, in `.claude/settings.json`) fetches `origin/dev` and fast-forwards
+the local `dev` branch, so a resumed or cached checkout never starts on stale code. It never fails the session; if it
+prints a warning, run `git fetch origin && git pull --ff-only` yourself before starting work.
+
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
 - **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
