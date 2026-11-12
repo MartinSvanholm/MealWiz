@@ -98,6 +98,7 @@
   </data>
   <data name="DeleteAccount_Failed" xml:space="preserve">
     <value>Kontoen kunne ikke slettes. Prøv igen senere.</value>
+  </data>
   <data name="Account_Label" xml:space="preserve">
     <value>Profil</value>
   </data>
@@ -116,5 +117,7 @@
   <data name="Account_Language" xml:space="preserve">
     <value>Sprog</value>
   </data>
+  <data name="Account_LanguageDeviceDefault" xml:space="preserve">
+    <value>Enhedens sprog</value>
   </data>
 </root>

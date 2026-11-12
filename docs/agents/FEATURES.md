@@ -441,7 +441,7 @@ per host (see [Hosts](#hosts)).
   reset link always shows `Reset_LinkInvalid`; GoTrue's English reason is never shown.
 - **Emails:** SignUp stores the app's language as `user_metadata.lang`. The confirmation and password-reset emails,
   `supabase/templates/confirmation.html` and `supabase/templates/recovery.html` (subjects in `supabase/config.toml`),
-  are Danish for `da` and English otherwise. Locally they need Mailpit, which verify leaves out. The hosted project's
+  are Danish for `da` and English otherwise. Locally they land in Mailpit (port 54324), which every verify stack runs. The hosted project's
   templates and subjects are pasted from these files by hand (Supabase dashboard, Authentication, Emails).
 - **Tests:**
   - bUnit: `Features/Authentication/ComponentTests/`

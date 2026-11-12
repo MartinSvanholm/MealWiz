@@ -98,6 +98,7 @@
   </data>
   <data name="DeleteAccount_Failed" xml:space="preserve">
     <value>Couldn't delete your account. Try again later.</value>
+  </data>
   <data name="Account_Label" xml:space="preserve">
     <value>Profile</value>
   </data>
@@ -116,5 +117,7 @@
   <data name="Account_Language" xml:space="preserve">
     <value>Language</value>
   </data>
+  <data name="Account_LanguageDeviceDefault" xml:space="preserve">
+    <value>Device default</value>
   </data>
 </root>
