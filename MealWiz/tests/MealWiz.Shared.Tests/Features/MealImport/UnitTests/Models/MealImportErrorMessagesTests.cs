@@ -18,8 +18,24 @@ public class MealImportErrorMessagesTests
     [InlineData(MealImportErrorCode.Unreachable, "We couldn't reach the meal import service. Please try again.")]
     [InlineData(MealImportErrorCode.TimedOut, "The meal import took too long. Please try again.")]
     [InlineData(MealImportErrorCode.Unknown, "The meal import failed. Please try again.")]
+    [InlineData(MealImportErrorCode.NoMealFound, "We couldn't find a meal or a recipe in the picture.")]
+    [InlineData(MealImportErrorCode.DailyLimitReached, "You've reached today's limit for picture imports. Try again tomorrow.")]
+    [InlineData(MealImportErrorCode.PictureUnreadable, "We couldn't read the picture. Try a different picture.")]
+    [InlineData(MealImportErrorCode.AiUnavailable, "The AI service is unavailable right now. Please try again later.")]
     public void ToMessage_EachCode_HasItsOwnMessage(MealImportErrorCode code, string expected)
     {
+        Assert.Equal(expected, _localizer.ToMessage(code));
+    }
+
+    [Theory]
+    [InlineData(MealImportErrorCode.NoMealFound, "Vi kunne ikke finde et måltid eller en opskrift på billedet.")]
+    [InlineData(MealImportErrorCode.DailyLimitReached, "Du har nået dagens grænse for import fra billeder. Prøv igen i morgen.")]
+    [InlineData(MealImportErrorCode.PictureUnreadable, "Vi kunne ikke læse billedet. Prøv med et andet billede.")]
+    [InlineData(MealImportErrorCode.AiUnavailable, "AI-tjenesten er ikke tilgængelig lige nu. Prøv igen senere.")]
+    public void ToMessage_PictureCodes_InDanish_AreDanish(MealImportErrorCode code, string expected)
+    {
+        using var _ = CultureScope.Use("da");
+
         Assert.Equal(expected, _localizer.ToMessage(code));
     }
 

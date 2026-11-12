@@ -30,6 +30,18 @@
   <data name="ImportError_Unknown" xml:space="preserve">
     <value>Importen af måltidet mislykkedes. Prøv igen.</value>
   </data>
+  <data name="ImportError_NoMealFound" xml:space="preserve">
+    <value>Vi kunne ikke finde et måltid eller en opskrift på billedet.</value>
+  </data>
+  <data name="ImportError_DailyLimitReached" xml:space="preserve">
+    <value>Du har nået dagens grænse for import fra billeder. Prøv igen i morgen.</value>
+  </data>
+  <data name="ImportError_PictureUnreadable" xml:space="preserve">
+    <value>Vi kunne ikke læse billedet. Prøv med et andet billede.</value>
+  </data>
+  <data name="ImportError_AiUnavailable" xml:space="preserve">
+    <value>AI-tjenesten er ikke tilgængelig lige nu. Prøv igen senere.</value>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Indtast et gyldigt link til måltidet (der starter med http:// eller https://).</value>
   </data>

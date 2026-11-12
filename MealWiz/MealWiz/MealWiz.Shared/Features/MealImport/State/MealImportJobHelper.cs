@@ -72,7 +72,10 @@ public static class MealImportJobHelper
         {
             Id = jobId,
             CreatedBy = current?.CreatedBy ?? Guid.Empty,
-            SourceUrl = current?.SourceUrl ?? string.Empty,
+            SourceUrl = current?.SourceUrl ?? (current?.IsPictureImport == true ? null : string.Empty),
+            PicturePaths = current?.PicturePaths,
+            Language = current?.Language,
+            Hint = current?.Hint,
             CreatedAt = current?.CreatedAt ?? now,
             Status = MealImportStatus.Failed,
             ErrorCode = errorCode,

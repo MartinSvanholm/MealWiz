@@ -19,6 +19,7 @@ namespace MealWiz.Functions.Tests.Functions.ScrapeRecipe.IntegrationTests;
 /// client observes the result. Skips (with the reason) when local Supabase isn't running.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("PictureJobs")] // PictureJob_IsLeftPending adds a picture row, which the daily-limit tests count
 public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestServer server)
     : IClassFixture<LocalSupabaseFixture>, IClassFixture<RecipeTestServer>
 {
@@ -74,9 +75,29 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
         var pendingRow = await supabase.InsertPendingRowAsync(server.Url("/recipe"));
 
-        var row = await HandleAsync(pendingRow.Id, pendingRow.SourceUrl, parser: new ThrowingRecipeParser());
+        var row = await HandleAsync(pendingRow.Id, pendingRow.SourceUrl!, parser: new ThrowingRecipeParser());
 
         AssertFailed(row, RecipeImportErrorCode.Unknown, "The parser broke.");
+    }
+
+    // AnalyzeMealPicture resolves picture jobs; ScrapeRecipe must not touch one, whatever url the caller sends.
+    [Fact]
+    public async Task PictureJob_IsLeftPending()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var pictureRow = await supabase.InsertRowAsync(new MealImportDb
+        {
+            PicturePaths = [$"{LocalSupabaseFixture.SeededUserId}/job/0.jpg"],
+            Language = "en",
+            Status = RecipeImportStatus.Pending.ToDbValue()
+        });
+
+        var row = await HandleAsync(pictureRow.Id, server.Url("/recipe"));
+
+        Assert.Equal(RecipeImportStatus.Pending, RecipeImportStatusExtensions.FromDbValue(row.Status));
+        Assert.Null(row.ParsedMeal);
+        Assert.Null(row.ErrorCode);
+        Assert.Null(row.UpdatedAt);
     }
 
     [Fact]
@@ -117,7 +138,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
             .Build();
 
         var result = await CreateHandler(clientFactory: new ServiceRoleSupabaseClientFactory(rejectedKeyConfiguration))
-            .HandleAsync(new ScrapeRecipeRequest(pendingRow.Id, pendingRow.SourceUrl), TestContext.Current.CancellationToken);
+            .HandleAsync(new ScrapeRecipeRequest(pendingRow.Id, pendingRow.SourceUrl!), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsFailed);
         var row = await supabase.GetRowAsync(pendingRow.Id);
@@ -137,7 +158,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
             ParsedMeal = new MealImportPayload { Name = "Original meal" }
         });
 
-        var row = await HandleAsync(succeededRow.Id, succeededRow.SourceUrl);
+        var row = await HandleAsync(succeededRow.Id, succeededRow.SourceUrl!);
 
         Assert.Equal(RecipeImportStatus.Succeeded, RecipeImportStatusExtensions.FromDbValue(row.Status));
         Assert.NotNull(row.ParsedMeal);
@@ -157,7 +178,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
             ErrorMessage = "Original error"
         });
 
-        var row = await HandleAsync(failedRow.Id, failedRow.SourceUrl);
+        var row = await HandleAsync(failedRow.Id, failedRow.SourceUrl!);
 
         Assert.Equal(RecipeImportStatus.Failed, RecipeImportStatusExtensions.FromDbValue(row.Status));
         Assert.Null(row.ParsedMeal);
@@ -192,7 +213,7 @@ public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestS
             .Set(x => x.ErrorMessage!, "Client timed out")
             .Update());
 
-        var row = await HandleAsync(pendingRow.Id, pendingRow.SourceUrl, fetcher);
+        var row = await HandleAsync(pendingRow.Id, pendingRow.SourceUrl!, fetcher);
 
         Assert.Equal(RecipeImportStatus.Failed, RecipeImportStatusExtensions.FromDbValue(row.Status));
         Assert.Null(row.ParsedMeal);

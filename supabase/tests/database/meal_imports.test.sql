@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(24);
+select plan(44);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -182,7 +182,8 @@ select col_is_null('public', 'meal_imports', 'error_code', 'error_code is nullab
 select lives_ok(
     $$ insert into public.meal_imports (created_by, source_url, status, error_code)
        select 'aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/' || code, 'failed', code
-       from unnest(array['invalid_url', 'no_recipe_found', 'fetch_failed', 'unreachable', 'timed_out', 'unknown']) as code $$,
+       from unnest(array['invalid_url', 'no_recipe_found', 'fetch_failed', 'unreachable', 'timed_out', 'unknown',
+                         'no_meal_found', 'daily_limit_reached', 'picture_unreadable', 'ai_unavailable']) as code $$,
     'every error code in the contract is accepted'
 );
 
@@ -191,6 +192,117 @@ select throws_ok(
        values ('aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/bogus', 'failed', 'bogus') $$,
     '23514', null,
     'an unknown error code is rejected'
+);
+
+-- Picture jobs: a link job or a picture job, never both or neither. Back as user A.
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"aaaaaaaa-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+
+select has_column('public', 'meal_imports', 'picture_paths', 'meal_imports has picture_paths');
+select has_column('public', 'meal_imports', 'language', 'meal_imports has language');
+select has_column('public', 'meal_imports', 'hint', 'meal_imports has hint');
+select col_is_null('public', 'meal_imports', 'source_url', 'source_url is nullable');
+
+select lives_ok(
+    $$ insert into public.meal_imports (id, created_by, picture_paths, language)
+       values ('00000000-0000-0000-0000-00000000a101', 'aaaaaaaa-0000-0000-0000-0000000000a1',
+               array['aaaaaaaa-0000-0000-0000-0000000000a1/j/0.jpg'], 'en') $$,
+    'a picture job with one picture and a language is accepted'
+);
+
+select lives_ok(
+    $$ insert into public.meal_imports (id, created_by, picture_paths, language, hint)
+       values ('00000000-0000-0000-0000-00000000a102', 'aaaaaaaa-0000-0000-0000-0000000000a1',
+               array['p/0.jpg', 'p/1.jpg', 'p/2.jpg'], 'da', 'it''s lasagne') $$,
+    'a picture job with three pictures, Danish and a hint is accepted'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg', 'p/1.jpg', 'p/2.jpg', 'p/3.jpg'], 'en') $$,
+    '23514', null, 'a picture job with four pictures is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array[]::text[], 'en') $$,
+    '23514', null, 'a picture job with no pictures is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg']) $$,
+    '23514', null, 'a picture job without a language is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg'], 'sv') $$,
+    '23514', null, 'a language other than en or da is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language, hint)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg'], 'en', '') $$,
+    '23514', null, 'an empty hint is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language, hint)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg'], 'en', repeat('x', 201)) $$,
+    '23514', null, 'a hint over 200 characters is rejected'
+);
+
+select lives_ok(
+    $$ insert into public.meal_imports (created_by, picture_paths, language, hint)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', array['p/0.jpg'], 'en', repeat('x', 200)) $$,
+    'a hint of 200 characters is accepted'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, source_url, picture_paths, language)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/both', array['p/0.jpg'], 'en') $$,
+    '23514', null, 'a row with both a link and pictures is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by, source_url, hint)
+       values ('aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/hint', 'a hint') $$,
+    '23514', null, 'a link job with a hint is rejected'
+);
+
+select throws_ok(
+    $$ insert into public.meal_imports (created_by) values ('aaaaaaaa-0000-0000-0000-0000000000a1') $$,
+    '23514', null, 'a row with neither a link nor pictures is rejected'
+);
+
+-- The client can't change a picture job afterwards, but can still fail its own pending one.
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', picture_paths = array['p/9.jpg']
+       where id = '00000000-0000-0000-0000-00000000a101' $$,
+    '42501', null, 'user A cannot change the pictures of a picture job'
+);
+
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', language = 'da'
+       where id = '00000000-0000-0000-0000-00000000a101' $$,
+    '42501', null, 'user A cannot change the language of a picture job'
+);
+
+select throws_ok(
+    $$ update public.meal_imports set status = 'failed', hint = 'changed'
+       where id = '00000000-0000-0000-0000-00000000a102' $$,
+    '42501', null, 'user A cannot change the hint of a picture job'
+);
+
+select results_eq(
+    $$ update public.meal_imports
+       set status = 'failed', error_code = 'unreachable', error_message = 'Function unreachable', updated_at = now()
+       where id = '00000000-0000-0000-0000-00000000a101' and status = 'pending'
+       returning id $$,
+    $$ values ('00000000-0000-0000-0000-00000000a101'::uuid) $$,
+    'user A can fail their own pending picture job'
 );
 
 select * from finish();
