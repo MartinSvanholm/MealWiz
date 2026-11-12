@@ -105,6 +105,20 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         return path;
     }
 
+    /// <summary>Whether the picture is still in Storage (the service role can read any object).</summary>
+    public async Task<bool> PictureExistsAsync(string path)
+    {
+        try
+        {
+            var bytes = await Client.Storage.From("meal-import-pictures").Download(path, (EventHandler<float>?)null);
+            return bytes.Length > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     /// <summary>The seeded user's picture jobs (no source_url, any status) created in the current UTC day.</summary>
     public async Task<int> CountTodaysPictureJobsAsync()
     {
