@@ -244,6 +244,43 @@ public sealed class E2ESupabase
         return rows.SingleOrDefault()?.Status;
     }
 
+    /// <summary>A picture job's stored picture paths and language, or null when there is no such row.</summary>
+    public async Task<(string[] Paths, string? Language)?> GetMealImportPicturesAsync(Guid jobId)
+    {
+        var rows = await _http.GetFromJsonAsync<PictureJobRow[]>(
+            $"rest/v1/meal_imports?id=eq.{jobId}&select=picture_paths,language") ?? [];
+        var row = rows.SingleOrDefault();
+        return row is null ? null : (row.PicturePaths ?? [], row.Language);
+    }
+
+    /// <summary>How many meal_imports rows the user has.</summary>
+    public async Task<int> CountMealImportsAsync(Guid userId)
+    {
+        var rows = await _http.GetFromJsonAsync<JsonElement[]>($"rest/v1/meal_imports?created_by=eq.{userId}&select=id") ?? [];
+        return rows.Length;
+    }
+
+    /// <summary>
+    /// Removes uploaded pictures through the Storage API (deleting a user doesn't remove their objects, and SQL
+    /// must not be used for it).
+    /// </summary>
+    public async Task DeleteStoredPicturesAsync(IEnumerable<string> paths)
+    {
+        var list = paths.ToArray();
+        if (list.Length == 0) return;
+
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "storage/v1/object/meal-import-pictures")
+        {
+            Content = JsonContent.Create(new { prefixes = list })
+        };
+        using var response = await _http.SendAsync(request);
+        await EnsureSuccessAsync(response, "Deleting stored meal import pictures");
+    }
+
+    private sealed record PictureJobRow(
+        [property: System.Text.Json.Serialization.JsonPropertyName("picture_paths")] string[]? PicturePaths,
+        [property: System.Text.Json.Serialization.JsonPropertyName("language")] string? Language);
+
     private async Task<T[]> InsertAsync<T>(string table, object rows)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"rest/v1/{table}") { Content = JsonContent.Create(rows) };

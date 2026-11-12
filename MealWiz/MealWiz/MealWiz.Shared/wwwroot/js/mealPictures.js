@@ -47,7 +47,8 @@ export async function shrinkSelectedFiles(input, maxCount, maxEdge, quality) {
         try {
             const blob = await shrinkFile(file, maxEdge, quality);
             results.push({ ok: true, bytes: await toBase64(blob), previewUrl: URL.createObjectURL(blob) });
-        } catch {
+        } catch (error) {
+            console.warn("A picture could not be shrunk:", error);
             results.push({ ok: false, bytes: null, previewUrl: null });
         }
     }

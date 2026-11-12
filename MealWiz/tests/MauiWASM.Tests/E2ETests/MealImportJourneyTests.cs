@@ -74,6 +74,142 @@ public class MealImportJourneyTests : E2ETestBase
         Assert.Equal("failed", await Supabase.GetMealImportStatusAsync(jobId));
     }
 
+
+    // ---- Create from pictures ----
+
+    // A real 40x30 JPEG, so the browser can decode, shrink and upload it.
+    private static readonly byte[] SmallJpeg = Convert.FromBase64String(
+        "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAeACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCaiiivlT6YKKKKACiiigAooooAKKKKACiiigD/2Q==");
+
+    [Fact]
+    public async Task PictureImport_ArrivesOverRealtime_AndCanBeSaved()
+    {
+        var analyzeCall = InterceptAnalyzeCall(acknowledgeWith: 200);
+
+        await OpenPictureImportAsync();
+        await Page.GetByTestId("import-picture-gallery-input").SetInputFilesAsync(
+            new FilePayload { Name = "dish.jpg", MimeType = "image/jpeg", Buffer = SmallJpeg });
+        await Expect(Page.GetByTestId("import-picture-thumb-0")).ToBeVisibleAsync();
+        await Page.GetByTestId("import-picture-submit").ClickAsync();
+
+        // Bounded by the test's own timeout rather than a sleep, like the link import.
+        var jobId = await analyzeCall.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await Expect(Page.GetByTestId("import-progress")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("import-progress")).ToContainTextAsync("Reading your pictures");
+
+        var stored = await Supabase.GetMealImportPicturesAsync(jobId);
+        Assert.NotNull(stored);
+        try
+        {
+            var path = Assert.Single(stored.Value.Paths);
+            Assert.StartsWith($"{User.Id:D}/{jobId:D}/", path);
+            Assert.Equal("en", stored.Value.Language);
+
+            await Supabase.ResolveMealImportAsync(jobId, "succeeded", parsedMeal: new
+            {
+                Name = "Lasagne",
+                Recipe = "Layer.\nBake.",
+                IsGuessed = true,
+                Ingredients = new[] { new { Name = "pasta sheets", Amount = "250 g" } }
+            });
+
+            // Opens the meal form filled in with the result; nothing is saved until the user presses Save
+            await Expect(Page).ToHaveURLAsync(UrlFor("meals/edit"));
+            await Expect(Page.GetByTestId("meal-name-input")).ToHaveValueAsync("Lasagne");
+            await Expect(Row("ingredient-card", "pasta sheets")).ToContainTextAsync("250 g");
+
+            await Page.GetByTestId("save-meal-button").ClickAsync();
+            await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
+            await Expect(Row("meal-list-item", "Lasagne")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await Supabase.DeleteStoredPicturesAsync(stored.Value.Paths);
+        }
+    }
+
+    [Fact]
+    public async Task UndecodablePicture_IsRejectedBeforeUpload()
+    {
+        var called = false;
+        await Page.RouteAsync($"**{E2EAppHost.FunctionsPath}/api/AnalyzeMealPicture", async route =>
+        {
+            called = true;
+            await route.FulfillAsync(new RouteFulfillOptions { Status = 200, ContentType = "application/json", Body = "{}" });
+        });
+
+        await OpenPictureImportAsync();
+        await Page.GetByTestId("import-picture-gallery-input").SetInputFilesAsync(
+            new FilePayload { Name = "x.jpg", MimeType = "image/jpeg", Buffer = System.Text.Encoding.UTF8.GetBytes("this is not a picture") });
+
+        await Expect(Page.GetByTestId("import-picture-error")).ToContainTextAsync("We couldn't read the picture.");
+        await Expect(Page.GetByTestId("import-picture-thumb-0")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("import-picture-submit")).ToBeDisabledAsync();
+        Assert.False(called);
+        Assert.Equal(0, await Supabase.CountMealImportsAsync(User.Id));
+    }
+
+    [Fact]
+    public async Task PictureImport_Failure_ShowsTheReason()
+    {
+        var analyzeCall = InterceptAnalyzeCall(acknowledgeWith: 200);
+
+        await OpenPictureImportAsync();
+        await Page.GetByTestId("import-picture-gallery-input").SetInputFilesAsync(
+            new FilePayload { Name = "dish.jpg", MimeType = "image/jpeg", Buffer = SmallJpeg });
+        await Page.GetByTestId("import-picture-submit").ClickAsync();
+        var jobId = await analyzeCall.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        var stored = await Supabase.GetMealImportPicturesAsync(jobId);
+        Assert.NotNull(stored);
+        try
+        {
+            await Supabase.ResolveMealImportAsync(jobId, "failed", errorMessage: "Daily limit", errorCode: "daily_limit_reached");
+
+            await Expect(Page.GetByTestId("import-job-error")).ToContainTextAsync("You've reached today's limit for picture imports.");
+            await Expect(Page.GetByTestId("import-picture-submit")).ToHaveTextAsync("Try again");
+            await Expect(Page.GetByTestId("import-picture-thumb-0")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            await Supabase.DeleteStoredPicturesAsync(stored.Value.Paths);
+        }
+    }
+
+    /// <summary>Answers the browser's call to AnalyzeMealPicture and returns the job id it carried.</summary>
+    private Task<Guid> InterceptAnalyzeCall(int acknowledgeWith)
+    {
+        var request = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Page.RouteAsync($"**{E2EAppHost.FunctionsPath}/api/AnalyzeMealPicture", async route =>
+        {
+            var body = route.Request.PostDataJSON() ?? throw new InvalidOperationException("AnalyzeMealPicture was called without a body.");
+            var jobId = body.GetProperty("jobId").GetGuid();
+
+            await route.FulfillAsync(new RouteFulfillOptions
+            {
+                Status = acknowledgeWith,
+                ContentType = "application/json",
+                Body = acknowledgeWith == 200 ? JsonSerializer.Serialize(new { jobId }) : string.Empty
+            });
+
+            request.TrySetResult(jobId);
+        });
+
+        return request.Task;
+    }
+
+    private async Task OpenPictureImportAsync()
+    {
+        await LoginAsync();
+        await Page.GetByTestId("nav-meals").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals"));
+
+        await Page.GetByTestId("add-meal-menu").ClickAsync();
+        await Page.GetByTestId("add-meal-import-picture").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("meals/import?source=picture"));
+    }
+
     /// <summary>
     /// Signs in, submits <see cref="SourceUrl"/> on the import page and returns the job id the app sent to the
     /// Function, once the Function has answered with <paramref name="acknowledgeWith"/>.
