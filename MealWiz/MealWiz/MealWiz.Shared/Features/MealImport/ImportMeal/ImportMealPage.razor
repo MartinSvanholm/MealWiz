@@ -1,6 +1,7 @@
 @attribute [Authorize]
 @page "/meals/import"
 @inject IMealImportStateContainer _mealImportStateContainer
+@inject IMealPictureShrinker _pictureShrinker
 @inject IMealsStateContainer _mealsStateContainer
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealImportResource> L
@@ -23,8 +24,15 @@
                 }
                 else
                 {
-                    <span class="mw-import-progress-title">@L["ImportPage_Fetching"]</span>
-                    <span class="mw-import-muted mw-import-url">@_mealImportStateContainer.CurrentImport?.SourceUrl</span>
+                    @if (IsPictureJob)
+                    {
+                        <span class="mw-import-progress-title">@L["ImportPage_ReadingPictures"]</span>
+                    }
+                    else
+                    {
+                        <span class="mw-import-progress-title">@L["ImportPage_Fetching"]</span>
+                        <span class="mw-import-muted mw-import-url">@_mealImportStateContainer.CurrentImport?.SourceUrl</span>
+                    }
 
                     @if (_mealImportStateContainer.CanContinueInBackground)
                     {
@@ -80,7 +88,7 @@
                               InputType="InputType.Url"
                               InputMode="InputMode.url"
                               Immediate
-                              AutoFocus
+                              AutoFocus="@(Source != "picture")"
                               Error="@(_urlError is not null)"
                               ErrorText="@_urlError"
                               OnKeyDown="OnUrlKeyDown" />
@@ -88,15 +96,87 @@
                 <MudButton data-testid="import-submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth OnClick="StartImport">
                     @(_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed ? L["ImportPage_TryAgain"] : L["ImportPage_Import"])
                 </MudButton>
+
+                <div class="mw-import-or" aria-hidden="true">@L["ImportPage_Or"]</div>
+
+                <div class="mw-import-pictures" data-testid="import-pictures">
+                    <div class="mw-import-form-intro">
+                        <span class="mw-import-form-icon">
+                            <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Color="Color.Inherit" Size="Size.Small" />
+                        </span>
+                        <p>@L["ImportPage_PicturesIntro"]</p>
+                    </div>
+
+                    <div class="mw-import-picture-buttons">
+                        <label class="mw-import-picture-button">
+                            <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Size="Size.Small" />
+                            @L["ImportPage_TakePicture"]
+                            <input type="file" accept="image/*" capture="environment" class="mw-visually-hidden"
+                                   data-testid="import-picture-camera-input" @ref="_cameraInput"
+                                   @onchange="() => OnPicturesChosen(_cameraInput)" />
+                        </label>
+                        <label class="mw-import-picture-button">
+                            <MudIcon Icon="@Icons.Material.Filled.PhotoLibrary" Size="Size.Small" />
+                            @L["ImportPage_ChoosePictures"]
+                            <input type="file" accept="image/*" multiple class="mw-visually-hidden"
+                                   data-testid="import-picture-gallery-input" @ref="_galleryInput"
+                                   @onchange="() => OnPicturesChosen(_galleryInput)" />
+                        </label>
+                    </div>
+
+                    @if (_pictures.Count > 0)
+                    {
+                        <ul class="mw-import-thumbs">
+                            @for (var i = 0; i < _pictures.Count; i++)
+                            {
+                                var index = i;
+                                <li class="mw-import-thumb">
+                                    <img data-testid="@($"import-picture-thumb-{index}")" src="@_pictures[index].PreviewUrl" alt="@L["ImportPage_PictureAlt", index + 1]" />
+                                    <button type="button" class="mw-import-thumb-remove" data-testid="@($"import-picture-remove-{index}")"
+                                            aria-label="@L["ImportPage_RemovePicture", index + 1]" @onclick="() => RemovePicture(index)">
+                                        <MudIcon Icon="@Icons.Material.Filled.Close" Size="Size.Small" />
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (_pictureError is not null)
+                    {
+                        <span class="mw-import-picture-error" role="alert" data-testid="import-picture-error">@_pictureError</span>
+                    }
+
+                    <span class="mw-import-muted" data-testid="import-picture-privacy">@L["ImportPage_PicturesPrivacy"]</span>
+
+                    <MudButton data-testid="import-picture-submit" Variant="Variant.Filled" Color="Color.Primary" FullWidth
+                               Disabled="@(_pictures.Count == 0)" OnClick="StartPictureImport">
+                        @(_mealImportStateContainer.JobStatus == MealImportJobStatus.Failed ? L["ImportPage_TryAgain"] : L["ImportPage_ImportPictures"])
+                    </MudButton>
+                </div>
             </section>
         }
     </div>
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "source")]
+    public string? Source { get; set; }
+
+    private sealed record PendingPicture(byte[] Bytes, string PreviewUrl);
+
+    private readonly List<PendingPicture> _pictures = [];
+    private ElementReference _cameraInput;
+    private ElementReference _galleryInput;
+    private string? _pictureError;
+
+    // Set when this page starts a picture job, so the progress card says so before the row exists.
+    private bool _startedPictureJob;
+
     private string _url = string.Empty;
     private string? _urlError;
     private bool _isLeaving;
+
+    private bool IsPictureJob => _startedPictureJob || _mealImportStateContainer.CurrentImport?.IsPictureImport == true;
 
     // Covers the moment between a fast success and the redirect to the pre-filled form.
     private bool IsBusy => _mealImportStateContainer.IsImportInProgress || IsUnclaimedFastSuccess;
@@ -150,11 +230,70 @@
         StateHasChanged();
     }
 
+    private async Task OnPicturesChosen(ElementReference input)
+    {
+        _pictureError = null;
+
+        // Ask for one more than fits, so a too-long selection can be told apart from a full one.
+        var room = MealImportPictures.MaxPictures - _pictures.Count;
+        var shrunk = await _pictureShrinker.ShrinkSelectedAsync(input, room + 1);
+
+        var overflow = false;
+        var unreadable = false;
+        foreach (var picture in shrunk)
+        {
+            if (!picture.Ok)
+            {
+                unreadable = true;
+                continue;
+            }
+
+            if (_pictures.Count >= MealImportPictures.MaxPictures)
+            {
+                overflow = true;
+                if (picture.PreviewUrl is not null) _ = _pictureShrinker.RevokePreviewAsync(picture.PreviewUrl);
+                continue;
+            }
+
+            _pictures.Add(new PendingPicture(picture.Bytes!, picture.PreviewUrl!));
+        }
+
+        if (overflow)
+            _pictureError = L["ImportPage_TooManyPictures", MealImportPictures.MaxPictures];
+        else if (unreadable)
+            _pictureError = L["ImportError_PictureUnreadable"];
+    }
+
+    private async Task RemovePicture(int index)
+    {
+        if (index < 0 || index >= _pictures.Count) return;
+
+        var removed = _pictures[index];
+        _pictures.RemoveAt(index);
+        _pictureError = null;
+        await _pictureShrinker.RevokePreviewAsync(removed.PreviewUrl);
+    }
+
+    private async Task StartPictureImport()
+    {
+        if (_mealImportStateContainer.IsImportInProgress || _pictures.Count == 0) return;
+
+        _pictureError = null;
+        _startedPictureJob = true;
+
+        var result = await _mealImportStateContainer.StartPictureImport(_pictures.Select(p => p.Bytes).ToList());
+
+        // A failed upload or insert fails the job itself (shown in the alert); anything else is about the input.
+        if (result.IsFailed && _mealImportStateContainer.JobStatus != MealImportJobStatus.Failed)
+            _pictureError = result.Errors.First().Message;
+    }
+
     private async Task StartImport()
     {
         if (_mealImportStateContainer.IsImportInProgress) return;
 
         _urlError = null;
+        _startedPictureJob = false;
 
         var result = await _mealImportStateContainer.StartImport(_url);
 
@@ -183,6 +322,9 @@
     public void Dispose()
     {
         _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;
+
+        foreach (var picture in _pictures)
+            _ = _pictureShrinker.RevokePreviewAsync(picture.PreviewUrl);
 
         // Leaving the page while the import runs (back arrow, nav bar, "Continue in background") backgrounds it.
         if (_mealImportStateContainer.IsImportInProgress && !_mealImportStateContainer.IsRunningInBackground)

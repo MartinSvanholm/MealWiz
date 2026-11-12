@@ -142,4 +142,44 @@
     <value>Try again</value>
     <comment>Submit button after a failed import</comment>
   </data>
+  <data name="ImportPage_Or" xml:space="preserve">
+    <value>or</value>
+    <comment>Divider between the link form and the picture section</comment>
+  </data>
+  <data name="ImportPage_PicturesIntro" xml:space="preserve">
+    <value>Take or choose up to 3 pictures of a written recipe or a dish and we'll fill it in for you.</value>
+    <comment>Intro of the picture section</comment>
+  </data>
+  <data name="ImportPage_TakePicture" xml:space="preserve">
+    <value>Take a picture</value>
+    <comment>Button: opens the camera on a phone</comment>
+  </data>
+  <data name="ImportPage_ChoosePictures" xml:space="preserve">
+    <value>Choose pictures</value>
+    <comment>Button: opens the gallery or a file dialog</comment>
+  </data>
+  <data name="ImportPage_RemovePicture" xml:space="preserve">
+    <value>Remove picture {0}</value>
+    <comment>Aria label of the remove button on a thumbnail; {0} is its number</comment>
+  </data>
+  <data name="ImportPage_PictureAlt" xml:space="preserve">
+    <value>Picture {0}</value>
+    <comment>Alt text of a thumbnail; {0} is its number</comment>
+  </data>
+  <data name="ImportPage_TooManyPictures" xml:space="preserve">
+    <value>You can add up to {0} pictures.</value>
+    <comment>Shown when more pictures were chosen than fit</comment>
+  </data>
+  <data name="ImportPage_PicturesPrivacy" xml:space="preserve">
+    <value>Your pictures are sent to an AI service (Anthropic, USA) to read the meal. We delete them within 2 days; Anthropic may keep them up to 30 days and doesn't train on them.</value>
+    <comment>Privacy note under the picture buttons</comment>
+  </data>
+  <data name="ImportPage_ImportPictures" xml:space="preserve">
+    <value>Import from pictures</value>
+    <comment>Button: starts the picture import</comment>
+  </data>
+  <data name="ImportPage_ReadingPictures" xml:space="preserve">
+    <value>Reading your pictures…</value>
+    <comment>Progress card title for a picture import</comment>
+  </data>
 </root>

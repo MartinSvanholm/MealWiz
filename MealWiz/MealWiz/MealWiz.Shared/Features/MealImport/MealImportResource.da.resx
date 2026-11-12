@@ -117,4 +117,34 @@
   <data name="ImportPage_TryAgain" xml:space="preserve">
     <value>Prøv igen</value>
   </data>
+  <data name="ImportPage_Or" xml:space="preserve">
+    <value>eller</value>
+  </data>
+  <data name="ImportPage_PicturesIntro" xml:space="preserve">
+    <value>Tag eller vælg op til 3 billeder af en skrevet opskrift eller en ret, så udfylder vi den for dig.</value>
+  </data>
+  <data name="ImportPage_TakePicture" xml:space="preserve">
+    <value>Tag et billede</value>
+  </data>
+  <data name="ImportPage_ChoosePictures" xml:space="preserve">
+    <value>Vælg billeder</value>
+  </data>
+  <data name="ImportPage_RemovePicture" xml:space="preserve">
+    <value>Fjern billede {0}</value>
+  </data>
+  <data name="ImportPage_PictureAlt" xml:space="preserve">
+    <value>Billede {0}</value>
+  </data>
+  <data name="ImportPage_TooManyPictures" xml:space="preserve">
+    <value>Du kan tilføje op til {0} billeder.</value>
+  </data>
+  <data name="ImportPage_PicturesPrivacy" xml:space="preserve">
+    <value>Dine billeder sendes til en AI-tjeneste (Anthropic, USA), som læser måltidet. Vi sletter dem inden for 2 dage; Anthropic kan gemme dem i op til 30 dage og træner ikke på dem.</value>
+  </data>
+  <data name="ImportPage_ImportPictures" xml:space="preserve">
+    <value>Importér fra billeder</value>
+  </data>
+  <data name="ImportPage_ReadingPictures" xml:space="preserve">
+    <value>Læser dine billeder…</value>
+  </data>
 </root>
