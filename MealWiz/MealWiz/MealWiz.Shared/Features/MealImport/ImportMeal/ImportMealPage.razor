@@ -216,6 +216,7 @@
             // Resolved while the user waited here: review the meal in the existing Save Meal form.
             _isLeaving = true;
             _mealsStateContainer.MealToEdit = _mealImportStateContainer.CurrentImport!.ParsedMeal!.ToMeal();
+            _mealImportStateContainer.OpenInForm();
             _mealImportStateContainer.ResetJob();
             _navigationManager.NavigateTo("/meals/edit");
             return;
