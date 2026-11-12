@@ -96,4 +96,7 @@
   <data name="Logout_Button" xml:space="preserve">
     <value>Log ud</value>
   </data>
+  <data name="Forgot_OpensInBrowser" xml:space="preserve">
+    <value>Linket åbner i din browser.</value>
+  </data>
 </root>
