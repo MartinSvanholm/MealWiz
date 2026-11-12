@@ -19,6 +19,7 @@ namespace MealWiz.Functions.Tests.Functions.ScrapeRecipe.IntegrationTests;
 /// client observes the result. Skips (with the reason) when local Supabase isn't running.
 /// </summary>
 [Trait("Category", "Integration")]
+[Collection("PictureJobs")] // PictureJob_IsLeftPending adds a picture row, which the daily-limit tests count
 public class ScrapeRecipeHandlerTests(LocalSupabaseFixture supabase, RecipeTestServer server)
     : IClassFixture<LocalSupabaseFixture>, IClassFixture<RecipeTestServer>
 {
