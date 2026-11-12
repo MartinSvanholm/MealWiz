@@ -223,6 +223,83 @@ public class AnalyzeMealPictureHandlerTests(LocalSupabaseFixture supabase) : ICl
         Assert.Empty(analyzer.Calls);
     }
 
+    // The limit tests are relative to today's count of the seeded user's picture jobs, so other tests' rows don't matter.
+    [Fact]
+    public async Task OverTheDailyLimit_WritesDailyLimitReachedWithoutCallingTheAnalyzer()
+    {
+        var job = await NewJobAsync(pictures: 1);
+        var analyzer = new FakeAnalyzer(Payload("Pasta", guessed: false));
+
+        var (row, _) = await RunAsync(job, analyzer, dailyLimit: await supabase.CountTodaysPictureJobsAsync() - 1);
+
+        AssertFailed(row, RecipeImportErrorCode.DailyLimitReached);
+        Assert.Empty(analyzer.Calls);
+    }
+
+    [Fact]
+    public async Task AtTheDailyLimit_StillAnalyses()
+    {
+        var job = await NewJobAsync(pictures: 1);
+        var analyzer = new FakeAnalyzer(Payload("Pasta", guessed: false));
+
+        var (row, _) = await RunAsync(job, analyzer, dailyLimit: await supabase.CountTodaysPictureJobsAsync());
+
+        Assert.Equal(RecipeImportStatus.Succeeded, RecipeImportStatusExtensions.FromDbValue(row.Status));
+        Assert.Single(analyzer.Calls);
+    }
+
+    [Fact]
+    public async Task TodaysFailedPictureJobs_CountTowardsTheLimit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var before = await supabase.CountTodaysPictureJobsAsync();
+        await supabase.InsertPictureRowAsync([$"{LocalSupabaseFixture.SeededUserId:D}/x/0.jpg"], status: RecipeImportStatus.Failed);
+        var job = await NewJobAsync(pictures: 1);
+
+        // Without the failed row the count would be before + 1, which the limit allows.
+        var (row, _) = await RunAsync(job, new FakeAnalyzer(Payload("Pasta", guessed: false)), dailyLimit: before + 1);
+
+        AssertFailed(row, RecipeImportErrorCode.DailyLimitReached);
+    }
+
+    [Fact]
+    public async Task YesterdaysPictureJobs_DoNotCount()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var before = await supabase.CountTodaysPictureJobsAsync();
+        await supabase.InsertPictureRowAsync([$"{LocalSupabaseFixture.SeededUserId:D}/x/0.jpg"],
+            createdAt: DateTime.UtcNow.Date.AddHours(-2), status: RecipeImportStatus.Succeeded);
+        var job = await NewJobAsync(pictures: 1);
+
+        var (row, _) = await RunAsync(job, new FakeAnalyzer(Payload("Pasta", guessed: false)), dailyLimit: before + 1);
+
+        Assert.Equal(RecipeImportStatus.Succeeded, RecipeImportStatusExtensions.FromDbValue(row.Status));
+    }
+
+    [Fact]
+    public async Task LinkJobs_DoNotCount()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var before = await supabase.CountTodaysPictureJobsAsync();
+        await supabase.InsertPendingRowAsync("https://example.test/recipe");
+        var job = await NewJobAsync(pictures: 1);
+
+        var (row, _) = await RunAsync(job, new FakeAnalyzer(Payload("Pasta", guessed: false)), dailyLimit: before + 1);
+
+        Assert.Equal(RecipeImportStatus.Succeeded, RecipeImportStatusExtensions.FromDbValue(row.Status));
+    }
+
+    [Fact]
+    public async Task DailyLimitZero_TurnsAnalysisOff()
+    {
+        var job = await NewJobAsync(pictures: 1);
+
+        var (row, analyzer) = await RunAsync(job, new FakeAnalyzer(Payload("Pasta", guessed: false)), dailyLimit: 0);
+
+        AssertFailed(row, RecipeImportErrorCode.DailyLimitReached);
+        Assert.Empty(analyzer.Calls);
+    }
+
     private async Task<MealImportDb> NewJobAsync(
         int pictures, string language = "en", string? hint = null, DateTime? createdAt = null)
     {

@@ -109,8 +109,9 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     public async Task<int> CountTodaysPictureJobsAsync()
     {
         var dayStart = DateTime.UtcNow.Date;
+        var seededUserId = SeededUserId; // Postgrest's Where can't read a static field, only a local
         return await Client.From<MealImportDb>()
-            .Where(x => x.CreatedBy == SeededUserId)
+            .Where(x => x.CreatedBy == seededUserId)
             .Filter("source_url", Supabase.Postgrest.Constants.Operator.Is, "null")
             .Filter("created_at", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, dayStart.ToString("o"))
             .Filter("created_at", Supabase.Postgrest.Constants.Operator.LessThan, dayStart.AddDays(1).ToString("o"))
