@@ -45,7 +45,7 @@ jobs:
       - name: Start Supabase (applies all migrations and the seed)
         id: supabase
         # Realtime stays on: the meal import E2E tests get their result over it.
-        run: supabase start -x studio,imgproxy,edge-runtime,storage-api,logflare,vector,postgres-meta,supavisor,mailpit
+        run: supabase start -x studio,imgproxy,edge-runtime,storage-api,logflare,vector,postgres-meta,supavisor
 
       # Checks the agent docs (docs/agents/, CLAUDE.md), then builds MauiWASM, MealWiz.Functions and the three test
       # projects (Debug). The test steps below don't rebuild.
@@ -142,3 +142,9 @@ jobs:
             MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/
           include-hidden-files: true
           if-no-files-found: ignore
+
+      # Last, so a failed job's log ends with what failed (every verify verdict above, with its FAILED test lines)
+      # instead of the upload and cleanup output.
+      - name: Show what failed
+        if: ${{ failure() && hashFiles('artifacts/verify/full/verdicts.log') != '' }}
+        run: cat artifacts/verify/full/verdicts.log

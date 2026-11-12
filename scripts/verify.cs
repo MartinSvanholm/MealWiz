@@ -350,6 +350,9 @@ int Finish(int exitCode)
 
     if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } jobSummary)
         File.AppendAllLines(jobSummary, ["```", .. report, "```", ""]);
+    // Every run's verdict in one file, so CI can print them all as the last lines of a failed job's log (that's what
+    // a log tail shows; the job summary isn't readable from the log).
+    File.AppendAllLines(Path.Combine(outDir, "verdicts.log"), [.. report, ""]);
     return exitCode;
 }
 
@@ -486,7 +489,7 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
     // The same services CI leaves out. Studio (and postgres-meta, which it needs) only with --studio: no test uses
     // them, and they're a large part of the first image pull.
     Progress("supabase start (first start pulls images and can take a few minutes)");
-    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor,mailpit" + (studio ? "" : ",studio,postgres-meta");
+    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor" + (studio ? "" : ",studio,postgres-meta");
     if (Run("supabase", ["start", "-x", excluded], log) == 0)
         return ("started", null);
 

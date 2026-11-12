@@ -3,6 +3,7 @@ using Bunit;
 using Bunit.TestDoubles;
 using FluentResults;
 using MealWiz.Shared.Components.Drawers;
+using MealWiz.Shared.Features.Account.GetPendingEmailChange;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
@@ -18,6 +19,7 @@ using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Localization;
+using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
 using MediatR;
@@ -47,6 +49,13 @@ public abstract class ComponentTestBase : BunitContext
     protected Mock<ILocalStorageService> LocalStorage { get; } = new();
     protected Mock<IMealImportStateContainer> MealImport { get; } = new();
     protected Mock<IThemeService> Theme { get; } = new();
+    protected Mock<ILanguagePreference> Language { get; } = new();
+
+    /// <summary>The session keeper the page resolved; counts <see cref="SessionKeeper.RefreshNowAsync"/> calls.</summary>
+    protected RecordingSessionKeeper Keeper { get; private set; } = default!;
+
+    /// <summary>The email link options the builder is created with (the web head's unless a test sets them).</summary>
+    protected MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkOptions EmailLinks { get; set; } = new(null);
 
     protected DrawerStateContainer Drawer { get; } = new();
     protected MealsStateContainer Meals { get; }
@@ -94,6 +103,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton(LocalStorage.Object);
         Services.AddSingleton(MealImport.Object);
         Services.AddSingleton(Theme.Object);
+        Services.AddSingleton(Language.Object);
         Services.AddSingleton<IDrawerStateContainer>(Drawer);
         Services.AddSingleton<IMealsStateContainer>(Meals);
         Services.AddSingleton<IGroceryListStateContainer>(GroceryList);
@@ -106,6 +116,11 @@ public abstract class ComponentTestBase : BunitContext
                 Random = new Random(1)
             });
         Services.AddSingleton(_ => new Supabase.Client("http://localhost", "test-key"));
+        // The web head's link options; a test of the MAUI head sets EmailLinks before rendering.
+        Services.AddSingleton(_ => EmailLinks);
+        Services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>();
+        // The startup gate in Routes starts it; with no stored session it is done at once.
+        Services.AddSingleton<SessionKeeper>(sp => Keeper = new RecordingSessionKeeper(sp.GetRequiredService<Supabase.Client>(), new EmptySessionPersistence(), Time));
 
         // Registered up front because bUnit allows no registrations once a service has been resolved (below).
         // Anonymous until a test calls Auth.SetAuthorized(...).
@@ -117,6 +132,7 @@ public abstract class ComponentTestBase : BunitContext
         MealPlan.CurrentSnackbar = Snackbar;
 
         // Empty-but-successful defaults for the loads that pages and containers fire on init.
+        SetupSend<GetPendingEmailChange.Query, Result<string?>>(Result.Ok<string?>(null));
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>()));
@@ -194,4 +210,24 @@ public abstract class ComponentTestBase : BunitContext
 
     /// <summary>Clicks Confirm in the confirm drawer.</summary>
     protected void Confirm() => ConfirmDrawerHost.Find(TestId("confirm-drawer-confirm")).Click();
+}
+
+internal sealed class EmptySessionPersistence : Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>
+{
+    public void SaveSession(Supabase.Gotrue.Session session) { }
+    public void DestroySession() { }
+    public Supabase.Gotrue.Session? LoadSession() => null;
+}
+
+/// <summary>A real keeper that only counts the refreshes asked for instead of calling GoTrue.</summary>
+public sealed class RecordingSessionKeeper(Supabase.Client client, Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session> persistence, TimeProvider time)
+    : SessionKeeper(client, persistence, time)
+{
+    public int RefreshNowCalls { get; private set; }
+
+    public override Task RefreshNowAsync()
+    {
+        RefreshNowCalls++;
+        return Task.CompletedTask;
+    }
 }

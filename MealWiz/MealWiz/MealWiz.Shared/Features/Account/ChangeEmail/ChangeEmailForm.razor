@@ -1,0 +1,64 @@
+@using MealWiz.Shared.Features.Account.GetPendingEmailChange
+@inject ISender _mediator
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<AccountResource> L
+
+<section class="mw-account-section" data-testid="change-email-section">
+    <h2 class="mw-account-section-title">@L["ChangeEmail_Title"]</h2>
+    @if (PendingEmail is not null)
+    {
+        <p class="mw-auth-note" data-testid="account-email-pending">@L["ChangeEmail_Pending", PendingEmail]</p>
+    }
+    <CustomForm @ref="Form" Class="mw-auth-form" @bind-IsValid="IsValid">
+        <div class="mw-auth-field">
+            <label class="mw-auth-label" for="@EmailInputId">@L["ChangeEmail_New"]</label>
+            <TextField data-testid="change-email-new" @bind-Value="NewEmail" InputId="@EmailInputId"
+                       Placeholder="you@example.com" Required InputType="InputType.Email" OnKeyDown="EnterKey.Then(Change)" />
+        </div>
+        <Button data-testid="change-email-submit" OnClick="Change" Class="mw-auth-submit" FullWidth="@true" IsLoading="IsLoading">@L["ChangeEmail_Submit"]</Button>
+    </CustomForm>
+</section>
+
+@code {
+    private string? NewEmail { get; set; }
+    private bool IsValid { get; set; }
+    private CustomForm Form { get; set; } = default!;
+    private bool IsLoading { get; set; }
+
+    /// <summary>The address waiting for both links to be clicked, or null.</summary>
+    private string? PendingEmail { get; set; }
+
+    private const string EmailInputId = "change-email-new-input";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var pending = await _mediator.Send(new GetPendingEmailChange.Query());
+        if (pending.IsSuccess)
+            PendingEmail = pending.Value;
+    }
+
+    private async Task Change()
+    {
+        IsLoading = true;
+
+        try
+        {
+            await Form.Validate();
+            if (!IsValid) return;
+
+            var email = NewEmail!.Trim();
+            var result = await _mediator.Send(new ChangeEmail.Command(email));
+            result.Handle(_snackbar);
+
+            if (result.IsSuccess)
+            {
+                PendingEmail = email;
+                NewEmail = null;
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

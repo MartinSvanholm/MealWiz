@@ -98,6 +98,47 @@ public sealed class E2ESupabase
         return new E2EUser(created.Id, email, password);
     }
 
+    /// <summary>
+    /// The link a password reset email would hold, made by the admin API without sending an email. Opening it in the
+    /// browser goes through GoTrue, which redirects to <paramref name="redirectTo"/> with the recovery session.
+    /// </summary>
+    public async Task<string> GenerateRecoveryLinkAsync(E2EUser user, string redirectTo)
+    {
+        using var response = await _http.PostAsJsonAsync("auth/v1/admin/generate_link", new GenerateLinkRequest("recovery", user.Email, redirectTo));
+        await EnsureSuccessAsync(response, $"Generating a reset link for {user.Email}");
+
+        var link = await response.Content.ReadFromJsonAsync<GeneratedLink>()
+            ?? throw new InvalidOperationException($"Generating a reset link for {user.Email} returned no link.");
+        return link.ActionLink;
+    }
+
+    /// <summary>
+    /// The link in the email GoTrue sent to <paramref name="address"/> for a pending email change, read from the local
+    /// Mailpit ([inbucket] port in supabase/config.toml). The admin API's <c>generate_link</c> can't stand in: its
+    /// change links confirm the whole change on the first click.
+    /// </summary>
+    public async Task<string> ReadEmailChangeLinkAsync(string address)
+    {
+        using var mailpit = new HttpClient { BaseAddress = new Uri("http://127.0.0.1:54324/"), Timeout = TimeSpan.FromSeconds(10) };
+        var link = new System.Text.RegularExpressions.Regex(@"https?://\S+/auth/v1/verify\?\S+");
+        for (var attempt = 0; attempt < 50; attempt++)
+        {
+            var search = await mailpit.GetFromJsonAsync<JsonElement>($"api/v1/search?query={Uri.EscapeDataString($"to:\"{address}\"")}");
+            foreach (var summary in search.GetProperty("messages").EnumerateArray())
+            {
+                var message = await mailpit.GetFromJsonAsync<JsonElement>($"api/v1/message/{summary.GetProperty("ID").GetString()}");
+                var sentToIt = message.GetProperty("To").EnumerateArray().Any(t => t.GetProperty("Address").GetString() == address);
+                var match = link.Match(message.GetProperty("Text").GetString() ?? string.Empty);
+                if (sentToIt && match.Success)
+                    return match.Value;
+            }
+
+            await Task.Delay(200);
+        }
+
+        throw new InvalidOperationException($"No email change link for {address} arrived in Mailpit.");
+    }
+
     /// <summary>Deletes the user. Every row it owns goes with it, since the created_by foreign keys cascade.</summary>
     public async Task DeleteUserAsync(E2EUser user)
     {
@@ -277,6 +318,13 @@ public sealed class E2ESupabase
         [property: JsonPropertyName("email")] string Email,
         [property: JsonPropertyName("password")] string Password,
         [property: JsonPropertyName("email_confirm")] bool EmailConfirm);
+
+    private sealed record GenerateLinkRequest(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("redirect_to")] string RedirectTo);
+
+    private sealed record GeneratedLink([property: JsonPropertyName("action_link")] string ActionLink);
 
     private sealed record IdRow<T>([property: JsonPropertyName("id")] T Id);
 

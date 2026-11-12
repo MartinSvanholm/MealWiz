@@ -1,16 +1,14 @@
 # Implementation plan template
 
-The coordinator writes one plan per issue and appends it to the issue's description under `## Implementation plan`.
-The issue's session runs on Sonnet at medium effort and **executes** the plan; it doesn't plan, explore for
-alternatives or ask about anything the plan settles. So the plan is the design.
+The coordinator writes a plan for an issue **just before that issue starts**, against the project branch as it is
+then, and appends it to the issue's description under `## Implementation plan`. The issue's session runs on Sonnet at
+medium effort and executes it.
 
-**The bar:** the session makes no design decision. Every name, signature, column, policy, data-testid, UI string and
-test case is written down. Leave out method bodies unless the logic is subtle (a merge rule, a date window, a
-generator); then give pseudo-code or the exact rule. Paths and code shapes are fine here, unlike the rest of the issue:
-the plan is used within days and is revised when its blockers merge.
-
-Sub-issues get no plan of their own. Each sub-issue's description gets one line under its acceptance criteria:
-`Plan: steps <n>–<m> of the parent's Implementation plan (<parent ID>).`
+**The bar:** the session makes no product or architecture decision. The plan settles what the user and the next
+issue can see: behaviour, data shapes, public members, routes, and which existing code to copy. It leaves the rest
+to the session: private names, test names and test data, method bodies, the exact wording of UI text the spec
+doesn't fix. Keep the plan to about one screen per three stories. A line the session could work out by reading the
+prior art doesn't belong here.
 
 Delete sections that don't apply.
 
@@ -19,57 +17,43 @@ Delete sections that don't apply.
 ```markdown
 ## Implementation plan
 
-Written <date> against `dev` @ <short sha>. Approved by <user> in the coordinator. Follow it step by step and don't
-re-plan. If a step doesn't fit the code, stop and ask (implement-issue, stop rule 8).
-<Revised <date> after <ID> merged: what changed.>
+Written <date> against `project/<slug>` @ <short sha>. Follow it story by story and don't re-plan. If a step doesn't
+fit the code, stop and ask (implement-issue, stop rule 8).
 
 ### Decisions
-Everything the session might otherwise ask, one line each: names (S-01), UI text, empty and error states, edge-case
-behaviour, which existing pattern to follow. Include decisions from the spec that this issue implements.
-
-### Files
-| File | New / Edit | What changes |
-|---|---|---|
-| `supabase/migrations/<YYYYMMDDHHMMSS>_<name>.sql` | New | table `x`, RLS, … |
-| `Features/<F>/<Op>/<Op>.cs` | New | handler (see Shapes) |
-| `docs/agents/FEATURES.md` | Edit | <section>: <rows> |
-
-Shared files (owned edits only): `<file>`: <the exact edit>, because <sibling> edits the rest.
+What the session would otherwise have to ask, one line each: names the user or other code sees (S-01), behaviour in
+empty and error states, edge cases, which existing pattern to follow. Include the spec's decisions this issue
+implements.
 
 ### Shapes
-The exact contracts the steps build, so nothing is designed on the fly:
-- **Migration:** columns with types, nullability, defaults, FKs with `on delete`, unique constraints and indexes; each
-  RLS policy (command, `using`, `with check`); grants.
-- **Handlers:** per handler (ARCH-04), its `public record Command(...)` or `Query(...)` with the
-  `IRequest<Result…>` it implements, what it reads and writes in Supabase, each failure it returns and its message.
-- **Models:** domain and Db properties, the mapping (ARCH-07).
-- **State container:** each new or changed public member, one line of behaviour each, and when it notifies.
-- **Components and pages:** route, parameters, the elements with their `data-testid`s (UI-01) and texts, which
-  existing component to copy, the theme tokens to use (UI-02).
+Only the public shapes, so the next issue and the tests can rely on them:
+- **Migration:** tables and columns with types, nullability, defaults and FKs; each RLS policy in one line (who may
+  do what).
+- **Handlers:** per handler (ARCH-04), its request and result type, and the failures it returns.
+- **State container:** each new or changed public member, one line of behaviour each.
+- **Pages and components:** route, the component to copy, and the `data-testid`s the E2E journey uses (UI-01).
 
-### Steps
-In order. Each step is one red → green TDD slice (`mw-tdd`) and one commit.
+### Stories
+In order. Each story is one or more red → green slices (`mw-tdd`) and at least one commit, named `<ID> story <n>: …`.
+Inside a story, work database → handlers → UI.
 
-1. **<slice>** (`[DB]` <sub-issue ID>)
-   - Red: `<TestClass>.<Test_name>` in `<path>`: <what it asserts>. <More tests, one line each.>
-   - Green: <what to write, pointing at Shapes>.
+1. **Story <n>: <one line>**
+   - Build: <what to add or change, by layer, pointing at Shapes>.
+   - Tests: <what must be proven, by suite: "pgTAP: a non-owner can't read the row", "integration: the handler
+     returns … when …", "bUnit: the page shows the empty state">.
    - Prior art: `<existing file to copy>`.
-2. **<slice>** (`[BE]` <ID>)
-   - …
+2. **Story <n>: …**
 
-E2E (last step, if any): the journey class and each scenario as numbered user actions and assertions, with the
-data-testids it uses and the seeded data it relies on.
-
-### Sub-issues
-- Order and mode for each: `[DB]` MEA-x inline → `[BE]` MEA-y inline → `[FE]` MEA-z in a subagent (owns `<paths>`,
-  codes against <seam>).
+E2E (last, if the spec names a journey): the journey class and each scenario as numbered user actions and
+assertions.
 
 ### Docs
-- `docs/agents/FEATURES.md`, section <name>: <the lines to add or change>.
-- `docs/agents/TESTING.md` / `CLAUDE.md`: <if anything>.
+The sections of `docs/agents/FEATURES.md` (and TESTING.md, CLAUDE.md) that need a line (DOC-01).
 
 ### Verify
-`scripts/verify.ps1 local --e2e <Class>` (exit 0).
+`scripts/verify.ps1 fast` (exit 0). <Plus, only if the issue has a migration, an RLS change or new integration
+tests: `scripts/verify.ps1 local --only <steps>` for those steps.> CI runs the rest on the PR; the ship session runs
+`verify full` on the whole project.
 
 ### Watch out
 Gotchas found while planning, e.g. "swapping a meal updates the `meal_plans-meals` row in place, so its id stays the

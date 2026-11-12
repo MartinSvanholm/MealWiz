@@ -1,6 +1,6 @@
 ---
 name: mw-code-review
-description: Review a branch's diff against dev on two separate axes, Standards (docs/agents/ARCHITECTURE.md rules, TESTING.md, a code-smell baseline) and Spec (the Linear issue and project spec), and report both side by side. Light by default to save tokens. Use before opening a PR, from /implement-issue, or when asked to review a branch, PR or work in progress.
+description: Review a branch's diff against dev on two separate axes, Standards (docs/agents/ARCHITECTURE.md rules, TESTING.md, a code-smell baseline) and Spec (the Linear issue and project spec), and report both side by side. Light by default to save tokens; ship mode is the full fresh-context review of a whole project. Use from /ship-project, before a bug PR from /implement-issue, or when asked to review a branch, PR or work in progress.
 ---
 
 <!-- Adapted from mattpocock/skills `skills/engineering/code-review` (MIT). See `.claude/skills/THIRD_PARTY_NOTICES.md`. -->
@@ -24,7 +24,8 @@ Default `origin/dev` (PRs target `dev`), unless the user names another. `git fet
 ## 2. Find the spec
 
 1. Issue ids (`MEA-xx`) in the branch name or commit messages → `get_issue`. If the issue is in a project, also read
-   the project description (`get_project`) and the Contract document, if any.
+   the project description (`get_project`). On a project branch (`project/<slug>`), the spec is the project
+   description plus every issue in the project.
 2. A path or issue the user passed.
 3. If nothing is found, ask. If there's no spec, skip the Spec axis and say so.
 
@@ -60,16 +61,20 @@ The user asked for light token use.
 
 - **Under ~50 changed lines (excluding tests):** review inline yourself, both axes.
 - **Otherwise:** one subagent (Agent tool, `model: "sonnet"`), in the foreground. Give it the diff commands and commit
-  list, the issue text (and contract items it uses), the paths of the standards files, the smell baseline pasted in,
+  list, the issue text, the paths of the standards files, the smell baseline pasted in,
   and this brief: "Read only the diff, the standards files and the issue; open other files only to confirm a finding.
   Report two sections. **Standards**: each finding as `🔴/🟡/🟣 RULE-ID file:line: what and why`, or a labelled
   smell. **Spec**: (a) asked for but missing or partial, (b) built but not asked for, (c) implemented but looks
   wrong; quote the issue line for each. Under 300 words."
-- **On request** ("thorough review", a large feature PR): two subagents in parallel, one per axis, as upstream does.
+- **On request** ("thorough review"): two subagents in parallel, one per axis, as upstream does.
+- **Ship mode** (from /ship-project): you are the fresh context, so review it yourself, with no subagent. Read the
+  whole diff commit by commit (the commits are grouped by user story), and open a changed file in full whenever the
+  hunk alone doesn't show whether it's right. Check every MUST rule against the diff, not a sample, and every user
+  story in the spec against the code and its tests.
 
 ## 5. Report and act
 
 Present `## Standards` and `## Spec` as returned, then one line: findings per axis and the worst in each.
 
-When called from /implement-issue: fix every 🔴 and every Spec gap (a) and (c) before opening the PR. For (b), remove
+When called from /implement-issue or /ship-project: fix every 🔴 and every Spec gap (a) and (c) before opening the PR. For (b), remove
 it or, if it's needed, say why in the PR. List the 🟡 you chose not to fix, with a reason, in the PR body.

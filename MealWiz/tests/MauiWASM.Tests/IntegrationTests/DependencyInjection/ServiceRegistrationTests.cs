@@ -55,18 +55,34 @@ public class ServiceRegistrationTests
         [
             typeof(AuthenticationStateProvider),
             typeof(Supabase.Client),
+            typeof(SessionKeeper),
+            typeof(MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder),
             typeof(MealImportFunctionOptions),
             typeof(TimeProvider),
             typeof(HttpClient),
             typeof(IStringLocalizerFactory),
             typeof(IStringLocalizer<SharedResource>),
             typeof(MudLocalizer),
+            typeof(ILanguagePreference),
         ]);
 
         await using var provider = BuildProvider();
         await using var scope = provider.CreateAsyncScope();
         Assert.IsType<CustomAuthStateProvider>(scope.ServiceProvider.GetRequiredService<AuthenticationStateProvider>());
         Assert.IsType<MealWizMudLocalizer>(scope.ServiceProvider.GetRequiredService<MudLocalizer>());
+    }
+
+    [Fact]
+    public async Task Client_SessionKeeper_and_persistence_are_one_instance_for_the_whole_app()
+    {
+        await using var provider = BuildProvider();
+        await using var first = provider.CreateAsyncScope();
+        await using var second = provider.CreateAsyncScope();
+
+        foreach (var type in new[] { typeof(Supabase.Client), typeof(SessionKeeper), typeof(Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>) })
+        {
+            Assert.Same(first.ServiceProvider.GetRequiredService(type), second.ServiceProvider.GetRequiredService(type));
+        }
     }
 
     private static async Task AssertAllResolve(IEnumerable<Type> serviceTypes, bool expectAny = false)

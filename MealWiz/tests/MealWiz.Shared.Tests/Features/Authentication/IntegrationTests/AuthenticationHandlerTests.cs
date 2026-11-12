@@ -1,10 +1,20 @@
+using Supabase.Gotrue;
+using FluentResults;
+using System.Globalization;
+using MealWiz.Shared.Features.Authentication;
 using System.Security.Claims;
 using MealWiz.Shared.Features.Authentication.Login;
 using MealWiz.Shared.Features.Authentication.Logout;
+using MealWiz.Shared.Features.Authentication.ResetPassword;
 using MealWiz.Shared.Features.Authentication.SignUp;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
+using MealWiz.Shared.Services.Authentication;
 using Moq;
+using Supabase;
+using Supabase.Gotrue;
+using Supabase.Gotrue.Interfaces;
+using Client = Supabase.Client;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Authentication.IntegrationTests;
@@ -51,18 +61,89 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
     }
 
     [Fact]
-    public async Task Logout_SignsOutAndRefreshesTheAuthState()
+    public async Task Login_AfterAStartWithNoSession_MakesTheAuthStateAuthenticated()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
-        var client = await supabase.CreateSignedOutClientAsync();
-        await client.Auth.SignIn(supabase.User.Email, supabase.User.Password);
-        Assert.NotNull(client.Auth.CurrentSession);
+        var persistence = new MemoryPersistence();
+        var client = await supabase.CreateSignedOutClientAsync(persistence);
+        var keeper = new SessionKeeper(client, persistence, TimeProvider.System);
+        var provider = new CustomAuthStateProvider(client, keeper);
+        await keeper.StartAsync();
+        Assert.True(keeper.IsSignedOut);
+        var notified = new List<bool>();
+        provider.AuthenticationStateChanged += async task => notified.Add((await task).User.Identity?.IsAuthenticated == true);
 
-        var result = await new Logout.Handler(client, _authStateProvider.Object).Handle(new Logout.Command(), CancellationToken);
+        await client.Auth.SignIn(supabase.User.Email, supabase.User.Password);
+
+        Assert.False(keeper.IsSignedOut);
+        Assert.True((await provider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated);
+        Assert.Contains(true, notified);
+    }
+
+    [Fact]
+    public async Task Logout_SignsOutAndClearsTheStoredSession()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var (client, persistence, keeper) = await SignedInClientAsync(supabase.User.Email, supabase.User.Password);
+
+        var result = await new Logout.Handler(client, keeper).Handle(new Logout.Command(), CancellationToken);
 
         ResultAssert.Ok(result);
         Assert.Null(client.Auth.CurrentSession);
-        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+        Assert.True(persistence.Destroyed);
+        Assert.True(keeper.IsSignedOut);
+    }
+
+    // The server refuses the sign-out of a deleted user (its token is dead), but the local sign-out still works.
+    [Fact]
+    public async Task LocalSignOut_ClearsTheSessionEvenForAUserDeletedOnTheServer()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var (client, persistence, keeper) = await SignedInClientAsync(user.Email, user.Password);
+        await supabase.DeleteUserNowAsync(user.Id);
+
+        await keeper.SignOutLocallyAsync();
+
+        Assert.True(keeper.IsSignedOut);
+        Assert.True(persistence.Destroyed);
+        var state = await new CustomAuthStateProvider(client, keeper).GetAuthenticationStateAsync();
+        Assert.False(state.User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task Logout_WhenTheServerRefusesTheSignOut_FailsAndKeepsTheSession()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var (client, persistence, keeper) = await SignedInClientAsync(user.Email, user.Password);
+        await supabase.DeleteUserNowAsync(user.Id);
+
+        var result = await new Logout.Handler(client, keeper).Handle(new Logout.Command(), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.False(persistence.Destroyed);
+        Assert.False(keeper.IsSignedOut);
+    }
+
+    private async Task<(Client Client, MemoryPersistence Persistence, SessionKeeper Keeper)> SignedInClientAsync(string email, string password)
+    {
+        var persistence = new MemoryPersistence();
+        var client = await supabase.CreateSignedOutClientAsync(persistence);
+        await client.Auth.SignIn(email, password);
+        Assert.NotNull(client.Auth.CurrentSession);
+        var keeper = new SessionKeeper(client, persistence, TimeProvider.System);
+        await keeper.StartAsync();
+        return (client, persistence, keeper);
+    }
+
+    private sealed class MemoryPersistence : IGotrueSessionPersistence<Session>
+    {
+        private Session? _session;
+        public bool Destroyed { get; private set; }
+        public void SaveSession(Session session) { _session = session; Destroyed = false; }
+        public void DestroySession() { _session = null; Destroyed = true; }
+        public Session? LoadSession() => _session;
     }
 
     [Fact]
@@ -83,6 +164,36 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
     }
 
+    // The confirmation and password-reset emails pick their language from user_metadata.lang (supabase/templates/).
+    [Theory]
+    [InlineData("da", "da")]
+    [InlineData("en", "en")]
+    [InlineData("de", "en")]
+    public async Task SignUp_StoresTheActiveLanguageInTheUserMetadata(string uiCulture, string expectedLang)
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var email = $"signup-lang-{Guid.NewGuid():N}@mealwiz.test";
+
+        var previous = CultureInfo.CurrentUICulture;
+        CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(uiCulture);
+        Result<Session?> result;
+        try
+        {
+            result = await new SignUp.Handler(client, _authStateProvider.Object)
+                .Handle(new SignUp.Command(email, Guid.NewGuid().ToString("N")), CancellationToken);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = previous;
+        }
+
+        var session = ResultAssert.Ok(result);
+        supabase.DeleteOnDispose(Guid.Parse(session!.User!.Id!));
+        var user = await client.Auth.GetUser(session.AccessToken!);
+        Assert.Equal(expectedLang, user?.UserMetadata["lang"]?.ToString());
+    }
+
     [Fact]
     public async Task SignUp_EmailAlreadyRegistered_FailsWithoutSigningIn()
     {
@@ -96,6 +207,65 @@ public class AuthenticationHandlerTests(LocalSupabaseFixture supabase) : IClassF
         Assert.Null(client.Auth.CurrentSession);
         _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
     }
+
+    // A user of its own: the class's user keeps its password for the other tests.
+    [Fact]
+    public async Task ResetPassword_FromTheEmailLink_SetsTheNewPasswordSignsInAndRefreshesTheAuthState()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var link = await supabase.FollowPasswordResetLinkAsync(user.Email, ResetPasswordRedirect);
+        Assert.Equal(ResetPasswordRedirect, link.GetLeftPart(UriPartial.Path));
+        var client = await supabase.CreateSignedOutClientAsync();
+        var newPassword = Guid.NewGuid().ToString("N");
+
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
+            .Handle(new ResetPassword.Command(link, newPassword), CancellationToken);
+
+        var session = ResultAssert.Ok(result);
+        Assert.Equal(user.Id.ToString(), session?.User?.Id);
+        Assert.Equal(user.Id.ToString(), client.Auth.CurrentUser?.Id);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+
+        var signIn = await supabase.CreateSignedOutClientAsync();
+        Assert.NotNull(await signIn.Auth.SignIn(user.Email, newPassword));
+        await Assert.ThrowsAnyAsync<Exception>(() => signIn.Auth.SignIn(user.Email, user.Password));
+    }
+
+    // What GoTrue redirects to for an expired or already used link.
+    [Fact]
+    public async Task ResetPassword_ExpiredLink_FailsWithoutSigningIn()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = await supabase.CreateSignedOutClientAsync();
+        var link = new Uri($"{ResetPasswordRedirect}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired");
+
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
+            .Handle(new ResetPassword.Command(link, Guid.NewGuid().ToString("N")), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.Null(client.Auth.CurrentSession);
+    }
+
+    [Fact]
+    public async Task ResetPassword_NewPasswordRefused_FailsAndLeavesTheUserSignedOut()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var user = await supabase.CreateSignedInUserAsync();
+        var link = await supabase.FollowPasswordResetLinkAsync(user.Email, ResetPasswordRedirect);
+        var client = await supabase.CreateSignedOutClientAsync();
+
+        // Below the minimum of 6 in supabase/config.toml.
+        var result = await new ResetPassword.Handler(client, _authStateProvider.Object, TestLocalizer.For<AuthenticationResource>())
+            .Handle(new ResetPassword.Command(link, "short"), CancellationToken);
+
+        ResultAssert.Failed(result);
+        Assert.Null(client.Auth.CurrentSession);
+        _authStateProvider.Verify(p => p.GetAuthenticationStateAsync(), Times.Once);
+    }
+
+    /// <summary>On the redirect allow list in supabase/config.toml, like the E2E app host's.</summary>
+    private const string ResetPasswordRedirect = "http://127.0.0.1:5053/reset-password";
 
     private static Mock<AuthenticationStateProvider> CreateAuthStateProvider()
     {

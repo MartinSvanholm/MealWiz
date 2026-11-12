@@ -381,22 +381,37 @@ detail for diagnosis.
 
 ## Authentication
 
-Email and password sign-in and self sign-up through Supabase Auth. After login, sign-up or logout the handler asks
-the `AuthenticationStateProvider` to re-read the session. Unauthenticated users hitting an `[Authorize]` page are
-sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
+password reset or logout the handler asks the `AuthenticationStateProvider` to re-read the session (logout goes through
+`SessionKeeper` instead, below). Unauthenticated users hitting an `[Authorize]` page are sent to `/login` by
+`Layout/RedirectToLogin.razor`. The session is persisted per host (see [Hosts](#hosts)).
+per host (see [Hosts](#hosts)).
 
 - **Folder:** `Features/Authentication/`
-- **Pages:** the only pages without `[Authorize]`. Neither has the bottom nav: `Layout/MainLayout.razor` shows it to
+- **Pages:** the only pages without `[Authorize]`. None has the bottom nav: `Layout/MainLayout.razor` shows it to
   signed-in users only.
   - `Features/Authentication/Login/LoginPage.razor` at `/login`: email and password fields (`login-email`,
     `login-password`) with labels above them, the full-width "Log in" button (`login-submit`) and "No account yet?
-    Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) is shown
-    but not wired yet (MEA-69).
+    Create one" (`login-create-account`), a link to `/signup`. "Forgot password?" (`login-forgot-password`) links to
+    `/forgot-password`.
+  - `Features/Authentication/RequestPasswordReset/ForgotPasswordPage.razor` at `/forgot-password`: email (`forgot-email`)
+    and "Send reset link" (`forgot-submit`), which asks Supabase to email a reset link that lands on the app's
+    `/reset-password` (`NavigationManager` base URI). Then a check-your-email note (`forgot-check-email`), worded so
+    it doesn't say whether the account exists (Supabase answers the same either way). `forgot-login` goes back.
+  - `Features/Authentication/ResetPassword/ResetPasswordPage.razor` at `/reset-password`, where the email's link
+    lands with the recovery session in the URL fragment (implicit flow, so any browser works). It keeps the URL in
+    memory and replaces the address bar's with one without the tokens. New password and repeat (`reset-password`,
+    `reset-password-repeat`), "Set password" (`reset-submit`) sets it, signs the user in and goes to the meal plan.
+    An expired or used link, or none, shows `reset-expired` and "Send a new link" (`reset-request-again`).
+  - **Web only.** The redirect has to be on Supabase's allow list: locally `additional_redirect_urls` in
+    `supabase/config.toml` (the dev run on `localhost:5053` and the test app host on `127.0.0.1`); in production the
+    dashboard's Redirect URLs. The MAUI app's base URI (`https://0.0.0.0/`) isn't reachable from an email, so a reset
+    asked for in the MAUI app lands on the Site URL instead.
   - `Features/Authentication/SignUp/SignUpPage.razor` at `/signup`: email, password and repeat password
     (`signup-email`, `signup-password`, `signup-password-repeat`), "Create account" (`signup-submit`) and "Already
     have an account? Log in" (`signup-login`). Passwords that don't match are caught on the page. With a session
     back it goes to the meal plan; without one (the Supabase project requires email confirmation) it shows a
     check-your-email note (`signup-check-email`). Supabase enforces the password minimum (6 locally).
+- **Email links:** `Features/Authentication/EmailLinks/EmailLinkBuilder.cs` (scoped) builds the absolute URL an email link opens: the web head uses its own base URL, MAUI the `WebApp:url` setting (`EmailLinkOptions`, registered per head); `OpensInBrowser` is true when one is configured. Forgot password uses it, and in MAUI its check-your-email note adds "The link opens in your browser." (`forgot-opens-in-browser`). `Features/Authentication/GotrueErrorCode.cs` reads `error_code` from a GoTrue error body (`weak_password`, `same_password`, `email_exists`, `validation_failed`). `Features/Authentication/SupabaseAuthSettings.cs` (url + anon key, both heads) is for the two direct GoTrue calls of the Account handlers.
 - **Components:** `Features/Authentication/AuthShell.razor`, the signed-out screens' frame (rings, logo tile, title
   and tagline; test ids `<prefix>-page`, `<prefix>-title`, `<prefix>-tagline`). Its
   `Features/Authentication/AuthShell.razor.css` also styles the pages' `mw-auth-*` form classes.
@@ -408,28 +423,94 @@ sent to `/login` by `Layout/RedirectToLogin.razor`. The session is persisted per
   |---|---|---|
   | Login | `Command(string Email, string Password)` → `Result<Session?>` | `SignInWithPassword`, then refresh auth state |
   | SignUp | `Command(string Email, string Password)` → `Result<Session?>` | `SignUp`, then `SetSession` with the returned session (gotrue-csharp doesn't keep an auto-confirmed sign-up's session itself; null when email confirmation is on), then refresh auth state |
-  | Logout | `Command()` → `Result` | `SignOut`, then refresh auth state |
+  | Logout | `Command()` → `Result` | `SignOut`, then `SessionKeeper.SignOutLocallyAsync()`; a failed sign-out changes nothing. The button then reloads the app fully on `/login` |
+  | RequestPasswordReset | `Command(string Email, string RedirectTo)` → `Result` | `ResetPasswordForEmail` with the redirect (implicit flow) |
+  | ResetPassword | `Command(Uri ResetLink, string NewPassword)` → `Result<Session?>` | reads the link's fragment (`Features/Authentication/ResetPassword/ResetLink.cs`; GoTrue's error, e.g. an expired link, fails it), `SetSession` with the recovery tokens, `Update` the password (signs out again if it's refused), then refresh auth state |
 
-- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token.
+- **Related:** `Services/Authentication/CustomAuthStateProvider.cs` builds claims from the Supabase access token and
+  notifies on `SessionKeeper.Changed` (which also relays the SDK's auth events); reading the state never notifies.
+  Signed in means a session with a refresh token that the keeper hasn't ended.
+  `Services/Authentication/SessionKeeper.cs` (singleton) replaces the SDK's refresh (`AutoRefreshToken` is off, and the
+  SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access
+  token expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry
+  after 15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises
+  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
+  wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
+  reload on `/login` when the session is rejected.
+- **Texts:** `Features/Authentication/AuthenticationResource.cs` (the signed-out pages, AuthShell and Log out). A bad
+  reset link always shows `Reset_LinkInvalid`; GoTrue's English reason is never shown.
+- **Emails:** SignUp stores the app's language as `user_metadata.lang`. The confirmation and password-reset emails,
+  `supabase/templates/confirmation.html` and `supabase/templates/recovery.html` (subjects in `supabase/config.toml`),
+  are Danish for `da` and English otherwise. Locally they land in Mailpit (port 54324), which every verify stack runs. The hosted project's
+  templates and subjects are pasted from these files by hand (Supabase dashboard, Authentication, Emails).
 - **Tests:**
   - bUnit: `Features/Authentication/ComponentTests/`
   - integration: `Features/Authentication/IntegrationTests/AuthenticationHandlerTests.cs`
-  - unit: `Services/Authentication/UnitTests/CustomAuthStateProviderTests.cs`
+  - unit: `Services/Authentication/UnitTests/` (`CustomAuthStateProviderTests.cs`, `SessionKeeperTests.cs`, `RefreshFailureTests.cs`)
+  - bUnit: `Services/Authentication/ComponentTests/SessionGateTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/AuthJourneyTests.cs`
 
 ## Account
 
 The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
-`mealwiz.theme`) and logout. No handlers, no tables.
+`mealwiz.theme`), the language dropdown, change password, change email, logout and delete account. No tables.
+Texts: `Features/Account/AccountResource.cs`.
+
+The language dropdown (`language-select`, a native select so phones show their own picker) lists Device default, then
+`SupportedLanguages.All` by native name, with the stored choice preselected. A change goes through
+`ILanguagePreference` (`Localization/ILanguagePreference.cs`): it saves the code (Device default removes it) and reloads
+the page in the new language. Web: `Localization/LocalStorageLanguagePreference.cs`, registered in
+`MealWiz/MauiWASM/ServiceCollectionExtensions.cs`. MAUI: `MealWiz/MealWiz/MealWiz/Providers/PreferencesLanguagePreference.cs`,
+which also applies the culture in-process, since a reload there doesn't re-run `MauiProgram`.
 
 - **Folder:** `Features/Account/`
 - **Pages:** `Features/Account/AccountPage.razor` at `/account`: a SubPageHeader ("Profile" / "Account", back
   `account-back` to `/`), a profile card with a green avatar (`account-avatar`, the email's initial) and "Signed in as"
   the email (`account-email`, the access token's `email` claim from the cascading `AuthenticationState`), a settings
-  group with the Dark mode row (`dark-mode-switch`) and the `LogoutButton`. Styles in
-  `Features/Account/AccountPage.razor.css`.
+  group with the Dark mode row (`dark-mode-switch`), the two forms below and the `LogoutButton` (a full reload on
+  `/login`). Styles in `Features/Account/AccountPage.razor.css`.
+  `Features/Account/EmailChangePage.razor` at `/email-change` (public, no `[Authorize]`): where the email-change links
+  land. From the URL fragment it shows `email-change-confirm-other` (`message=`: click the other address's link),
+  `email-change-done` (`type=email_change` with a token) or `email-change-invalid`, each with a link to the Account page
+  (`email-change-account-link`); the fragment is removed from the address bar and the link's own session is not
+  adopted. On done it calls `SessionKeeper.RefreshNowAsync()` when this browser is signed in, so the Account page shows
+  the new address.
+- **Components:** `Features/Account/ChangePassword/ChangePasswordForm.razor` (`change-password-new`,
+  `change-password-repeat`, `change-password-submit`; a mismatch is caught on the page) and
+  `Features/Account/ChangeEmail/ChangeEmailForm.razor` (`change-email-new`, `change-email-submit`, and the pending note
+  `account-email-pending` loaded on init) and `Features/Account/DeleteAccount/DeleteAccountPanel.razor` (a red outlined
+  `delete-account-open` below Log out opens an inline panel: `delete-account-password`, `delete-account-confirm`,
+  `delete-account-cancel`; a failure shows in `delete-account-error`; success is `NavigateTo("/login", forceLoad: true)`).
+- **Handlers:**
+
+  | Handler | Request → result | Does |
+  |---|---|---|
+  | ChangePassword | `Command(string NewPassword)` → `Result` | `Auth.Update` on the current session (GoTrue keeps it and revokes the others); `weak_password` and `same_password` have their own messages |
+  | ChangeEmail | `Command(string NewEmail)` → `Result` | `PUT /auth/v1/user` with `HttpClient` (the SDK sends no redirect) and a `redirect_to` header from `EmailLinkBuilder.Build("email-change")`; GoTrue emails both addresses; `email_exists` and `validation_failed` have their own messages |
+  | GetPendingEmailChange | `Query()` → `Result<string?>` | `GET /auth/v1/user`, reads `new_email` (the SDK's `User` drops it); null when none |
+  | DeleteAccount | `Command(string Password)` → `Result` | `POST {MealImportFunction:Url}/api/DeleteAccount` with the session's bearer token, the password and `x-functions-key`; 204 → `SessionKeeper.SignOutLocallyAsync()` (never `SignOut`, the user is gone), 403 / 401 / anything else → their own messages and no sign-out |
+
+- **Texts:** `Features/Account/AccountResource.resx` / `.da.resx` (marker `AccountResource.cs`).
 - **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
-- **Tests:** bUnit: `Features/Account/ComponentTests/AccountPageTests.cs`
+- **Tests:**
+  - bUnit: `Features/Account/ComponentTests/` (`AccountPageTests`, `ChangePasswordFormTests`, `ChangeEmailFormTests`, `EmailChangePageTests`, `DeleteAccountPanelTests`)
+  - integration: `Features/Account/IntegrationTests/AccountHandlerTests.cs` (GoTrue and Mailpit)
+  - unit: `Features/Account/UnitTests/DeleteAccountTests.cs` (stubbed Function)
+  - E2E: `AuthJourneyTests` (change password; change email; delete account with the Function stubbed by a route)
+
+## Functions: DeleteAccount
+
+The other function in the same app. `POST /api/DeleteAccount` (`AuthorizationLevel.Function`) takes the caller's access
+token as `Authorization: Bearer` and `{ password }`. With the service-role key it asks GoTrue who the token belongs to,
+checks the password with a password grant, and only then hard-deletes the user (admin API); the `created_by` foreign
+keys cascade to every row the user owns. Responses: 204 deleted, 400 bad body or blank password, 401 missing or invalid
+token, 403 wrong password (nothing deleted), 502 any other GoTrue failure (logged, not returned). It reuses
+`Supabase:Url` and `Supabase:ServiceRoleKey`; there is no new setting.
+
+- **Function:** `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountFunction.cs` (the HTTP trigger, outcome → status) and
+  `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountHandler.cs` (`IDeleteAccountHandler` → `DeleteAccountOutcome`, a named `HttpClient`).
+- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/UnitTests/` and `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/IntegrationTests/`;
+  pgTAP `supabase/tests/database/delete_account_cascade.test.sql`.
 
 ## Functions: ScrapeRecipe
 
@@ -486,7 +567,7 @@ key, CORS and deployment.
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
-- **`Services/Authentication/CustomAuthStateProvider.cs`:** the auth state, from the Supabase session.
+- **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`

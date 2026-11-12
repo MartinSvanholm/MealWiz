@@ -19,10 +19,11 @@ Other groups running in parallel own: <their files>. Don't edit those; if your f
 
 <Known issues filed during this run: <ID> <one line>, … Don't file these again; if you hit one, add a comment to it.>
 
-Verify level: <local | local --e2e <class>>. Don't run smoke or full locally; CI runs every E2E journey.
+Verify with `fast`, plus only the step that holds a bug's red test when it isn't a unit or bUnit test
+(`local --only <step>`, or `local --e2e <class>` for a bug pinned by an E2E test). CI runs `verify full` on the PR.
 
 Merge rule, written by the user for this flow: when CI is green on your PR to dev, merge it yourself without asking
-(`scripts/merge-to-dev.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
+(`scripts/merge-pr.sh <n>`, never `gh pr merge` directly), unless the skill's "ask before fixing" list applied and the user hasn't
 cleared it.
 ```
 
@@ -35,19 +36,6 @@ plans into the ones that needed them, grouped them by the files they touch and s
 parallel worktrees from dev. Rules: CLAUDE.md and docs/agents/. PRs go to dev
 only, never main. Fix only your group's bugs; file anything else in Linear with the Bug label and no project.
 Windows: PowerShell 5.1, so write commit messages and PR bodies to a file (git commit -F, gh pr create --body-file).
-```
-
-## Cloud mode
-
-For a cloud session (`create_session`, see the fix-bugs skill), pass `background` as `append_system_prompt`, replace
-its last sentence ("Windows: PowerShell 5.1, …") with "Linux cloud container (bash), with its own Docker and Supabase;
-GitHub through the GitHub MCP tools, no gh CLI.", and add to the `prompt`:
-
-```
-You run in your own Claude Code cloud container, in cloud mode (see the implement-issue skill): it says how to check
-your branch (<ids>-<slug>, never dev), set up with scripts/cloud-setup.sh, watch CI and merge without the gh CLI.
-The coordinator is session <coordinator session id>. It isn't woken when your turn ends, so `send_message` it your
-BLOCKED / UNBLOCKED / PLAN / MERGED / STUCK lines too.
 ```
 
 ## Call shape (local mode)

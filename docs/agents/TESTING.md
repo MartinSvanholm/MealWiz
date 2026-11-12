@@ -25,7 +25,8 @@ adds every E2E journey.
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
 
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
-- **Logs:** under `artifacts/verify/<level>/`.
+- **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
+  `--only` adds to it, a full run starts it over).
 - **Supabase:** at local, smoke and full, verify starts local Supabase if it isn't running and sets
   `REQUIRE_SUPABASE=true`, so a test that can't reach the stack fails instead of skipping. Without that variable (plain
   `dotnet test`, or `fast`), Supabase-backed tests skip with a reason.
@@ -39,13 +40,16 @@ adds every E2E journey.
   Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
-  ends with `--check-complete`, which fails if a step never ran.
+  ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
+  the end of the job log names the failed steps and tests.
 
 ## Which tests for which change
 
-Run `scripts/verify.ps1 local` before calling any app change done, with `--e2e <class>` where the table names a
-journey (one class per run; run it again for a second one). CI runs everything else (`verify full`), and a PR merges
-only on green CI. While iterating, run just the project or class you're touching:
+The Level column is the lowest verify level that runs those tests. Who runs it depends on the flow (CLAUDE.md,
+"Verifying changes"): an issue or bug session runs `fast`, plus `local --only <steps>` for the Supabase-backed steps
+its new tests live in; CI runs `verify full` on every PR, and a PR merges only on green CI; the ship session
+(`/ship-project`) runs `verify full` on the whole project before its PR to `dev`. A change made outside that flow
+runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a journey (one class per run). While iterating, run just the project or class you're touching:
 `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
 
 | You changed | Add or update | Run at least |
@@ -120,8 +124,11 @@ TestInfrastructure/
   - It creates a throwaway user (`shared-tests-<guid>@mealwiz.test`) and signs it in with the **anon key**, so every
     query goes through RLS.
   - It exposes `Client`, `UserId`, `GetOtherUserAsync()` (a second user, for cross-user checks),
-    `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `IsAvailable` and `SkipReason`.
+    `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `FollowPasswordResetLinkAsync()` (where a reset
+    email's link lands, made with the admin API so no email is sent), `IsAvailable` and `SkipReason`.
   - The users are deleted at the end, and their rows cascade away with them.
+  - After each sign-in it waits until the token is a little over a second old (`DelayUntilTokenIsAccepted`), so
+    PostgREST doesn't reject it with PGRST303 "JWT issued at future" (MEA-55).
 - `TestInfrastructure/Builders/` holds `MealBuilder`, `IngredientBuilder`, `GroceryItemBuilder` and `MealPlanBuilder` (whose `InsertAsync` fills `PlannedMealIdOnDate`). Each has fluent
   `WithX()` methods; `Build()` makes an unsaved model, and `InsertAsync(client)` inserts it as that client's user.
   `ClientExtensions` adds `CurrentUserId()` and `UniqueSuffix()`.
@@ -201,13 +208,20 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 - **E2E** (`E2ETests/`): drives the **published** app (Release, trimmed) in headless Chromium against local Supabase.
   It is the only level that catches broken JS interop, routing, session persistence and Realtime. The journeys are
   `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
-  `MealImportJourneyTests`.
+  `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
+  refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
+  email from the Account page, and deleting the account (a Playwright route plays the Function: it deletes the user through
+  the admin API and answers 204; a second route answers 403). The local GoTrue applies an email change on the first click of the new address's link
+  (autoconfirm), so the E2E reads that link from Mailpit, which every local and CI stack now runs (the `generate_link` admin
+  API confirms on the first click too); the "click the other link" state is covered by bUnit.
 - **E2E infrastructure** (`TestInfrastructure/E2E/`):
   - `E2EEnvironment` publishes the app once per run, hosts it with `E2EAppHost` (which serves a Development
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
   - `E2ETestBase` gives each test its own user and browser context. Helpers: `GoToAsync`, `LoginAsync`, `FillAsync`,
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
-  - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan) and resolves imports with the service role.
+  - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan)
+    and resolves imports with the service role, and makes password reset links (`GenerateRecoveryLinkAsync`, the
+    admin `generate_link`) so no email is sent.
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:
@@ -223,7 +237,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
 `grocery_item_sources`, `meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
-names. Each file follows the same pattern:
+`delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
+another user's). Each table file follows the same pattern:
 
 ```sql
 begin;

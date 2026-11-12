@@ -47,18 +47,12 @@ public class LoginPageTests : ComponentTestBase
         Assert.Equal("signup", cut.Find(TestId("login-create-account")).GetAttribute("href"));
     }
 
-    // Not wired yet: password reset is MEA-69.
     [Fact]
-    public void Forgot_password_is_shown_but_does_nothing_yet()
+    public void Forgot_password_links_to_the_reset_request()
     {
         var cut = Render<LoginPage>();
 
-        var link = cut.Find(TestId("login-forgot-password"));
-
-        // A plain button: no href to follow, doesn't submit the form, and no click handler.
-        Assert.Equal("BUTTON", link.TagName);
-        Assert.Equal("button", link.GetAttribute("type"));
-        Assert.Throws<MissingEventHandlerException>(() => link.Click());
+        Assert.Equal("forgot-password", cut.Find(TestId("login-forgot-password")).GetAttribute("href"));
     }
 
     [Fact]
@@ -151,16 +145,20 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Logout_signs_out_and_reloads_the_page()
+    public void Logout_signs_out_and_reloads_the_app_on_the_login_page()
     {
         SetupSend<Logout.Command, Result>(Result.Ok());
-        var historyBefore = Navigation.History.Count;
         var cut = Render<LogoutButton>();
 
         cut.Find(TestId("logout-button")).Click();
 
         Assert.Single(Sent<Logout.Command>());
-        cut.WaitForAssertion(() => Assert.True(Navigation.History.First().Options.ForceLoad || Navigation.History.Count > historyBefore));
+        cut.WaitForAssertion(() =>
+        {
+            var navigation = Navigation.History.First();
+            Assert.EndsWith("/login", navigation.Uri);
+            Assert.True(navigation.Options.ForceLoad);
+        });
     }
 
     [Fact]

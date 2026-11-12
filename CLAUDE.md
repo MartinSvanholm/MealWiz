@@ -15,22 +15,27 @@ MAUI app (mobile and desktop) that share one UI project.
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
 ## How work is done
-Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in three levels:
+Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in two levels. There are
+no sub-issues: an issue's layers (database, handlers, UI) are steps in its plan.
 
 | Level | Is | Worked by |
 |---|---|---|
-| Project | a feature: a collection of user stories; its description is the spec | the main (coordinator) session, `/plan-project` |
-| Issue | one user story, a vertical slice: one branch, one PR to `dev`; the coordinator writes its implementation plan into the description | its own session (Sonnet, medium effort), started by the coordinator |
-| Sub-issue | one layer task of an issue: `[DB]`, `[BE]` or `[FE]` (only when the story spans layers) | the issue's session, itself or through subagents; lands in the issue's PR |
+| Project | a feature; its description is the spec. One branch, `project/<slug>`, and one PR to `dev` | the main (coordinator) session, `/plan-project`, then a ship session, `/ship-project` |
+| Issue | a group of user stories that leaves the app working (one to three issues per project): one branch, one PR **into the project branch**; the coordinator writes its plan into the description just before it starts | its own session (Sonnet, medium effort), started by the coordinator; in a cloud container, the main session itself, one issue at a time |
 
-Project skills in `.claude/skills/` run the workflow:
+A feature goes through four steps, each a project skill in `.claude/skills/`:
 
-| Skill | Use it to |
-|---|---|
-| `/spec-project` | interview the user about a feature and write the spec into the Linear project description |
-| `/plan-project` | research, split a specced project into issues and layer sub-issues with blocking relations, write a full implementation plan into each issue for the user to approve, then coordinate one Sonnet session per issue that executes its plan (max 4 at once locally; no limit in cloud mode) |
-| `/implement-issue` | implement one issue and its sub-issues by executing the approved plan in the issue (feature mode, the user merges) or a group of bugs (bug mode, merges itself on green) |
-| `/fix-bugs` | diagnose the open Bug issues and write a fix plan into each one that needs it for the user to approve, group them by the files they touch, and start one Sonnet bug-mode session per group that executes the plans |
+| Step | Skill | What it does |
+|---|---|---|
+| 1. Spec | `/spec-project` | interviews the user about a feature and writes the spec into the Linear project description. A feature that fits one issue can skip step 2 |
+| 2. Plan | `/plan-project` | splits the project into one to three large issues, plans only the issue that starts next (later ones just before they start), asks the user once, then coordinates one Sonnet session per issue and starts the ship session at the end |
+| 3. Implement | `/implement-issue` | builds one issue story by story, test-first, with `verify fast` only, and merges its PR into the project branch itself on green CI. No review of its own |
+| 4. Ship | `/ship-project` | a fresh session on Opus at medium effort: runs `verify full`, reviews the whole project diff, fixes what it finds, attaches UI screenshots to Linear, and opens the one PR to `dev` with the architecture and the critical changes. The user merges it |
+
+Bugs have their own flow: `/fix-bugs` diagnoses the open Bug issues, writes a fix plan into each one that needs it
+for the user to approve, groups them by the files they touch, and starts one Sonnet session per group that runs
+`/implement-issue` in bug mode (fast checks, a PR to `dev`, merged by the session on green CI). In a cloud container
+it fixes the groups itself, one at a time.
 
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
 `mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
@@ -41,8 +46,9 @@ Rules for every session:
   if it's there, add a comment with what you saw. Otherwise create a Linear issue in team MealWiz with the **Bug**
   label, status Backlog and **no project**, even when you found it while working on a project. Say what you saw and
   where.
-- PRs target `dev`. Feature PRs are merged by the user; only bug-mode sessions merge their own PR, and only to `dev`.
-  Nothing goes to `main` (see below).
+- Issue PRs target the project branch and are merged by their session on green CI. The ship PR (project branch to
+  `dev`) is merged by the user. Bug PRs target `dev` and are merged by their session on green CI, through
+  `scripts/merge-pr.sh`. Nothing goes to `main` (see below).
 
 ## Tech stack
 - **Runtime:** C#. The apps target .NET 9. `MealWiz.Functions`, the test projects and `scripts/verify.cs` need the
@@ -54,7 +60,7 @@ Rules for every session:
 - **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
   picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
-- **Server:** one Azure Functions app (`ScrapeRecipe`, isolated worker, net10.0) for meal import.
+- **Server:** one Azure Functions app (`ScrapeRecipe` for meal import, `DeleteAccount`; isolated worker, net10.0).
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
 
 ## Projects
@@ -63,7 +69,7 @@ Rules for every session:
 | `MealWiz/MealWiz/MealWiz.Shared/` | All feature code: pages, components, handlers, state, models |
 | `MealWiz/MauiWASM/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
 | `MealWiz/MealWiz/MealWiz/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
-| `MealWiz/src/MealWiz.Functions/` | Azure Function `ScrapeRecipe`. Deliberately doesn't reference Shared |
+| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe` and `DeleteAccount`. Deliberately doesn't reference Shared |
 | `MealWiz/tests/MealWiz.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
 | `MealWiz/tests/MealWiz.Functions.Tests/` | Unit and integration tests for Functions |
 | `MealWiz/tests/MauiWASM.Tests/` | Web-head unit tests and Playwright E2E |
@@ -85,7 +91,8 @@ In the Claude desktop app, `.claude/launch.json` has this as the `web` preview. 
 Staging or Production.
 
 ## Verifying changes
-One command builds and tests everything relevant. **Run it before you say a change is done**, and report its verdict
+One command builds and tests everything relevant. **Run it, at the level your role calls for, before you say a
+change is done**, and report its verdict
 line (e.g. `verify local: PASSED in 2m10s`). The exit code is the verdict: 0 passed, 1 failed, 2 couldn't run. Never
 claim success on a non-zero exit.
 
@@ -96,15 +103,20 @@ scripts/verify.sh local      # Linux, macOS, Git Bash
 
 | Level | Runs | Use it for |
 |---|---|---|
-| `fast` | docs check + build + unit and bUnit tests. No Docker. ~1 min | iterating; docs-only or test-only changes |
-| `local` | `fast` + local Supabase + integration tests + pgTAP RLS tests. No browser tests | **before finishing** any app, handler, page or migration change. Add `--e2e <class>` for the journey your change touches (TESTING.md) |
+| `fast` | docs check + build + unit and bUnit tests. No Docker, no lock. ~1 min | **issue and bug sessions, before their PR**; docs-only or test-only changes. Add `local --only <steps>` for just the Supabase-backed steps a plan names |
+| `local` | `fast` + local Supabase + integration tests + pgTAP RLS tests. No browser tests | a change made outside the project flow, with no ship session behind it. Add `--e2e <class>` for the journey it touches (TESTING.md) |
 | `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | when you want the browser smoke set locally |
-| `full` | `smoke` + every E2E journey + pgTAP RLS tests | what CI runs; locally only when asked |
+| `full` | `smoke` + every E2E journey + pgTAP RLS tests | **the ship session, once per project**, before the PR to `dev`; CI on every PR |
+
+Issue sessions run only `fast` so they never hold the shared Supabase stack for long. The full run and the review
+happen once per project, in the ship session.
 
 In a Claude Code cloud container (Ubuntu, `CLAUDE_CODE_REMOTE=true`), `scripts/cloud-setup.sh` installs the .NET 10
 SDK and the Supabase CLI and starts Docker. Make `bash scripts/cloud-setup.sh` the environment's setup script so each
-session starts ready. Each cloud session has its own Docker and Supabase stack; the workflow skills have a cloud mode
-for that.
+session starts ready. A cloud session has its own Docker and Supabase stack. There, the workflow skills run in one
+session: it works the issues one at a time, each on its own branch from the latest project branch with its own PR,
+and before each new issue it checks its open PRs (conflicts, CI) and merges the green ones into the project branch
+(implement-issue, "Cloud mode"). The ship session is still a separate, fresh session.
 
 Browser tests are slow and suffer most when several sessions run at once, so the full E2E suite runs in CI
 (`.github/workflows/CI.yml` runs `verify full` on every PR), and a PR merges only on green CI. Run verify in the
@@ -114,7 +126,8 @@ and resets the database to your worktree's migrations and seed first. So don't r
 for which change; the verify skill explains how to read failures.
 
 ## Branches and deployment
-- Feature branches and PRs target **`dev`**. A push to `main` deploys to production.
+- A feature's issue branches merge into its project branch, `project/<slug>`, and that branch reaches **`dev`** through
+  one ship PR. Bug PRs target **`dev`**. A push to `main` deploys to production.
 - `.github/workflows/deploy.yml` runs on every push to `main`. It runs `supabase db push` against production, then
   deploys the web app to Static Web Apps and the Function app, each only if its code changed.
 - Never run `supabase db push` by hand, and never edit a migration that has reached `main` (DB-02). There is no
@@ -132,6 +145,7 @@ for which change; the verify skill explains how to read failures.
   - Development points at local Supabase on `127.0.0.1:54321`.
   - Production's Function key stays empty in git; `deploy.yml` injects it.
 - **MAUI:** always loads the embedded `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
+  Its `WebApp:url` (the web app, `http://localhost:5053/` in Development) is where email links open; the web head leaves it out and links to itself.
 - **Functions:** a gitignored `local.settings.json`, copied from
   `MealWiz/src/MealWiz.Functions/local.settings.json.example`. Its README covers keys, CORS and deployment.
 - Only the anon key may reach a client (SEC-01).

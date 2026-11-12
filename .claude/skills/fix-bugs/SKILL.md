@@ -1,6 +1,6 @@
 ---
 name: fix-bugs
-description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
+description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first with the fast checks, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
 ---
 
 # Fix bugs
@@ -99,11 +99,11 @@ into a card. Their reply is the request to start sessions.
 
 ## 5. Start the group sessions
 
-**Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start each group with `create_session` and check its record right
-after, exactly as `plan-project` describes under "Cloud mode" (Sonnet and medium if `create_session` takes them),
-with the cloud changes in [references/bug-brief.md](references/bug-brief.md). There is no limit of 4
-there, since each session has its own Supabase; groups that share a file still wait for each other. Being woken,
-GitHub checks and cleanup work as that section says.
+**Cloud mode** (`CLAUDE_CODE_REMOTE` is `true`): start no sessions. Work the groups yourself, one at a time and in
+the order above, each in bug mode with the [implement-issue](../implement-issue/SKILL.md) skill's
+[Cloud mode](../implement-issue/SKILL.md#cloud-mode): before each group, check every open PR from this session and
+merge the green ones into `dev`; then branch the group from the latest `origin/dev` and open its own PR. A group that
+shares a file with an unmerged group waits for that merge. Skip the rest of this step and step 6.
 
 **At most 4 run at once** locally. For each group that can start:
 
@@ -121,8 +121,8 @@ Tell the user once, with the first wave: groups that wait for a merge start late
 began, so they arrive as cards to click. Or the user can say "start the next ones" whenever they're back, and you start
 every group that is unblocked by then directly.
 
-Tell the user once: each session will ask the app to approve `set_monitor` the first time, unless they've allowed it.
-`.claude/settings.json` pre-approves `scripts/merge-to-dev.sh` (which only merges green PRs into `dev`), `gh pr view` and
+`.claude/settings.json` pre-approves `scripts/merge-pr.sh` (which only merges green bug PRs into `dev` and green issue
+PRs into a project branch), `gh pr view` and
 `gh pr checks`. It deliberately doesn't pre-approve `gh pr merge`, which could merge a release PR into `main`.
 
 ## 6. Every time you're woken
@@ -147,5 +147,5 @@ Tell the user once: each session will ask the app to approve `set_monitor` the f
 ## 7. Finish
 
 When every group is merged, stuck or cancelled: summarise (bug → PR → result), list the bugs filed along the way,
-and offer cleanup as in `plan-project` step 7 (archive merged sessions on the user's yes, then remove their
+and offer cleanup as in `plan-project` step 6 (archive merged sessions on the user's yes, then remove their
 worktrees, then `git branch -d` merged branches).

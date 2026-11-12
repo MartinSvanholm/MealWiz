@@ -5,26 +5,38 @@ using System.Text.Json;
 
 namespace MealWiz.Shared.Services.Authentication;
 
-public class CustomAuthStateProvider(Client client) : AuthenticationStateProvider
+public class CustomAuthStateProvider : AuthenticationStateProvider
 {
-    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    private readonly Client _client;
+    private readonly SessionKeeper _keeper;
+
+    /// <summary>
+    /// Signed in means a session with a refresh token that the keeper hasn't ended. An expired access token alone
+    /// doesn't sign the user out: the keeper refreshes it, and offline the user stays signed in.
+    /// The state changes are pushed from the SDK's auth events and the keeper, never from reading the state.
+    /// </summary>
+    public CustomAuthStateProvider(Client client, SessionKeeper keeper)
+    {
+        _client = client;
+        _keeper = keeper;
+        _keeper.Changed += Notify;
+    }
+
+    public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(BuildState());
+
+    private void Notify() => NotifyAuthenticationStateChanged(Task.FromResult(BuildState()));
+
+    private AuthenticationState BuildState()
     {
         var identity = new ClaimsIdentity();
+        var session = _client.Auth.CurrentSession;
 
-        if (!string.IsNullOrEmpty(client.Auth.CurrentSession?.AccessToken) && !client.Auth.CurrentSession.Expired())
+        if (!_keeper.IsSignedOut && !string.IsNullOrEmpty(session?.AccessToken) && !string.IsNullOrEmpty(session.RefreshToken))
         {
-            List<Claim> claims = [];
-            claims.AddRange(ParseClaimsFromJwt(client.Auth.CurrentSession.AccessToken));
-
-            identity = new ClaimsIdentity(claims, "jwt");
+            identity = new ClaimsIdentity(ParseClaimsFromJwt(session.AccessToken), "jwt");
         }
 
-        var user = new ClaimsPrincipal(identity);
-        var state = new AuthenticationState(user);
-
-        NotifyAuthenticationStateChanged(Task.FromResult(state));
-
-        return Task.FromResult(state);
+        return new AuthenticationState(new ClaimsPrincipal(identity));
     }
 
     private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)

@@ -5,7 +5,7 @@ description: Step 1 of a MealWiz feature. Interview the user about a new feature
 
 # Spec a feature project
 
-The first of three steps for a feature (spec → plan → implement). This session only talks and writes the spec. It
+The first of four steps for a feature (spec → plan → implement → ship). This session only talks and writes the spec. It
 writes no code and creates no issues; `/plan-project` does that, in a new session.
 
 ## 1. Find or create the project
@@ -42,4 +42,10 @@ Run `mw-to-spec`: it writes the description with `save_project`. Then:
 
 - set the project status to **Planned** (`save_project`, `state: "Planned"`);
 - tell the user the spec is in place, link the project, and say the next step is `/plan-project <project>` in a
-  **new session**, which researches, slices the work into issues and starts the implementation sessions.
+  **new session**, which slices the work into a few large issues, plans the first and starts the sessions.
+
+**Fast path for a small feature.** If the whole spec fits one issue (one session can build it: up to about five user
+stories in one feature folder), offer to skip `/plan-project`. On the user's yes, create the single issue with
+`mw-to-tickets` (step 5 and its template) and the project branch (plan-project, step 3, item 5), and tell the user to run
+`/implement-issue <ID>` in a new session on Sonnet at medium effort. That session plans the issue itself, asks for
+approval, builds it on the project branch, and hands over to `/ship-project`.

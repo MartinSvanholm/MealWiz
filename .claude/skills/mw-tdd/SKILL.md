@@ -65,5 +65,6 @@ on every edge case.
   `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`. Integration tests
   need `supabase start` first; without it they skip, which is not green.
 - **Refactoring is not part of the loop.** Tidy up once the slice is green, then rerun.
-- **Finish with verify.** `scripts/verify.ps1 local` (plus `--e2e <class>` where TESTING.md names a journey) in the
-  background. The exit code is the verdict. CI runs the full E2E suite.
+- **Finish with verify.** `scripts/verify.ps1 fast`, plus `local --only <steps>` for the Supabase-backed steps your
+  new tests live in. The exit code is the verdict. CI runs `verify full` on the PR, and `/ship-project` runs it on
+  a whole project before it reaches `dev`.

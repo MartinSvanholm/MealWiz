@@ -1,0 +1,38 @@
+@implements IDisposable
+@inject SessionKeeper Keeper
+@inject NavigationManager Navigation
+@inject TimeProvider Time
+
+@* Holds the app back until the stored session is loaded and, if due, refreshed, so the first auth check already
+   sees the fresh session. After 10 s it renders anyway: the user stays signed in and the keeper keeps retrying. *@
+@if (_ready)
+{
+    @ChildContent
+}
+else
+{
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
+        <MudProgressCircular Indeterminate="true" data-testid="session-gate-loading" />
+    </div>
+}
+
+@code {
+    private static readonly TimeSpan Cap = TimeSpan.FromSeconds(10);
+    private bool _ready;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Keeper.SessionRejected += OnSessionRejected;
+
+        await Task.WhenAny(Keeper.StartAsync(), Task.Delay(Cap, Time));
+        _ready = true;
+    }
+
+    // Raised on the keeper's timer thread; a rejected session means a full reload on the login page.
+    private void OnSessionRejected() =>
+        _ = InvokeAsync(() => Navigation.NavigateTo("/login", forceLoad: true));
+
+    public void Dispose() => Keeper.SessionRejected -= OnSessionRejected;
+}
