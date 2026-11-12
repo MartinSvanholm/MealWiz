@@ -228,7 +228,9 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
   - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan)
     and resolves imports with the service role, and makes password reset links (`GenerateRecoveryLinkAsync`, the
-    admin `generate_link`) so no email is sent.
+    admin `generate_link`) so no email is sent. For picture imports it reads a job's stored picture paths
+    (`GetMealImportPicturesAsync`) and removes uploaded pictures through the Storage API (`DeleteStoredPicturesAsync`;
+    deleting a user doesn't remove their objects, so a test that uploads cleans up itself).
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:

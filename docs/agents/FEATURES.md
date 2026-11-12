@@ -332,9 +332,16 @@ stays pending past 3 minutes. One job runs at a time.
 A job row is a **link job** (`source_url`) or a **picture job** (`picture_paths`: one to three JPEGs in the private
 `meal-import-pictures` bucket, `language` `en`/`da`, optional `hint`), never both. A picture job is resolved by
 [Functions: AnalyzeMealPicture](#functions-analyzemealpicture) and its `parsed_meal` also has `IsGuessed` (true for a
-meal guessed from a dish; absent reads as false). The client side of picture jobs (upload, UI) comes in later issues
-of the project; so far only the models, constants (`Features/MealImport/Models/MealImportPictures.cs`: bucket id, `MaxPictures`,
-`MaxHintLength`, `PathFor(userId, jobId, index)`) and error codes exist.
+meal guessed from a dish; absent reads as false). The client starts one from the Import page (`/meals/import?source=picture`, reached by "Create from a picture" in the
+New menu: `add-meal-import-picture`): the user takes or chooses up to 3 pictures (`import-picture-camera-input`,
+`import-picture-gallery-input`), sees thumbnails (`import-picture-thumb-{i}`, `import-picture-remove-{i}`), a privacy note
+(`import-picture-privacy`) and an inline error (`import-picture-error`), and presses `import-picture-submit`. Each picture
+is shrunk in the browser first (`MealWiz/MealWiz/MealWiz.Shared/wwwroot/js/mealPictures.js` through `Features/MealImport/State/MealPictureShrinker.cs`,
+`IMealPictureShrinker`: orientation applied, long edge 2,500 px, JPEG 0.8; a file the browser can't decode is not added).
+`IMealImportStateContainer.StartPictureImport` then uploads the pictures, inserts the row (with the app language, from
+`MealImportJobHelper.LanguageFor`), and calls the Function; the rest (progress card, background mode, one job at a
+time) is shared with link jobs. Constants live in `Features/MealImport/Models/MealImportPictures.cs` (bucket id,
+`MaxPictures`, `MaxHintLength`, `PathFor(userId, jobId, index)`). The pictures are deleted by a later issue.
 
 A failed row's `error_code` says why: `invalid_url`, `no_recipe_found` and `fetch_failed` (or `unknown`) from the
 Function; `unreachable` or `timed_out` from the client. A picture job adds `no_meal_found`, `daily_limit_reached`,
@@ -357,6 +364,10 @@ detail for diagnosis.
   | GetLatestMealImport | `Query` → `Result<MealImport?>` | The user's newest row, for the entry-point status |
   | MarkMealImportFailed | `Command(Guid Id, MealImportErrorCode ErrorCode, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
   | TriggerScrapeRecipe | `Command(Guid JobId, string Url)` → `Result` | POST to `<MealImportFunction:url>/api/ScrapeRecipe` with `x-functions-key`. Uses `HttpClient`, not Supabase |
+  | UploadMealImportPictures | `Command(Guid JobId, IReadOnlyList<byte[]> Pictures)` → `Result<IReadOnlyList<string>>` | Upload 1–3 JPEGs one at a time to `{userId}/{jobId}/{index}.jpg` in the `meal-import-pictures` bucket; removes the earlier ones if a later one fails |
+  | DeleteMealImportPictures | `Command(IReadOnlyList<string> Paths)` → `Result` | Remove objects through the Storage API (empty list = success) |
+  | CreatePictureMealImport | `Command(Guid Id, IReadOnlyList<string> PicturePaths, string Language, string? Hint)` → `Result<MealImport>` | Insert the pending picture job (no `source_url`); a blank hint becomes null, a hint over 200 characters fails |
+  | TriggerAnalyzeMealPicture | `Command(Guid JobId)` → `Result` | POST `{ jobId }` to `<MealImportFunction:url>/api/AnalyzeMealPicture` with `x-functions-key` |
 
 - **State:**
   - `Features/MealImport/State/MealImportStateContainer.cs` (`IMealImportStateContainer`): runs the job, its timers

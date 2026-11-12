@@ -176,4 +176,12 @@
     <value>Remove from grocery list?</value>
     <comment>Title of the review drawer for a deleted meal's grocery items</comment>
   </data>
+  <data name="AddMealMenu_ImportPicture" xml:space="preserve">
+    <value>Create from a picture</value>
+    <comment>Menu item: create a meal from a photo of a recipe or a dish</comment>
+  </data>
+  <data name="AddMealMenu_ImportPictureHint" xml:space="preserve">
+    <value>Photo of a recipe or a dish</value>
+    <comment>Hint under the picture menu item</comment>
+  </data>
 </root>

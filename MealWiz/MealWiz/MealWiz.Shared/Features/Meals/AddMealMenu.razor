@@ -61,6 +61,17 @@
                 }
             </span>
         </MudMenuItem>
+        <MudMenuItem data-testid="add-meal-import-picture" OnClick="OnImportPictureClick">
+            <span class="mw-add-meal-item">
+                <span class="mw-add-meal-tile mw-text-green">
+                    <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Color="Color.Inherit" Size="Size.Small" />
+                </span>
+                <span class="mw-add-meal-text">
+                    <span class="mw-add-meal-title">@L["AddMealMenu_ImportPicture"]</span>
+                    <span class="mw-add-meal-hint">@L["AddMealMenu_ImportPictureHint"]</span>
+                </span>
+            </span>
+        </MudMenuItem>
     </ChildContent>
 </MudMenu>
 
@@ -94,6 +105,11 @@
     private void OnImportClick()
     {
         _navigationManager.NavigateTo("/meals/import");
+    }
+
+    private void OnImportPictureClick()
+    {
+        _navigationManager.NavigateTo("/meals/import?source=picture");
     }
 
     public void Dispose() => _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;

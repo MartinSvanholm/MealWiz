@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.MealImport.ImportMeal;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Moq;
 using Xunit;
@@ -302,6 +303,150 @@ public class ImportMealPageTests : ComponentTestBase
         await DisposeComponentsAsync();
 
         MealImport.Verify(m => m.ContinueInBackground(), Times.Once);
+    }
+
+    // ---- Picture import ----
+
+    private static ShrunkPicture Shrunk(byte id) => new(true, [id], $"blob:test/{id}");
+    private static ShrunkPicture Unreadable() => new(false, null, null);
+
+    private void ChoosePictures(string inputTestId, params ShrunkPicture[] pictures)
+    {
+        PictureShrinker
+            .Setup(p => p.ShrinkSelectedAsync(It.IsAny<ElementReference>(), It.IsAny<int>()))
+            .ReturnsAsync(pictures);
+        Render_ = Render_ ?? throw new InvalidOperationException("Render the page first.");
+        Render_.Find(InputOf(inputTestId)).Change(new Microsoft.AspNetCore.Components.ChangeEventArgs());
+    }
+
+    private IRenderedComponent<ImportMealPage>? Render_;
+
+    private IRenderedComponent<ImportMealPage> RenderPage()
+    {
+        MealImport.Setup(m => m.StartPictureImport(It.IsAny<IReadOnlyList<byte[]>>())).ReturnsAsync(Result.Ok());
+        Render_ = Render<ImportMealPage>();
+        return Render_;
+    }
+
+    [Fact]
+    public void The_picture_section_has_both_buttons_the_privacy_note_and_a_disabled_submit()
+    {
+        var cut = RenderPage();
+
+        Assert.Equal("environment", cut.Find(InputOf("import-picture-camera-input")).GetAttribute("capture"));
+        Assert.NotNull(cut.Find(InputOf("import-picture-gallery-input")).GetAttribute("multiple"));
+        Assert.Equal("image/*", cut.Find(InputOf("import-picture-gallery-input")).GetAttribute("accept"));
+        Assert.Contains("Your pictures are sent to an AI service (Anthropic, USA)", cut.Find(TestId("import-picture-privacy")).TextContent);
+        Assert.True(cut.Find(TestId("import-picture-submit")).HasAttribute("disabled"));
+        Assert.Equal("Import from pictures", cut.Find(TestId("import-picture-submit")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void Chosen_pictures_show_as_thumbnails_in_order_and_enable_the_submit()
+    {
+        var cut = RenderPage();
+
+        ChoosePictures("import-picture-gallery-input", Shrunk(1), Shrunk(2));
+
+        Assert.Equal("blob:test/1", cut.Find(TestId("import-picture-thumb-0")).GetAttribute("src"));
+        Assert.Equal("blob:test/2", cut.Find(TestId("import-picture-thumb-1")).GetAttribute("src"));
+        Assert.False(cut.Find(TestId("import-picture-submit")).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void A_picture_can_be_removed_before_the_import_starts()
+    {
+        var cut = RenderPage();
+        ChoosePictures("import-picture-gallery-input", Shrunk(1), Shrunk(2));
+
+        cut.Find(TestId("import-picture-remove-0")).Click();
+
+        Assert.Single(cut.FindAll("[data-testid^='import-picture-thumb-']"));
+        Assert.Equal("blob:test/2", cut.Find(TestId("import-picture-thumb-0")).GetAttribute("src"));
+        PictureShrinker.Verify(p => p.RevokePreviewAsync("blob:test/1"), Times.Once);
+    }
+
+    [Fact]
+    public void More_than_three_pictures_are_not_added_and_the_user_is_told()
+    {
+        var cut = RenderPage();
+        ChoosePictures("import-picture-gallery-input", Shrunk(1), Shrunk(2), Shrunk(3));
+
+        ChoosePictures("import-picture-camera-input", Shrunk(4));
+
+        Assert.Equal(3, cut.FindAll("[data-testid^='import-picture-thumb-']").Count);
+        Assert.Contains("You can add up to 3 pictures.", cut.Find(TestId("import-picture-error")).TextContent);
+        PictureShrinker.Verify(p => p.RevokePreviewAsync("blob:test/4"), Times.Once);
+    }
+
+    [Fact]
+    public void A_picture_the_browser_cannot_read_is_not_added_and_the_error_shows()
+    {
+        var cut = RenderPage();
+
+        ChoosePictures("import-picture-gallery-input", Unreadable());
+
+        Assert.Empty(cut.FindAll("[data-testid^='import-picture-thumb-']"));
+        Assert.Contains("We couldn't read the picture.", cut.Find(TestId("import-picture-error")).TextContent);
+        MealImport.Verify(m => m.StartPictureImport(It.IsAny<IReadOnlyList<byte[]>>()), Times.Never);
+    }
+
+    [Fact]
+    public void Submitting_starts_the_picture_import_with_the_bytes_in_order()
+    {
+        var cut = RenderPage();
+        ChoosePictures("import-picture-gallery-input", Shrunk(1), Shrunk(2));
+
+        cut.Find(TestId("import-picture-submit")).Click();
+
+        MealImport.Verify(m => m.StartPictureImport(It.Is<IReadOnlyList<byte[]>>(
+            b => b.Count == 2 && b[0][0] == 1 && b[1][0] == 2)), Times.Once);
+        MealImport.Verify(m => m.StartImport(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public void The_progress_card_of_a_picture_job_says_so_and_shows_no_url()
+    {
+        MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.AwaitingResult);
+        MealImport.SetupGet(m => m.IsImportInProgress).Returns(true);
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel { PicturePaths = ["u/j/0.jpg"], Language = "en" });
+
+        var cut = Render<ImportMealPage>();
+
+        var progress = cut.Find(TestId("import-progress")).TextContent;
+        Assert.Contains("Reading your pictures", progress);
+        Assert.Empty(cut.FindAll(".mw-import-url"));
+    }
+
+    [Fact]
+    public void A_failed_picture_job_shows_its_error_without_a_url_line_and_keeps_the_pictures()
+    {
+        var cut = RenderPage();
+        ChoosePictures("import-picture-gallery-input", Shrunk(1));
+        MealImport.SetupGet(m => m.JobStatus).Returns(MealImportJobStatus.Failed);
+        MealImport.SetupGet(m => m.JobErrorMessage).Returns(MessageFor(MealImportErrorCode.DailyLimitReached));
+        MealImport.SetupGet(m => m.CurrentImport).Returns(new MealImportModel
+        {
+            PicturePaths = ["u/j/0.jpg"], Language = "en", Status = MealImportStatus.Failed, ErrorCode = MealImportErrorCode.DailyLimitReached
+        });
+
+        cut.Render();
+
+        Assert.Contains("You've reached today's limit for picture imports.", cut.Find(TestId("import-job-error")).TextContent);
+        Assert.Empty(cut.Find(TestId("import-job-error")).QuerySelectorAll(".mw-import-url"));
+        Assert.Equal("Try again", cut.Find(TestId("import-picture-submit")).TextContent.Trim());
+        Assert.Single(cut.FindAll("[data-testid^='import-picture-thumb-']"));
+    }
+
+    [Fact]
+    public async Task Leaving_the_page_revokes_the_thumbnail_urls()
+    {
+        var cut = RenderPage();
+        ChoosePictures("import-picture-gallery-input", Shrunk(1));
+
+        await DisposeComponentsAsync();
+
+        PictureShrinker.Verify(p => p.RevokePreviewAsync("blob:test/1"), Times.Once);
     }
 }
 
