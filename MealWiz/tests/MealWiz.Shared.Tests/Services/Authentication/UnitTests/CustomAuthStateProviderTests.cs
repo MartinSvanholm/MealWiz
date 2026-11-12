@@ -4,6 +4,7 @@ using MealWiz.Shared.Services.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Supabase;
 using Supabase.Gotrue;
+using Supabase.Gotrue;
 using Supabase.Gotrue.Interfaces;
 using Xunit;
 using Client = Supabase.Client;
@@ -21,7 +22,7 @@ public class CustomAuthStateProviderTests
     [Fact]
     public async Task GetAuthenticationStateAsync_NoSession_IsAnonymous()
     {
-        var provider = new CustomAuthStateProvider(ClientWithSession(null));
+        var provider = ProviderWith(null);
 
         var state = await provider.GetAuthenticationStateAsync();
 
@@ -30,22 +31,9 @@ public class CustomAuthStateProviderTests
     }
 
     [Fact]
-    public async Task GetAuthenticationStateAsync_ExpiredSession_IsAnonymous()
-    {
-        var session = Session(Jwt(Payload()));
-        session.CreatedAt = DateTime.Now.AddHours(-2);
-        session.ExpiresIn = 3600;
-        var provider = new CustomAuthStateProvider(ClientWithSession(session));
-
-        var state = await provider.GetAuthenticationStateAsync();
-
-        Assert.False(state.User.Identity?.IsAuthenticated);
-    }
-
-    [Fact]
     public async Task GetAuthenticationStateAsync_ValidSession_IsAuthenticatedWithTheJwtClaims()
     {
-        var provider = new CustomAuthStateProvider(ClientWithSession(Session(Jwt(Payload()))));
+        var provider = ProviderWith(Session(Jwt(Payload())));
 
         var state = await provider.GetAuthenticationStateAsync();
 
@@ -64,7 +52,7 @@ public class CustomAuthStateProviderTests
         var jwt = Jwt(payload);
         Assert.Contains('-', jwt.Split('.')[1]);
 
-        var provider = new CustomAuthStateProvider(ClientWithSession(Session(jwt)));
+        var provider = ProviderWith(Session(jwt));
 
         var state = await provider.GetAuthenticationStateAsync();
 
@@ -73,30 +61,99 @@ public class CustomAuthStateProviderTests
     }
 
     [Fact]
-    public async Task GetAuthenticationStateAsync_NotifiesSubscribers()
+    public async Task GetAuthenticationStateAsync_ExpiredAccessTokenWithRefreshToken_IsStillAuthenticated()
     {
-        var provider = new CustomAuthStateProvider(ClientWithSession(Session(Jwt(Payload()))));
-        Task<AuthenticationState>? notified = null;
-        provider.AuthenticationStateChanged += task => notified = task;
+        // The keeper refreshes it; offline the user must stay signed in.
+        var session = Session(Jwt(Payload()));
+        session.CreatedAt = DateTime.Now.AddHours(-2);
+        session.ExpiresIn = 3600;
+        var provider = ProviderWith(session);
 
         var state = await provider.GetAuthenticationStateAsync();
 
-        Assert.NotNull(notified);
-        Assert.Same(state, await notified);
+        Assert.True(state.User.Identity?.IsAuthenticated);
     }
 
-    private static Client ClientWithSession(Session? session)
+    [Fact]
+    public async Task GetAuthenticationStateAsync_NoRefreshToken_IsAnonymous()
     {
-        var client = new Client("http://127.0.0.1:54321", "test-anon-key", new SupabaseOptions
+        var session = Session(Jwt(Payload()));
+        session.RefreshToken = null;
+        var provider = ProviderWith(session);
+
+        var state = await provider.GetAuthenticationStateAsync();
+
+        Assert.False(state.User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationStateAsync_AfterLocalSignOut_IsAnonymous()
+    {
+        var provider = ProviderWith(Session(Jwt(Payload())), out var keeper);
+
+        await keeper.SignOutLocallyAsync();
+        var state = await provider.GetAuthenticationStateAsync();
+
+        Assert.False(state.User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task GetAuthenticationStateAsync_DoesNotNotifySubscribers()
+    {
+        var provider = ProviderWith(Session(Jwt(Payload())));
+        var notified = false;
+        provider.AuthenticationStateChanged += _ => notified = true;
+
+        await provider.GetAuthenticationStateAsync();
+
+        Assert.False(notified);
+    }
+
+    [Fact]
+    public async Task KeeperChange_NotifiesSubscribersWithTheNewState()
+    {
+        var provider = ProviderWith(Session(Jwt(Payload())), out var keeper);
+        Task<AuthenticationState>? notified = null;
+        provider.AuthenticationStateChanged += task => notified = task;
+
+        await keeper.SignOutLocallyAsync();
+
+        Assert.NotNull(notified);
+        Assert.False((await notified).User.Identity?.IsAuthenticated);
+    }
+
+    [Fact]
+    public async Task SdkAuthEvent_NotifiesSubscribers()
+    {
+        var provider = ProviderWith(Session(Jwt(Payload())), out _, out var client);
+        var notified = 0;
+        provider.AuthenticationStateChanged += _ => notified++;
+
+        ((Supabase.Gotrue.Client)client.Auth).NotifyAuthStateChange(Constants.AuthState.TokenRefreshed);
+        ((Supabase.Gotrue.Client)client.Auth).NotifyAuthStateChange(Constants.AuthState.SignedOut);
+
+        Assert.Equal(2, notified);
+        await Task.CompletedTask;
+    }
+
+    private static CustomAuthStateProvider ProviderWith(Session? session) => ProviderWith(session, out _);
+
+    private static CustomAuthStateProvider ProviderWith(Session? session, out SessionKeeper keeper) =>
+        ProviderWith(session, out keeper, out _);
+
+    private static CustomAuthStateProvider ProviderWith(Session? session, out SessionKeeper keeper, out Client client)
+    {
+        var persistence = new FakeSessionPersistence(session);
+        client = new Client("http://127.0.0.1:54321", "test-anon-key", new SupabaseOptions
         {
             AutoRefreshToken = false,
             AutoConnectRealtime = false,
-            SessionHandler = new FakeSessionPersistence(session)
+            SessionHandler = persistence
         });
         client.Auth.LoadSession();
-        return client;
+        keeper = new SessionKeeper(client, persistence, TimeProvider.System);
+        return new CustomAuthStateProvider(client, keeper);
     }
-
     private static Session Session(string accessToken) => new()
     {
         AccessToken = accessToken,

@@ -16,7 +16,8 @@
         result.Handle(_snackbar);
 
         if (result.IsSuccess) {
-            _navigationManager.Refresh();
+            // A full reload, so nothing of the previous user stays in memory. Dark mode and language live in storage.
+            _navigationManager.NavigateTo("/login", forceLoad: true);
         }
     }
 }

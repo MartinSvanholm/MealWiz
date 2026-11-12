@@ -96,4 +96,8 @@
   <data name="Logout_Button" xml:space="preserve">
     <value>Log out</value>
   </data>
+  <data name="Forgot_OpensInBrowser" xml:space="preserve">
+    <value>The link opens in your browser.</value>
+    <comment>Note on the forgot-password confirmation in the app: the emailed link opens the web app</comment>
+  </data>
 </root>

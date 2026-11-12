@@ -208,7 +208,12 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 - **E2E** (`E2ETests/`): drives the **published** app (Release, trimmed) in headless Chromium against local Supabase.
   It is the only level that catches broken JS interop, routing, session persistence and Realtime. The journeys are
   `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
-  `MealImportJourneyTests`.
+  `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
+  refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
+  email from the Account page, and deleting the account (a Playwright route plays the Function: it deletes the user through
+  the admin API and answers 204; a second route answers 403). The local GoTrue applies an email change on the first click of the new address's link
+  (autoconfirm), so the E2E reads that link from Mailpit, which every local and CI stack now runs (the `generate_link` admin
+  API confirms on the first click too); the "click the other link" state is covered by bUnit.
 - **E2E infrastructure** (`TestInfrastructure/E2E/`):
   - `E2EEnvironment` publishes the app once per run, hosts it with `E2EAppHost` (which serves a Development
     appsettings pointing at local Supabase, plus a `/functions` stub), and launches the browser.
@@ -232,7 +237,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
 `grocery_item_sources`, `meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
-names. Each file follows the same pattern:
+`delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
+another user's). Each table file follows the same pattern:
 
 ```sql
 begin;

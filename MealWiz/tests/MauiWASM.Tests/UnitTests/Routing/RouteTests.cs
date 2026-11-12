@@ -41,12 +41,23 @@ public partial class RouteTests
         using var context = new BunitContext();
         context.AddAuthorization();
         context.Services.AddLocalization(); // App's route texts come from the shared resource
+        // App wraps the router in the startup gate, which starts the session keeper (nothing stored: done at once).
+        context.Services.AddSingleton(TimeProvider.System);
+        context.Services.AddSingleton(new MealWiz.Shared.Services.Authentication.SessionKeeper(
+            new Supabase.Client("http://localhost", "test-key"), new NoSession(), TimeProvider.System));
         context.ComponentFactories.AddStub<Router>();
 
         var router = context.Render<App>().FindComponent<Stub<Router>>().Instance.Parameters;
 
         Assert.Equal(WebAssembly, router.Get(r => r.AppAssembly));
         Assert.Contains(SharedAssembly, router.Get(r => r.AdditionalAssemblies)!);
+    }
+
+    private sealed class NoSession : Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>
+    {
+        public void SaveSession(Supabase.Gotrue.Session session) { }
+        public void DestroySession() { }
+        public Supabase.Gotrue.Session? LoadSession() => null;
     }
 
     // "/meals/{id:guid}" and "/Meals/{mealId}/" match the same URLs, so they normalize to the same string.

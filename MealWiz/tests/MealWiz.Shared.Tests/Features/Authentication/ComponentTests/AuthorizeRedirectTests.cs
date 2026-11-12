@@ -21,7 +21,7 @@ namespace MealWiz.Shared.Tests.Features.Authentication.ComponentTests;
 public class AuthorizeRedirectTests : ComponentTestBase
 {
     // Pages that don't require sign-in. Adding one here should be a deliberate decision.
-    private static readonly Type[] PublicPages = [typeof(LoginPage), typeof(SignUpPage), typeof(ForgotPasswordPage), typeof(ResetPasswordPage)];
+    private static readonly Type[] PublicPages = [typeof(LoginPage), typeof(SignUpPage), typeof(ForgotPasswordPage), typeof(ResetPasswordPage), typeof(EmailChangePage)];
 
     public static TheoryData<Type, string> ProtectedPages => new()
     {

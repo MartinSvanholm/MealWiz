@@ -31,5 +31,6 @@ public class ServiceCollectionExtensionsTests
         var function = ActivatorUtilities.CreateInstance<ScrapeRecipeFunction>(scope.ServiceProvider);
 
         Assert.NotNull(function);
+        Assert.NotNull(ActivatorUtilities.CreateInstance<MealWiz.Functions.Functions.DeleteAccount.DeleteAccountFunction>(scope.ServiceProvider));
     }
 }

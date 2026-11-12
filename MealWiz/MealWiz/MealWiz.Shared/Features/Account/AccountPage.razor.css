@@ -126,6 +126,75 @@
     font-size: 15px;
 }
 
+/* The change password and change email forms reuse the sign-in pages' form classes (their rules live in
+   AuthShell.razor.css under .mw-auth), so the same rules are repeated here for the Account page. */
+.mw-account ::deep .mw-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mw-account ::deep .mw-auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mw-account ::deep .mw-auth-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-text-muted);
+}
+
+.mw-account ::deep .mw-auth-field .mud-input-control {
+    margin: 0;
+}
+
+.mw-account ::deep .mw-auth-field .mud-input.mud-input-outlined {
+    background: var(--mw-surface);
+    border-radius: var(--mw-radius-s);
+}
+
+.mw-account ::deep .mw-auth-field .mud-input-slot {
+    height: 50px;
+    box-sizing: border-box;
+    padding: 0 16px;
+    font-size: 15px;
+}
+
+.mw-account ::deep .mw-auth-note {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: var(--mw-text-muted);
+}
+
+/* Delete account: a red outlined button below Log out that opens an inline confirm panel. */
+.mw-account-delete ::deep .mw-account-delete-button {
+    width: 100%;
+    height: 50px;
+    border-width: 1.5px;
+    font-size: 15px;
+}
+
+.mw-account ::deep .mw-account-delete-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mw-account ::deep .mw-account-delete-warning {
+    margin: 0;
+    font-size: 14px;
+    color: var(--mw-text-muted);
+}
+
+.mw-account ::deep .mw-account-delete-error {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--mud-palette-error);
+}
+
 /* The language dropdown: a native select, so phones show their own picker. */
 .mw-account-select {
     flex: none;

@@ -489,7 +489,7 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
     // The same services CI leaves out. Studio (and postgres-meta, which it needs) only with --studio: no test uses
     // them, and they're a large part of the first image pull.
     Progress("supabase start (first start pulls images and can take a few minutes)");
-    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor,mailpit" + (studio ? "" : ",studio,postgres-meta");
+    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor" + (studio ? "" : ",studio,postgres-meta");
     if (Run("supabase", ["start", "-x", excluded], log) == 0)
         return ("started", null);
 

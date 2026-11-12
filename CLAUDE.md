@@ -60,7 +60,7 @@ Rules for every session:
 - **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
   picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
-- **Server:** one Azure Functions app (`ScrapeRecipe`, isolated worker, net10.0) for meal import.
+- **Server:** one Azure Functions app (`ScrapeRecipe` for meal import, `DeleteAccount`; isolated worker, net10.0).
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
 
 ## Projects
@@ -69,7 +69,7 @@ Rules for every session:
 | `MealWiz/MealWiz/MealWiz.Shared/` | All feature code: pages, components, handlers, state, models |
 | `MealWiz/MauiWASM/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
 | `MealWiz/MealWiz/MealWiz/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
-| `MealWiz/src/MealWiz.Functions/` | Azure Function `ScrapeRecipe`. Deliberately doesn't reference Shared |
+| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe` and `DeleteAccount`. Deliberately doesn't reference Shared |
 | `MealWiz/tests/MealWiz.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
 | `MealWiz/tests/MealWiz.Functions.Tests/` | Unit and integration tests for Functions |
 | `MealWiz/tests/MauiWASM.Tests/` | Web-head unit tests and Playwright E2E |
@@ -145,6 +145,7 @@ for which change; the verify skill explains how to read failures.
   - Development points at local Supabase on `127.0.0.1:54321`.
   - Production's Function key stays empty in git; `deploy.yml` injects it.
 - **MAUI:** always loads the embedded `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
+  Its `WebApp:url` (the web app, `http://localhost:5053/` in Development) is where email links open; the web head leaves it out and links to itself.
 - **Functions:** a gitignored `local.settings.json`, copied from
   `MealWiz/src/MealWiz.Functions/local.settings.json.example`. Its README covers keys, CORS and deployment.
 - Only the anon key may reach a client (SEC-01).

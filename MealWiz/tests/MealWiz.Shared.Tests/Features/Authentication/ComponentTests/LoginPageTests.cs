@@ -145,16 +145,20 @@ public class LoginPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Logout_signs_out_and_reloads_the_page()
+    public void Logout_signs_out_and_reloads_the_app_on_the_login_page()
     {
         SetupSend<Logout.Command, Result>(Result.Ok());
-        var historyBefore = Navigation.History.Count;
         var cut = Render<LogoutButton>();
 
         cut.Find(TestId("logout-button")).Click();
 
         Assert.Single(Sent<Logout.Command>());
-        cut.WaitForAssertion(() => Assert.True(Navigation.History.First().Options.ForceLoad || Navigation.History.Count > historyBefore));
+        cut.WaitForAssertion(() =>
+        {
+            var navigation = Navigation.History.First();
+            Assert.EndsWith("/login", navigation.Uri);
+            Assert.True(navigation.Options.ForceLoad);
+        });
     }
 
     [Fact]

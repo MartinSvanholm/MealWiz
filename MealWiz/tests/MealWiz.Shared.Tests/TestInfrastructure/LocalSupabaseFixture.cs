@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using FluentResults;
+using MealWiz.Shared.Features.Authentication;
 using Supabase;
 using Xunit;
 
@@ -102,6 +103,64 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         }
     }
 
+    public SupabaseAuthSettings AuthSettings => new(_credentials.Url, _credentials.AnonKey);
+
+    /// <summary>
+    /// The links GoTrue emailed for a pending email change, read from the local Mailpit. The admin API's
+    /// <c>generate_link</c> can't stand in: its change links confirm the whole change on the first click.
+    /// The local GoTrue (autoconfirm on) also applies the change on the first click of the new address's link, so
+    /// the "now click the other link" state can't be reached locally; component tests cover it.
+    /// </summary>
+    public async Task<EmailChangeLinks> ReadEmailChangeLinksAsync(string email, string newEmail)
+    {
+        using var http = new HttpClient { BaseAddress = new Uri(MailpitUrl), Timeout = TimeSpan.FromSeconds(10) };
+        var regex = new System.Text.RegularExpressions.Regex(@"https?://\S+/auth/v1/verify\?\S+");
+        string? toCurrent = null, toNew = null;
+        for (var attempt = 0; attempt < 25 && (toCurrent is null || toNew is null); attempt++)
+        {
+            foreach (var query in new[] { email, newEmail }) // a search matches substrings: the exact To address decides
+            {
+                var search = await http.GetFromJsonAsync<MailpitSearch>($"api/v1/search?query={Uri.EscapeDataString($"to:\"{query}\"")}");
+                foreach (var summary in search?.Messages ?? [])
+                {
+                    var message = await http.GetFromJsonAsync<MailpitMessage>($"api/v1/message/{summary.Id}");
+                    var link = regex.Match(message?.Text ?? string.Empty);
+                    if (!link.Success || message is null) continue;
+                    if (message.To.Any(t => t.Address == newEmail)) toNew = link.Value;
+                    else if (message.To.Any(t => t.Address == email)) toCurrent = link.Value;
+                }
+            }
+
+            if (toCurrent is null || toNew is null)
+                await Task.Delay(200);
+        }
+
+        return toNew is not null && toCurrent is not null
+            ? new EmailChangeLinks(toCurrent, toNew)
+            : throw new InvalidOperationException($"Expected both email change links in Mailpit for {email}.");
+    }
+
+
+    /// <summary>Mailpit's address in the local stack (supabase/config.toml, [inbucket] port).</summary>
+    private static string MailpitUrl => "http://127.0.0.1:54324/";
+
+    /// <summary>Clicks a link without following GoTrue's redirect: the redirect's address, fragment included.</summary>
+    public async Task<Uri> FollowLinkAsync(string actionLink)
+    {
+        using var browser = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(10) };
+        using var response = await browser.GetAsync(actionLink);
+        return response.Headers.Location
+            ?? throw new InvalidOperationException($"Following the link returned {(int)response.StatusCode} without a redirect.");
+    }
+
+    private sealed record MailpitSearch([property: JsonPropertyName("messages")] List<MailpitSummary> Messages);
+    private sealed record MailpitSummary([property: JsonPropertyName("ID")] string Id);
+    private sealed record MailpitMessage(
+        [property: JsonPropertyName("Text")] string Text,
+        [property: JsonPropertyName("To")] List<MailpitAddress> To);
+    private sealed record MailpitAddress([property: JsonPropertyName("Address")] string Address);
+
+
     /// <summary>
     /// What the user's browser ends up on after clicking a password reset email's link: the admin API makes the link
     /// without sending an email, and following it returns GoTrue's redirect to <paramref name="redirectTo"/> with the
@@ -174,17 +233,29 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     /// <summary>Deletes a user the test created itself (e.g. through sign-up) together with the fixture's own.</summary>
     public void DeleteOnDispose(Guid userId) => _createdUserIds.Add(userId);
 
+    /// <summary>Deletes a user right away through the admin API, so its sessions stop being valid on the server.</summary>
+    public async Task DeleteUserNowAsync(Guid userId)
+    {
+        using var http = CreateAdminHttpClient();
+        using var response = await http.DeleteAsync($"auth/v1/admin/users/{userId}");
+        response.EnsureSuccessStatusCode();
+    }
+
     /// <summary>
     /// A client with the anon key and no session, like the app before sign-in. Use it for the signed-out paths and
     /// for signing in through a handler.
     /// </summary>
-    public async Task<Client> CreateSignedOutClientAsync()
+    public async Task<Client> CreateSignedOutClientAsync(Supabase.Gotrue.Interfaces.IGotrueSessionPersistence<Supabase.Gotrue.Session>? persistence = null)
     {
-        var client = new Client(_credentials.Url, _credentials.AnonKey, new SupabaseOptions
+        var options = new SupabaseOptions
         {
             AutoRefreshToken = false,
             AutoConnectRealtime = false
-        });
+        };
+        if (persistence is not null)
+            options.SessionHandler = persistence;
+
+        var client = new Client(_credentials.Url, _credentials.AnonKey, options);
         await client.InitializeAsync();
         return client;
     }
@@ -362,4 +433,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
 }
 
 /// <summary>A throwaway user, its password, and a <see cref="Supabase.Client"/> signed in as it with the anon key.</summary>
+/// <summary>The email change links: the one mailed to the current address and the one mailed to the new address.</summary>
+public sealed record EmailChangeLinks(string ToCurrent, string ToNew);
+
 public sealed record TestUser(Guid Id, string Email, string Password, Client Client);
