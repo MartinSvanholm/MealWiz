@@ -11,6 +11,16 @@ public class EmailChangePageTests : ComponentTestBase
     private const string Done = "email-change#access_token=access&expires_in=3600&refresh_token=refresh&token_type=bearer&type=email_change";
 
     [Fact]
+    public void The_page_sits_in_the_sign_in_frame()
+    {
+        Navigation.NavigateTo("email-change");
+        var cut = Render<EmailChangePage>();
+
+        Assert.Equal("MealWiz", cut.Find(TestId("email-change-title")).TextContent.Trim());
+        Assert.NotNull(cut.Find(TestId("email-change-page")));
+    }
+
+    [Fact]
     public void The_first_link_asks_for_the_other_address()
     {
         Navigation.NavigateTo(ConfirmOther);
