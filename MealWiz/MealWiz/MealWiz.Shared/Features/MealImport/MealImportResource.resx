@@ -36,6 +36,22 @@
     <value>The meal import failed. Please try again.</value>
     <comment>A failed import with error_code unknown, none, or one this app doesn't know</comment>
   </data>
+  <data name="ImportError_NoMealFound" xml:space="preserve">
+    <value>We couldn't find a meal or a recipe in the picture.</value>
+    <comment>A failed picture import, error_code no_meal_found</comment>
+  </data>
+  <data name="ImportError_DailyLimitReached" xml:space="preserve">
+    <value>You've reached today's limit for picture imports. Try again tomorrow.</value>
+    <comment>A failed picture import, error_code daily_limit_reached</comment>
+  </data>
+  <data name="ImportError_PictureUnreadable" xml:space="preserve">
+    <value>We couldn't read the picture. Try a different picture.</value>
+    <comment>A failed picture import, error_code picture_unreadable: format, size or a missing file</comment>
+  </data>
+  <data name="ImportError_AiUnavailable" xml:space="preserve">
+    <value>The AI service is unavailable right now. Please try again later.</value>
+    <comment>A failed picture import, error_code ai_unavailable</comment>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Please enter a valid meal URL (starting with http:// or https://).</value>
     <comment>Validation error on the URL field</comment>

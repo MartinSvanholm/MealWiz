@@ -46,7 +46,7 @@ fi
 if [[ "${MEALWIZ_PULL_IMAGES:-}" == "1" ]]; then
   # Start and stop the same services verify starts, which pulls their images.
   log "pulling the Supabase images"
-  supabase start -x studio,postgres-meta,imgproxy,edge-runtime,storage-api,logflare,vector,supavisor > /dev/null
+  supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor > /dev/null
   supabase stop --no-backup > /dev/null
 fi
 

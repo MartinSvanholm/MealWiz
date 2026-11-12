@@ -4,5 +4,9 @@
   "FetchFailed": "fetch_failed",
   "Unreachable": "unreachable",
   "TimedOut": "timed_out",
-  "Unknown": "unknown"
+  "Unknown": "unknown",
+  "NoMealFound": "no_meal_found",
+  "DailyLimitReached": "daily_limit_reached",
+  "PictureUnreadable": "picture_unreadable",
+  "AiUnavailable": "ai_unavailable"
 }

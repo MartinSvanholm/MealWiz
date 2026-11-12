@@ -12,8 +12,20 @@ public class MealImportDb : BaseModel
     [Column("created_by")]
     public Guid CreatedBy { get; set; }
 
+    // Null for a picture job.
     [Column("source_url")]
-    public string SourceUrl { get; set; } = string.Empty;
+    public string? SourceUrl { get; set; }
+
+    // A picture job: storage paths in the order the user added them, the app language and an optional hint.
+    // All three are null for a link job.
+    [Column("picture_paths")]
+    public List<string>? PicturePaths { get; set; }
+
+    [Column("language")]
+    public string? Language { get; set; }
+
+    [Column("hint")]
+    public string? Hint { get; set; }
 
     [Column("status")]
     public string Status { get; set; } = RecipeImportStatusExtensions.PendingValue;
