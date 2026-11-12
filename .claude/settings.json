@@ -4,7 +4,16 @@
       "Bash(gh pr view *)",
       "Bash(gh pr checks *)",
       "Bash(scripts/merge-pr.sh *)",
-      "mcp__Linear"
+      "mcp__Linear",
+      "mcp__a21d7348-127a-4392-810a-c071e901f0e1",
+      "Bash(dotnet build *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "WebSearch",
+      "Bash(docker exec *)",
+      "Bash(supabase db *)",
+      "Bash(supabase gen *)"
     ]
   },
   "hooks": {
@@ -18,5 +27,8 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
