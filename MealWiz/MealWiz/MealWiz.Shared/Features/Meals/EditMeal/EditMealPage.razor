@@ -97,6 +97,7 @@
 @code {
     private MudTextFieldExtended<string> _recipeField = default!;
 
+    private MealWiz.Shared.Features.MealImport.Models.MealImport? _formImport;
     private bool _showHint;
     private string _hint = string.Empty;
 
@@ -105,21 +106,26 @@
     protected override void OnInitialized()
     {
         _mealsStateContainer.OnStateChanged += StateHasChanged;
+        _formImport = _mealImportStateContainer.FormImport;
         _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
     }
 
     // Realtime callbacks can arrive off the UI thread (MAUI).
-    private void OnImportStateChanged() => InvokeAsync(StateHasChanged);
-
-    private async Task OnRetryClick()
+    private void OnImportStateChanged() => InvokeAsync(() =>
     {
-        var result = await _mealImportStateContainer.RetryWithHint(_hint);
-        if (result.IsSuccess)
+        if (!ReferenceEquals(_mealImportStateContainer.FormImport, _formImport))
         {
+            _formImport = _mealImportStateContainer.FormImport;
             _showHint = false;
             _hint = string.Empty;
         }
-    }
+
+        StateHasChanged();
+    });
+
+    // The hint stays in its field while the retry runs and after a failed one, so the user can try again. A successful
+    // retry replaces the form's job, and the section starts over.
+    private async Task OnRetryClick() => await _mealImportStateContainer.RetryWithHint(_hint);
 
     private void OnBackClick()
     {

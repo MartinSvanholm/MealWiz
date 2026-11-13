@@ -253,6 +253,13 @@ public sealed class E2ESupabase
         return row is null ? null : (row.PicturePaths ?? [], row.Language);
     }
 
+    /// <summary>Whether the picture is still in Storage (a service-role read of the object).</summary>
+    public async Task<bool> StoredPictureExistsAsync(string path)
+    {
+        using var response = await _http.GetAsync($"storage/v1/object/meal-import-pictures/{path}");
+        return response.IsSuccessStatusCode;
+    }
+
     /// <summary>How many meal_imports rows the user has.</summary>
     public async Task<int> CountMealImportsAsync(Guid userId)
     {

@@ -341,7 +341,16 @@ is shrunk in the browser first (`MealWiz/MealWiz/MealWiz.Shared/wwwroot/js/mealP
 `IMealImportStateContainer.StartPictureImport` then uploads the pictures, inserts the row (with the app language, from
 `MealImportJobHelper.LanguageFor`), and calls the Function; the rest (progress card, background mode, one job at a
 time) is shared with link jobs. Constants live in `Features/MealImport/Models/MealImportPictures.cs` (bucket id,
-`MaxPictures`, `MaxHintLength`, `PathFor(userId, jobId, index)`). The pictures are deleted by a later issue.
+`MaxPictures`, `MaxHintLength`, `PathFor(userId, jobId, index)`). The Edit meal form knows its job (`IMealImportStateContainer.FormImport`, set by the
+Import page's `OpenInForm()`): `EditMealPage` shows `edit-meal-guessed-note` when the meal was guessed from a dish, and for
+a picture job `edit-meal-retry` ("Not right? Try again with a hint") opens `edit-meal-hint-input` and
+`edit-meal-hint-submit` (disabled for a blank hint). `RetryWithHint` starts a new job on the same picture paths with the
+hint (no upload); while it runs (`IsRetrying`, `edit-meal-retrying`) `save-meal-button` is disabled. A successful retry
+replaces the form and `FormImport`; a failed one leaves the form and shows `RetryErrorMessage`
+(`edit-meal-retry-error`); leaving the form during a retry backgrounds it. `ReleaseFormImport()` deletes the form job's
+pictures (best effort, silent, through `DeleteMealImportPictures`): after a full save (`SaveMealButton`) and when the form
+is left; a backgrounded picture job deletes its pictures when it finishes. What's left (a closed tab, a failed job) goes in
+the daily clean-up ([Functions: CleanUpMealPictures](#functions-cleanupmealpictures)).
 
 A failed row's `error_code` says why: `invalid_url`, `no_recipe_found` and `fetch_failed` (or `unknown`) from the
 Function; `unreachable` or `timed_out` from the client. A picture job adds `no_meal_found`, `daily_limit_reached`,
@@ -604,6 +613,22 @@ in a `PictureImportError`. Nothing logs picture bytes, the key or the hint.
   `TestInfrastructure/FakeAnthropicHandler.cs`, mapper, prompt, rules, trigger) and `MealWiz/tests/MealWiz.Functions.Tests/Functions/AnalyzeMealPicture/IntegrationTests/` (the handler
   with a fake analyzer against local Supabase and Storage). No test calls the real AI service.
 
+## Functions: CleanUpMealPictures
+
+A timer Function (`0 17 3 * * *`, 03:17 UTC daily, `AzureWebJobsStorage`) that deletes every picture in the
+`meal-import-pictures` bucket older than 24 hours, so none outlives about two days (the app deletes a job's pictures on
+save or discard; this catches the rest, including a deleted account's). Storage can't list by age, so
+`CleanUpMealPicturesHandler.HandleAsync(cutoff)` asks the service-role-only database function
+`public.expired_meal_import_pictures(cutoff)` for the names and removes them through the Storage API in batches of 100,
+at most 5,000 per run (never SQL). A failed batch is logged and ends the run; the next day tries again.
+
+- **Folder:** `MealWiz/src/MealWiz.Functions/Functions/CleanUpMealPictures/`
+  (`CleanUpMealPicturesFunction.cs`: the timer, passes now minus 24 h; `CleanUpMealPicturesHandler.cs`).
+- **Migration:** `supabase/migrations/20261112130000_add_expired_meal_import_pictures.sql`.
+- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/UnitTests/` and
+  `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/IntegrationTests/` (local Storage; collection
+  `PictureJobs`); pgTAP `supabase/tests/database/expired_meal_import_pictures.test.sql`.
+
 ## Cross-cutting code (MealWiz.Shared)
 
 - **`Features/StateContainerBase.cs`:** base class for state containers. It provides `OnStateChanged`,
@@ -705,6 +730,12 @@ table and policy list.
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
+
+### Functions
+
+| Function | Feature | Created in | Notes |
+|---|---|---|---|
+| `public.expired_meal_import_pictures(cutoff)` | MealImport | `add_expired_meal_import_pictures` | Names the pictures of `meal-import-pictures` created before the cutoff. `security definer`; only `service_role` may execute it. The clean-up Function removes them through the Storage API |
 
 ### Storage buckets
 
