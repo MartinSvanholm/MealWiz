@@ -19,7 +19,7 @@ adds every E2E journey.
 | `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
-| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` and `AnalyzeMealPictureHandler` end to end (the latter with a fake analyzer and local Storage), `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
+| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler`, `AnalyzeMealPictureHandler` and `CleanUpMealPicturesHandler` end to end (the latter with a fake analyzer and local Storage), `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
 | `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list, deleting a meal with grocery items (12 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access, the Storage bucket policies | local, full | Docker |
@@ -174,6 +174,7 @@ framework reference to ASP.NET Core.
 ```
 Functions/ScrapeRecipe/{UnitTests,IntegrationTests}/
 Functions/AnalyzeMealPicture/{UnitTests,IntegrationTests}/
+Functions/CleanUpMealPictures/{UnitTests,IntegrationTests}/
 Shared/{UnitTests,IntegrationTests}/<Area>/     (Fetching, Ingredients, Models, Ssrf, SupabaseAccess)
 UnitTests/                                      (ServiceCollectionExtensions)
 TestInfrastructure/
@@ -184,7 +185,7 @@ TestInfrastructure/
 - `TestInfrastructure/LocalSupabaseFixture.cs` is a separate copy from the Shared one. It uses the **service role**,
   like the Function, and inserts pending `meal_imports` rows owned by the seeded user (`InsertPendingRowAsync`,
   `InsertPictureRowAsync`). It also uploads pictures for the seeded user (`UploadPictureAsync`, `image/jpeg`), counts
-  today's picture jobs, and deletes rows and uploaded objects (through the Storage API) at the end.
+  today's picture jobs (`CountTodaysPictureJobsAsync`), checks whether a picture still exists (`PictureExistsAsync`), and deletes rows and uploaded objects (through the Storage API) at the end.
 - `TestInfrastructure/FakeAnthropicHandler.cs` is an `HttpMessageHandler` that drives the real Anthropic SDK client
   offline for the analyzer's unit tests. **No test calls the real AI service.** The handler's integration tests use a
   fake `IMealPictureAnalyzer`.
@@ -230,7 +231,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     and resolves imports with the service role, and makes password reset links (`GenerateRecoveryLinkAsync`, the
     admin `generate_link`) so no email is sent. For picture imports it reads a job's stored picture paths
     (`GetMealImportPicturesAsync`) and removes uploaded pictures through the Storage API (`DeleteStoredPicturesAsync`;
-    deleting a user doesn't remove their objects, so a test that uploads cleans up itself).
+    deleting a user doesn't remove their objects, so a test that uploads cleans up itself) and checks that one is gone
+    (`StoredPictureExistsAsync`).
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:

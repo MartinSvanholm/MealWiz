@@ -184,4 +184,28 @@
     <value>Photo of a recipe or a dish</value>
     <comment>Hint under the picture menu item</comment>
   </data>
+  <data name="EditMeal_GuessedNote" xml:space="preserve">
+    <value>Guessed from your picture, check ingredients and amounts</value>
+    <comment>Note on the Edit meal form when the meal was guessed from a picture of a dish</comment>
+  </data>
+  <data name="EditMeal_Retry" xml:space="preserve">
+    <value>Not right? Try again with a hint</value>
+    <comment>Button on a form filled from pictures: opens the hint field</comment>
+  </data>
+  <data name="EditMeal_HintLabel" xml:space="preserve">
+    <value>Hint</value>
+    <comment>Label of the hint field</comment>
+  </data>
+  <data name="EditMeal_HintPlaceholder" xml:space="preserve">
+    <value>It's lasagne</value>
+    <comment>Example in the hint field</comment>
+  </data>
+  <data name="EditMeal_HintSubmit" xml:space="preserve">
+    <value>Try again</value>
+    <comment>Button: analyse the pictures again with the hint</comment>
+  </data>
+  <data name="EditMeal_Retrying" xml:space="preserve">
+    <value>Trying again…</value>
+    <comment>Shown while the pictures are analysed again</comment>
+  </data>
 </root>

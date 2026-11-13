@@ -1,5 +1,8 @@
 using Bunit;
+using FluentResults;
 using MealWiz.Shared.Features.Meals.EditMeal;
+using MealWiz.Shared.Features.MealImport.Models;
+using Moq;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;
 
@@ -120,5 +123,127 @@ public class EditMealPageTests : ComponentTestBase
         await DisposeComponentsAsync();
 
         Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    // ---- A form filled from a picture job (MEA-143) ----
+
+    private void FormFrom(bool guessed, bool pictureJob = true)
+    {
+        MealImport.SetupGet(m => m.FormImport).Returns(new MealWiz.Shared.Features.MealImport.Models.MealImport
+        {
+            PicturePaths = pictureJob ? ["u/j/0.jpg"] : null,
+            SourceUrl = pictureJob ? null : "https://example.com/r",
+            Status = MealImportStatus.Succeeded,
+            ParsedMeal = new ParsedMeal { Name = "Lasagne", IsGuessed = guessed }
+        });
+    }
+
+    [Fact]
+    public void A_guessed_meal_shows_the_note()
+    {
+        FormFrom(guessed: true);
+
+        var cut = Render<EditMealPage>();
+
+        Assert.Equal("Guessed from your picture, check ingredients and amounts", cut.Find(TestId("edit-meal-guessed-note")).TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData(false, true)]  // a written recipe
+    [InlineData(false, false)] // a link import
+    public void No_note_for_a_written_recipe_or_a_link_import(bool guessed, bool pictureJob)
+    {
+        FormFrom(guessed, pictureJob);
+
+        var cut = Render<EditMealPage>();
+
+        Assert.Empty(cut.FindAll(TestId("edit-meal-guessed-note")));
+    }
+
+    [Fact]
+    public void A_hand_made_meal_has_no_note_and_no_retry()
+    {
+        var cut = Render<EditMealPage>();
+
+        Assert.Empty(cut.FindAll(TestId("edit-meal-guessed-note")));
+        Assert.Empty(cut.FindAll(TestId("edit-meal-retry")));
+        Assert.Empty(cut.FindAll(TestId("edit-meal-retry-section")));
+    }
+
+    [Fact]
+    public void The_retry_is_offered_for_a_picture_job_only()
+    {
+        FormFrom(guessed: false, pictureJob: false);
+        Assert.Empty(Render<EditMealPage>().FindAll(TestId("edit-meal-retry")));
+    }
+
+    [Fact]
+    public void An_empty_hint_cannot_be_sent_and_a_typed_one_is_passed_to_the_retry()
+    {
+        FormFrom(guessed: true);
+        MealImport.Setup(m => m.RetryWithHint(It.IsAny<string>())).ReturnsAsync(Result.Ok());
+        var cut = Render<EditMealPage>();
+
+        cut.Find(TestId("edit-meal-retry")).Click();
+        Assert.True(cut.Find(TestId("edit-meal-hint-submit")).HasAttribute("disabled"));
+
+        cut.Find(InputOf("edit-meal-hint-input")).Input("   ");
+        Assert.True(cut.Find(TestId("edit-meal-hint-submit")).HasAttribute("disabled"));
+
+        cut.Find(InputOf("edit-meal-hint-input")).Input("it's pizza");
+        cut.Find(TestId("edit-meal-hint-submit")).Click();
+
+        MealImport.Verify(m => m.RetryWithHint("it's pizza"), Times.Once);
+    }
+
+    [Fact]
+    public void While_a_retry_runs_the_form_shows_progress_and_no_hint_field()
+    {
+        FormFrom(guessed: true);
+        MealImport.SetupGet(m => m.IsRetrying).Returns(true);
+
+        var cut = Render<EditMealPage>();
+
+        Assert.Contains("Trying again", cut.Find(TestId("edit-meal-retrying")).TextContent);
+        Assert.Empty(cut.FindAll(TestId("edit-meal-hint-submit")));
+        Assert.Empty(cut.FindAll(TestId("edit-meal-retry")));
+    }
+
+    [Fact]
+    public void A_failed_retry_shows_why_and_keeps_the_hint_field_open()
+    {
+        FormFrom(guessed: true);
+        MealImport.SetupGet(m => m.RetryErrorMessage).Returns("We couldn't find a meal or a recipe in the picture.");
+
+        var cut = Render<EditMealPage>();
+
+        Assert.Contains("We couldn't find a meal", cut.Find(TestId("edit-meal-retry-error")).TextContent);
+        Assert.NotNull(cut.Find(InputOf("edit-meal-hint-input")));
+    }
+
+    [Fact]
+    public async Task Leaving_during_a_retry_continues_it_in_the_background()
+    {
+        FormFrom(guessed: true);
+        MealImport.SetupGet(m => m.IsRetrying).Returns(true);
+        Render<EditMealPage>();
+
+        await DisposeComponentsAsync();
+
+        MealImport.Verify(m => m.ContinueInBackground(), Times.Once);
+        MealImport.Verify(m => m.ReleaseFormImport(), Times.Never);
+    }
+
+    [Fact]
+    public async Task Leaving_the_form_releases_its_pictures()
+    {
+        FormFrom(guessed: true);
+        MealImport.Setup(m => m.ReleaseFormImport()).Returns(Task.CompletedTask);
+        Render<EditMealPage>();
+
+        await DisposeComponentsAsync();
+
+        MealImport.Verify(m => m.ReleaseFormImport(), Times.Once);
+        MealImport.Verify(m => m.ContinueInBackground(), Times.Never);
     }
 }

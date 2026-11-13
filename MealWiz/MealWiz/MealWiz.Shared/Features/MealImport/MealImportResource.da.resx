@@ -48,6 +48,9 @@
   <data name="Import_HintTooLong" xml:space="preserve">
     <value>Hintet må højst være på {0} tegn.</value>
   </data>
+  <data name="Import_HintRequired" xml:space="preserve">
+    <value>Skriv først et hint.</value>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Indtast et gyldigt link til måltidet (der starter med http:// eller https://).</value>
   </data>

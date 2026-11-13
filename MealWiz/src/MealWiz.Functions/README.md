@@ -145,6 +145,15 @@ two are not secret). The deploy workflow sets **no** app settings, so these must
 Set a monthly spend limit on the workspace in the Claude Console: a reached limit shows up as an HTTP 400 from the API,
 which the Function writes as `ai_unavailable`.
 
+## Picture clean-up (CleanUpMealPictures)
+
+A timer Function that runs every day at 03:17 UTC and deletes every picture in the `meal-import-pictures` bucket that is
+older than 24 hours, so no picture outlives about two days. The app already deletes a job's pictures when the meal is
+saved or the form is left; this catches the rest (a closed tab, a failed job, a deleted account). It names the old pictures
+with the service-role-only database function `expired_meal_import_pictures` and removes them through the Storage API, in
+batches of 100 and at most 5,000 per run. Nothing needs setting: the timer uses `AzureWebJobsStorage`, which the app
+already has (locally, `UseDevelopmentStorage=true` needs Azurite for the timer to start).
+
 ## DeleteAccount
 
 `POST /api/DeleteAccount` deletes the signed-in user's account and everything they own (the `created_by` foreign

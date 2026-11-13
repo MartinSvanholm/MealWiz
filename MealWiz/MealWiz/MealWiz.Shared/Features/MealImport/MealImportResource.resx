@@ -58,6 +58,9 @@
   <data name="Import_HintTooLong" xml:space="preserve">
     <value>The hint can be at most {0} characters.</value>
   </data>
+  <data name="Import_HintRequired" xml:space="preserve">
+    <value>Type a hint first.</value>
+  </data>
   <data name="Import_InvalidUrl" xml:space="preserve">
     <value>Please enter a valid meal URL (starting with http:// or https://).</value>
     <comment>Validation error on the URL field</comment>

@@ -1,5 +1,6 @@
 using Anthropic;
 using MealWiz.Functions.Functions.AnalyzeMealPicture;
+using MealWiz.Functions.Functions.CleanUpMealPictures;
 using MealWiz.Functions.Functions.DeleteAccount;
 using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
@@ -43,6 +44,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<IMealPictureAnalyzer, AnthropicMealPictureAnalyzer>();
         services.AddScoped<IAnalyzeMealPictureHandler, AnalyzeMealPictureHandler>();
+        services.AddScoped<ICleanUpMealPicturesHandler, CleanUpMealPicturesHandler>();
 
         services.AddHttpClient(DeleteAccountHandler.HttpClientName);
         services.AddScoped<IDeleteAccountHandler, DeleteAccountHandler>();
