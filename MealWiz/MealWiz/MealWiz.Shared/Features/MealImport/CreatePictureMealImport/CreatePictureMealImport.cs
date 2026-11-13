@@ -39,7 +39,6 @@ public static class CreatePictureMealImport
                 Status = MealImportStatus.Pending
             }.MapToMealImportDb();
 
-            mealImportDb.CreatedAt = DateTime.UtcNow;
             mealImportDb.CreatedBy = new Guid(userId);
 
             var insertResult = await Result.Try(async Task<ModeledResponse<MealImportDb>> () => await supabaseClient

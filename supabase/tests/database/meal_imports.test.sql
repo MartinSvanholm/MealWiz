@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(44);
+select plan(47);
 
 -- Fixtures, inserted as postgres (the table owner, so RLS doesn't apply).
 insert into auth.users (id, email, aud, role) values
@@ -303,6 +303,40 @@ select results_eq(
        returning id $$,
     $$ values ('00000000-0000-0000-0000-00000000a101'::uuid) $$,
     'user A can fail their own pending picture job'
+);
+
+-- created_at is the server's time for a client's insert (the Function's freshness check and daily limit rely on it).
+insert into public.meal_imports (id, created_by, picture_paths, language, created_at)
+values ('00000000-0000-0000-0000-00000000a201', 'aaaaaaaa-0000-0000-0000-0000000000a1',
+        array['aaaaaaaa-0000-0000-0000-0000000000a1/j/0.jpg'], 'en', now() - interval '1 day');
+insert into public.meal_imports (id, created_by, source_url, created_at)
+values ('00000000-0000-0000-0000-00000000a202', 'aaaaaaaa-0000-0000-0000-0000000000a1',
+        'https://example.test/a202', now() + interval '1 hour');
+
+select is(
+    (select created_at from public.meal_imports where id = '00000000-0000-0000-0000-00000000a201'),
+    now(),
+    'a picture job user A inserts with a back-dated created_at gets the server''s time'
+);
+
+select is(
+    (select created_at from public.meal_imports where id = '00000000-0000-0000-0000-00000000a202'),
+    now(),
+    'a link job user A inserts with a future created_at gets the server''s time'
+);
+
+-- The service role (the Function, test fixtures) keeps the created_at it gives.
+reset role;
+set local role service_role;
+
+insert into public.meal_imports (id, created_by, picture_paths, language, created_at)
+values ('00000000-0000-0000-0000-00000000a203', 'aaaaaaaa-0000-0000-0000-0000000000a1',
+        array['aaaaaaaa-0000-0000-0000-0000000000a1/j/0.jpg'], 'en', '2026-01-01T00:00:00Z');
+
+select is(
+    (select created_at from public.meal_imports where id = '00000000-0000-0000-0000-00000000a203'),
+    '2026-01-01T00:00:00Z'::timestamptz,
+    'the service role keeps the created_at it inserts'
 );
 
 select * from finish();

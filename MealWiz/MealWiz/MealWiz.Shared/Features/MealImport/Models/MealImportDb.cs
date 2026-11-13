@@ -42,7 +42,8 @@ public class MealImportDb : BaseModel
     [Column("error_message")]
     public string? ErrorMessage { get; set; }
 
-    [Column("created_at")]
+    // Set by the database on insert (a trigger forces now() for a client's insert), so it is never sent.
+    [Column("created_at", ignoreOnInsert: true)]
     public DateTime CreatedAt { get; set; }
 
     [Column("updated_at")]

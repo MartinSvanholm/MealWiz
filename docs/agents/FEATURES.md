@@ -401,6 +401,9 @@ detail for diagnosis.
     the client's update grant.
   - `supabase/migrations/20261112120000_add_meal_import_pictures.sql`: the `meal-import-pictures` bucket with its
     owner-only policies, the picture-job columns and checks, and the four new error codes.
+  - `supabase/migrations/20261113120000_set_meal_import_created_at_on_client_insert.sql`: a trigger that sets
+    `created_at` to the server's `now()` on a client's insert (the Function's freshness check and daily limit rely on
+    it); the service role keeps its own value. The client never sends `created_at`.
 - **Tests:**
   - unit: `Features/MealImport/UnitTests/` (Handlers, Models, State)
   - bUnit: `Features/MealImport/ComponentTests/ImportMealPageTests.cs`
