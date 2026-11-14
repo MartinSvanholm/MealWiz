@@ -1,3 +1,4 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Net;
 using System.Text.Json;
 using FluentResults;
@@ -19,7 +20,7 @@ public class TriggerAnalyzeMealPictureTests
     {
         var stub = new StubHandler(HttpStatusCode.OK);
 
-        var result = await SendAsync(stub, new MealImportFunctionOptions("https://functions.example.com/", "secret"));
+        var result = await SendAsync(stub, new FunctionAppOptions("https://functions.example.com/", "secret"));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(HttpMethod.Post, stub.Request!.Method);
@@ -36,7 +37,7 @@ public class TriggerAnalyzeMealPictureTests
     [InlineData(HttpStatusCode.Unauthorized)]
     public async Task FunctionAnswersWithAnError_Fails(HttpStatusCode statusCode)
     {
-        var result = await SendAsync(new StubHandler(statusCode), new MealImportFunctionOptions("https://functions.example.com", "key"));
+        var result = await SendAsync(new StubHandler(statusCode), new FunctionAppOptions("https://functions.example.com", "key"));
 
         Assert.True(result.IsFailed);
         Assert.Equal($"The meal import service responded with {(int)statusCode}.", result.Errors[0].Message);
@@ -47,13 +48,13 @@ public class TriggerAnalyzeMealPictureTests
     {
         var stub = new StubHandler(HttpStatusCode.OK);
 
-        var result = await SendAsync(stub, new MealImportFunctionOptions("", ""));
+        var result = await SendAsync(stub, new FunctionAppOptions("", ""));
 
         Assert.True(result.IsFailed);
         Assert.Null(stub.Request);
     }
 
-    private static async Task<Result> SendAsync(StubHandler stub, MealImportFunctionOptions options)
+    private static async Task<Result> SendAsync(StubHandler stub, FunctionAppOptions options)
     {
         using var httpClient = new HttpClient(stub);
         var handler = new Trigger.Handler(httpClient, options, TestLocalizer.For<MealImportResource>());

@@ -282,6 +282,22 @@ public class MealImportStateContainerRetryTests
     }
 
     [Fact]
+    public async Task ARetryLeftInTheBackground_NoLongerBelongsToAForm_SoAnotherMealIsNotAffected()
+    {
+        await OpenFormWith(Guessed("Lasagne"));
+        await _container.RetryWithHint("pizza");
+        Assert.True(_container.IsRetrying);
+
+        _container.ContinueInBackground();
+
+        // Edit meal opened for another meal while the retry still runs: no note, no retry section, Save enabled.
+        Assert.True(_container.IsImportInProgress);
+        Assert.Null(_container.FormImport);
+        Assert.False(_container.IsRetrying);
+        Assert.Null(_container.RetryErrorMessage);
+    }
+
+    [Fact]
     public async Task AFailedRetryLeftInTheBackground_ToastsAndDeletesThePictures()
     {
         await OpenFormWith(Guessed("Lasagne"));

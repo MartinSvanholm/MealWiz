@@ -156,7 +156,7 @@ public sealed class SessionKeeperTests : IDisposable
     public async Task SignOutLocally_destroys_the_session_stops_refreshing_and_raises_Changed()
     {
         Store(createdAgo: TimeSpan.FromMinutes(5));
-        var keeper = Keeper(out _);
+        var keeper = Keeper(out var client);
         await keeper.StartAsync();
         var changed = 0;
         keeper.Changed += () => changed++;
@@ -165,6 +165,8 @@ public sealed class SessionKeeperTests : IDisposable
         await AdvanceAsync(TimeSpan.FromHours(2));
 
         Assert.True(keeper.IsSignedOut);
+        Assert.Null(client.Auth.CurrentSession);
+        Assert.Null(client.Auth.CurrentUser);
         Assert.True(_persistence.Destroyed);
         Assert.Equal(1, changed);
         Assert.Equal(0, _endpoint.Requests);
