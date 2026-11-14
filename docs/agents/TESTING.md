@@ -19,10 +19,10 @@ adds every E2E journey.
 | `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
 | `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
-| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler` end to end, `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
+| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler`, `AnalyzeMealPictureHandler` and `CleanUpMealPicturesHandler` end to end (the latter with a fake analyzer and local Storage), `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
 | `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list, deleting a meal with grocery items (12 cases) | smoke | Docker + Chromium |
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
-| `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access | local, full | Docker |
+| `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access, the Storage bucket policies | local, full | Docker |
 
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
 - **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
@@ -38,7 +38,8 @@ adds every E2E journey.
   the CLI lacks its `supabase-go` binary (MEA-72), verify restarts the stack instead.
 - **Starting the stack:** verify starts it without Studio and postgres-meta, as CI does (`--studio` keeps them). On
   Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
-  .NET 10 SDK and the Supabase CLI there.
+  .NET 10 SDK and the Supabase CLI there. The stack includes **Storage** (the `meal-import-pictures` bucket); a running
+  stack that was started without it is stopped (`supabase stop --no-backup`, which wipes local data once) and started again.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
   ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
   the end of the job log names the failed steps and tests.
@@ -63,6 +64,7 @@ runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a jo
 | Localization setup (`Localization/`) | Unit test in `Localization/UnitTests/` | fast, then local |
 | DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
 | A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
+| A Storage bucket or its policies | pgTAP in `supabase/tests/database/` (`meal_import_pictures.test.sql`), plus `storage.buckets` and `policies_are('storage', 'objects', …)` in `00_rls_enabled.test.sql` | local |
 | Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
 | A meal plan flow | Shared tests plus `MealPlanJourneyTests` | local `--e2e MealPlanJourneyTests` |
 | Functions parsing or mapping | Unit tests in `MealWiz/tests/MealWiz.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then local |
@@ -171,6 +173,8 @@ framework reference to ASP.NET Core.
 
 ```
 Functions/ScrapeRecipe/{UnitTests,IntegrationTests}/
+Functions/AnalyzeMealPicture/{UnitTests,IntegrationTests}/
+Functions/CleanUpMealPictures/{UnitTests,IntegrationTests}/
 Shared/{UnitTests,IntegrationTests}/<Area>/     (Fetching, Ingredients, Models, Ssrf, SupabaseAccess)
 UnitTests/                                      (ServiceCollectionExtensions)
 TestInfrastructure/
@@ -179,8 +183,12 @@ TestInfrastructure/
 **Infrastructure:**
 
 - `TestInfrastructure/LocalSupabaseFixture.cs` is a separate copy from the Shared one. It uses the **service role**,
-  like the Function, and inserts pending `meal_imports` rows owned by the seeded user (`InsertPendingRowAsync`). Rows
-  are deleted at the end.
+  like the Function, and inserts pending `meal_imports` rows owned by the seeded user (`InsertPendingRowAsync`,
+  `InsertPictureRowAsync`). It also uploads pictures for the seeded user (`UploadPictureAsync`, `image/jpeg`), counts
+  today's picture jobs (`CountTodaysPictureJobsAsync`), checks whether a picture still exists (`PictureExistsAsync`), and deletes rows and uploaded objects (through the Storage API) at the end.
+- `TestInfrastructure/FakeAnthropicHandler.cs` is an `HttpMessageHandler` that drives the real Anthropic SDK client
+  offline for the analyzer's unit tests. **No test calls the real AI service.** The handler's integration tests use a
+  fake `IMealPictureAnalyzer`.
 - `TestInfrastructure/RecipeTestServer.cs` is a Kestrel server on a random loopback port that serves recipe pages.
   Tests never scrape live sites.
 - `TestInfrastructure/LoopbackAllowingIpAddressGuard.cs` wraps the real `IpAddressGuard` so tests can reach 127.0.0.1
@@ -191,7 +199,7 @@ they open sockets, but they don't need Supabase. `ScrapeRecipeHandlerTests` need
 
 **Contract tests:** `Shared/UnitTests/Models/ContractTests.cs` (here) and
 `MealWiz/tests/MealWiz.Shared.Tests/Features/MealImport/UnitTests/Models/MealImportModelTests.cs` (Shared side)
-compare each side's types with `MealWiz/tests/Contracts/*.json`. Both projects link these files.
+(including `IsGuessed` and the ten error codes) compare each side's types with `MealWiz/tests/Contracts/*.json`. Both projects link these files.
 
 Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoint_WritesFailedStatus`.
 
@@ -221,7 +229,10 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     `DeleteAfterTheTest` (for a user the test signed up through the app), `Drawer`, `ConfirmDrawer`, `Row`, `Expect`.
   - `E2ESupabase` seeds data (`InsertMealAsync`, `InsertPlannedMealAsync`: only plan empty days, it reuses the week's plan)
     and resolves imports with the service role, and makes password reset links (`GenerateRecoveryLinkAsync`, the
-    admin `generate_link`) so no email is sent.
+    admin `generate_link`) so no email is sent. For picture imports it reads a job's stored picture paths
+    (`GetMealImportPicturesAsync`) and removes uploaded pictures through the Storage API (`DeleteStoredPicturesAsync`;
+    deleting a user doesn't remove their objects, so a test that uploads cleans up itself) and checks that one is gone
+    (`StoredPictureExistsAsync`).
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
     `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
 - **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:
@@ -236,7 +247,10 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 ### pgTAP: `supabase/tests/database/`
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
-`grocery_item_sources`, `meal_imports`), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+`grocery_item_sources`, `meal_imports`, and `meal_import_pictures` for the Storage bucket), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+Storage policies live on `storage.objects`, which `supabase_storage_admin` owns: never `alter table` it, only add policies.
+Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
+through the Storage API instead).
 `delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
 another user's). Each table file follows the same pattern:
 

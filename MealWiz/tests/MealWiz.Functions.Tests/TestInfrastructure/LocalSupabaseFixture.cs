@@ -29,6 +29,7 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     private const string RequireSupabaseVariable = "REQUIRE_SUPABASE";
 
     private readonly ConcurrentBag<Guid> _createdRowIds = [];
+    private readonly ConcurrentBag<string> _uploadedPaths = [];
 
     public string? SkipReason { get; private set; }
     public bool IsAvailable => SkipReason is null;
@@ -70,16 +71,65 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
     /// <summary>
     /// Inserts <paramref name="row"/> as-is (any status, parsed_meal, error_message), owned by the seed user.
     /// </summary>
-    public async Task<MealImportDb> InsertRowAsync(MealImportDb row)
+    public async Task<MealImportDb> InsertRowAsync(MealImportDb row, DateTime? createdAt = null)
     {
         row.CreatedBy = SeededUserId;
-        row.CreatedAt = DateTime.UtcNow;
+        row.CreatedAt = createdAt ?? DateTime.UtcNow;
 
         var response = await Client.From<MealImportDb>().Insert(row);
 
         var inserted = response.Model ?? throw new InvalidOperationException("Inserting a meal_imports row returned no row.");
         _createdRowIds.Add(inserted.Id);
         return inserted;
+    }
+
+    /// <summary>A picture job owned by the seeded user: <paramref name="paths"/> as given, optionally backdated.</summary>
+    public Task<MealImportDb> InsertPictureRowAsync(
+        IEnumerable<string> paths, string language = "en", string? hint = null, DateTime? createdAt = null,
+        RecipeImportStatus status = RecipeImportStatus.Pending) =>
+        InsertRowAsync(new MealImportDb
+        {
+            PicturePaths = paths.ToList(),
+            Language = language,
+            Hint = hint,
+            Status = status.ToDbValue()
+        }, createdAt);
+
+    /// <summary>Uploads a JPEG for the seeded user (the path is <c>{userId}/{jobId}/{index}.jpg</c>) and returns the path.</summary>
+    public async Task<string> UploadPictureAsync(byte[] bytes, Guid? jobId = null, int index = 0)
+    {
+        var path = $"{SeededUserId:D}/{(jobId ?? Guid.NewGuid()):D}/{index}.jpg";
+        await Client.Storage.From("meal-import-pictures").Upload(bytes, path,
+            new Supabase.Storage.FileOptions { ContentType = "image/jpeg", Upsert = true }, onProgress: null, inferContentType: false);
+        _uploadedPaths.Add(path);
+        return path;
+    }
+
+    /// <summary>Whether the picture is still in Storage (the service role can read any object).</summary>
+    public async Task<bool> PictureExistsAsync(string path)
+    {
+        try
+        {
+            var bytes = await Client.Storage.From("meal-import-pictures").Download(path, (EventHandler<float>?)null);
+            return bytes.Length > 0;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The seeded user's picture jobs (no source_url, any status) created in the current UTC day.</summary>
+    public async Task<int> CountTodaysPictureJobsAsync()
+    {
+        var dayStart = DateTime.UtcNow.Date;
+        var seededUserId = SeededUserId; // Postgrest's Where can't read a static field, only a local
+        return await Client.From<MealImportDb>()
+            .Where(x => x.CreatedBy == seededUserId)
+            .Filter("source_url", Supabase.Postgrest.Constants.Operator.Is, "null")
+            .Filter("created_at", Supabase.Postgrest.Constants.Operator.GreaterThanOrEqual, dayStart.ToString("o"))
+            .Filter("created_at", Supabase.Postgrest.Constants.Operator.LessThan, dayStart.AddDays(1).ToString("o"))
+            .Count(Supabase.Postgrest.Constants.CountType.Exact);
     }
 
     public Task<MealImportDb?> GetRowAsync(Guid id) =>
@@ -92,6 +142,12 @@ public sealed class LocalSupabaseFixture : IAsyncLifetime
         foreach (var id in _createdRowIds)
         {
             await Client.From<MealImportDb>().Where(x => x.Id == id).Delete();
+        }
+
+        // Storage objects aren't removed with SQL; use the API.
+        if (!_uploadedPaths.IsEmpty)
+        {
+            await Client.Storage.From("meal-import-pictures").Remove(_uploadedPaths.ToList());
         }
     }
 

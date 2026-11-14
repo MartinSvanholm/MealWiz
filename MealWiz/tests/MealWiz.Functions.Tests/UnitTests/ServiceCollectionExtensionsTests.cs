@@ -32,5 +32,7 @@ public class ServiceCollectionExtensionsTests
 
         Assert.NotNull(function);
         Assert.NotNull(ActivatorUtilities.CreateInstance<MealWiz.Functions.Functions.DeleteAccount.DeleteAccountFunction>(scope.ServiceProvider));
+        Assert.NotNull(ActivatorUtilities.CreateInstance<MealWiz.Functions.Functions.AnalyzeMealPicture.AnalyzeMealPictureFunction>(scope.ServiceProvider));
+        Assert.NotNull(ActivatorUtilities.CreateInstance<MealWiz.Functions.Functions.CleanUpMealPictures.CleanUpMealPicturesFunction>(scope.ServiceProvider));
     }
 }

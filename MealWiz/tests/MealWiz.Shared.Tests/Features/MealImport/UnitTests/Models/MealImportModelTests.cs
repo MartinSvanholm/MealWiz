@@ -68,9 +68,66 @@ public class MealImportModelTests
 
         Assert.Equal("Æblepandekager", parsed.Name);
         Assert.Equal("Pisk dejen.\nSteg pandekagerne.", parsed.Recipe);
+        Assert.True(parsed.IsGuessed);
         Assert.Collection(parsed.Ingredients,
             i => { Assert.Equal("sødmælk", i.Name); Assert.Equal("2½ dl", i.Amount); },
             i => { Assert.Equal("salt", i.Name); Assert.Equal("", i.Amount); });
+    }
+
+    [Fact]
+    public void ParsedMeal_WithoutIsGuessed_ReadsAsNotGuessed()
+    {
+        var parsed = JsonConvert.DeserializeObject<ParsedMeal>("""{"Name":"Pasta"}""")!;
+
+        Assert.False(parsed.IsGuessed);
+    }
+
+    [Fact]
+    public void PictureImport_RoundTripsThroughDbModel()
+    {
+        var original = new MealImportModel
+        {
+            Id = Guid.NewGuid(),
+            CreatedBy = Guid.NewGuid(),
+            SourceUrl = null,
+            PicturePaths = ["u/j/0.jpg", "u/j/1.jpg"],
+            Language = "da",
+            Hint = "it's lasagne"
+        };
+
+        var db = original.MapToMealImportDb();
+        var roundTripped = new MealImportModel(db);
+
+        Assert.Null(db.SourceUrl);
+        Assert.Equal(new[] { "u/j/0.jpg", "u/j/1.jpg" }, db.PicturePaths);
+        Assert.Equal("da", db.Language);
+        Assert.Equal("it's lasagne", db.Hint);
+        Assert.True(roundTripped.IsPictureImport);
+        Assert.Equal(original.PicturePaths, roundTripped.PicturePaths);
+        Assert.Equal(original.Language, roundTripped.Language);
+        Assert.Equal(original.Hint, roundTripped.Hint);
+    }
+
+    [Fact]
+    public void LinkImport_IsNotAPictureImport()
+    {
+        var link = new MealImportModel(new MealImportDb { SourceUrl = "https://example.com/r" });
+
+        Assert.False(link.IsPictureImport);
+        Assert.Null(link.PicturePaths);
+    }
+
+    [Fact]
+    public void PathFor_IsLowercaseUserJobIndexJpg()
+    {
+        var userId = Guid.Parse("AAAAAAAA-0000-0000-0000-0000000000A1");
+        var jobId = Guid.Parse("BBBBBBBB-0000-0000-0000-0000000000B2");
+
+        Assert.Equal("aaaaaaaa-0000-0000-0000-0000000000a1/bbbbbbbb-0000-0000-0000-0000000000b2/2.jpg",
+            MealImportPictures.PathFor(userId, jobId, 2));
+        Assert.Equal("meal-import-pictures", MealImportPictures.BucketId);
+        Assert.Equal(3, MealImportPictures.MaxPictures);
+        Assert.Equal(200, MealImportPictures.MaxHintLength);
     }
 
     [Fact]

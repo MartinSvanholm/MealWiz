@@ -89,4 +89,17 @@ public class AddMealMenuTests : ComponentTestBase
         // MudMenuItem closes the menu (async) before it runs OnClick.
         cut.WaitForAssertion(() => Assert.Equal("meals/import", CurrentPath));
     }
+
+    [Fact]
+    public void Picture_item_opens_the_import_page_in_picture_mode()
+    {
+        var cut = RenderWithPopovers<AddMealMenu>();
+
+        cut.Find(TestId("add-meal-menu")).Click();
+        var item = Popovers.WaitForElement(TestId("add-meal-import-picture"));
+        Assert.Contains("Create from a picture", item.TextContent);
+        item.Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("meals/import?source=picture", CurrentPath));
+    }
 }

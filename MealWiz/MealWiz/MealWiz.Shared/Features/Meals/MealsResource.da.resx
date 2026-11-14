@@ -135,4 +135,28 @@
   <data name="DeleteMeal_ReviewTitle" xml:space="preserve">
     <value>Fjern fra indkøbslisten?</value>
   </data>
+  <data name="AddMealMenu_ImportPicture" xml:space="preserve">
+    <value>Opret fra et billede</value>
+  </data>
+  <data name="AddMealMenu_ImportPictureHint" xml:space="preserve">
+    <value>Billede af en opskrift eller en ret</value>
+  </data>
+  <data name="EditMeal_GuessedNote" xml:space="preserve">
+    <value>Gættet ud fra dit billede, tjek ingredienser og mængder</value>
+  </data>
+  <data name="EditMeal_Retry" xml:space="preserve">
+    <value>Passer det ikke? Prøv igen med et hint</value>
+  </data>
+  <data name="EditMeal_HintLabel" xml:space="preserve">
+    <value>Hint</value>
+  </data>
+  <data name="EditMeal_HintPlaceholder" xml:space="preserve">
+    <value>Det er lasagne</value>
+  </data>
+  <data name="EditMeal_HintSubmit" xml:space="preserve">
+    <value>Prøv igen</value>
+  </data>
+  <data name="EditMeal_Retrying" xml:space="preserve">
+    <value>Prøver igen…</value>
+  </data>
 </root>

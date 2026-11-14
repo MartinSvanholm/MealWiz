@@ -481,7 +481,16 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
         return ("missing", "The Supabase CLI isn't on PATH. Install it (https://supabase.com/docs/guides/local-development/cli/getting-started) or run `verify fast`.");
 
     if (Run("supabase", ["status", "-o", "env"], log) == 0 && File.ReadAllText(log).Contains("API_URL="))
-        return ("running", null);
+    {
+        // A stack started before Storage joined the test stacks has no Storage container. Restart it once (this wipes
+        // local data; the database is reset from the migrations and seed anyway).
+        var storageLog = Path.Combine(outDir, "docker-storage.log");
+        if (Run("docker", ["ps", "--filter", "name=supabase_storage_", "--format", "{{.Names}}"], storageLog) != 0
+            || File.ReadAllText(storageLog).Contains("supabase_storage_"))
+            return ("running", null);
+        Progress("the running Supabase stack has no Storage: restarting it once (local data is wiped)");
+        Run("supabase", ["stop", "--no-backup"], log);
+    }
 
     if (Run("docker", ["info"], log) != 0 && !StartDockerDaemon(log))
         return ("no Docker", "Docker isn't running, and local, smoke and full need the local Supabase stack. Start Docker Desktop, or run `verify fast`.");
@@ -489,7 +498,7 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
     // The same services CI leaves out. Studio (and postgres-meta, which it needs) only with --studio: no test uses
     // them, and they're a large part of the first image pull.
     Progress("supabase start (first start pulls images and can take a few minutes)");
-    var excluded = "imgproxy,edge-runtime,storage-api,logflare,vector,supavisor" + (studio ? "" : ",studio,postgres-meta");
+    var excluded = "imgproxy,edge-runtime,logflare,vector,supavisor" + (studio ? "" : ",studio,postgres-meta");
     if (Run("supabase", ["start", "-x", excluded], log) == 0)
         return ("started", null);
 

@@ -107,6 +107,53 @@ Not implemented. This would replace the function key with real per-user auth:
 4. The trigger can then drop to `AuthorizationLevel.Anonymous`, and the key, the GitHub secret and the workflow step
    can go away.
 
+## Picture analysis (AnalyzeMealPicture)
+
+`POST /api/AnalyzeMealPicture` with `{ "jobId": "<meal_imports.id>" }` (function key, like ScrapeRecipe) resolves a
+**picture job**: a `meal_imports` row with no `source_url` and 1–3 `picture_paths` in the private `meal-import-pictures`
+bucket. It downloads the pictures, sends them to Claude in one request, and writes `succeeded` + `parsed_meal` (with
+`IsGuessed` true when the meal was guessed from a dish) or `failed` + an `error_code` back to the row. Responses mean the
+same as ScrapeRecipe's (200 resolved, 400 bad body, 502 row unreachable and still pending).
+
+**Error codes** the Function writes: `no_meal_found` (the pictures show no meal), `daily_limit_reached`,
+`picture_unreadable` (a path that isn't the owner's, a missing or unreadable picture, a picture the AI service refuses),
+`ai_unavailable` (no API key, a refusal or cut-off answer, rate limit, server error or the self-set spend limit),
+`timed_out` (a stale row, or the AI call outlasting its budget) and `unknown`.
+
+**Timeouts** (a job must finish inside the Function's 2-minute limit): all picture downloads 25 s together; the AI call
+80 s in all, with 40 s per attempt and one retry.
+
+| Setting (Azure app setting) | Meaning |
+|---|---|
+| `Anthropic:ApiKey` (`Anthropic__ApiKey`) | Required. A key from a dedicated "MealWiz" workspace in the Claude Console. Without it every picture job fails with `ai_unavailable` and the API is never called. |
+| `Anthropic:Model` (`Anthropic__Model`) | Default `claude-haiku-5-5`. Switch to `claude-sonnet-5-5` if handwriting quality is too low. |
+| `MealPictureImport:DailyLimit` (`MealPictureImport__DailyLimit`) | Analyses per user per UTC day. Default 20; 0 turns analysis off; an invalid or negative value means 20. |
+
+Locally, put these in `local.settings.json` (gitignored). The key goes in no committed file.
+
+**Setting the key in Azure** without it ending up in your shell history: read it silently into a variable, then pass it
+from there:
+
+```bash
+read -rs ANTHROPIC_KEY && az functionapp config appsettings set --name MealWizFunctions \
+  --resource-group <resource group> --settings "Anthropic__ApiKey=$ANTHROPIC_KEY" > /dev/null; unset ANTHROPIC_KEY
+```
+
+Do the same for `Anthropic__Model` and `MealPictureImport__DailyLimit` if you want other values than the defaults (those
+two are not secret). The deploy workflow sets **no** app settings, so these must be set by hand once.
+
+Set a monthly spend limit on the workspace in the Claude Console: a reached limit shows up as an HTTP 400 from the API,
+which the Function writes as `ai_unavailable`.
+
+## Picture clean-up (CleanUpMealPictures)
+
+A timer Function that runs every day at 03:17 UTC and deletes every picture in the `meal-import-pictures` bucket that is
+older than 24 hours, so no picture outlives about two days. The app already deletes a job's pictures when the meal is
+saved or the form is left; this catches the rest (a closed tab, a failed job, a deleted account). It names the old pictures
+with the service-role-only database function `expired_meal_import_pictures` and removes them through the Storage API, in
+batches of 100 and at most 5,000 per run. Nothing needs setting: the timer uses `AzureWebJobsStorage`, which the app
+already has (locally, `UseDevelopmentStorage=true` needs Azurite for the timer to start).
+
 ## DeleteAccount
 
 `POST /api/DeleteAccount` deletes the signed-in user's account and everything they own (the `created_by` foreign

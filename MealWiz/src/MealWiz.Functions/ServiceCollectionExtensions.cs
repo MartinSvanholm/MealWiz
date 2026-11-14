@@ -1,3 +1,6 @@
+using Anthropic;
+using MealWiz.Functions.Functions.AnalyzeMealPicture;
+using MealWiz.Functions.Functions.CleanUpMealPictures;
 using MealWiz.Functions.Functions.DeleteAccount;
 using MealWiz.Functions.Functions.ScrapeRecipe;
 using MealWiz.Functions.Functions.ScrapeRecipe.Parsing;
@@ -5,6 +8,7 @@ using MealWiz.Functions.Shared.Fetching;
 using MealWiz.Functions.Shared.Ingredients;
 using MealWiz.Functions.Shared.Ssrf;
 using MealWiz.Functions.Shared.SupabaseAccess;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MealWiz.Functions;
@@ -29,6 +33,18 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IServiceRoleSupabaseClientFactory, ServiceRoleSupabaseClientFactory>();
         services.AddScoped<IScrapeRecipeHandler, ScrapeRecipeHandler>();
+
+        // The picture analysis. The SDK makes its own HttpClient; FN-02 is about user-supplied URLs, and this one only
+        // calls the Anthropic API. One attempt may take 40 s and there is one retry; the analyzer caps the whole call at 80 s.
+        services.AddSingleton<IAnthropicClient>(sp => new AnthropicClient
+        {
+            ApiKey = sp.GetRequiredService<IConfiguration>()["Anthropic:ApiKey"],
+            MaxRetries = 1,
+            Timeout = TimeSpan.FromSeconds(40)
+        });
+        services.AddSingleton<IMealPictureAnalyzer, AnthropicMealPictureAnalyzer>();
+        services.AddScoped<IAnalyzeMealPictureHandler, AnalyzeMealPictureHandler>();
+        services.AddScoped<ICleanUpMealPicturesHandler, CleanUpMealPicturesHandler>();
 
         services.AddHttpClient(DeleteAccountHandler.HttpClientName);
         services.AddScoped<IDeleteAccountHandler, DeleteAccountHandler>();

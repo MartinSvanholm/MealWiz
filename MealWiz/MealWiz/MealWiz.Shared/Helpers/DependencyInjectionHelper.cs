@@ -24,6 +24,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
         services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
+        services.AddScoped<IMealPictureShrinker, MealPictureShrinker>();
 
         // IStringLocalizer<T> over the .resx resources (no ResourcesPath: resources sit beside their marker type),
         // and MudBlazor's built-in texts from the shared resource. Replace, so the order against AddMudServices

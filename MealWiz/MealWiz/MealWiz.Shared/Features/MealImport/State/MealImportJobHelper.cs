@@ -23,6 +23,12 @@ public static class MealImportJobHelper
         return true;
     }
 
+    /// <summary>The language a picture job is written in: the culture's two-letter code if the app supports it, else English.</summary>
+    public static string LanguageFor(System.Globalization.CultureInfo culture) =>
+        Localization.SupportedLanguages.IsSupported(culture.TwoLetterISOLanguageName)
+            ? culture.TwoLetterISOLanguageName.ToLowerInvariant()
+            : Localization.SupportedLanguages.DefaultCode;
+
     /// <summary>
     /// A running import takes precedence over an earlier failure — the failure is superseded once it resolves.
     /// </summary>
@@ -72,7 +78,10 @@ public static class MealImportJobHelper
         {
             Id = jobId,
             CreatedBy = current?.CreatedBy ?? Guid.Empty,
-            SourceUrl = current?.SourceUrl ?? string.Empty,
+            SourceUrl = current?.SourceUrl ?? (current?.IsPictureImport == true ? null : string.Empty),
+            PicturePaths = current?.PicturePaths,
+            Language = current?.Language,
+            Hint = current?.Hint,
             CreatedAt = current?.CreatedAt ?? now,
             Status = MealImportStatus.Failed,
             ErrorCode = errorCode,

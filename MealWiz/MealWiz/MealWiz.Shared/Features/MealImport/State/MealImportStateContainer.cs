@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentResults;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -40,6 +41,18 @@ public interface IMealImportStateContainer
     /// </summary>
     bool IsRunningInBackground { get; }
 
+    /// <summary>
+    /// The job whose result the Edit meal form currently shows (set by <see cref="OpenInForm"/>, replaced by a successful
+    /// retry, cleared by <see cref="ReleaseFormImport"/>). Null for a hand-made or existing meal.
+    /// </summary>
+    Models.MealImport? FormImport { get; }
+
+    /// <summary>True while a retry with a hint (<see cref="RetryWithHint"/>) is running: the form disables Save and shows progress.</summary>
+    bool IsRetrying { get; }
+
+    /// <summary>Why the last retry failed, for the form to show (the form itself is left as it was). Cleared by the next retry.</summary>
+    string? RetryErrorMessage { get; }
+
     event Action OnStateChanged;
 
     void NotifyStateChanged();
@@ -47,11 +60,36 @@ public interface IMealImportStateContainer
     Task<Result> StartImport(string url);
 
     /// <summary>
+    /// Starts a picture job: uploads the (already shrunk) JPEGs, inserts the pending row with the app language, then asks
+    /// the AnalyzeMealPicture Function. From there it behaves like <see cref="StartImport"/>. One job at a time.
+    /// </summary>
+    Task<Result> StartPictureImport(IReadOnlyList<byte[]> pictures);
+
+    /// <summary>
     /// Hands the running job over to the container, which then saves a success (no review step) or toasts a failure.
     /// Allowed at any point while the job is in progress, so leaving the Import page early backgrounds it too.
     /// No-op when nothing is in progress.
     /// </summary>
     void ContinueInBackground();
+
+    /// <summary>
+    /// The Import page calls this when a foreground success opens the Edit meal form, before <see cref="ResetJob"/>:
+    /// the form's job is then <see cref="FormImport"/>.
+    /// </summary>
+    void OpenInForm();
+
+    /// <summary>
+    /// Analyses the form's pictures again with a hint, as a new job on the same pictures (no upload). On success the
+    /// Edit meal form is replaced with the new meal; on failure it is left as it was and <see cref="RetryErrorMessage"/> is
+    /// set. Fails for a blank or too long hint, while another job runs, or when the form isn't a picture job.
+    /// </summary>
+    Task<Result> RetryWithHint(string hint);
+
+    /// <summary>
+    /// The form is saved or left: deletes the form job's pictures (best effort, silent) and forgets the job.
+    /// A no-op without a picture job.
+    /// </summary>
+    Task ReleaseFormImport();
 
     /// <summary>Clears a finished job back to <see cref="MealImportJobStatus.Idle"/>. No-op while one is in progress.</summary>
     void ResetJob();
@@ -92,6 +130,7 @@ public class MealImportStateContainer(
     // Id of the job still awaiting its result; cleared exactly once, by whichever path resolves it first.
     private Guid? activeJobId;
     private IAsyncDisposable? subscription;
+    private bool isRetryJob;
     private CancellationTokenSource? jobTimersCts;
 
     public MealImportJobStatus JobStatus { get; private set; } = MealImportJobStatus.Idle;
@@ -100,6 +139,9 @@ public class MealImportStateContainer(
     public Models.MealImport? LatestImport { get; private set; }
     public bool CanContinueInBackground { get; private set; }
     public bool IsRunningInBackground { get; private set; }
+    public Models.MealImport? FormImport { get; private set; }
+    public string? RetryErrorMessage { get; private set; }
+    public bool IsRetrying => isRetryJob && IsImportInProgress;
 
     public bool IsImportInProgress => JobStatus is MealImportJobStatus.Submitting or MealImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == MealImportStatus.Failed;
@@ -128,34 +170,72 @@ public class MealImportStateContainer(
         if (!MealImportJobHelper.TryNormalizeMealUrl(url, out var sourceUrl)) return Result.Fail(localizer["Import_InvalidUrl"]);
 
         var jobId = Guid.NewGuid();
+        BeginSubmitting();
 
+        var createResult = await mediator.Send(new CreateMealImport.CreateMealImport.Command(jobId, sourceUrl));
+        if (createResult.IsFailed) return FailSubmitting(createResult.Errors.First().Message, createResult.ToResult());
+
+        return await AwaitResult(jobId, createResult.Value,
+            () => mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl)));
+    }
+
+    public async Task<Result> StartPictureImport(IReadOnlyList<byte[]> pictures)
+    {
+        if (IsImportInProgress) return Result.Fail(localizer["Import_AlreadyInProgress"]);
+
+        var jobId = Guid.NewGuid();
+        BeginSubmitting();
+
+        // The upload comes before the row insert: the Function rejects a row older than 5 minutes.
+        var uploadResult = await mediator.Send(new UploadMealImportPictures.UploadMealImportPictures.Command(jobId, pictures));
+        if (uploadResult.IsFailed) return FailSubmitting(uploadResult.Errors.First().Message, uploadResult.ToResult());
+
+        var paths = uploadResult.Value;
+        var createResult = await mediator.Send(new CreatePictureMealImport.CreatePictureMealImport.Command(
+            jobId, paths, MealImportJobHelper.LanguageFor(CultureInfo.CurrentUICulture), Hint: null));
+        if (createResult.IsFailed)
+        {
+            // Best effort: nothing else refers to these pictures.
+            await mediator.Send(new DeleteMealImportPictures.DeleteMealImportPictures.Command(paths));
+            return FailSubmitting(createResult.Errors.First().Message, createResult.ToResult());
+        }
+
+        return await AwaitResult(jobId, createResult.Value,
+            () => mediator.Send(new TriggerAnalyzeMealPicture.TriggerAnalyzeMealPicture.Command(jobId)));
+    }
+
+    private void BeginSubmitting()
+    {
         CurrentImport = null;
         JobErrorMessage = null;
         CanContinueInBackground = false;
         IsRunningInBackground = false;
         JobStatus = MealImportJobStatus.Submitting;
         NotifyStateChanged();
+    }
 
-        var createResult = await mediator.Send(new CreateMealImport.CreateMealImport.Command(jobId, sourceUrl));
-        if (createResult.IsFailed)
-        {
-            JobErrorMessage = createResult.Errors.First().Message;
-            JobStatus = MealImportJobStatus.Failed;
+    private Result FailSubmitting(string message, Result failure)
+    {
+        JobErrorMessage = message;
+        JobStatus = MealImportJobStatus.Failed;
 
-            // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
-            if (IsRunningInBackground)
-                snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
+        // Backgrounded while submitting (the user left the Import page), so nothing else would show this.
+        if (IsRunningInBackground)
+            snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
 
-            NotifyStateChanged();
-            return createResult.ToResult();
-        }
+        NotifyStateChanged();
+        return failure;
+    }
 
+    /// <summary>The part of a job that is the same for links and pictures, once its pending row exists.</summary>
+    private async Task<Result> AwaitResult(Guid jobId, Models.MealImport created, Func<Task<Result>> trigger)
+    {
         lock (jobLock) activeJobId = jobId;
-        CurrentImport = createResult.Value;
-        LatestImport = createResult.Value;
+        CurrentImport = created;
+        LatestImport = created;
 
         // Subscribe before the Function runs so its write-back can't be missed. If subscribing fails we
-        // carry on anyway: the row is re-read once the Function has acked (see RunScrape).
+        // carry on anyway: the row is re-read once the Function has acked (see RunTrigger).
         var subscribeResult = await realtimeSubscriber.Subscribe(jobId, update => Track(OnRowUpdated(jobId, update)));
         if (subscribeResult.IsSuccess)
             subscription = subscribeResult.Value;
@@ -164,9 +244,80 @@ public class MealImportStateContainer(
         NotifyStateChanged();
 
         StartJobTimers(jobId);
-        Track(RunScrape(jobId, sourceUrl));
+        Track(RunTrigger(jobId, trigger));
 
         return Result.Ok();
+    }
+
+    public void OpenInForm()
+    {
+        FormImport = CurrentImport;
+        RetryErrorMessage = null;
+    }
+
+    public async Task<Result> RetryWithHint(string hint)
+    {
+        if (IsImportInProgress) return Result.Fail(localizer["Import_AlreadyInProgress"]);
+
+        var trimmed = hint?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0) return Result.Fail(localizer["Import_HintRequired"]);
+        if (trimmed.Length > MealImportPictures.MaxHintLength)
+            return Result.Fail(localizer["Import_HintTooLong", MealImportPictures.MaxHintLength]);
+
+        var form = FormImport;
+        if (form is not { IsPictureImport: true }) return Result.Fail(localizer["Import_NotFound"]);
+
+        RetryErrorMessage = null;
+        var jobId = Guid.NewGuid();
+        isRetryJob = true;
+        BeginSubmitting();
+
+        // The same pictures, a new job: nothing is uploaded again.
+        var createResult = await mediator.Send(new CreatePictureMealImport.CreatePictureMealImport.Command(
+            jobId, form.PicturePaths!, MealImportJobHelper.LanguageFor(CultureInfo.CurrentUICulture), trimmed));
+        if (createResult.IsFailed)
+        {
+            var message = createResult.Errors.First().Message;
+            var failure = FailSubmitting(message, createResult.ToResult());
+            isRetryJob = false;
+
+            // Still on the form: it stays as it was, with the reason next to the hint.
+            if (!IsRunningInBackground)
+            {
+                RetryErrorMessage = message;
+                JobStatus = MealImportJobStatus.Idle;
+                JobErrorMessage = null;
+                NotifyStateChanged();
+            }
+
+            return failure;
+        }
+
+        return await AwaitResult(jobId, createResult.Value,
+            () => mediator.Send(new TriggerAnalyzeMealPicture.TriggerAnalyzeMealPicture.Command(jobId)));
+    }
+
+    public async Task ReleaseFormImport()
+    {
+        var form = FormImport;
+        FormImport = null;
+        RetryErrorMessage = null;
+
+        if (form is { IsPictureImport: true })
+            await DeletePicturesQuietly(form.PicturePaths!);
+    }
+
+    /// <summary>A failed delete never blocks or shows anything: the daily clean-up catches what is left.</summary>
+    private async Task DeletePicturesQuietly(IReadOnlyList<string> paths)
+    {
+        try
+        {
+            await mediator.Send(new DeleteMealImportPictures.DeleteMealImportPictures.Command(paths));
+        }
+        catch (Exception)
+        {
+            // Silent on purpose.
+        }
     }
 
     public void ContinueInBackground()
@@ -216,11 +367,11 @@ public class MealImportStateContainer(
     /// job via <see cref="FailPendingJob"/>.</item>
     /// </list>
     /// </summary>
-    private async Task RunScrape(Guid jobId, string sourceUrl)
+    private async Task RunTrigger(Guid jobId, Func<Task<Result>> trigger)
     {
         try
         {
-            var triggerResult = await mediator.Send(new TriggerScrapeRecipe.TriggerScrapeRecipe.Command(jobId, sourceUrl));
+            var triggerResult = await trigger();
             if (!IsActive(jobId)) return;
 
             if (await TryResolveFromRow(jobId)) return;
@@ -289,6 +440,10 @@ public class MealImportStateContainer(
 
         row = MealImportJobHelper.EnsureUsableResult(row);
 
+        var wasRetry = isRetryJob;
+        isRetryJob = false;
+        var backgrounded = IsRunningInBackground;
+
         CurrentImport = row;
         LatestImport = row;
         CanContinueInBackground = false;
@@ -300,16 +455,44 @@ public class MealImportStateContainer(
                 JobErrorMessage = null;
                 JobStatus = MealImportJobStatus.Succeeded;
 
-                if (IsRunningInBackground)
+                if (backgrounded)
                     await SaveImportedMeal(row.ParsedMeal!);
+                else if (wasRetry)
+                {
+                    // The form is still open: it now shows the new meal.
+                    mealsStateContainer.MealToEdit = row.ParsedMeal!.ToMeal();
+                    FormImport = row;
+                    RetryErrorMessage = null;
+                }
             }
             else
             {
                 JobErrorMessage = localizer.ToMessage(row.ErrorCode);
                 JobStatus = MealImportJobStatus.Failed;
 
-                if (IsRunningInBackground)
+                if (backgrounded)
                     snackbar.Add(localizer["ImportToast_Failed", JobErrorMessage], Severity.Error);
+                else if (wasRetry)
+                {
+                    // The form stays as it was.
+                    RetryErrorMessage = JobErrorMessage;
+                    LatestImport = FormImport ?? LatestImport;
+                }
+            }
+
+            // A backgrounded picture job has nobody left to retry it: its pictures go now.
+            if (backgrounded && row.IsPictureImport)
+            {
+                FormImport = null;
+                await DeletePicturesQuietly(row.PicturePaths!);
+            }
+
+            // A retry's outcome lives in the form, not in the Import page's job state.
+            if (wasRetry && !backgrounded)
+            {
+                JobStatus = MealImportJobStatus.Idle;
+                CurrentImport = null;
+                JobErrorMessage = null;
             }
         }
         catch (Exception)

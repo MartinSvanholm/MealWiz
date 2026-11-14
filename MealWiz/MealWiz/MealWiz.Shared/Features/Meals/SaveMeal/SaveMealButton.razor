@@ -1,4 +1,6 @@
 ﻿@inject IMealsStateContainer _mealsStateContainer
+@inject IMealImportStateContainer _mealImportStateContainer
+@implements IDisposable
 @inject NavigationManager _navigationManager
 @inject ISnackbar _snackbar
 @inject ISender _mediator
@@ -8,6 +10,7 @@
 <MudLoadingButton
 data-testid="save-meal-button"
 @bind-Loading="IsSaving"
+Disabled="@_mealImportStateContainer.IsRetrying"
 ButtonVariant="ButtonVariant.Button"
 Variant="Variant.Filled"
 Color="Color.Dark"
@@ -16,6 +19,13 @@ OnClick="SaveMeal">@S["Common_Save"]</MudLoadingButton>
 
 @code {
     private bool IsSaving { get; set; }
+
+    protected override void OnInitialized() => _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
+
+    // Save is disabled while a retry runs. Realtime callbacks can arrive off the UI thread (MAUI).
+    private void OnImportStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;
 
     public async Task SaveMeal()
     {
@@ -47,6 +57,9 @@ OnClick="SaveMeal">@S["Common_Save"]</MudLoadingButton>
                     return;
                 }
             }
+
+            // The form's pictures are no longer needed (best effort, silent).
+            await _mealImportStateContainer.ReleaseFormImport();
 
             _snackbar.Add(L["SaveMeal_Saved"], Severity.Success);
             _navigationManager.NavigateTo("/meals");

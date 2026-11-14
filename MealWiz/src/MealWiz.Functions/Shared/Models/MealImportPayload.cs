@@ -15,6 +15,9 @@ public class MealImportPayload
     public required string Name { get; init; }
     public string Recipe { get; init; } = string.Empty;
     public List<MealImportIngredientPayload> Ingredients { get; init; } = [];
+
+    /// <summary>True only when the meal was guessed from a picture of a dish. Reads as false when absent.</summary>
+    public bool IsGuessed { get; init; }
 }
 
 public class MealImportIngredientPayload

@@ -19,6 +19,7 @@ public class ContractTests
         {
             Name = "Æblepandekager",
             Recipe = "Pisk dejen.\nSteg pandekagerne.",
+            IsGuessed = true,
             Ingredients =
             [
                 new MealImportIngredientPayload { Name = "sødmælk", Amount = "2½ dl" },
@@ -32,6 +33,32 @@ public class ContractTests
         var expected = JToken.Parse(ReadContract("parsed_meal.json"));
         var actual = JToken.Parse(json);
         Assert.True(JToken.DeepEquals(expected, actual), $"Expected {expected}\nbut got {actual}");
+    }
+
+    [Fact]
+    public void MealImportPayload_WithoutIsGuessed_ReadsAsNotGuessed()
+    {
+        var payload = JsonConvert.DeserializeObject<MealImportPayload>("""{"Name":"Pasta"}""")!;
+
+        Assert.False(payload.IsGuessed);
+    }
+
+    [Fact]
+    public void MealImportDb_PictureJob_SerializesItsColumns()
+    {
+        var row = new MealImportDb
+        {
+            PicturePaths = ["u/j/0.jpg", "u/j/1.jpg"],
+            Language = "da",
+            Hint = "lasagne"
+        };
+
+        var json = JObject.Parse(JsonConvert.SerializeObject(row, Supabase.Postgrest.Client.SerializerSettings()));
+
+        Assert.Equal(new[] { "u/j/0.jpg", "u/j/1.jpg" }, json["picture_paths"]!.Select(t => (string?)t));
+        Assert.Equal("da", (string?)json["language"]);
+        Assert.Equal("lasagne", (string?)json["hint"]);
+        Assert.Equal(JTokenType.Null, json["source_url"]!.Type);
     }
 
     [Fact]

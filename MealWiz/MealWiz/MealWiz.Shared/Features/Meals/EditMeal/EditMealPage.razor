@@ -1,6 +1,7 @@
 @page "/meals/edit"
 @attribute [Authorize]
 @inject IMealsStateContainer _mealsStateContainer
+@inject IMealImportStateContainer _mealImportStateContainer
 @inject NavigationManager _navigationManager
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IStringLocalizer<MealsResource> L
@@ -25,6 +26,44 @@
         </section>
 
         <div class="mw-edit-meal-body">
+            @if (_mealImportStateContainer.FormImport?.ParsedMeal?.IsGuessed == true)
+            {
+                <p class="mw-edit-meal-note" role="note" data-testid="edit-meal-guessed-note">@L["EditMeal_GuessedNote"]</p>
+            }
+
+            @if (_mealImportStateContainer.FormImport is { IsPictureImport: true })
+            {
+                <div class="mw-edit-meal-retry" data-testid="edit-meal-retry-section">
+                    @if (_mealImportStateContainer.IsRetrying)
+                    {
+                        <span class="mw-edit-meal-retrying" data-testid="edit-meal-retrying">
+                            <MudProgressCircular Indeterminate Color="Color.Primary" Size="Size.Small" />
+                            @L["EditMeal_Retrying"]
+                        </span>
+                    }
+                    else
+                    {
+                        @if (_mealImportStateContainer.RetryErrorMessage is not null)
+                        {
+                            <span class="mw-edit-meal-retry-error" role="alert" data-testid="edit-meal-retry-error">@_mealImportStateContainer.RetryErrorMessage</span>
+                        }
+
+                        @if (!_showHint && _mealImportStateContainer.RetryErrorMessage is null)
+                        {
+                            <button type="button" class="mw-edit-meal-retry-link" data-testid="edit-meal-retry" @onclick="() => _showHint = true">@L["EditMeal_Retry"]</button>
+                        }
+                        else
+                        {
+                            <MudTextField data-testid="edit-meal-hint-input" @bind-Value="_hint" Immediate
+                                          Label="@L["EditMeal_HintLabel"]" Placeholder="@L["EditMeal_HintPlaceholder"]"
+                                          MaxLength="@MealImportPictures.MaxHintLength" Variant="Variant.Outlined" />
+                            <MudButton data-testid="edit-meal-hint-submit" Variant="Variant.Filled" Color="Color.Primary"
+                                       Disabled="@string.IsNullOrWhiteSpace(_hint)" OnClick="OnRetryClick">@L["EditMeal_HintSubmit"]</MudButton>
+                        }
+                    }
+                </div>
+            }
+
             <div class="mw-edit-meal-section">
                 <h2 class="mw-edit-meal-heading">@L["EditMeal_Recipe"]</h2>
                 <MudTextFieldExtended @ref="_recipeField" data-testid="meal-recipe-input" Lines="4" Placeholder="@L["EditMeal_RecipePlaceholder"]"
@@ -58,12 +97,35 @@
 @code {
     private MudTextFieldExtended<string> _recipeField = default!;
 
+    private MealWiz.Shared.Features.MealImport.Models.MealImport? _formImport;
+    private bool _showHint;
+    private string _hint = string.Empty;
+
     private string ItemCount => L.Plural("EditMeal_Items", _mealsStateContainer.MealToEdit.Ingredients.Count);
 
     protected override void OnInitialized()
     {
         _mealsStateContainer.OnStateChanged += StateHasChanged;
+        _formImport = _mealImportStateContainer.FormImport;
+        _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
     }
+
+    // Realtime callbacks can arrive off the UI thread (MAUI).
+    private void OnImportStateChanged() => InvokeAsync(() =>
+    {
+        if (!ReferenceEquals(_mealImportStateContainer.FormImport, _formImport))
+        {
+            _formImport = _mealImportStateContainer.FormImport;
+            _showHint = false;
+            _hint = string.Empty;
+        }
+
+        StateHasChanged();
+    });
+
+    // The hint stays in its field while the retry runs and after a failed one, so the user can try again. A successful
+    // retry replaces the form's job, and the section starts over.
+    private async Task OnRetryClick() => await _mealImportStateContainer.RetryWithHint(_hint);
 
     private void OnBackClick()
     {
@@ -74,5 +136,13 @@
     {
         _drawerStateContainer.CloseDrawer();
         _mealsStateContainer.OnStateChanged -= StateHasChanged;
+        _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;
+
+        // Left during a retry: it finishes in the background. Otherwise the form is discarded (a save has already
+        // released it), so its pictures go.
+        if (_mealImportStateContainer.IsRetrying)
+            _mealImportStateContainer.ContinueInBackground();
+        else
+            _ = _mealImportStateContainer.ReleaseFormImport();
     }
 }

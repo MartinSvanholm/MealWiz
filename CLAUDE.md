@@ -64,7 +64,7 @@ Rules for every session:
 - **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
   picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
-- **Server:** one Azure Functions app (`ScrapeRecipe` for meal import, `DeleteAccount`; isolated worker, net10.0).
+- **Server:** one Azure Functions app (`ScrapeRecipe`, `AnalyzeMealPicture` and the daily `CleanUpMealPictures` for meal import, `DeleteAccount`; isolated worker, net10.0).
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
 
 ## Projects
@@ -73,7 +73,7 @@ Rules for every session:
 | `MealWiz/MealWiz/MealWiz.Shared/` | All feature code: pages, components, handlers, state, models |
 | `MealWiz/MauiWASM/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
 | `MealWiz/MealWiz/MealWiz/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
-| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe` and `DeleteAccount`. Deliberately doesn't reference Shared |
+| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe`, `AnalyzeMealPicture`, `CleanUpMealPictures` and `DeleteAccount`. Deliberately doesn't reference Shared |
 | `MealWiz/tests/MealWiz.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
 | `MealWiz/tests/MealWiz.Functions.Tests/` | Unit and integration tests for Functions |
 | `MealWiz/tests/MauiWASM.Tests/` | Web-head unit tests and Playwright E2E |
