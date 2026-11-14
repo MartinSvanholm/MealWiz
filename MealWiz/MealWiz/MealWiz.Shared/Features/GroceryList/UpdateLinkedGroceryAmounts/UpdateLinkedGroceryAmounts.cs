@@ -11,8 +11,9 @@ namespace MealWiz.Shared.Features.GroceryList.UpdateLinkedGroceryAmounts;
 
 /// <summary>
 /// Brings grocery items up to date with ingredients whose amount changed after they were added. Checks that each item is
-/// the user's and still to buy and that each source belongs to its item, sets each item's amount once, then each
-/// source's remembered amount. The steps run in turn and are not atomic: a failure stops and returns its error.
+/// the user's and still to buy and that each source belongs to its item, then sets each item's amount once and each
+/// source's remembered amount in one transaction (the <c>update_linked_grocery_amounts</c> database function): a
+/// failure changes nothing.
 /// </summary>
 public static class UpdateLinkedGroceryAmounts
 {
@@ -54,33 +55,26 @@ public static class UpdateLinkedGroceryAmounts
             if (request.Updates.Any(u => !sources.Any(s => s.Id == u.SourceId && s.GroceryItemId == u.GroceryItemId)))
                 return Result.Fail(LinkNotFound());
 
-            foreach (var group in request.Updates.GroupBy(u => u.GroceryItemId))
-            {
-                var id = group.Key;
-                var amount = group.First().FinalAmount;
-                var updateResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
-                    .From<GroceryItemDb>()
-                    .Where(x => x.Id == id)
-                    .Where(x => x.IsPicked == false)
-                    .Set(x => x.Amount!, amount)
-                    .Set(x => x.UpdatedAt!, DateTime.UtcNow)
-                    .Update(cancellationToken: cancellationToken));
-                if (updateResult.IsFailed) return updateResult.ToResult();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail(ItemNotFound());
-            }
+            // One call, one transaction: each item's amount once, then each link's remembered amount.
+            var itemAmounts = request.Updates
+                .GroupBy(u => u.GroceryItemId)
+                .Select(group => new { id = group.Key, amount = group.First().FinalAmount })
+                .ToList();
+            var sourceAmounts = request.Updates
+                .GroupBy(u => u.SourceId)
+                .Select(group => new { id = group.Key, amount = group.Last().SourceAmount })
+                .ToList();
 
-            foreach (var update in request.Updates)
-            {
-                var sourceId = update.SourceId;
-                var sourceAmount = update.SourceAmount;
-                var updateResult = await Result.Try(async Task<ModeledResponse<GroceryItemSourceDb>> () => await supabaseClient
-                    .From<GroceryItemSourceDb>()
-                    .Where(x => x.Id == sourceId)
-                    .Set(x => x.Amount, sourceAmount)
-                    .Update(cancellationToken: cancellationToken));
-                if (updateResult.IsFailed) return updateResult.ToResult();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail(LinkNotFound());
-            }
+            var written = await Result.Try(
+                async Task () => await supabaseClient.Rpc("update_linked_grocery_amounts", new Dictionary<string, object>
+                {
+                    ["item_amounts"] = itemAmounts,
+                    ["source_amounts"] = sourceAmounts
+                }),
+                exception => exception.Message.Contains("grocery_item_source_not_found") ? new Error(LinkNotFound()).CausedBy(exception)
+                    : exception.Message.Contains("grocery_item_not_found") ? new Error(ItemNotFound()).CausedBy(exception)
+                    : ResultHelper.MapException(exception));
+            if (written.IsFailed) return written;
 
             return Result.Ok();
         }

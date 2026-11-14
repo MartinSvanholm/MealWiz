@@ -251,6 +251,8 @@ There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_me
 Storage policies live on `storage.objects`, which `supabase_storage_admin` owns: never `alter table` it, only add policies.
 Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
 through the Storage API instead).
+`atomic_write_functions.test.sql` covers the database functions handlers call for a multi-step write: all or nothing, RLS
+still applied, signed-in users only.
 `delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
 another user's). Each table file follows the same pattern:
 

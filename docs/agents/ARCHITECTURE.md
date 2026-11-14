@@ -423,6 +423,27 @@ The static class has the same name as its namespace's last segment, so callers w
 `new GetAllMeals.GetAllMeals.Query()` or alias it (`using CreateMealPlanAction = …CreateMealPlan.CreateMealPlan;`, as
 in `Features/MealPlans/State/MealPlanStateContainer.cs`).
 
+### Multi-step writes (ARCH-04, ARCH-05, DB-01)
+
+A handler that changes more than one row set in a way that must not be half done (an item and its link, a link and
+the amount it lowers, a week's plan and its days) writes through **one database function**, so the writes are one
+transaction. The handler keeps the reading, the checks and any arithmetic, and passes the function the rows to write:
+
+```csharp
+// Features/GroceryList/UnlinkGroceryItems/UnlinkGroceryItems.cs
+return await Result.Try(async Task () => await supabaseClient.Rpc(
+    "unlink_grocery_items", new Dictionary<string, object> { ["item_ids"] = ids }));
+```
+
+- The function is `security invoker` with `set search_path = ''`, so it runs as the caller and RLS still decides what
+  they may touch. `revoke all ... from public, anon` and `grant execute ... to authenticated, service_role`.
+- A write that matches fewer rows than it was given `raise`s a named error (`grocery_item_not_found`); the handler
+  maps that name to its message in `Result.Try`'s catch handler. Everything the call did rolls back.
+- The functions live in `supabase/migrations/20261114140000_add_atomic_write_functions.sql`, with pgTAP in
+  `supabase/tests/database/atomic_write_functions.test.sql`. A new one gets its own migration and cases there.
+- Not converted yet: `SettleLinkedItems` in `GroceryListStateContainer` (three requests) and the meal-plus-ingredients
+  saves (`SaveMealButton`, `MealImportStateContainer.SaveImportedMeal`).
+
 ### Result handling (ARCH-05, ARCH-06)
 
 - `Helpers/ResultHelper.cs` provides two things:
