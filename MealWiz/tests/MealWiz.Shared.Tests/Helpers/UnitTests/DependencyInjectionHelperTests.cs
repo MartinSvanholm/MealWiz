@@ -30,4 +30,19 @@ public class DependencyInjectionHelperTests
         Assert.Equal(implementation, descriptor.ImplementationType);
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
+
+    [Fact]
+    public void RegisterScopedServices_HttpClientOutwaitsTheFunctionAppsTwoMinuteLimit()
+    {
+        var services = new ServiceCollection();
+        services.RegisterScopedServices();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
+
+        // host.json of MealWiz.Functions: "functionTimeout": "00:02:00".
+        Assert.True(httpClient.Timeout > TimeSpan.FromMinutes(2));
+        Assert.Equal(DependencyInjectionHelper.HttpClientTimeout, httpClient.Timeout);
+    }
 }

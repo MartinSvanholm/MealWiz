@@ -263,9 +263,9 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
     off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
     with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
@@ -314,7 +314,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table)
 
 ## MealImport
 
@@ -347,7 +347,7 @@ a picture job `edit-meal-retry` ("Not right? Try again with a hint") opens `edit
 `edit-meal-hint-submit` (disabled for a blank hint). `RetryWithHint` starts a new job on the same picture paths with the
 hint (no upload); while it runs (`IsRetrying`, `edit-meal-retrying`) `save-meal-button` is disabled. A successful retry
 replaces the form and `FormImport`; a failed one leaves the form and shows `RetryErrorMessage`
-(`edit-meal-retry-error`); leaving the form during a retry backgrounds it. `ReleaseFormImport()` deletes the form job's
+(`edit-meal-retry-error`); leaving the form during a retry backgrounds it and clears `FormImport` and `IsRetrying`, so another meal opened meanwhile is not affected. `ReleaseFormImport()` deletes the form job's
 pictures (best effort, silent, through `DeleteMealImportPictures`): after a full save (`SaveMealButton`) and when the form
 is left; a backgrounded picture job deletes its pictures when it finishes. What's left (a closed tab, a failed job) goes in
 the daily clean-up ([Functions: CleanUpMealPictures](#functions-cleanupmealpictures)).
@@ -392,7 +392,7 @@ detail for diagnosis.
     `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
     `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
-  - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
+  - `Services/FunctionApp/FunctionAppOptions.cs`: the Function app's URL and key from appsettings (the `MealImportFunction` section); also used by Account's DeleteAccount.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
     `supabase_realtime` publication.
@@ -651,6 +651,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
+- **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
@@ -663,7 +664,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
-  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
+  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services. It also registers the app's `HttpClient`, with a 150 s timeout (`HttpClientTimeout`): longer than the Function app's two-minute limit, so the client never gives up on an import the Function may still finish.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
   - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
@@ -704,14 +705,14 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **MauiWASM (web, deployed to Azure Static Web Apps).**
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
-    `RegisterScopedServices()`, the MediatR assembly scan, auth, `TimeProvider`, `HttpClient`,
-    `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
+    `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
+    `FunctionAppOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
   - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
-    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `MealImportFunctionOptions` and the Supabase `Client`
+    MediatR assembly scan, auth, `TimeProvider`, `FunctionAppOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.

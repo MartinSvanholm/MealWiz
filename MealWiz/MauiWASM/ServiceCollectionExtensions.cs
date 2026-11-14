@@ -4,6 +4,7 @@ using MauiWASM.Provider;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Services.Authentication;
+using MealWiz.Shared.Services.FunctionApp;
 using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
 using Supabase;
@@ -30,8 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddAuthorizationCore();
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped(_ => new HttpClient());
-        services.AddSingleton(new MealImportFunctionOptions(
+        services.AddSingleton(new FunctionAppOptions(
             configuration["MealImportFunction:url"] ?? string.Empty,
             configuration["MealImportFunction:key"]));
 
