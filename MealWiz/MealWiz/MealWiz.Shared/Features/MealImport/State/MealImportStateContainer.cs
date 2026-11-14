@@ -43,11 +43,15 @@ public interface IMealImportStateContainer
 
     /// <summary>
     /// The job whose result the Edit meal form currently shows (set by <see cref="OpenInForm"/>, replaced by a successful
-    /// retry, cleared by <see cref="ReleaseFormImport"/>). Null for a hand-made or existing meal.
+    /// retry, cleared by <see cref="ReleaseFormImport"/> and when a retry is backgrounded). Null for a hand-made or
+    /// existing meal.
     /// </summary>
     Models.MealImport? FormImport { get; }
 
-    /// <summary>True while a retry with a hint (<see cref="RetryWithHint"/>) is running: the form disables Save and shows progress.</summary>
+    /// <summary>
+    /// True while a retry with a hint (<see cref="RetryWithHint"/>) is running for the open form: the form disables Save
+    /// and shows progress. False once the retry is backgrounded (its form was left).
+    /// </summary>
     bool IsRetrying { get; }
 
     /// <summary>Why the last retry failed, for the form to show (the form itself is left as it was). Cleared by the next retry.</summary>
@@ -96,16 +100,16 @@ public interface IMealImportStateContainer
 }
 
 /// <summary>
-/// Runs one meal import job at a time: inserts the pending meal_imports row, subscribes to it via Realtime,
-/// then calls the Function. The row is the source of truth for the outcome. Registered as scoped, which is
-/// app-lifetime in both WASM and BlazorWebView, so a background job keeps resolving after the user leaves the Import page.
+/// Runs one meal import job at a time: inserts the pending meal_imports row, then calls the Function, which answers
+/// once it has written the row. The row is the source of truth for the outcome: it is re-read when the call returns,
+/// and polled if it is still pending then. Registered as scoped, which is app-lifetime in both WASM and BlazorWebView,
+/// so a background job keeps resolving after the user leaves the Import page.
 ///
-/// Realtime callbacks can arrive off the UI thread (MAUI), so components should subscribe to
-/// <see cref="StateContainerBase.OnStateChanged"/> with <c>() => InvokeAsync(StateHasChanged)</c>.
+/// A job resolves from a timer or a continuation, which can be off the UI thread (MAUI), so components should subscribe
+/// to <see cref="StateContainerBase.OnStateChanged"/> with <c>() => InvokeAsync(StateHasChanged)</c>.
 /// </summary>
 public class MealImportStateContainer(
     IMediator mediator,
-    IMealImportRealtimeSubscriber realtimeSubscriber,
     IMealsStateContainer mealsStateContainer,
     ISnackbar snackbar,
     TimeProvider timeProvider,
@@ -119,6 +123,9 @@ public class MealImportStateContainer(
     /// </summary>
     public static readonly TimeSpan ResultTimeout = TimeSpan.FromMinutes(3);
 
+    /// <summary>How often a row that is still pending after the Function answered is read again.</summary>
+    public static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
+
     // English details stored in error_message for diagnosis only; the user sees the message for the error code.
     private const string UnreachableDetail = "The import Function could not be called, or answered with an error.";
     private const string TimedOutDetail = "No result within the client's timeout.";
@@ -129,7 +136,6 @@ public class MealImportStateContainer(
 
     // Id of the job still awaiting its result; cleared exactly once, by whichever path resolves it first.
     private Guid? activeJobId;
-    private IAsyncDisposable? subscription;
     private bool isRetryJob;
     private CancellationTokenSource? jobTimersCts;
 
@@ -141,7 +147,7 @@ public class MealImportStateContainer(
     public bool IsRunningInBackground { get; private set; }
     public Models.MealImport? FormImport { get; private set; }
     public string? RetryErrorMessage { get; private set; }
-    public bool IsRetrying => isRetryJob && IsImportInProgress;
+    public bool IsRetrying => isRetryJob && IsImportInProgress && !IsRunningInBackground;
 
     public bool IsImportInProgress => JobStatus is MealImportJobStatus.Submitting or MealImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == MealImportStatus.Failed;
@@ -228,25 +234,19 @@ public class MealImportStateContainer(
     }
 
     /// <summary>The part of a job that is the same for links and pictures, once its pending row exists.</summary>
-    private async Task<Result> AwaitResult(Guid jobId, Models.MealImport created, Func<Task<Result>> trigger)
+    private Task<Result> AwaitResult(Guid jobId, Models.MealImport created, Func<Task<Result>> trigger)
     {
         lock (jobLock) activeJobId = jobId;
         CurrentImport = created;
         LatestImport = created;
 
-        // Subscribe before the Function runs so its write-back can't be missed. If subscribing fails we
-        // carry on anyway: the row is re-read once the Function has acked (see RunTrigger).
-        var subscribeResult = await realtimeSubscriber.Subscribe(jobId, update => Track(OnRowUpdated(jobId, update)));
-        if (subscribeResult.IsSuccess)
-            subscription = subscribeResult.Value;
-
         JobStatus = MealImportJobStatus.AwaitingResult;
         NotifyStateChanged();
 
-        StartJobTimers(jobId);
-        Track(RunTrigger(jobId, trigger));
+        var jobToken = StartJobTimers(jobId);
+        Track(RunTrigger(jobId, trigger, jobToken));
 
-        return Result.Ok();
+        return Task.FromResult(Result.Ok());
     }
 
     public void OpenInForm()
@@ -325,6 +325,15 @@ public class MealImportStateContainer(
         if (!IsImportInProgress) return;
 
         IsRunningInBackground = true;
+
+        // A retry is only backgrounded by leaving its form. The form is gone, so it has no job any more: the next meal
+        // opened in Edit meal must not show this one's note, retry section or disabled Save.
+        if (isRetryJob)
+        {
+            FormImport = null;
+            RetryErrorMessage = null;
+        }
+
         NotifyStateChanged();
     }
 
@@ -349,25 +358,16 @@ public class MealImportStateContainer(
     }
 
     /// <summary>
-    /// Realtime callback for the job's row. Only a final status (succeeded/failed) resolves the job;
-    /// other updates to a still-pending row are ignored.
-    /// </summary>
-    private async Task OnRowUpdated(Guid jobId, Models.MealImport update)
-    {
-        if (update.IsResolved)
-            await Resolve(jobId, update);
-    }
-
-    /// <summary>
-    /// Calls the Function, then makes sure the job ends up resolved even if Realtime misses the update:
+    /// Calls the Function, then resolves the job from its row:
     /// <list type="number">
-    /// <item>Re-read the row. If the Function already wrote a result (or an error), use that.</item>
-    /// <item>If the Function acked but the row is still pending, keep waiting for Realtime.</item>
+    /// <item>Re-read the row. The Function answers after writing it, so this normally has the result (or the error).</item>
+    /// <item>If the Function acked but the row is still pending, read it again every <see cref="PollInterval"/> until it
+    /// is resolved or <see cref="ResultTimeout"/> fails the job.</item>
     /// <item>If the Function couldn't be reached, or answered with an error (it couldn't reach the row), fail the
     /// job via <see cref="FailPendingJob"/>.</item>
     /// </list>
     /// </summary>
-    private async Task RunTrigger(Guid jobId, Func<Task<Result>> trigger)
+    private async Task RunTrigger(Guid jobId, Func<Task<Result>> trigger, CancellationToken jobToken)
     {
         try
         {
@@ -376,7 +376,11 @@ public class MealImportStateContainer(
 
             if (await TryResolveFromRow(jobId)) return;
 
-            if (triggerResult.IsSuccess) return;
+            if (triggerResult.IsSuccess)
+            {
+                await PollUntilResolved(jobId, jobToken);
+                return;
+            }
 
             await FailPendingJob(jobId, MealImportErrorCode.Unreachable, UnreachableDetail);
         }
@@ -384,6 +388,27 @@ public class MealImportStateContainer(
         {
             await Resolve(jobId, MealImportJobHelper.CreateLocallyFailedImport(
                 jobId, CurrentImport, MealImportErrorCode.Unknown, ClientErrorDetail, timeProvider.GetUtcNow().UtcDateTime));
+        }
+    }
+
+    /// <summary>
+    /// Reads the row every <see cref="PollInterval"/> until it has a final status. Ends when the job is resolved by
+    /// anything (that cancels <paramref name="jobToken"/>); a read that fails is simply tried again.
+    /// </summary>
+    private async Task PollUntilResolved(Guid jobId, CancellationToken jobToken)
+    {
+        while (IsActive(jobId))
+        {
+            try
+            {
+                await Task.Delay(PollInterval, timeProvider, jobToken);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            if (!IsActive(jobId) || await TryResolveFromRow(jobId)) return;
         }
     }
 
@@ -422,9 +447,9 @@ public class MealImportStateContainer(
     }
 
     /// <summary>
-    /// Finishes the job with its final row. Realtime, the post-ack re-read and the failure fallback can all race
-    /// to get here, so only the first call for the active job does anything. It stops the subscription and the
-    /// job's timers, then publishes the result. For a background job it also does what the Import page would have done:
+    /// Finishes the job with its final row. The post-ack re-read, the polling, the timeout and the failure fallback can
+    /// all race to get here, so only the first call for the active job does anything. It stops the job's timers and
+    /// polling, then publishes the result. For a background job it also does what the Import page would have done:
     /// saves the meal on success, or toasts the error on failure.
     /// </summary>
     private async Task Resolve(Guid jobId, Models.MealImport row)
@@ -436,7 +461,6 @@ public class MealImportStateContainer(
         }
 
         jobTimersCts?.Cancel();
-        await DisposeSubscription();
 
         row = MealImportJobHelper.EnsureUsableResult(row);
 
@@ -540,9 +564,9 @@ public class MealImportStateContainer(
 
     /// <summary>
     /// Starts the job's countdowns: 30 s until the Import page may offer "Continue in background", and
-    /// <see cref="ResultTimeout"/> until the job is given up on. Resolving the job cancels both.
+    /// <see cref="ResultTimeout"/> until the job is given up on. Resolving the job cancels both, and the returned token.
     /// </summary>
-    private void StartJobTimers(Guid jobId)
+    private CancellationToken StartJobTimers(Guid jobId)
     {
         jobTimersCts?.Dispose();
         var cts = new CancellationTokenSource();
@@ -550,6 +574,7 @@ public class MealImportStateContainer(
 
         Track(WaitForBackgroundEligibility(jobId, cts.Token));
         Track(WaitForResultTimeout(jobId, cts.Token));
+        return cts.Token;
     }
 
     /// <summary>
@@ -575,7 +600,7 @@ public class MealImportStateContainer(
 
     /// <summary>
     /// Waits out <see cref="ResultTimeout"/>, then fails a job that is still pending, so the import never spins
-    /// forever. A result written in the meantime (and missed by Realtime) still wins.
+    /// forever. A result written in the meantime still wins.
     /// </summary>
     private async Task WaitForResultTimeout(Guid jobId, CancellationToken cancellationToken)
     {
@@ -609,16 +634,8 @@ public class MealImportStateContainer(
         lock (jobLock) return activeJobId == jobId;
     }
 
-    /// <summary>Unsubscribes from the job's Realtime channel, at most once.</summary>
-    private async Task DisposeSubscription()
-    {
-        var current = Interlocked.Exchange(ref subscription, null);
-        if (current is not null)
-            await current.DisposeAsync();
-    }
-
     /// <summary>
-    /// Keeps hold of fire-and-forget tasks (Function call, timer, Realtime resolution) so tests can await them
+    /// Keeps hold of fire-and-forget tasks (Function call, polling, timers) so tests can await them
     /// via <see cref="WhenBackgroundWorkCompleted"/>. Completed tasks are pruned as new ones are added.
     /// </summary>
     private void Track(Task task)
@@ -635,6 +652,5 @@ public class MealImportStateContainer(
         lock (jobLock) activeJobId = null;
         jobTimersCts?.Cancel();
         jobTimersCts?.Dispose();
-        _ = DisposeSubscription();
     }
 }

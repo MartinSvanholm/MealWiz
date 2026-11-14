@@ -33,7 +33,7 @@ Ways to build one, roughly in this order:
    - a policy → pgTAP in `supabase/tests/database/`, run with `supabase test db`;
    - Function parsing or SSRF → `MealWiz/tests/MealWiz.Functions.Tests/`.
 2. **A Playwright journey or step** in `MealWiz/tests/MauiWASM.Tests/E2ETests/`, when only the real browser shows it
-   (Realtime, navigation, rendering). Its failure artifacts (screenshot, console log) are described in the verify
+   (polling, navigation, rendering). Its failure artifacts (screenshot, console log) are described in the verify
    skill.
 3. **SQL as a specific user**, in a transaction you roll back: `docker exec -i supabase_db_MealWiz psql -U postgres`,
    then `set local role authenticated;` and `set local request.jwt.claims = '{"sub":"<uuid>","role":"authenticated"}';`.

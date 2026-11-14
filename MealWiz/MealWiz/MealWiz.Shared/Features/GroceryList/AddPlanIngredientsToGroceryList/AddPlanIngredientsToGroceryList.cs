@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
@@ -12,8 +14,8 @@ namespace MealWiz.Shared.Features.GroceryList.AddPlanIngredientsToGroceryList;
 /// <summary>
 /// Puts planned ingredients on the grocery list and links each to its planned day. Ingredients already linked from that
 /// planned day are skipped. Entries with an existing item update its amount; the rest become new items (one per name,
-/// is_manual false). Every remaining entry gets a source. The steps run in turn and are not atomic: a failure stops and
-/// returns its error.
+/// is_manual false). Every remaining entry gets a source. The amounts, the new items and the sources are written in one
+/// transaction (the <c>add_plan_ingredients_to_grocery_list</c> database function): a failure changes nothing.
 /// </summary>
 public static class AddPlanIngredientsToGroceryList
 {
@@ -45,76 +47,66 @@ public static class AddPlanIngredientsToGroceryList
                 .ToList();
             if (entries.Count == 0) return Result.Ok(new List<GroceryItem>());
 
-            var updated = new List<GroceryItem>();
-            var itemIdOfEntry = new Dictionary<PlanIngredientToAdd, int>();
+            // Existing items get the amount of their first entry; new items are one per name, with their first entry's
+            // name and amount.
+            var existingItems = entries
+                .Where(e => e.ExistingGroceryItemId != null)
+                .GroupBy(e => e.ExistingGroceryItemId!.Value)
+                .Select(group => new { id = group.Key, amount = group.First().FinalAmount })
+                .ToList();
 
-            foreach (var group in entries.Where(e => e.ExistingGroceryItemId != null).GroupBy(e => e.ExistingGroceryItemId!.Value))
-            {
-                var id = group.Key;
-                var amount = group.First().FinalAmount;
-                var updateResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
-                    .From<GroceryItemDb>()
-                    .Where(x => x.Id == id)
-                    .Set(x => x.Amount!, amount)
-                    .Set(x => x.UpdatedAt!, DateTime.UtcNow)
-                    .Update(cancellationToken: cancellationToken));
-                if (updateResult.IsFailed) return updateResult.ToResult<List<GroceryItem>>();
-                if (updateResult.Value.Models.Count == 0) return Result.Fail(localizer["GroceryItem_NotFound"]);
-
-                updated.Add(new GroceryItem(updateResult.Value.Models[0]));
-                foreach (var entry in group) itemIdOfEntry[entry] = id;
-            }
-
-            var inserted = new List<GroceryItem>();
             var newGroups = entries
                 .Where(e => e.ExistingGroceryItemId == null)
                 .GroupBy(e => e.Ingredient.Name.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            var newItems = newGroups
+                .Select((group, key) => new { key, name = group.Key, amount = group.First().FinalAmount })
+                .ToList();
 
-            if (newGroups.Count > 0)
+            var newItemKeyOfEntry = new Dictionary<PlanIngredientToAdd, int>();
+            for (var key = 0; key < newGroups.Count; key++)
+                foreach (var entry in newGroups[key]) newItemKeyOfEntry[entry] = key;
+
+            var sources = entries.ConvertAll(entry => new
             {
-                var newItems = newGroups.ConvertAll(group => new GroceryItem
+                item_id = entry.ExistingGroceryItemId,
+                new_item_key = entry.ExistingGroceryItemId == null ? newItemKeyOfEntry[entry] : (int?)null,
+                planned_meal_id = entry.PlannedMealId,
+                ingredient_id = entry.Ingredient.Id,
+                amount = entry.Ingredient.Amount ?? string.Empty
+            });
+
+            // One call, one transaction: the amounts, the new items and every link are written together or not at all.
+            var written = await Result.Try(
+                async Task<string?> () => (await supabaseClient.Rpc("add_plan_ingredients_to_grocery_list", new Dictionary<string, object>
                 {
-                    Name = group.Key,
-                    Amount = group.First().FinalAmount,
-                    IsPicked = false,
-                    IsManual = false,
-                    CreatedBy = user,
-                    CreatedAt = DateTime.UtcNow
-                });
+                    ["existing_items"] = existingItems,
+                    ["new_items"] = newItems,
+                    ["sources"] = sources
+                })).Content,
+                exception => exception.Message.Contains("grocery_item_not_found") ? new Error(localizer["GroceryItem_NotFound"]).CausedBy(exception)
+                    : exception.Message.Contains("grocery_item_source_not_added") ? new Error(localizer["GroceryItems_NotAdded"]).CausedBy(exception)
+                    : ResultHelper.MapException(exception));
+            if (written.IsFailed) return written.ToResult<List<GroceryItem>>();
 
-                var insertResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
-                    .From<GroceryItemDb>()
-                    .Insert(newItems.ConvertAll(item => item.MapToDb()), cancellationToken: cancellationToken));
-                if (insertResult.IsFailed) return insertResult.ToResult<List<GroceryItem>>();
-                if (insertResult.Value.Models.Count < newGroups.Count) return Result.Fail(localizer["GroceryItems_NotAdded"]);
+            var ids = Result.Try(() => JsonSerializer.Deserialize<WrittenIds>(written.Value ?? "null"));
+            if (ids.IsFailed || ids.Value is null || ids.Value.Inserted.Count < newGroups.Count)
+                return Result.Fail(localizer["GroceryItems_NotAdded"]);
 
-                // Bulk insert order is not guaranteed: find each group's row by name.
-                var rowByName = insertResult.Value.Models.ToDictionary(row => row.Name.Trim(), StringComparer.OrdinalIgnoreCase);
-                foreach (var group in newGroups)
-                {
-                    var row = rowByName[group.Key];
-                    inserted.Add(new GroceryItem(row));
-                    foreach (var entry in group) itemIdOfEntry[entry] = row.Id;
-                }
-            }
+            // Read the written items back: the updated ones first, then the new ones in the order they were added.
+            var writtenIds = ids.Value.Updated.Concat(ids.Value.Inserted).ToList();
+            var itemsResult = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
+                .From<GroceryItemDb>()
+                .Filter(x => x.Id, Operator.In, writtenIds)
+                .Get(cancellationToken));
+            if (itemsResult.IsFailed) return itemsResult.ToResult<List<GroceryItem>>();
 
-            var sources = entries.ConvertAll(entry => new GroceryItemSource
-            {
-                GroceryItemId = itemIdOfEntry[entry],
-                PlannedMealId = entry.PlannedMealId,
-                IngredientId = entry.Ingredient.Id,
-                Amount = entry.Ingredient.Amount ?? string.Empty,
-                CreatedBy = user,
-                CreatedAt = DateTime.UtcNow
-            }.MapToGroceryItemSourceDb());
-
-            var sourceResult = await Result.Try(async Task<ModeledResponse<GroceryItemSourceDb>> () => await supabaseClient
-                .From<GroceryItemSourceDb>()
-                .Insert(sources, cancellationToken: cancellationToken));
-            if (sourceResult.IsFailed) return sourceResult.ToResult<List<GroceryItem>>();
-
-            return Result.Ok(updated.Concat(inserted).ToList());
+            var rowById = itemsResult.Value.Models.ToDictionary(row => row.Id);
+            return Result.Ok(writtenIds.Where(rowById.ContainsKey).Select(id => new GroceryItem(rowById[id])).ToList());
         }
+
+        private sealed record WrittenIds(
+            [property: JsonPropertyName("updated")] List<int> Updated,
+            [property: JsonPropertyName("inserted")] List<int> Inserted);
     }
 }

@@ -22,8 +22,9 @@ using MealImportModel = MealWiz.Shared.Features.MealImport.Models.MealImport;
 namespace MealWiz.Shared.Tests.Features.MealImport.UnitTests.State;
 
 /// <summary>
-/// Covers the job lifecycle: MediatR, the Realtime subscription and the clock are faked, and the Function's
-/// HTTP ack is held open with a TaskCompletionSource so each test decides when (and how) it completes.
+/// Covers the job lifecycle: MediatR and the clock are faked, and the Function's HTTP ack is held open with a
+/// TaskCompletionSource so each test decides when (and how) it completes. A job resolves from its row, which is read
+/// when the Function answers and polled while it is still pending.
 /// </summary>
 public class MealImportStateContainerTests
 {
@@ -38,17 +39,14 @@ public class MealImportStateContainerTests
     private static readonly string TimedOutMessage = Localizer.ToMessage(MealImportErrorCode.TimedOut);
 
     private readonly Mock<IMediator> _mediator = new();
-    private readonly Mock<IMealImportRealtimeSubscriber> _subscriber = new();
     private readonly Mock<IMealsStateContainer> _mealsState = new();
     private readonly Mock<ISnackbar> _snackbar = new();
-    private readonly Mock<IAsyncDisposable> _subscription = new();
     private readonly FakeTimeProvider _time = new();
     private readonly TaskCompletionSource<Result> _functionAck = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly List<string> _calls = [];
     private readonly MealImportStateContainer _container;
 
     private Guid _jobId;
-    private Action<MealImportModel>? _onRealtimeUpdate;
 
     public MealImportStateContainerTests()
     {
@@ -61,14 +59,6 @@ public class MealImportStateContainerTests
                 return Result.Ok(Row(MealImportStatus.Pending));
             });
 
-        _subscriber
-            .Setup(s => s.Subscribe(It.IsAny<Guid>(), It.IsAny<Action<MealImportModel>>()))
-            .ReturnsAsync((Guid _, Action<MealImportModel> onUpdate) =>
-            {
-                _calls.Add("subscribe");
-                _onRealtimeUpdate = onUpdate;
-                return Result.Ok(_subscription.Object);
-            });
 
         _mediator
             .Setup(m => m.Send(It.IsAny<TriggerScrapeRecipe.Command>(), It.IsAny<CancellationToken>()))
@@ -78,23 +68,21 @@ public class MealImportStateContainerTests
                 return _functionAck.Task;
             });
 
-        _subscription.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
 
         _container = new MealImportStateContainer(
-            _mediator.Object, _subscriber.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
+            _mediator.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
     }
 
     [Fact]
-    public async Task StartImport_InsertsTheRowAndSubscribesBeforeCallingTheFunction()
+    public async Task StartImport_InsertsTheRowBeforeCallingTheFunction()
     {
         var result = await _container.StartImport(Url);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(new[] { "create", "subscribe", "trigger" }, _calls);
+        Assert.Equal(new[] { "create", "trigger" }, _calls);
         Assert.Equal(MealImportJobStatus.AwaitingResult, _container.JobStatus);
         Assert.True(_container.IsImportInProgress);
         Assert.Equal(_jobId, _container.CurrentImport?.Id);
-        _subscriber.Verify(s => s.Subscribe(_jobId, It.IsAny<Action<MealImportModel>>()), Times.Once);
     }
 
     [Theory]
@@ -125,7 +113,7 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task StartImport_InsertFails_FailsTheJobWithoutSubscribingOrCallingTheFunction()
+    public async Task StartImport_InsertFails_FailsTheJobWithoutCallingTheFunction()
     {
         _mediator
             .Setup(m => m.Send(It.IsAny<CreateMealImport.Command>(), It.IsAny<CancellationToken>()))
@@ -136,7 +124,6 @@ public class MealImportStateContainerTests
         Assert.True(result.IsFailed);
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
         Assert.Equal("Insert failed", _container.JobErrorMessage);
-        _subscriber.Verify(s => s.Subscribe(It.IsAny<Guid>(), It.IsAny<Action<MealImportModel>>()), Times.Never);
         _mediator.Verify(m => m.Send(It.IsAny<TriggerScrapeRecipe.Command>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -176,7 +163,7 @@ public class MealImportStateContainerTests
     public async Task ContinueInBackground_AfterTheJobResolved_IsANoOp()
     {
         await _container.StartImport(Url);
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Nope"));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorMessage: "Nope"));
 
         _container.ContinueInBackground();
 
@@ -185,7 +172,7 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task RealtimeSuccess_BackgroundedBefore30Seconds_SavesTheMeal()
+    public async Task Success_BackgroundedBefore30Seconds_SavesTheMeal()
     {
         _mediator
             .Setup(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()))
@@ -196,7 +183,7 @@ public class MealImportStateContainerTests
 
         await _container.StartImport(Url);
         _container.ContinueInBackground();
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await FunctionWrote(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
 
         _mediator.Verify(m => m.Send(It.Is<SaveMeal.Command>(c => c.Meal.Name == "Pasta"), It.IsAny<CancellationToken>()), Times.Once);
         VerifySnackbar(Severity.Success, "Pasta");
@@ -241,7 +228,7 @@ public class MealImportStateContainerTests
         await _container.StartImport(Url);
         Assert.Equal(MealImportEntryState.InProgress, _container.EntryState);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Nope"));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorMessage: "Nope"));
         Assert.Equal(MealImportEntryState.Failed, _container.EntryState);
 
         _container.ResetJob();
@@ -249,27 +236,26 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task RealtimeSuccess_InForeground_ExposesTheParsedMealWithoutSavingIt()
+    public async Task Success_InForeground_ExposesTheParsedMealWithoutSavingIt()
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await FunctionWrote(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
 
         Assert.Equal(MealImportJobStatus.Succeeded, _container.JobStatus);
         Assert.False(_container.IsImportInProgress);
         Assert.Equal("Pasta", _container.CurrentImport?.ParsedMeal?.Name);
         Assert.False(_container.LatestImportFailed);
-        _subscription.Verify(s => s.DisposeAsync(), Times.Once);
         _mediator.Verify(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()), Times.Never);
         VerifyNoSnackbar();
     }
 
     [Fact]
-    public async Task RealtimeFailure_InForeground_ExposesTheErrorWithoutAToast()
+    public async Task Failure_InForeground_ExposesTheErrorWithoutAToast()
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
         Assert.Equal(NoRecipeMessage, _container.JobErrorMessage);
@@ -279,18 +265,18 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task RealtimeFailure_WithoutACode_ShowsTheGenericImportFailure()
+    public async Task Failure_WithoutACode_ShowsTheGenericImportFailure()
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Something English from the Function"));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorMessage: "Something English from the Function"));
 
         Assert.Equal(Localizer.ToMessage(MealImportErrorCode.Unknown), _container.JobErrorMessage);
         Assert.Equal(Localizer.ToMessage(MealImportErrorCode.Unknown), _container.LatestErrorMessage);
     }
 
     [Fact]
-    public async Task RealtimeSuccess_InBackground_SavesTheMealAndIngredientsThenToasts()
+    public async Task Success_InBackground_SavesTheMealAndIngredientsThenToasts()
     {
         _mediator
             .Setup(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()))
@@ -300,7 +286,7 @@ public class MealImportStateContainerTests
             .ReturnsAsync(Result.Ok());
 
         await StartAndBackground();
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await FunctionWrote(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
 
         Assert.Equal(MealImportJobStatus.Succeeded, _container.JobStatus);
         _mediator.Verify(m => m.Send(It.Is<SaveMeal.Command>(c => c.Meal.Name == "Pasta" && c.Meal.Id == 0), It.IsAny<CancellationToken>()), Times.Once);
@@ -311,10 +297,10 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task RealtimeFailure_InBackground_ToastsAndSavesNothing()
+    public async Task Failure_InBackground_ToastsAndSavesNothing()
     {
         await StartAndBackground();
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         Assert.True(_container.LatestImportFailed);
         _mediator.Verify(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -322,7 +308,7 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task FunctionAcked_RealtimeEventMissed_ResolvesFromTheRow()
+    public async Task FunctionAcked_ResolvesFromTheRow()
     {
         SetupGetMealImport(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
         await _container.StartImport(Url);
@@ -334,7 +320,7 @@ public class MealImportStateContainerTests
     }
 
     [Fact]
-    public async Task FunctionAcked_RowStillPending_KeepsWaitingForRealtime()
+    public async Task FunctionAcked_RowStillPending_KeepsPollingTheRow()
     {
         SetupGetMealImport(Row(MealImportStatus.Pending));
         await _container.StartImport(Url);
@@ -344,7 +330,7 @@ public class MealImportStateContainerTests
         Assert.Equal(MealImportJobStatus.AwaitingResult, _container.JobStatus);
         VerifyNoMarkFailed();
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await FunctionWrote(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
         Assert.Equal(MealImportJobStatus.Succeeded, _container.JobStatus);
     }
 
@@ -450,7 +436,6 @@ public class MealImportStateContainerTests
         _mediator.Verify(m => m.Send(
             It.Is<MarkMealImportFailed.Command>(c => c.Id == _jobId && c.ErrorCode == MealImportErrorCode.TimedOut),
             It.IsAny<CancellationToken>()), Times.Once);
-        _subscription.Verify(s => s.DisposeAsync(), Times.Once);
     }
 
     [Fact]
@@ -484,28 +469,15 @@ public class MealImportStateContainerTests
     public async Task JobResolvedBeforeTheTimeout_TimeoutDoesNothing()
     {
         await _container.StartImport(Url);
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.NoRecipeFound, errorMessage: "Could not find recipe data on the page."));
 
         _time.Advance(MealImportStateContainer.ResultTimeout);
         await Task.Delay(50, TestContext.Current.CancellationToken);
 
         Assert.Equal(NoRecipeMessage, _container.JobErrorMessage);
-        _mediator.Verify(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()), Times.Never);
+        // Read once, when the Function answered; neither the polling nor the timeout reads it again.
+        _mediator.Verify(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()), Times.Once);
         VerifyNoMarkFailed();
-    }
-
-    [Fact]
-    public async Task SubscribeFails_StillCallsTheFunctionAndResolvesFromTheRow()
-    {
-        _subscriber
-            .Setup(s => s.Subscribe(It.IsAny<Guid>(), It.IsAny<Action<MealImportModel>>()))
-            .ReturnsAsync(Result.Fail<IAsyncDisposable>("Socket closed"));
-        SetupGetMealImport(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
-        await _container.StartImport(Url);
-
-        await CompleteFunctionCall(Result.Ok());
-
-        Assert.Equal(MealImportJobStatus.Succeeded, _container.JobStatus);
     }
 
     [Fact]
@@ -513,12 +485,11 @@ public class MealImportStateContainerTests
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.FetchFailed, errorMessage: "First"));
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorCode: MealImportErrorCode.FetchFailed, errorMessage: "First"));
+        await FunctionWrote(Row(MealImportStatus.Succeeded, parsedMeal: Pasta()));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
         Assert.Equal(Localizer.ToMessage(MealImportErrorCode.FetchFailed), _container.JobErrorMessage);
-        _subscription.Verify(s => s.DisposeAsync(), Times.Once);
     }
 
     [Fact]
@@ -526,7 +497,7 @@ public class MealImportStateContainerTests
     {
         await _container.StartImport(Url);
 
-        await PushRealtimeUpdate(Row(MealImportStatus.Succeeded));
+        await FunctionWrote(Row(MealImportStatus.Succeeded));
 
         Assert.Equal(MealImportJobStatus.Failed, _container.JobStatus);
         Assert.True(_container.LatestImportFailed);
@@ -536,7 +507,7 @@ public class MealImportStateContainerTests
     public async Task ResetJob_AfterAFinishedJob_ReturnsToIdleButKeepsTheLatestImport()
     {
         await _container.StartImport(Url);
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Nope"));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorMessage: "Nope"));
 
         _container.ResetJob();
 
@@ -574,7 +545,7 @@ public class MealImportStateContainerTests
     public async Task LoadLatestImport_StalePendingCopyOfAResolvedJob_DoesNotOverwriteIt()
     {
         await _container.StartImport(Url);
-        await PushRealtimeUpdate(Row(MealImportStatus.Failed, errorMessage: "Nope"));
+        await FunctionWrote(Row(MealImportStatus.Failed, errorMessage: "Nope"));
         _mediator
             .Setup(m => m.Send(It.IsAny<GetLatestMealImport.Query>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok<MealImportModel?>(Row(MealImportStatus.Pending)));
@@ -593,10 +564,27 @@ public class MealImportStateContainerTests
         Assert.True(_container.IsRunningInBackground);
     }
 
-    private async Task PushRealtimeUpdate(MealImportModel row)
+    /// <summary>
+    /// The Function writes <paramref name="row"/>. If its call is still open it answers now, and the job reads the row;
+    /// if it has answered already (the row was still pending then), the next poll reads it.
+    /// </summary>
+    private async Task FunctionWrote(MealImportModel row)
     {
-        Assert.NotNull(_onRealtimeUpdate);
-        _onRealtimeUpdate(row);
+        SetupGetMealImport(row);
+
+        if (!_functionAck.Task.IsCompleted)
+        {
+            await CompleteFunctionCall(Result.Ok());
+            return;
+        }
+
+        // The poll's timer is set up asynchronously after the previous read, so advance until it has fired.
+        for (var i = 0; i < 100 && _container.IsImportInProgress; i++)
+        {
+            _time.Advance(MealImportStateContainer.PollInterval);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
         await DrainBackgroundWork();
     }
 

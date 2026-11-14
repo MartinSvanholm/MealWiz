@@ -204,7 +204,7 @@
             HandleJobState();
     }
 
-    // Realtime callbacks can arrive off the UI thread (MAUI).
+    // An import job can resolve off the UI thread (MAUI).
     private void OnImportStateChanged() => InvokeAsync(HandleJobState);
 
     private void HandleJobState()

@@ -44,7 +44,6 @@ jobs:
       # test fixtures read the keys from `supabase status`, as they do locally.
       - name: Start Supabase (applies all migrations and the seed)
         id: supabase
-        # Realtime stays on: the meal import E2E tests get their result over it.
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor
 
       # Checks the agent docs (docs/agents/, CLAUDE.md), then builds MauiWASM, MealWiz.Functions and the three test

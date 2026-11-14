@@ -13,6 +13,13 @@ namespace MealWiz.Shared.Helpers;
 
 public static class DependencyInjectionHelper
 {
+    /// <summary>
+    /// How long the app's <see cref="HttpClient"/> waits for an answer. Longer than the Function app's two-minute
+    /// limit (functionTimeout in the Functions host.json), so a slow import is never given up on while the Function
+    /// may still write its result; .NET's default of 100 seconds is shorter than that limit.
+    /// </summary>
+    public static readonly TimeSpan HttpClientTimeout = TimeSpan.FromSeconds(150);
+
     public static void RegisterScopedServices(this IServiceCollection services)
     {
         services.AddScoped<IMealsStateContainer, MealsStateContainer>();
@@ -22,9 +29,9 @@ public static class DependencyInjectionHelper
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
         services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
-        services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
         services.AddScoped<IMealPictureShrinker, MealPictureShrinker>();
+        services.AddScoped(_ => new HttpClient { Timeout = HttpClientTimeout });
 
         // IStringLocalizer<T> over the .resx resources (no ResourcesPath: resources sit beside their marker type),
         // and MudBlazor's built-in texts from the shared resource. Replace, so the order against AddMudServices

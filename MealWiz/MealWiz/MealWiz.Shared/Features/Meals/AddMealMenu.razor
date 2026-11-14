@@ -93,7 +93,7 @@
         await _mealImportStateContainer.LoadLatestImport();
     }
 
-    // Realtime callbacks can arrive off the UI thread (MAUI).
+    // An import job can resolve off the UI thread (MAUI).
     private void OnImportStateChanged() => InvokeAsync(StateHasChanged);
 
     private void OnCreateManuallyClick()

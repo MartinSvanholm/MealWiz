@@ -65,7 +65,7 @@ runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a jo
 | DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
 | A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
 | A Storage bucket or its policies | pgTAP in `supabase/tests/database/` (`meal_import_pictures.test.sql`), plus `storage.buckets` and `policies_are('storage', 'objects', …)` in `00_rls_enabled.test.sql` | local |
-| Meal import, Realtime | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
+| Meal import | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
 | A meal plan flow | Shared tests plus `MealPlanJourneyTests` | local `--e2e MealPlanJourneyTests` |
 | Functions parsing or mapping | Unit tests in `MealWiz/tests/MealWiz.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then local |
 | Functions fetching or SSRF | `MealWiz/tests/MealWiz.Functions.Tests/Shared/UnitTests/Ssrf/` and `Shared/IntegrationTests/` | local |
@@ -214,7 +214,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
   - `IntegrationTests/DependencyInjection/ServiceRegistrationTests.cs`: builds the real web container, and resolves
     every handler and every component's injected services.
 - **E2E** (`E2ETests/`): drives the **published** app (Release, trimmed) in headless Chromium against local Supabase.
-  It is the only level that catches broken JS interop, routing, session persistence and Realtime. The journeys are
+  It is the only level that catches broken JS interop, routing, session persistence and the meal import's polling. The journeys are
   `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
   `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
   refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
@@ -251,6 +251,8 @@ There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_me
 Storage policies live on `storage.objects`, which `supabase_storage_admin` owns: never `alter table` it, only add policies.
 Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
 through the Storage API instead).
+`atomic_write_functions.test.sql` covers the database functions handlers call for a multi-step write: all or nothing, RLS
+still applied, signed-in users only.
 `delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
 another user's). Each table file follows the same pattern:
 
