@@ -24,7 +24,7 @@ namespace MealWiz.Shared.Tests.Features.MealImport.UnitTests.State;
 
 /// <summary>
 /// The picture half of the job lifecycle: upload, then the row, then the AnalyzeMealPicture call. The shared part
-/// (Realtime, timers, background mode) is covered by <see cref="MealImportStateContainerTests"/>.
+/// (reading the row, timers, background mode) is covered by <see cref="MealImportStateContainerTests"/>.
 /// </summary>
 public class MealImportStateContainerPictureTests
 {
@@ -35,17 +35,14 @@ public class MealImportStateContainerPictureTests
     private static readonly IReadOnlyList<string> Paths = ["u/j/0.jpg", "u/j/1.jpg"];
 
     private readonly Mock<IMediator> _mediator = new();
-    private readonly Mock<IMealImportRealtimeSubscriber> _subscriber = new();
     private readonly Mock<IMealsStateContainer> _mealsState = new();
     private readonly Mock<ISnackbar> _snackbar = new();
-    private readonly Mock<IAsyncDisposable> _subscription = new();
     private readonly FakeTimeProvider _time = new();
     private readonly TaskCompletionSource<Result> _functionAck = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly List<string> _calls = [];
     private readonly MealImportStateContainer _container;
 
     private Guid _jobId;
-    private Action<MealImportModel>? _onRealtimeUpdate;
     private CreatePictureMealImport.Command? _createCommand;
 
     public MealImportStateContainerPictureTests()
@@ -80,27 +77,18 @@ public class MealImportStateContainerPictureTests
                 _calls.Add("trigger");
                 return _functionAck.Task;
             });
-        _subscriber
-            .Setup(s => s.Subscribe(It.IsAny<Guid>(), It.IsAny<Action<MealImportModel>>()))
-            .ReturnsAsync((Guid _, Action<MealImportModel> onUpdate) =>
-            {
-                _calls.Add("subscribe");
-                _onRealtimeUpdate = onUpdate;
-                return Result.Ok(_subscription.Object);
-            });
-        _subscription.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
 
         _container = new MealImportStateContainer(
-            _mediator.Object, _subscriber.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
+            _mediator.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
     }
 
     [Fact]
-    public async Task StartPictureImport_UploadsThenInsertsTheRowThenSubscribesThenCallsTheFunction()
+    public async Task StartPictureImport_UploadsThenInsertsTheRowThenCallsTheFunction()
     {
         var result = await _container.StartPictureImport(Pictures);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(new[] { "upload", "create", "subscribe", "trigger" }, _calls);
+        Assert.Equal(new[] { "upload", "create", "trigger" }, _calls);
         Assert.Equal(MealImportJobStatus.AwaitingResult, _container.JobStatus);
         Assert.True(_container.IsImportInProgress);
         Assert.Equal(_jobId, _container.CurrentImport?.Id);
@@ -172,15 +160,13 @@ public class MealImportStateContainerPictureTests
     }
 
     [Fact]
-    public async Task ARealtimeSuccess_ResolvesThePictureJob()
+    public async Task ASuccess_ResolvesThePictureJob()
     {
         await _container.StartPictureImport(Pictures);
         var row = Row(MealImportStatus.Succeeded);
         row.ParsedMeal = new ParsedMeal { Name = "Lasagne", IsGuessed = true };
 
-        _onRealtimeUpdate!(row);
-        await _container.WhenBackgroundWorkCompleted().WaitAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken)
-            .ContinueWith(_ => { });
+        await FunctionWrote(row);
 
         Assert.Equal(MealImportJobStatus.Succeeded, _container.JobStatus);
         Assert.Equal("Lasagne", _container.CurrentImport?.ParsedMeal?.Name);
@@ -198,8 +184,7 @@ public class MealImportStateContainerPictureTests
         var row = Row(MealImportStatus.Succeeded);
         row.ParsedMeal = new ParsedMeal { Name = "Lasagne" };
 
-        _onRealtimeUpdate!(row);
-        await Eventually(() => !_container.IsImportInProgress);
+        await FunctionWrote(row);
 
         _mediator.Verify(m => m.Send(
             It.Is<SaveMeal.Command>(c => c.Meal.Name == "Lasagne"), It.IsAny<CancellationToken>()), Times.Once);
@@ -224,6 +209,16 @@ public class MealImportStateContainerPictureTests
         _mediator.Verify(m => m.Send(
             It.Is<MarkMealImportFailed.Command>(c => c.ErrorCode == MealImportErrorCode.Unreachable), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    /// <summary>The Function writes the row and answers; the job then reads it.</summary>
+    private async Task FunctionWrote(MealImportModel row)
+    {
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(row));
+        _functionAck.TrySetResult(Result.Ok());
+        await Eventually(() => !_container.IsImportInProgress);
     }
 
     private MealImportModel Row(MealImportStatus status, MealImportErrorCode? errorCode = null, string? errorMessage = null) => new()

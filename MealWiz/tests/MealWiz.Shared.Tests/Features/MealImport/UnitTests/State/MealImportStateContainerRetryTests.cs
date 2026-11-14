@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport;
 using MealWiz.Shared.Features.MealImport.CreatePictureMealImport;
 using MealWiz.Shared.Features.MealImport.DeleteMealImportPictures;
+using MealWiz.Shared.Features.MealImport.GetMealImport;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Features.MealImport.TriggerAnalyzeMealPicture;
@@ -31,16 +32,13 @@ public class MealImportStateContainerRetryTests
     private static readonly IReadOnlyList<string> Paths = ["u/j/0.jpg", "u/j/1.jpg"];
 
     private readonly Mock<IMediator> _mediator = new();
-    private readonly Mock<IMealImportRealtimeSubscriber> _subscriber = new();
     private readonly Mock<IMealsStateContainer> _mealsState = new();
     private readonly Mock<ISnackbar> _snackbar = new();
-    private readonly Mock<IAsyncDisposable> _subscription = new();
     private readonly FakeTimeProvider _time = new();
     private readonly List<CreatePictureMealImport.Command> _creates = [];
     private readonly MealImportStateContainer _container;
 
     private Guid _jobId;
-    private Action<MealImportModel>? _onRealtimeUpdate;
     private Meal _mealToEdit = new();
 
     public MealImportStateContainerRetryTests()
@@ -75,23 +73,16 @@ public class MealImportStateContainerRetryTests
             .ReturnsAsync(Result.Ok());
         _mediator
             .Setup(m => m.Send(It.IsAny<TriggerAnalyzeMealPicture.Command>(), It.IsAny<CancellationToken>()))
-            // Never answers: the result arrives over Realtime, as in production.
-            .Returns(() => new TaskCompletionSource<Result>().Task);
+            // Answers while the row is still pending, so each test decides when the row gets its result (ResolveWith).
+            .ReturnsAsync(Result.Ok());
+        SetupGetMealImport(null);
         _mediator
             .Setup(m => m.Send(It.IsAny<SaveMeal.Command>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Ok(new Meal { Id = 7, Name = "Saved" }));
-        _subscriber
-            .Setup(s => s.Subscribe(It.IsAny<Guid>(), It.IsAny<Action<MealImportModel>>()))
-            .ReturnsAsync((Guid _, Action<MealImportModel> onUpdate) =>
-            {
-                _onRealtimeUpdate = onUpdate;
-                return Result.Ok(_subscription.Object);
-            });
-        _subscription.Setup(s => s.DisposeAsync()).Returns(ValueTask.CompletedTask);
         _mealsState.SetupSet(m => m.MealToEdit = It.IsAny<Meal>()).Callback<Meal>(m => _mealToEdit = m);
 
         _container = new MealImportStateContainer(
-            _mediator.Object, _subscriber.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
+            _mediator.Object, _mealsState.Object, _snackbar.Object, _time, Localizer);
     }
 
     // ---- FormImport ----
@@ -291,6 +282,22 @@ public class MealImportStateContainerRetryTests
     }
 
     [Fact]
+    public async Task ARetryLeftInTheBackground_NoLongerBelongsToAForm_SoAnotherMealIsNotAffected()
+    {
+        await OpenFormWith(Guessed("Lasagne"));
+        await _container.RetryWithHint("pizza");
+        Assert.True(_container.IsRetrying);
+
+        _container.ContinueInBackground();
+
+        // Edit meal opened for another meal while the retry still runs: no note, no retry section, Save enabled.
+        Assert.True(_container.IsImportInProgress);
+        Assert.Null(_container.FormImport);
+        Assert.False(_container.IsRetrying);
+        Assert.Null(_container.RetryErrorMessage);
+    }
+
+    [Fact]
     public async Task AFailedRetryLeftInTheBackground_ToastsAndDeletesThePictures()
     {
         await OpenFormWith(Guessed("Lasagne"));
@@ -329,7 +336,6 @@ public class MealImportStateContainerRetryTests
         }
         else
         {
-            _onRealtimeUpdate = null;
             await _container.StartImport("https://example.com/r");
             resolved.Id = _jobId;
             await ResolveWith(resolved);
@@ -342,9 +348,25 @@ public class MealImportStateContainerRetryTests
     private async Task ResolveWith(MealImportModel row)
     {
         row.Id = _jobId;
-        _onRealtimeUpdate!(row);
-        await Eventually(() => !_container.IsImportInProgress);
+        SetupGetMealImport(row);
+
+        // The job polls its pending row; the poll's timer is set up asynchronously, so advance until it has fired.
+        for (var i = 0; i < 100 && _container.IsImportInProgress; i++)
+        {
+            _time.Advance(MealImportStateContainer.PollInterval);
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        Assert.False(_container.IsImportInProgress);
+        SetupGetMealImport(null); // the next job's row starts pending
     }
+
+    /// <summary>What reading the job's row returns: <paramref name="row"/>, or a pending row when null.</summary>
+    private void SetupGetMealImport(MealImportModel? row) =>
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetMealImport.Query>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetMealImport.Query q, CancellationToken _) =>
+                Result.Ok(row ?? new MealImportModel { Id = q.Id, Status = MealImportStatus.Pending }));
 
     private static MealImportModel Guessed(string name) => PictureRow(name, guessed: true);
     private static MealImportModel Written(string name) => PictureRow(name, guessed: false);

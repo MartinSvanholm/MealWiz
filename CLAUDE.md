@@ -59,7 +59,7 @@ Rules for every session:
   .NET 10 SDK.
 - **UI:** Blazor WebAssembly, MudBlazor 8, CodeBeam.MudBlazor.Extensions.
 - **Data:** PostgreSQL through Supabase, using the C# SDK directly from the client. There's no API layer, so RLS
-  does all authorization. Realtime is used for meal imports.
+  does all authorization. Realtime is not used: meal import reads its row after the Function call and polls it.
 - **Patterns:** vertical slices, CQRS with MediatR 13, FluentResults 4 for errors, and scoped state containers.
 - **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
   picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").

@@ -40,7 +40,7 @@ namespace MealWiz.Shared.Tests.TestInfrastructure;
 /// <summary>
 /// bUnit context for MealWiz.Shared components. MediatR is mocked; the Meals, GroceryList, MealPlan and Drawer
 /// state containers are the real in-memory ones running on that mock, so a test can assert the actual request a
-/// click ends in. The MealImport container is mocked (it drives Realtime and timers; its own unit tests cover it).
+/// click ends in. The MealImport container is mocked (it drives timers and polling; its own unit tests cover it).
 /// Elements are found by <c>data-testid</c>, never by MudBlazor markup.
 /// </summary>
 public abstract class ComponentTestBase : BunitContext

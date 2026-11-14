@@ -110,7 +110,7 @@
         _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
     }
 
-    // Realtime callbacks can arrive off the UI thread (MAUI).
+    // An import job can resolve off the UI thread (MAUI).
     private void OnImportStateChanged() => InvokeAsync(() =>
     {
         if (!ReferenceEquals(_mealImportStateContainer.FormImport, _formImport))

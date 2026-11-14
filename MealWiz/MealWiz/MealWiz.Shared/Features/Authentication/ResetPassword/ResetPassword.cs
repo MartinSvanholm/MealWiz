@@ -26,7 +26,7 @@ public static class ResetPassword
             if (tokens.IsFailed)
                 return Result.Fail<Session?>(L["Reset_LinkInvalid"]);
 
-            var result = await Result.Try(() => SetNewPasswordAsync(tokens.Value, request.NewPassword));
+            var result = await SetNewPasswordAsync(tokens.Value, request.NewPassword);
 
             await authenticationStateProvider.GetAuthenticationStateAsync();
 
@@ -35,20 +35,26 @@ public static class ResetPassword
 
         // Update needs the recovery session, and adopting it signs the user in. If the new password is refused (too
         // short, say), sign out again: the user is signed in only once the password is set.
-        private async Task<Session?> SetNewPasswordAsync(ResetLink.Tokens tokens, string newPassword)
+        private async Task<Result<Session?>> SetNewPasswordAsync(ResetLink.Tokens tokens, string newPassword)
         {
-            await _supabaseClient.Auth.SetSession(tokens.AccessToken, tokens.RefreshToken);
-            try
+            var adopted = await Result.Try(async Task () =>
+            {
+                await _supabaseClient.Auth.SetSession(tokens.AccessToken, tokens.RefreshToken);
+            });
+            if (adopted.IsFailed) return adopted.ToResult<Session?>();
+
+            var updated = await Result.Try(async Task () =>
             {
                 await _supabaseClient.Auth.Update(new UserAttributes { Password = newPassword });
-            }
-            catch
+            });
+            if (updated.IsFailed)
             {
-                await _supabaseClient.Auth.SignOut();
-                throw;
+                // Best effort: the refused password is the failure to report, whatever the sign-out does.
+                await Result.Try(() => _supabaseClient.Auth.SignOut());
+                return updated.ToResult<Session?>();
             }
 
-            return _supabaseClient.Auth.CurrentSession;
+            return Result.Ok(_supabaseClient.Auth.CurrentSession);
         }
     }
 }

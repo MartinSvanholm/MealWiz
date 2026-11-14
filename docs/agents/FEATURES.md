@@ -263,9 +263,9 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
     off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
     with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
@@ -314,15 +314,15 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included)
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions)
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions)
 
 ## MealImport
 
-Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports` and subscribes to that row
-over Supabase Realtime. It then POSTs `{ jobId, url }` to the Azure Function (see
+Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports`, then POSTs `{ jobId, url }` to the Azure Function (see
 [Functions: ScrapeRecipe](#functions-scraperecipe)), which scrapes the page and writes `succeeded` + `parsed_meal` or
 `failed` + `error_code` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
-whether the row was written.
+whether the row was written. The Function answers after writing the row, so the client reads the row when the call
+returns, and reads it again every 2 s (`PollInterval`) if it is still pending then. There is no Realtime subscription.
 
 On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal()`. After 30 s the page offers
 "Continue in background", and leaving the page does the same. A backgrounded job saves the meal itself, or shows a
@@ -347,7 +347,7 @@ a picture job `edit-meal-retry` ("Not right? Try again with a hint") opens `edit
 `edit-meal-hint-submit` (disabled for a blank hint). `RetryWithHint` starts a new job on the same picture paths with the
 hint (no upload); while it runs (`IsRetrying`, `edit-meal-retrying`) `save-meal-button` is disabled. A successful retry
 replaces the form and `FormImport`; a failed one leaves the form and shows `RetryErrorMessage`
-(`edit-meal-retry-error`); leaving the form during a retry backgrounds it. `ReleaseFormImport()` deletes the form job's
+(`edit-meal-retry-error`); leaving the form during a retry backgrounds it and clears `FormImport` and `IsRetrying`, so another meal opened meanwhile is not affected. `ReleaseFormImport()` deletes the form job's
 pictures (best effort, silent, through `DeleteMealImportPictures`): after a full save (`SaveMealButton`) and when the form
 is left; a backgrounded picture job deletes its pictures when it finishes. What's left (a closed tab, a failed job) goes in
 the daily clean-up ([Functions: CleanUpMealPictures](#functions-cleanupmealpictures)).
@@ -381,8 +381,6 @@ detail for diagnosis.
 - **State:**
   - `Features/MealImport/State/MealImportStateContainer.cs` (`IMealImportStateContainer`): runs the job, its timers
     and background mode. It depends on `IMealsStateContainer` to save imported meals, and injects `ISnackbar` itself.
-  - `Features/MealImport/State/MealImportRealtimeSubscriber.cs` (`IMealImportRealtimeSubscriber`): the Realtime
-    channel for one row. It is the only Shared service outside a handler that uses the Supabase client.
   - `Features/MealImport/State/MealImportJobHelper.cs`: pure logic: URL normalising, the entry-point state, and stale-row checks.
 - **Models:**
   - `Features/MealImport/Models/MealImport.cs` ↔ `Features/MealImport/Models/MealImportDb.cs`, table `meal_imports`.
@@ -392,10 +390,11 @@ detail for diagnosis.
     `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
     `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
-  - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
+  - `Services/FunctionApp/FunctionAppOptions.cs`: the Function app's URL and key from appsettings (the `MealImportFunction` section); also used by Account's DeleteAccount.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
-    `supabase_realtime` publication.
+    `supabase_realtime` publication, which `supabase/migrations/20261114130000_remove_meal_imports_from_realtime.sql`
+    takes back out (the app polls the row instead).
   - `supabase/migrations/20261012120000_allow_client_to_fail_meal_imports.sql`
   - `supabase/migrations/20261106120000_add_meal_import_error_codes.sql`: `error_code` with its check constraint, in
     the client's update grant.
@@ -467,7 +466,7 @@ per host (see [Hosts](#hosts)).
   SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access
   token expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry
   after 15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises
-  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
+  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server; it destroys the stored session and drops the client's in-memory one, raising `Changed` once. `Services/Authentication/SessionGate.razor`
   wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
   reload on `/login` when the session is rejected.
 - **Texts:** `Features/Authentication/AuthenticationResource.cs` (the signed-out pages, AuthShell and Log out). A bad
@@ -651,6 +650,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
+- **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
@@ -663,7 +663,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
-  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
+  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services. It also registers the app's `HttpClient`, with a 150 s timeout (`HttpClientTimeout`): longer than the Function app's two-minute limit, so the client never gives up on an import the Function may still finish.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
   - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
@@ -704,14 +704,14 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **MauiWASM (web, deployed to Azure Static Web Apps).**
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
-    `RegisterScopedServices()`, the MediatR assembly scan, auth, `TimeProvider`, `HttpClient`,
-    `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
+    `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
+    `FunctionAppOptions`, and the scoped Supabase `Client` (anon key; Realtime is not used).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
   - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
-    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `MealImportFunctionOptions` and the Supabase `Client`
+    MediatR assembly scan, auth, `TimeProvider`, `FunctionAppOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
@@ -732,7 +732,7 @@ table and policy list.
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
 
 ### Functions
 

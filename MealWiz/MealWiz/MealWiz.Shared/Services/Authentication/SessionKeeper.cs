@@ -24,6 +24,7 @@ public class SessionKeeper : IDisposable
     private ITimer? _timer;
     private TimeSpan _backoff = FirstRetry;
     private bool _disposed;
+    private bool _signingOutLocally;
 
     public SessionKeeper(Client client, IGotrueSessionPersistence<Session> persistence, TimeProvider time)
     {
@@ -37,6 +38,8 @@ public class SessionKeeper : IDisposable
     // The auth state provider listens to Changed only, so it never reads this state before it is updated.
     private void OnAuthStateChanged(IGotrueClient<User, Session> sender, Constants.AuthState state)
     {
+        if (_signingOutLocally) return;
+
         if (_start is not null) // before that, StartAsync decides on its own once it has loaded the stored session
         {
             switch (state)
@@ -78,13 +81,21 @@ public class SessionKeeper : IDisposable
     /// </summary>
     public virtual Task RefreshNowAsync() => RefreshAsync();
 
-    public async Task SignOutLocallyAsync()
+    public Task SignOutLocallyAsync()
     {
         StopTimer();
         _persistence.DestroySession();
         IsSignedOut = true;
-        await Task.CompletedTask;
+
+        // Nothing is stored any more, so loading drops the client's in-memory session too: handlers stop seeing a
+        // signed-in user at once, not only after the app reloads. The SDK announces that as a sign-out; it is this
+        // one, so Changed is raised once, below.
+        _signingOutLocally = true;
+        try { _client.Auth.LoadSession(); }
+        finally { _signingOutLocally = false; }
+
         Changed?.Invoke();
+        return Task.CompletedTask;
     }
 
     private async Task StartCoreAsync()
@@ -104,15 +115,6 @@ public class SessionKeeper : IDisposable
             await RefreshAsync();
         else
             ScheduleNext();
-
-        // Meal import needs realtime; it's connected here because AutoConnectRealtime is off.
-        _ = ConnectRealtimeAsync();
-    }
-
-    private async Task ConnectRealtimeAsync()
-    {
-        try { await _client.Realtime.ConnectAsync(); }
-        catch { /* realtime reconnects on its own; a failure here must not affect the session */ }
     }
 
     private bool IsDue(Session session) =>
