@@ -663,7 +663,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
-  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
+  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services. It also registers the app's `HttpClient`, with a 150 s timeout (`HttpClientTimeout`): longer than the Function app's two-minute limit, so the client never gives up on an import the Function may still finish.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
   - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
@@ -704,14 +704,14 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **MauiWASM (web, deployed to Azure Static Web Apps).**
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
-    `RegisterScopedServices()`, the MediatR assembly scan, auth, `TimeProvider`, `HttpClient`,
+    `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
     `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
   - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
-    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `MealImportFunctionOptions` and the Supabase `Client`
+    MediatR assembly scan, auth, `TimeProvider`, `MealImportFunctionOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
