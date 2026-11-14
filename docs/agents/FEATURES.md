@@ -347,7 +347,7 @@ a picture job `edit-meal-retry` ("Not right? Try again with a hint") opens `edit
 `edit-meal-hint-submit` (disabled for a blank hint). `RetryWithHint` starts a new job on the same picture paths with the
 hint (no upload); while it runs (`IsRetrying`, `edit-meal-retrying`) `save-meal-button` is disabled. A successful retry
 replaces the form and `FormImport`; a failed one leaves the form and shows `RetryErrorMessage`
-(`edit-meal-retry-error`); leaving the form during a retry backgrounds it. `ReleaseFormImport()` deletes the form job's
+(`edit-meal-retry-error`); leaving the form during a retry backgrounds it and clears `FormImport` and `IsRetrying`, so another meal opened meanwhile is not affected. `ReleaseFormImport()` deletes the form job's
 pictures (best effort, silent, through `DeleteMealImportPictures`): after a full save (`SaveMealButton`) and when the form
 is left; a backgrounded picture job deletes its pictures when it finishes. What's left (a closed tab, a failed job) goes in
 the daily clean-up ([Functions: CleanUpMealPictures](#functions-cleanupmealpictures)).
