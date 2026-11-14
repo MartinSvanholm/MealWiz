@@ -43,11 +43,15 @@ public interface IMealImportStateContainer
 
     /// <summary>
     /// The job whose result the Edit meal form currently shows (set by <see cref="OpenInForm"/>, replaced by a successful
-    /// retry, cleared by <see cref="ReleaseFormImport"/>). Null for a hand-made or existing meal.
+    /// retry, cleared by <see cref="ReleaseFormImport"/> and when a retry is backgrounded). Null for a hand-made or
+    /// existing meal.
     /// </summary>
     Models.MealImport? FormImport { get; }
 
-    /// <summary>True while a retry with a hint (<see cref="RetryWithHint"/>) is running: the form disables Save and shows progress.</summary>
+    /// <summary>
+    /// True while a retry with a hint (<see cref="RetryWithHint"/>) is running for the open form: the form disables Save
+    /// and shows progress. False once the retry is backgrounded (its form was left).
+    /// </summary>
     bool IsRetrying { get; }
 
     /// <summary>Why the last retry failed, for the form to show (the form itself is left as it was). Cleared by the next retry.</summary>
@@ -141,7 +145,7 @@ public class MealImportStateContainer(
     public bool IsRunningInBackground { get; private set; }
     public Models.MealImport? FormImport { get; private set; }
     public string? RetryErrorMessage { get; private set; }
-    public bool IsRetrying => isRetryJob && IsImportInProgress;
+    public bool IsRetrying => isRetryJob && IsImportInProgress && !IsRunningInBackground;
 
     public bool IsImportInProgress => JobStatus is MealImportJobStatus.Submitting or MealImportJobStatus.AwaitingResult;
     public bool LatestImportFailed => LatestImport?.Status == MealImportStatus.Failed;
@@ -325,6 +329,15 @@ public class MealImportStateContainer(
         if (!IsImportInProgress) return;
 
         IsRunningInBackground = true;
+
+        // A retry is only backgrounded by leaving its form. The form is gone, so it has no job any more: the next meal
+        // opened in Edit meal must not show this one's note, retry section or disabled Save.
+        if (isRetryJob)
+        {
+            FormImport = null;
+            RetryErrorMessage = null;
+        }
+
         NotifyStateChanged();
     }
 
