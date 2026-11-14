@@ -11,6 +11,7 @@ using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Features.MealImport.State;
+using MealWiz.Shared.Services.ScreenWakeLock;
 using MealWiz.Shared.Features.MealPlans.GetMealPlanByDate;
 using MealWiz.Shared.Features.MealPlans.GetMealPlannedDates;
 using MealWiz.Shared.Features.MealPlans.Models;
@@ -49,6 +50,7 @@ public abstract class ComponentTestBase : BunitContext
     protected Mock<ILocalStorageService> LocalStorage { get; } = new();
     protected Mock<IMealImportStateContainer> MealImport { get; } = new();
     protected Mock<IMealPictureShrinker> PictureShrinker { get; } = new();
+    protected Mock<IScreenWakeLock> WakeLock { get; } = new();
     protected Mock<IThemeService> Theme { get; } = new();
     protected Mock<ILanguagePreference> Language { get; } = new();
 
@@ -104,6 +106,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton(LocalStorage.Object);
         Services.AddSingleton(MealImport.Object);
         Services.AddSingleton(PictureShrinker.Object);
+        Services.AddSingleton(WakeLock.Object);
         Services.AddSingleton(Theme.Object);
         Services.AddSingleton(Language.Object);
         Services.AddSingleton<IDrawerStateContainer>(Drawer);

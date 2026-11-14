@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.Meals.CookMeal;
 using MealWiz.Shared.Features.Meals.GetAllMeals;
 using MealWiz.Shared.Features.Meals.Models;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Moq;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.Meals.ComponentTests;
@@ -99,5 +100,36 @@ public class CookMealPageTests : ComponentTestBase
         cut.Find(TestId("cook-meal-back")).Click();
 
         Assert.Equal(expected, new Uri(Navigation.Uri).AbsolutePath);
+    }
+
+    [Fact]
+    public async Task Keeps_the_screen_on_while_a_meal_shows_and_lets_it_sleep_when_the_page_goes()
+    {
+        var cut = RenderPage(5);
+
+        WakeLock.Verify(w => w.RequestAsync(), Times.Once);
+        WakeLock.Verify(w => w.ReleaseAsync(), Times.Never);
+
+        await cut.Instance.DisposeAsync();
+
+        WakeLock.Verify(w => w.ReleaseAsync(), Times.Once);
+    }
+
+    [Fact]
+    public void Does_not_ask_for_the_wake_lock_when_the_meal_is_not_found()
+    {
+        RenderPage(99);
+
+        WakeLock.Verify(w => w.RequestAsync(), Times.Never);
+    }
+
+    [Fact]
+    public void Renders_the_same_when_the_wake_lock_is_refused()
+    {
+        WakeLock.Setup(w => w.RequestAsync()).Returns(new ValueTask<bool>(false));
+
+        var cut = RenderPage(5);
+
+        Assert.Equal(2, cut.FindAll(TestId("cook-meal-step")).Count);
     }
 }

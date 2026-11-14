@@ -4,7 +4,8 @@
 @inject ISnackbar _snackbar
 @inject NavigationManager _navigationManager
 @inject IStringLocalizer<MealsResource> L
-@implements IDisposable
+@inject IScreenWakeLock _wakeLock
+@implements IAsyncDisposable
 
 @* The cooking view: a read-only page to cook from. The ingredients with their amounts at the top, the recipe below in
    large text, one step per line. Opens from the Meal plan's day card and from the Meals page; back goes to where it
@@ -83,6 +84,7 @@
     private bool _loading = true;
     private Meal? _meal;
     private IReadOnlyList<string> _steps = [];
+    private bool _wakeLockRequested;
 
     private string BackHref => From == "plan" ? "/" : "/meals";
 
@@ -117,8 +119,18 @@
         _navigationManager.NavigateTo("/meals/edit");
     }
 
-    public void Dispose()
+    // Keeps the screen on while a meal shows. Where that isn't supported the request just returns false.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_meal is null || _wakeLockRequested) return;
+
+        _wakeLockRequested = true;
+        await _wakeLock.RequestAsync();
+    }
+
+    public async ValueTask DisposeAsync()
     {
         _mealsStateContainer.OnStateChanged -= StateChanged;
+        if (_wakeLockRequested) await _wakeLock.ReleaseAsync();
     }
 }
