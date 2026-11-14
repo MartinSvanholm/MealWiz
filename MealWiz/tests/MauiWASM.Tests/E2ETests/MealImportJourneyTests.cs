@@ -9,7 +9,7 @@ namespace MauiWASM.Tests.E2ETests;
 /// The import from URL, with the Functions app played by the test. The browser's call to ScrapeRecipe is
 /// intercepted and acknowledged straight away, leaving the row pending, and the test then writes the result with the
 /// service role, as ScrapeRecipeHandler does. Because the app has already re-read the row after the acknowledgement,
-/// the result can only reach it over Realtime. The scraping itself is covered by MealWiz.Functions.Tests.
+/// the result can only reach it by polling the row. The scraping itself is covered by MealWiz.Functions.Tests.
 /// </summary>
 [Trait("Category", "E2E")]
 public class MealImportJourneyTests : E2ETestBase
@@ -17,7 +17,7 @@ public class MealImportJourneyTests : E2ETestBase
     private const string SourceUrl = "https://recipes.mealwiz.test/aeblepandekager";
 
     [Fact]
-    public async Task ImportedMeal_ArrivesOverRealtime_AndCanBeSaved()
+    public async Task ImportedMeal_ArrivesFromTheRow_AndCanBeSaved()
     {
         var jobId = await StartImportAsync(acknowledgeWith: 200);
 
@@ -49,7 +49,7 @@ public class MealImportJourneyTests : E2ETestBase
     }
 
     [Fact]
-    public async Task FailedImport_ArrivesOverRealtime_AndShowsTheReason()
+    public async Task FailedImport_ArrivesFromTheRow_AndShowsTheReason()
     {
         // The page shows the message for the row's error_code, never the Function's English error_message.
         const string detail = "Could not find recipe data on the page.";
@@ -82,7 +82,7 @@ public class MealImportJourneyTests : E2ETestBase
         "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCAAeACgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCaiiivlT6YKKKKACiiigAooooAKKKKACiiigD/2Q==");
 
     [Fact]
-    public async Task PictureImport_ArrivesOverRealtime_AndCanBeSaved()
+    public async Task PictureImport_ArrivesFromTheRow_AndCanBeSaved()
     {
         var analyzeCall = InterceptAnalyzeCall(acknowledgeWith: 200);
 
@@ -403,7 +403,7 @@ public class MealImportJourneyTests : E2ETestBase
         await Page.GetByTestId("import-submit").ClickAsync();
 
         // Bounded by the test's own timeout rather than a sleep: the app calls the Function once the row is created
-        // and its Realtime channel is subscribed as the user, so the result can be written straight away (MEA-43).
+        // and then polls it, so the result can be written straight away.
         var (sentJobId, sentUrl) = await request.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         Assert.Equal(SourceUrl, sentUrl);
 

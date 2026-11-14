@@ -18,7 +18,6 @@ public class DependencyInjectionHelperTests
     [InlineData(typeof(IMealPlanStateContainer), typeof(MealPlanStateContainer))]
     [InlineData(typeof(IPlanWeekStateContainer), typeof(PlanWeekStateContainer))]
     [InlineData(typeof(IGroceryListStateContainer), typeof(GroceryListStateContainer))]
-    [InlineData(typeof(IMealImportRealtimeSubscriber), typeof(MealImportRealtimeSubscriber))]
     [InlineData(typeof(IMealImportStateContainer), typeof(MealImportStateContainer))]
     public void RegisterScopedServices_RegistersEachStateContainerAsScoped(Type service, Type implementation)
     {

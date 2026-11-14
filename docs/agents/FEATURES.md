@@ -318,11 +318,11 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 
 ## MealImport
 
-Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports` and subscribes to that row
-over Supabase Realtime. It then POSTs `{ jobId, url }` to the Azure Function (see
+Imports a meal from a recipe URL. The client inserts a `pending` row in `meal_imports`, then POSTs `{ jobId, url }` to the Azure Function (see
 [Functions: ScrapeRecipe](#functions-scraperecipe)), which scrapes the page and writes `succeeded` + `parsed_meal` or
 `failed` + `error_code` + `error_message` back to the row. The row is the source of truth; the Function's HTTP status only says
-whether the row was written.
+whether the row was written. The Function answers after writing the row, so the client reads the row when the call
+returns, and reads it again every 2 s (`PollInterval`) if it is still pending then. There is no Realtime subscription.
 
 On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal()`. After 30 s the page offers
 "Continue in background", and leaving the page does the same. A backgrounded job saves the meal itself, or shows a
@@ -381,8 +381,6 @@ detail for diagnosis.
 - **State:**
   - `Features/MealImport/State/MealImportStateContainer.cs` (`IMealImportStateContainer`): runs the job, its timers
     and background mode. It depends on `IMealsStateContainer` to save imported meals, and injects `ISnackbar` itself.
-  - `Features/MealImport/State/MealImportRealtimeSubscriber.cs` (`IMealImportRealtimeSubscriber`): the Realtime
-    channel for one row. It is the only Shared service outside a handler that uses the Supabase client.
   - `Features/MealImport/State/MealImportJobHelper.cs`: pure logic: URL normalising, the entry-point state, and stale-row checks.
 - **Models:**
   - `Features/MealImport/Models/MealImport.cs` ↔ `Features/MealImport/Models/MealImportDb.cs`, table `meal_imports`.
@@ -395,7 +393,8 @@ detail for diagnosis.
   - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
-    `supabase_realtime` publication.
+    `supabase_realtime` publication, which `supabase/migrations/20261114130000_remove_meal_imports_from_realtime.sql`
+    takes back out (the app polls the row instead).
   - `supabase/migrations/20261012120000_allow_client_to_fail_meal_imports.sql`
   - `supabase/migrations/20261106120000_add_meal_import_error_codes.sql`: `error_code` with its check constraint, in
     the client's update grant.
@@ -705,7 +704,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
     `RegisterScopedServices()`, the MediatR assembly scan, auth, `TimeProvider`, `HttpClient`,
-    `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
+    `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key; Realtime is not used).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
@@ -732,7 +731,7 @@ table and policy list.
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
 
 ### Functions
 

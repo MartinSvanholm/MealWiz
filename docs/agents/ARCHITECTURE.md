@@ -51,7 +51,6 @@ across features; `GroceryItem` builds from `Ingredient`, and `MealPlan` holds `M
 Only MediatR handlers inject or use `Supabase.Client`. The exceptions are these, and no others:
 
 - `Services/Authentication/CustomAuthStateProvider.cs`, which reads the session
-- `Features/MealImport/State/MealImportRealtimeSubscriber.cs`, which owns the Realtime channel
 - the host DI setup that creates the client, in `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` and
   `MealWiz/MealWiz/MealWiz/MauiProgram.cs`
 
@@ -125,8 +124,7 @@ does. Without it the exception would be lost.
   `GroceryItem.MapToDb()` predates the naming.
 - Enums are stored as strings through `ToDbValue()` and `FromDbValue()` extensions; see `MealType` and
   `MealImportStatus`.
-- Pages, components and state containers use only domain types. `*Db` types appear only in handlers, in `Models/`,
-  and in `MealImportRealtimeSubscriber`.
+- Pages, components and state containers use only domain types. `*Db` types appear only in handlers and in `Models/`.
 
 - **Why:** the database schema can change without touching UI code, and Postgrest attributes and `BaseModel`
   behaviour stay out of UI state.
@@ -368,7 +366,7 @@ Namespaces are file-scoped and match the folder path.
 - A state container inherits `StateContainerBase`, declares its interface in the same file, is registered as scoped,
   and calls `NotifyStateChanged()` after every state change.
 - Components that subscribe to `OnStateChanged` implement `IDisposable` and unsubscribe in `Dispose`.
-- Events that can arrive off the UI thread (Realtime, timers) are handled with `() => InvokeAsync(StateHasChanged)`.
+- Events that can arrive off the UI thread (timers, background jobs) are handled with `() => InvokeAsync(StateHasChanged)`.
 - The hosting page sets `CurrentSnackbar` before calling load methods.
 
 - **Why:** a subscription that is never removed leaks the component and re-renders a page that's gone, and off-thread

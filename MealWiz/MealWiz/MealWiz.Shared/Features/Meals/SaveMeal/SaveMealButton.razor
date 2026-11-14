@@ -22,7 +22,7 @@ OnClick="SaveMeal">@S["Common_Save"]</MudLoadingButton>
 
     protected override void OnInitialized() => _mealImportStateContainer.OnStateChanged += OnImportStateChanged;
 
-    // Save is disabled while a retry runs. Realtime callbacks can arrive off the UI thread (MAUI).
+    // Save is disabled while a retry runs. An import job can resolve off the UI thread (MAUI).
     private void OnImportStateChanged() => InvokeAsync(StateHasChanged);
 
     public void Dispose() => _mealImportStateContainer.OnStateChanged -= OnImportStateChanged;

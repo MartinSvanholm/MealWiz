@@ -1,6 +1,6 @@
 # E2ETests
 
-Playwright tests that drive the **published** web app in headless Chromium against the local Supabase stack. This is the only level that catches broken JS interop, routing, session persistence in localStorage and Realtime.
+Playwright tests that drive the **published** web app in headless Chromium against the local Supabase stack. This is the only level that catches broken JS interop, routing, session persistence in localStorage and the meal import's polling of its row.
 
 ## Run
 
@@ -45,7 +45,7 @@ Environment variables:
 
 - `console.log` also records the Supabase Realtime frames, minus heartbeats, so a missed update can be told apart from one the app ignored.
 
-The import journey doesn't run the Functions app. The browser's call to `/functions/api/ScrapeRecipe` is intercepted and acknowledged, and the test writes the row's result with the service role, so the app can only learn the result over Realtime. Scraping is covered by MealWiz.Functions.Tests.
+The import journey doesn't run the Functions app. The browser's call to `/functions/api/ScrapeRecipe` is intercepted and acknowledged, and the test writes the row's result with the service role, so the app can only learn the result by polling the row. Scraping is covered by MealWiz.Functions.Tests.
 
 ## Writing tests without flakes
 
