@@ -62,7 +62,6 @@ namespace MealWiz
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddSingleton(TimeProvider.System);
-            builder.Services.AddScoped(_ => new HttpClient());
             builder.Services.AddSingleton(new FunctionAppOptions(
                 builder.Configuration["MealImportFunction:url"] ?? string.Empty,
                 builder.Configuration["MealImportFunction:key"]));

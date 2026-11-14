@@ -51,6 +51,8 @@ across features; `GroceryItem` builds from `Ingredient`, and `MealPlan` holds `M
 Only MediatR handlers inject or use `Supabase.Client`. The exceptions are these, and no others:
 
 - `Services/Authentication/CustomAuthStateProvider.cs`, which reads the session
+- `Services/Authentication/SessionKeeper.cs`, which loads, refreshes and ends the session in place of the SDK's own
+  refresh (the SDK signs the user out on a network error)
 - `Features/MealImport/State/MealImportRealtimeSubscriber.cs`, which owns the Realtime channel
 - the host DI setup that creates the client, in `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` and
   `MealWiz/MealWiz/MealWiz/MauiProgram.cs`

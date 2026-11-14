@@ -263,9 +263,9 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
     off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
     with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
@@ -314,7 +314,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table)
 
 ## MealImport
 
@@ -664,7 +664,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **`Helpers/`:**
   - `ResultHelper.cs`: `Handle(snackbar)`, plus `SetDefaultCatchHandler()`/`MapException`, which turn Supabase
     exceptions into errors; a unique violation (23505) becomes "This was just changed on another device. Reload to see it."
-  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services.
+  - `DependencyInjectionHelper.cs`: `RegisterScopedServices()`, the one list of Shared services. It also registers the app's `HttpClient`, with a 150 s timeout (`HttpClientTimeout`): longer than the Function app's two-minute limit, so the client never gives up on an import the Function may still finish.
   - `ErrorMessages.cs`: `GenericError`, `NotSignedIn`.
   - `SupabaseHelper.cs`, `DateTimeExtensions.cs` (`StartOfWeek`, `EndOfWeek`), `DictionaryExtensions.cs`.
 - **`Models/Supabase/`:** the shapes of Supabase error responses, used by `ResultHelper`.
@@ -705,14 +705,14 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **MauiWASM (web, deployed to Azure Static Web Apps).**
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
-    `RegisterScopedServices()`, the MediatR assembly scan, auth, `TimeProvider`, `HttpClient`,
+    `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
     `FunctionAppOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
   - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
-    MediatR assembly scan, auth, `TimeProvider`, `HttpClient`, `FunctionAppOptions` and the Supabase `Client`
+    MediatR assembly scan, auth, `TimeProvider`, `FunctionAppOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.

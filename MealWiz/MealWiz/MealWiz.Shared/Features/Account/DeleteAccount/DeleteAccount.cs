@@ -38,18 +38,14 @@ public static class DeleteAccount
             if (!string.IsNullOrWhiteSpace(options.Key))
                 httpRequest.Headers.Add("x-functions-key", options.Key);
 
-            HttpStatusCode status;
-            try
+            var sent = await Result.Try(async Task<HttpStatusCode> () =>
             {
                 using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
-                status = response.StatusCode;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                return Failed();
-            }
+                return response.StatusCode;
+            });
+            if (sent.IsFailed) return Failed();
 
-            switch (status)
+            switch (sent.Value)
             {
                 case HttpStatusCode.NoContent:
                     await sessionKeeper.SignOutLocallyAsync();
