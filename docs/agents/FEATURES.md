@@ -329,8 +329,32 @@ On success the Import page pre-fills the Edit Meal form from `ParsedMeal.ToMeal(
 toast if it fails. The client fails the row itself (`MarkMealImportFailed`) if the Function is unreachable or the row
 stays pending past 3 minutes. One job runs at a time.
 
+A job row is a **link job** (`source_url`) or a **picture job** (`picture_paths`: one to three JPEGs in the private
+`meal-import-pictures` bucket, `language` `en`/`da`, optional `hint`), never both. A picture job is resolved by
+[Functions: AnalyzeMealPicture](#functions-analyzemealpicture) and its `parsed_meal` also has `IsGuessed` (true for a
+meal guessed from a dish; absent reads as false). The client starts one from the Import page (`/meals/import?source=picture`, reached by "Create from a picture" in the
+New menu: `add-meal-import-picture`): the user takes or chooses up to 3 pictures (`import-picture-camera-input`,
+`import-picture-gallery-input`), sees thumbnails (`import-picture-thumb-{i}`, `import-picture-remove-{i}`), a privacy note
+(`import-picture-privacy`) and an inline error (`import-picture-error`), and presses `import-picture-submit`. Each picture
+is shrunk in the browser first (`MealWiz/MealWiz/MealWiz.Shared/wwwroot/js/mealPictures.js` through `Features/MealImport/State/MealPictureShrinker.cs`,
+`IMealPictureShrinker`: orientation applied, long edge 2,500 px, JPEG 0.8; a file the browser can't decode is not added).
+`IMealImportStateContainer.StartPictureImport` then uploads the pictures, inserts the row (with the app language, from
+`MealImportJobHelper.LanguageFor`), and calls the Function; the rest (progress card, background mode, one job at a
+time) is shared with link jobs. Constants live in `Features/MealImport/Models/MealImportPictures.cs` (bucket id,
+`MaxPictures`, `MaxHintLength`, `PathFor(userId, jobId, index)`). The Edit meal form knows its job (`IMealImportStateContainer.FormImport`, set by the
+Import page's `OpenInForm()`): `EditMealPage` shows `edit-meal-guessed-note` when the meal was guessed from a dish, and for
+a picture job `edit-meal-retry` ("Not right? Try again with a hint") opens `edit-meal-hint-input` and
+`edit-meal-hint-submit` (disabled for a blank hint). `RetryWithHint` starts a new job on the same picture paths with the
+hint (no upload); while it runs (`IsRetrying`, `edit-meal-retrying`) `save-meal-button` is disabled. A successful retry
+replaces the form and `FormImport`; a failed one leaves the form and shows `RetryErrorMessage`
+(`edit-meal-retry-error`); leaving the form during a retry backgrounds it. `ReleaseFormImport()` deletes the form job's
+pictures (best effort, silent, through `DeleteMealImportPictures`): after a full save (`SaveMealButton`) and when the form
+is left; a backgrounded picture job deletes its pictures when it finishes. What's left (a closed tab, a failed job) goes in
+the daily clean-up ([Functions: CleanUpMealPictures](#functions-cleanupmealpictures)).
+
 A failed row's `error_code` says why: `invalid_url`, `no_recipe_found` and `fetch_failed` (or `unknown`) from the
-Function; `unreachable` or `timed_out` from the client. The UI shows the localized message for the code
+Function; `unreachable` or `timed_out` from the client. A picture job adds `no_meal_found`, `daily_limit_reached`,
+`picture_unreadable` and `ai_unavailable` (and the Function may write `timed_out`). The UI shows the localized message for the code
 (`ImportError_<Code>`, null or unknown = `ImportError_Unknown`) and never `error_message`, which keeps the English
 detail for diagnosis.
 
@@ -349,6 +373,10 @@ detail for diagnosis.
   | GetLatestMealImport | `Query` → `Result<MealImport?>` | The user's newest row, for the entry-point status |
   | MarkMealImportFailed | `Command(Guid Id, MealImportErrorCode ErrorCode, string ErrorMessage)` → `Result<MealImport?>` | Move own row `pending` → `failed`; the only client update RLS allows |
   | TriggerScrapeRecipe | `Command(Guid JobId, string Url)` → `Result` | POST to `<MealImportFunction:url>/api/ScrapeRecipe` with `x-functions-key`. Uses `HttpClient`, not Supabase |
+  | UploadMealImportPictures | `Command(Guid JobId, IReadOnlyList<byte[]> Pictures)` → `Result<IReadOnlyList<string>>` | Upload 1–3 JPEGs one at a time to `{userId}/{jobId}/{index}.jpg` in the `meal-import-pictures` bucket; removes the earlier ones if a later one fails |
+  | DeleteMealImportPictures | `Command(IReadOnlyList<string> Paths)` → `Result` | Remove objects through the Storage API (empty list = success) |
+  | CreatePictureMealImport | `Command(Guid Id, IReadOnlyList<string> PicturePaths, string Language, string? Hint)` → `Result<MealImport>` | Insert the pending picture job (no `source_url`); a blank hint becomes null, a hint over 200 characters fails |
+  | TriggerAnalyzeMealPicture | `Command(Guid JobId)` → `Result` | POST `{ jobId }` to `<MealImportFunction:url>/api/AnalyzeMealPicture` with `x-functions-key` |
 
 - **State:**
   - `Features/MealImport/State/MealImportStateContainer.cs` (`IMealImportStateContainer`): runs the job, its timers
@@ -371,12 +399,17 @@ detail for diagnosis.
   - `supabase/migrations/20261012120000_allow_client_to_fail_meal_imports.sql`
   - `supabase/migrations/20261106120000_add_meal_import_error_codes.sql`: `error_code` with its check constraint, in
     the client's update grant.
+  - `supabase/migrations/20261112120000_add_meal_import_pictures.sql`: the `meal-import-pictures` bucket with its
+    owner-only policies, the picture-job columns and checks, and the four new error codes.
+  - `supabase/migrations/20261113120000_set_meal_import_created_at_on_client_insert.sql`: a trigger that sets
+    `created_at` to the server's `now()` on a client's insert (the Function's freshness check and daily limit rely on
+    it); the service role keeps its own value. The client never sends `created_at`.
 - **Tests:**
   - unit: `Features/MealImport/UnitTests/` (Handlers, Models, State)
   - bUnit: `Features/MealImport/ComponentTests/ImportMealPageTests.cs`
   - integration: `Features/MealImport/IntegrationTests/MealImportHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealImportJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/meal_imports.test.sql`
+  - pgTAP: `supabase/tests/database/meal_imports.test.sql`, `supabase/tests/database/meal_import_pictures.test.sql` (the bucket policies)
   - contracts: `MealWiz/tests/Contracts/`
 
 ## Authentication
@@ -524,7 +557,7 @@ DNS, non-public host, network, timeout), `no_recipe_found` (no parser found a re
 
 Responses: 200 means the row is resolved; 502 means the row couldn't be read or written and is still pending, so the
 client fails it; 400 means a bad body. `MealWiz/src/MealWiz.Functions/README.md` covers local setup, the function
-key, CORS and deployment.
+key, CORS and deployment. A picture job (no `source_url`) is left pending with a warning: AnalyzeMealPicture resolves it.
 
 - **Folder:** `MealWiz/src/MealWiz.Functions/`
 - **Function:**
@@ -548,6 +581,56 @@ key, CORS and deployment.
 - **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/`
   - `Functions/ScrapeRecipe/UnitTests/` and `Functions/ScrapeRecipe/IntegrationTests/`
   - `Shared/UnitTests/` and `Shared/IntegrationTests/`
+
+## Functions: AnalyzeMealPicture
+
+The picture half of MealImport, in the same Functions app. `POST /api/AnalyzeMealPicture` (`AuthorizationLevel.Function`)
+takes `{ jobId }` (other fields are ignored). It resolves a pending picture job with the service-role key, in this
+order: load the row (502 if it can't be read); leave a non-pending row or a link job alone (200); **claim** the row
+(conditional update of `updated_at` where it's pending and still null, so a duplicate call does nothing); the row must
+be at most 5 minutes old and at most 1 minute ahead (else `timed_out`); its 1–3 paths must be lowercase and under
+`{created_by}/` with no `.`, `..` or empty segment (else `picture_unreadable`); the owner's picture jobs created today
+(UTC day, any status, this one included) must not exceed the daily limit (else `daily_limit_reached`); download the
+pictures one at a time (any failure → `picture_unreadable`); analyse; write back with the conditional
+`status = pending` update, so the first resolution wins. The reply, 200/400/502, means the same as ScrapeRecipe's.
+
+The AI seam is `IMealPictureAnalyzer`. `AnthropicMealPictureAnalyzer` sends all the pictures (labelled "Image 1:", …)
+and one instruction ("Write the meal in English|Danish.", plus the hint) in one request to Claude through the official
+`Anthropic` NuGet package, with low effort and schema-constrained output (`MealPictureReading`), and maps the answer:
+`written_recipe` → `IsGuessed` false, `dish` → true, `no_meal` or a blank name → `no_meal_found`. A stop reason other
+than `end_turn`, a 429/5xx/other API error or a missing API key → `ai_unavailable` (the API isn't called without a key);
+a 413 or an image 400 → `picture_unreadable`; a timeout or the 80 s budget → `timed_out`. Every error carries its code
+in a `PictureImportError`. Nothing logs picture bytes, the key or the hint.
+
+- **Folder:** `MealWiz/src/MealWiz.Functions/Functions/AnalyzeMealPicture/`
+  - `AnalyzeMealPictureFunction.cs`: the HTTP trigger.
+  - `AnalyzeMealPictureHandler.cs`: `IAnalyzeMealPictureHandler.HandleAsync` → `Result`.
+  - `PictureJobRules.cs`: the pure rules: path check, freshness window, the daily-limit setting.
+  - `IMealPictureAnalyzer.cs`: the seam, `MealPictureAnalysisRequest` and `PictureImportError`.
+  - `AnthropicMealPictureAnalyzer.cs`, `MealPicturePrompt.cs`, `MealPictureReading.cs`, `MealPictureMapper.cs`: the production analyzer.
+- **Settings:** `Anthropic:ApiKey` (required; `Anthropic__ApiKey` in Azure), `Anthropic:Model` (default `claude-haiku-5-5`),
+  `MealPictureImport:DailyLimit` (default 20; 0 turns analysis off). See `MealWiz/src/MealWiz.Functions/README.md`.
+- **Shared code:** `MealWiz/src/MealWiz.Functions/Shared/Models/MealImportPictures.cs` (bucket id, limits), duplicated
+  on the client (FN-01).
+- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/AnalyzeMealPicture/UnitTests/` (analyzer through
+  `TestInfrastructure/FakeAnthropicHandler.cs`, mapper, prompt, rules, trigger) and `MealWiz/tests/MealWiz.Functions.Tests/Functions/AnalyzeMealPicture/IntegrationTests/` (the handler
+  with a fake analyzer against local Supabase and Storage). No test calls the real AI service.
+
+## Functions: CleanUpMealPictures
+
+A timer Function (`0 17 3 * * *`, 03:17 UTC daily, `AzureWebJobsStorage`) that deletes every picture in the
+`meal-import-pictures` bucket older than 24 hours, so none outlives about two days (the app deletes a job's pictures on
+save or discard; this catches the rest, including a deleted account's). Storage can't list by age, so
+`CleanUpMealPicturesHandler.HandleAsync(cutoff)` asks the service-role-only database function
+`public.expired_meal_import_pictures(cutoff)` for the names and removes them through the Storage API in batches of 100,
+at most 5,000 per run (never SQL). A failed batch is logged and ends the run; the next day tries again.
+
+- **Folder:** `MealWiz/src/MealWiz.Functions/Functions/CleanUpMealPictures/`
+  (`CleanUpMealPicturesFunction.cs`: the timer, passes now minus 24 h; `CleanUpMealPicturesHandler.cs`).
+- **Migration:** `supabase/migrations/20261112130000_add_expired_meal_import_pictures.sql`.
+- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/UnitTests/` and
+  `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/IntegrationTests/` (local Storage; collection
+  `PictureJobs`); pgTAP `supabase/tests/database/expired_meal_import_pictures.test.sql`.
 
 ## Cross-cutting code (MealWiz.Shared)
 
@@ -649,4 +732,16 @@ table and policy list.
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
-| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the six codes in `meal_import_error_code.json`; the Function writes the result with the service role |
+| `meal_imports` | MealImport | `add_meal_imports_table` | uuid id; in the Realtime publication. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
+
+### Functions
+
+| Function | Feature | Created in | Notes |
+|---|---|---|---|
+| `public.expired_meal_import_pictures(cutoff)` | MealImport | `add_expired_meal_import_pictures` | Names the pictures of `meal-import-pictures` created before the cutoff. `security definer`; only `service_role` may execute it. The clean-up Function removes them through the Storage API |
+
+### Storage buckets
+
+| Bucket | Feature | Created in | Notes |
+|---|---|---|---|
+| `meal-import-pictures` | MealImport | `add_meal_import_pictures` | Private; 5 MB; JPEG only. Paths are `{userId}/{jobId}/{index}.jpg`. Policies "Meal import pictures: owner inserts / reads / deletes" allow `authenticated` only inside their own `{userId}/` folder; there is no UPDATE policy. The service role (the Function) reads everything. Objects aren't removed with SQL; the app deletes through the Storage API |

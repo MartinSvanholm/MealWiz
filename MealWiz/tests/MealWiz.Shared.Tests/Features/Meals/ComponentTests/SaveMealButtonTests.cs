@@ -84,4 +84,41 @@ public class SaveMealButtonTests : ComponentTestBase
         Assert.Empty(Sent<SaveIngredient.Command>());
         Assert.Equal("meals/edit", CurrentPath);
     }
+
+    [Fact]
+    public void Save_is_disabled_while_a_retry_runs()
+    {
+        MealImport.SetupGet(m => m.IsRetrying).Returns(true);
+
+        var cut = Render<SaveMealButton>();
+
+        Assert.True(cut.Find(TestId("save-meal-button")).HasAttribute("disabled"));
+    }
+
+    [Fact]
+    public void A_full_save_releases_the_forms_pictures()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        SetupSend<SaveMeal.Command, Result<Meal>>(Result.Ok(TestData.Meal("Pancakes", id: 42)));
+        MealImport.Setup(m => m.ReleaseFormImport()).Returns(Task.CompletedTask);
+        var cut = Render<SaveMealButton>();
+
+        cut.Find(TestId("save-meal-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal("meals", CurrentPath));
+        MealImport.Verify(m => m.ReleaseFormImport(), Times.Once);
+    }
+
+    [Fact]
+    public void A_failed_save_keeps_the_pictures()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        SetupSend<SaveMeal.Command, Result<Meal>>(Result.Fail<Meal>("Nope"));
+        var cut = Render<SaveMealButton>();
+
+        cut.Find(TestId("save-meal-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Nope", SnackbarMessages));
+        MealImport.Verify(m => m.ReleaseFormImport(), Times.Never);
+    }
 }

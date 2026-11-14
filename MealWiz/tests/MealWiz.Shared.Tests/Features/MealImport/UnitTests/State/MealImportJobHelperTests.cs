@@ -107,4 +107,13 @@ public class MealImportJobHelperTests
         Assert.Equal(now, failed.CreatedAt);
         Assert.Equal(string.Empty, failed.SourceUrl);
     }
+
+    [Theory]
+    [InlineData("da", "da")]
+    [InlineData("da-DK", "da")]
+    [InlineData("en-US", "en")]
+    [InlineData("en", "en")]
+    [InlineData("sv", "en")]
+    public void LanguageFor_IsTheSupportedLanguageOrEnglish(string culture, string expected) =>
+        Assert.Equal(expected, MealImportJobHelper.LanguageFor(System.Globalization.CultureInfo.GetCultureInfo(culture)));
 }

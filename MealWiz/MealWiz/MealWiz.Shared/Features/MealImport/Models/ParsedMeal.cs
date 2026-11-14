@@ -19,6 +19,9 @@ public class ParsedMeal
 
     public List<ParsedMealIngredient> Ingredients { get; set; } = [];
 
+    /// <summary>True only when the meal was guessed from a picture of a dish. Absent in the JSON reads as false.</summary>
+    public bool IsGuessed { get; set; }
+
     /// <summary>
     /// An unsaved <see cref="Meal"/> pre-filled from the import, for the Save Meal form or a direct save.
     /// </summary>

@@ -107,3 +107,41 @@
     flex-direction: column;
     gap: 6px;
 }
+
+.mw-edit-meal-note {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-surface-raised);
+    color: var(--mw-text);
+    font-size: 13px;
+}
+
+.mw-edit-meal-retry {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mw-edit-meal-retry-link {
+    align-self: flex-start;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--mw-green-text);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mw-edit-meal-retrying {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--mw-text-muted);
+}
+
+.mw-edit-meal-retry-error {
+    color: var(--mw-red-text);
+    font-size: 13px;
+}

@@ -40,6 +40,10 @@ it fixes the groups itself, one at a time.
 They build on adapted copies of Matt Pocock's skills (`mw-grilling`, `mw-to-spec`, `mw-to-tickets`, `mw-tdd`,
 `mw-code-review`, `mw-diagnosing-bugs`, `mw-research`); see `.claude/skills/THIRD_PARTY_NOTICES.md`.
 
+A SessionStart hook (`.claude/hooks/sync-dev.sh`, in `.claude/settings.json`) fetches `origin/dev` and fast-forwards
+the local `dev` branch, so a resumed or cached checkout never starts on stale code. It never fails the session; if it
+prints a warning, run `git fetch origin && git pull --ff-only` yourself before starting work.
+
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
 - **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
@@ -60,7 +64,7 @@ Rules for every session:
 - **Languages:** English and Danish, from `.resx` resources through `IStringLocalizer`; the device language
   picks one at startup (ARCHITECTURE.md, UI-03 and "Localization").
 - **Auth:** Supabase Auth with a custom `AuthenticationStateProvider`.
-- **Server:** one Azure Functions app (`ScrapeRecipe` for meal import, `DeleteAccount`; isolated worker, net10.0).
+- **Server:** one Azure Functions app (`ScrapeRecipe`, `AnalyzeMealPicture` and the daily `CleanUpMealPictures` for meal import, `DeleteAccount`; isolated worker, net10.0).
 - **Hosting:** Azure Static Web Apps and Azure Functions, deployed by GitHub Actions.
 
 ## Projects
@@ -69,7 +73,7 @@ Rules for every session:
 | `MealWiz/MealWiz/MealWiz.Shared/` | All feature code: pages, components, handlers, state, models |
 | `MealWiz/MauiWASM/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
 | `MealWiz/MealWiz/MealWiz/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
-| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe` and `DeleteAccount`. Deliberately doesn't reference Shared |
+| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe`, `AnalyzeMealPicture`, `CleanUpMealPictures` and `DeleteAccount`. Deliberately doesn't reference Shared |
 | `MealWiz/tests/MealWiz.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
 | `MealWiz/tests/MealWiz.Functions.Tests/` | Unit and integration tests for Functions |
 | `MealWiz/tests/MauiWASM.Tests/` | Web-head unit tests and Playwright E2E |

@@ -26,7 +26,6 @@ public static class CreateMealImport
             var userId = supabaseClient.Auth.CurrentSession?.User?.Id;
             if (userId is null) return Result.Fail(ErrorMessages.NotSignedIn);
 
-            mealImportDb.CreatedAt = DateTime.UtcNow;
             mealImportDb.CreatedBy = new Guid(userId);
 
             var insertResult = await Result.Try(async Task<ModeledResponse<MealImportDb>> () => await supabaseClient

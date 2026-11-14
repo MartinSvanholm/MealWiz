@@ -48,6 +48,7 @@ public abstract class ComponentTestBase : BunitContext
     protected Mock<IMediator> Mediator { get; } = new();
     protected Mock<ILocalStorageService> LocalStorage { get; } = new();
     protected Mock<IMealImportStateContainer> MealImport { get; } = new();
+    protected Mock<IMealPictureShrinker> PictureShrinker { get; } = new();
     protected Mock<IThemeService> Theme { get; } = new();
     protected Mock<ILanguagePreference> Language { get; } = new();
 
@@ -102,6 +103,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<ISender>(Mediator.Object);
         Services.AddSingleton(LocalStorage.Object);
         Services.AddSingleton(MealImport.Object);
+        Services.AddSingleton(PictureShrinker.Object);
         Services.AddSingleton(Theme.Object);
         Services.AddSingleton(Language.Object);
         Services.AddSingleton<IDrawerStateContainer>(Drawer);

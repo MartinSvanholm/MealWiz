@@ -76,6 +76,14 @@ public class ScrapeRecipeHandler(
             return Result.Ok();
         }
 
+        // A picture job has no link; AnalyzeMealPicture resolves it. Leave it pending.
+        if (importRow.SourceUrl is null)
+        {
+            logger.LogWarning("meal_imports row {JobId} is a picture job (no source_url); ScrapeRecipe leaves it alone.",
+                request.JobId);
+            return Result.Ok();
+        }
+
         if (!string.Equals(request.Url, importRow.SourceUrl, StringComparison.Ordinal))
         {
             logger.LogWarning("Request URL for meal_imports row {JobId} doesn't match its source_url; scraping source_url.",

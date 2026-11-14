@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(9);
+select plan(11);
 
 select is_empty(
     $$ select c.relname::text
@@ -67,6 +67,19 @@ select policies_are('public', 'meals', array[
     'Enable insert for authenticated users only',
     'Enable update for users based on user_id',
     'Enable users to view their own data only'
+]);
+
+-- Storage: the pictures bucket is the only bucket, and its three owner-only policies the only objects policies.
+select bag_eq(
+    $$ select id::text from storage.buckets $$,
+    $$ values ('meal-import-pictures') $$,
+    'storage has only the meal-import-pictures bucket'
+);
+
+select policies_are('storage', 'objects', array[
+    'Meal import pictures: owner deletes',
+    'Meal import pictures: owner inserts',
+    'Meal import pictures: owner reads'
 ]);
 
 select * from finish();
