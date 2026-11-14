@@ -1,3 +1,4 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Net.Http.Json;
 using FluentResults;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -15,7 +16,7 @@ public static class TriggerAnalyzeMealPicture
 {
     public record Command(Guid JobId) : IRequest<Result>;
 
-    public class Handler(HttpClient httpClient, MealImportFunctionOptions options, IStringLocalizer<MealImportResource> localizer) : IRequestHandler<Command, Result>
+    public class Handler(HttpClient httpClient, FunctionAppOptions options, IStringLocalizer<MealImportResource> localizer) : IRequestHandler<Command, Result>
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
