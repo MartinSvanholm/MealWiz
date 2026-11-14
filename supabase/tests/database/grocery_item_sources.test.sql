@@ -1,6 +1,6 @@
 -- RLS on grocery_item_sources (MEA-84): which planned day and ingredient a grocery item came from.
 -- Each user reads and writes only their own rows; INSERT and UPDATE also require the user's own item, planned day
--- and ingredient (planned day and ingredient may be null); anon gets nothing.
+-- and ingredient (planned day and ingredient may be null); anon holds no privilege on the table at all.
 begin;
 create extension if not exists pgtap with schema extensions;
 
@@ -159,9 +159,10 @@ select is_empty(
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 
-select is_empty(
+select throws_ok(
     $$ select id from public.grocery_item_sources $$,
-    'anon sees no sources'
+    '42501', null,
+    'anon cannot read sources'
 );
 
 select throws_ok(
@@ -171,13 +172,15 @@ select throws_ok(
     'anon cannot insert sources'
 );
 
-select is_empty(
+select throws_ok(
     $$ update public.grocery_item_sources set amount = 'hacked' returning id $$,
+    '42501', null,
     'anon cannot update sources'
 );
 
-select is_empty(
+select throws_ok(
     $$ delete from public.grocery_item_sources returning id $$,
+    '42501', null,
     'anon cannot delete sources'
 );
 

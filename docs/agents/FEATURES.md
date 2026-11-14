@@ -314,7 +314,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table)
 
 ## MealImport
 
