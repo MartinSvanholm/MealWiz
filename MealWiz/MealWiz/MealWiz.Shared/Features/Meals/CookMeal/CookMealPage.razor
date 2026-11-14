@@ -1,0 +1,124 @@
+@attribute [Authorize]
+@page "/meals/cook/{MealId:int}"
+@inject IMealsStateContainer _mealsStateContainer
+@inject ISnackbar _snackbar
+@inject NavigationManager _navigationManager
+@inject IStringLocalizer<MealsResource> L
+@implements IDisposable
+
+@* The cooking view: a read-only page to cook from. The ingredients with their amounts at the top, the recipe below in
+   large text, one step per line. Opens from the Meal plan's day card and from the Meals page; back goes to where it
+   was opened (?from=plan or ?from=meals). It shows no input, so nothing on it can be edited. *@
+<div class="mw-page mw-cook" data-testid="cook-meal-page">
+    <SubPageHeader Label="@L["CookMeal_Label"]" BackHref="@BackHref" BackTestId="cook-meal-back">
+        <TitleContent><span data-testid="cook-meal-name">@_meal?.Name</span></TitleContent>
+    </SubPageHeader>
+
+    <div class="mw-cook-body">
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" data-testid="cook-meal-loading" />
+        }
+        else if (_meal is null)
+        {
+            <p class="mw-cook-empty" data-testid="cook-meal-not-found">@L["CookMeal_NotFound"]</p>
+        }
+        else
+        {
+            <section class="mw-cook-section" data-testid="cook-meal-ingredients">
+                <h2 class="mw-cook-title">@L["CookMeal_Ingredients"]</h2>
+                @if (_meal.Ingredients.Count == 0)
+                {
+                    <p class="mw-cook-empty" data-testid="cook-meal-no-ingredients">@L["CookMeal_NoIngredients"]</p>
+                }
+                else
+                {
+                    <ul class="mw-cook-ingredients">
+                        @foreach (var ingredient in _meal.Ingredients)
+                        {
+                            <li class="mw-cook-ingredient" data-testid="cook-meal-ingredient">
+                                <span class="mw-cook-ingredient-name" data-testid="cook-meal-ingredient-name">@ingredient.Name</span>
+                                @if (!string.IsNullOrWhiteSpace(ingredient.Amount))
+                                {
+                                    <span class="mw-cook-ingredient-amount" data-testid="cook-meal-ingredient-amount">@ingredient.Amount</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            @if (_steps.Count == 0)
+            {
+                <section class="mw-cook-no-recipe" data-testid="cook-meal-no-recipe">
+                    <div class="mw-cook-no-recipe-text">
+                        <span class="mw-cook-no-recipe-title">@L["CookMeal_NoRecipe"]</span>
+                        <span class="mw-cook-no-recipe-hint">@L["CookMeal_NoRecipeHint"]</span>
+                    </div>
+                    <button type="button" class="mw-cook-link" data-testid="cook-meal-add-recipe" @onclick="AddRecipe">@L["CookMeal_AddRecipe"]</button>
+                </section>
+            }
+            else
+            {
+                <section class="mw-cook-section" data-testid="cook-meal-recipe">
+                    <h2 class="mw-cook-title">@L["CookMeal_Recipe"]</h2>
+                    @foreach (var step in _steps)
+                    {
+                        <p class="mw-cook-step" data-testid="cook-meal-step">@step</p>
+                    }
+                </section>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int MealId { get; set; }
+
+    /// <summary>Where the page was opened from: "plan" goes back to the Meal plan, anything else to the Meals page.</summary>
+    [SupplyParameterFromQuery(Name = "from")]
+    public string? From { get; set; }
+
+    private bool _loading = true;
+    private Meal? _meal;
+    private IReadOnlyList<string> _steps = [];
+
+    private string BackHref => From == "plan" ? "/" : "/meals";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _mealsStateContainer.CurrentSnackbar = _snackbar;
+        _mealsStateContainer.OnStateChanged += StateChanged;
+
+        // Always reload: the meal may have been edited since the list was loaded, and a reload or deep link starts empty.
+        await _mealsStateContainer.LoadMeals();
+        Refresh();
+        _loading = false;
+    }
+
+    private void Refresh()
+    {
+        _meal = _mealsStateContainer.Meals.FirstOrDefault(m => m.Id == MealId && m.IsRegular);
+        _steps = _meal?.RecipeSteps.Where(step => !string.IsNullOrWhiteSpace(step)).ToList() ?? [];
+    }
+
+    private void StateChanged()
+    {
+        Refresh();
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void AddRecipe()
+    {
+        if (_meal is null) return;
+
+        _mealsStateContainer.MealToEdit = _meal;
+        _navigationManager.NavigateTo("/meals/edit");
+    }
+
+    public void Dispose()
+    {
+        _mealsStateContainer.OnStateChanged -= StateChanged;
+    }
+}
