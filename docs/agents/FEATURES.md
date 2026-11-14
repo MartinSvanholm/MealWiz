@@ -263,9 +263,9 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
     scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
     meal plan" header button; loads the meal plan if needed, then calls `AddPlanIngredientsToGroceryListDrawer.Open`.
-  - `Features/GroceryList/AddMealPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
+  - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddPlanIngredientsToGroceryListDrawer.razor`: the merge
     drawer, `Open(drawer, title, dates)`. It loads items and sources itself, skips ingredients with `ShowOnGroceryList`
     off, makes one row per existing to-buy item (or per new name), combining new ingredients and linked ingredients
     with a changed amount (subline parts "Plan X + Y", "Was … · Now …" with `plan-ingredient-now`, "In list Z";
