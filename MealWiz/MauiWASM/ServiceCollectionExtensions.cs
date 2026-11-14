@@ -30,7 +30,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
         services.AddAuthorizationCore();
         services.AddSingleton(TimeProvider.System);
-        services.AddScoped(_ => new HttpClient());
         services.AddSingleton(new MealImportFunctionOptions(
             configuration["MealImportFunction:url"] ?? string.Empty,
             configuration["MealImportFunction:key"]));
