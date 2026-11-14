@@ -467,7 +467,7 @@ per host (see [Hosts](#hosts)).
   SDK's `RetrieveSessionAsync` deletes expired sessions): it loads the stored session, refreshes it when the access
   token expires within 60 s, then at 80 % of its lifetime. Offline, timeout, 5xx and 429 keep the session and retry
   after 15 s, doubling to 5 min (`RefreshFailure.cs` classifies); only a 400/401/403 destroys the session and raises
-  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server. `Services/Authentication/SessionGate.razor`
+  `SessionRejected`. `RefreshNowAsync()` refreshes at once with the same failure rules (after an email change). `SignOutLocallyAsync()` never calls the server; it destroys the stored session and drops the client's in-memory one, raising `Changed` once. `Services/Authentication/SessionGate.razor`
   wraps `Routes.razor`: a spinner (`session-gate-loading`) until `StartAsync()` is done (10 s cap), and a forced
   reload on `/login` when the session is rejected.
 - **Texts:** `Features/Authentication/AuthenticationResource.cs` (the signed-out pages, AuthShell and Log out). A bad
