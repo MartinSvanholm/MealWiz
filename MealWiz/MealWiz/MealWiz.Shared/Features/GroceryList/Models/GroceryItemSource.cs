@@ -1,4 +1,5 @@
 using System.Globalization;
+using MealWiz.Shared.Amounts;
 
 namespace MealWiz.Shared.Features.GroceryList.Models;
 
@@ -57,14 +58,20 @@ public class GroceryItemSource
         !IsStale && IngredientAmount is not null
         && !string.Equals(Amount.Trim(), IngredientAmount.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    public GroceryItemSourceDb MapToGroceryItemSourceDb() => new()
+    public GroceryItemSourceDb MapToGroceryItemSourceDb()
     {
-        Id = Id,
-        GroceryItemId = GroceryItemId,
-        PlannedMealId = PlannedMealId,
-        IngredientId = IngredientId,
-        Amount = Amount,
-        CreatedBy = CreatedBy,
-        CreatedAt = CreatedAt
-    };
+        var amount = ParsedAmount.Parse(Amount);
+        return new GroceryItemSourceDb
+        {
+            Id = Id,
+            GroceryItemId = GroceryItemId,
+            PlannedMealId = PlannedMealId,
+            IngredientId = IngredientId,
+            Amount = Amount,
+            AmountQuantity = amount.Quantity,
+            AmountUnit = amount.UnitCode,
+            CreatedBy = CreatedBy,
+            CreatedAt = CreatedAt
+        };
+    }
 }

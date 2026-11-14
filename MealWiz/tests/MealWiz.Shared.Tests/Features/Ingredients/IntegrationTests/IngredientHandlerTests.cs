@@ -128,6 +128,43 @@ public class IngredientHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
         Assert.Equal("Keep", remaining.Name);
     }
 
+    [Theory]
+    [InlineData("1,5 dl", 1.5, "dl")]
+    [InlineData("2", 2, null)]
+    [InlineData("a pinch", null, null)]
+    public async Task SaveIngredient_StoresTheAmountAsTextQuantityAndUnit(string amount, double? quantity, string? unit)
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().InsertAsync(supabase.Client);
+
+        ResultAssert.Ok(await SaveAsync(new IngredientBuilder().WithName("Milk").WithAmount(amount).Build(), meal.Id));
+
+        var row = Assert.Single(await GetRowsAsync(meal.Id));
+        Assert.Equal(amount, row.Amount);
+        Assert.Equal((decimal?)quantity, row.AmountQuantity);
+        Assert.Equal(unit, row.AmountUnit);
+    }
+
+    [Fact]
+    public async Task SaveIngredient_ChangingTheAmountToUnreadableText_ClearsQuantityAndUnit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var meal = await new MealBuilder().WithIngredient(i => i.WithName("Salt").WithAmount("2 tsk")).InsertAsync(supabase.Client);
+        var ingredient = meal.Ingredients.Single();
+        ingredient.Amount = "1,5 dl";
+        ResultAssert.Ok(await SaveAsync(ingredient, meal.Id));
+        var changed = Assert.Single(await GetRowsAsync(meal.Id));
+        Assert.Equal((1.5m, "dl"), (changed.AmountQuantity, changed.AmountUnit));
+
+        ingredient.Amount = "to taste";
+        ResultAssert.Ok(await SaveAsync(ingredient, meal.Id));
+
+        var row = Assert.Single(await GetRowsAsync(meal.Id));
+        Assert.Equal("to taste", row.Amount);
+        Assert.Null(row.AmountQuantity);
+        Assert.Null(row.AmountUnit);
+    }
+
     private Task<FluentResults.Result> SaveAsync(Ingredient ingredient, int mealId) =>
         new SaveIngredient.Handler(supabase.Client).Handle(new SaveIngredient.Command(ingredient, mealId), CancellationToken);
 
