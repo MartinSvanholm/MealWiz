@@ -18,19 +18,17 @@ public static class ChangePassword
     {
         public async Task<Result> Handle(Command request, CancellationToken cancellationToken)
         {
-            try
-            {
-                await supabaseClient.Auth.Update(new UserAttributes { Password = request.NewPassword });
-                return Result.Ok().WithSuccess(localizer["ChangePassword_Done"].Value);
-            }
-            catch (GotrueException ex) when (GotrueErrorCode.Read(ex.Content) is { } code && MessageFor(code) is { } message)
-            {
-                return Result.Fail(new Error(message).CausedBy(ex));
-            }
-            catch (Exception ex)
-            {
-                return Result.Fail(ResultHelper.MapException(ex));
-            }
+            var result = await Result.Try(
+                async Task () =>
+                {
+                    await supabaseClient.Auth.Update(new UserAttributes { Password = request.NewPassword });
+                },
+                // GoTrue's own reason for refusing the password, when it is one the user can act on.
+                ex => ex is GotrueException gotrue && GotrueErrorCode.Read(gotrue.Content) is { } code && MessageFor(code) is { } message
+                    ? new Error(message).CausedBy(ex)
+                    : ResultHelper.MapException(ex));
+
+            return result.IsSuccess ? result.WithSuccess(localizer["ChangePassword_Done"].Value) : result;
         }
 
         private string? MessageFor(string code) => code switch
