@@ -115,15 +115,6 @@ public class SessionKeeper : IDisposable
             await RefreshAsync();
         else
             ScheduleNext();
-
-        // Meal import needs realtime; it's connected here because AutoConnectRealtime is off.
-        _ = ConnectRealtimeAsync();
-    }
-
-    private async Task ConnectRealtimeAsync()
-    {
-        try { await _client.Realtime.ConnectAsync(); }
-        catch { /* realtime reconnects on its own; a failure here must not affect the session */ }
     }
 
     private bool IsDue(Session session) =>

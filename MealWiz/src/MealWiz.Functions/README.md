@@ -25,8 +25,8 @@ step of the "import a meal from a URL" flow ([MEA-13](https://linear.app/mealwiz
    POST http://localhost:7071/api/ScrapeRecipe
    { "jobId": "<meal_imports.id>", "url": "https://example.com/some-recipe" }
    ```
-   The outcome is in the `meal_imports` row's `status`/`parsed_meal`/`error_message` columns (or subscribe via
-   Realtime, same as the client does), not in the response. The status code only says whether the row tells you:
+   The outcome is in the `meal_imports` row's `status`/`parsed_meal`/`error_message` columns (the client
+   reads the row after this call), not in the response. The status code only says whether the row tells you:
    - `200` with `{ "jobId": ... }`: the row is resolved. Either this call wrote `succeeded`, or it wrote `failed` with
      the scrape error, or the row was already resolved.
    - `502` with an empty body: the function couldn't reach the row. It couldn't create the Supabase client, couldn't

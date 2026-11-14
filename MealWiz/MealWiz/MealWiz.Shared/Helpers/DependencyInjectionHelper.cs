@@ -29,7 +29,6 @@ public static class DependencyInjectionHelper
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
         services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
-        services.AddScoped<IMealImportRealtimeSubscriber, MealImportRealtimeSubscriber>();
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
         services.AddScoped<IMealPictureShrinker, MealPictureShrinker>();
         services.AddScoped(_ => new HttpClient { Timeout = HttpClientTimeout });
