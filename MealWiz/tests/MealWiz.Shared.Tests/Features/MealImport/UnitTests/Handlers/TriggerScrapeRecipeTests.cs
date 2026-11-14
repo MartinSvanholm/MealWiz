@@ -1,3 +1,4 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Net;
 using FluentResults;
 using MealWiz.Shared.Features.MealImport;
@@ -39,7 +40,7 @@ public class TriggerScrapeRecipeTests
     {
         using var httpClient = new HttpClient(new StubHandler(statusCode));
         var handler = new Trigger.Handler(
-            httpClient, new MealImportFunctionOptions("https://functions.example.com", "key"),
+            httpClient, new FunctionAppOptions("https://functions.example.com", "key"),
             TestLocalizer.For<MealImportResource>());
 
         return await handler.Handle(

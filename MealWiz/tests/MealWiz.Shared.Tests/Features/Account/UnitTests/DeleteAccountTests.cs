@@ -1,6 +1,6 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Net;
 using MealWiz.Shared.Features.Account;
-using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Services.Authentication;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.Extensions.Time.Testing;
@@ -57,7 +57,7 @@ public class DeleteAccountTests
     public async Task NoFunctionUrl_FailsWithoutSending()
     {
         var stub = new Stub(HttpStatusCode.NoContent);
-        var run = await RunAsync(stub, new MealImportFunctionOptions("", null));
+        var run = await RunAsync(stub, new FunctionAppOptions("", null));
 
         Assert.True(run.Result.IsFailed);
         Assert.Null(stub.Request);
@@ -76,7 +76,7 @@ public class DeleteAccountTests
         Assert.Equal("""{"password":"pw"}""", stub.Body);
     }
 
-    private static async Task<Run> RunAsync(Stub stub, MealImportFunctionOptions? options = null)
+    private static async Task<Run> RunAsync(Stub stub, FunctionAppOptions? options = null)
     {
         var persistence = new FakePersistence
         {
@@ -95,7 +95,7 @@ public class DeleteAccountTests
 
         using var http = new HttpClient(stub);
         var handler = new Delete.Handler(
-            http, options ?? new MealImportFunctionOptions("https://functions.example.com", "fn-key"),
+            http, options ?? new FunctionAppOptions("https://functions.example.com", "fn-key"),
             client, keeper, TestLocalizer.For<AccountResource>());
         var result = await handler.Handle(new Delete.Command("pw"), TestContext.Current.CancellationToken);
         return new Run(result, keeper, persistence);
