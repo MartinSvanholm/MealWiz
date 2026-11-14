@@ -26,6 +26,8 @@
   <ItemGroup>
     <!-- Golden files shared with the other test project; see ../Contracts/README.md. -->
     <None Include="..\Contracts\*.json" Link="Contracts\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The pgTAP test embeds a copy of amount_parsing.json; a test checks it equals the file. -->
+    <None Include="..\..\..\supabase\tests\database\amounts.test.sql" Link="Contracts\amounts.test.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <!-- Pins the run to en-US (CurrentCulture and CurrentUICulture), so English assertions hold on any machine.

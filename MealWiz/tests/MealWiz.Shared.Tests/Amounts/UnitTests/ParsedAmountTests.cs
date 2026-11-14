@@ -30,6 +30,33 @@ public class ParsedAmountTests
     }
 
     [Fact]
+    public void PgTapTest_EmbedsTheSameContract()
+    {
+        var sql = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Contracts", "amounts.test.sql"));
+        var begin = sql.IndexOf("-- contract:begin", StringComparison.Ordinal);
+        var end = sql.IndexOf("-- contract:end", StringComparison.Ordinal);
+        var block = sql[begin..end];
+        const string quote = "$contract$";
+        var from = block.IndexOf(quote, StringComparison.Ordinal) + quote.Length;
+        var to = block.LastIndexOf(quote, StringComparison.Ordinal);
+
+        var embedded = JsonDocument.Parse(block[from..to]).RootElement;
+
+        Assert.True(JsonSerializer.Serialize(Normalize(embedded)) == JsonSerializer.Serialize(Normalize(Contract)),
+            "supabase/tests/database/amounts.test.sql embeds a different contract than MealWiz/tests/Contracts/amount_parsing.json");
+    }
+
+    // Numbers compare by value, so 2 and 2.0 are the same.
+    private static object? Normalize(JsonElement e) => e.ValueKind switch
+    {
+        JsonValueKind.Object => e.EnumerateObject().ToDictionary(p => p.Name, p => Normalize(p.Value)),
+        JsonValueKind.Array => e.EnumerateArray().Select(Normalize).ToList(),
+        JsonValueKind.Number => e.GetDecimal(),
+        JsonValueKind.String => e.GetString(),
+        _ => null
+    };
+
+    [Fact]
     public void Contract_ListsTheTenUnitsInOrder() =>
         Assert.Equal(AmountUnit.All.Select(u => u.Code),
             Contract.GetProperty("units").EnumerateArray().Select(u => u.GetString()));
