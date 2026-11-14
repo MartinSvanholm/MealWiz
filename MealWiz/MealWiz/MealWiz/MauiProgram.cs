@@ -4,6 +4,7 @@ using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Helpers;
 using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.Authentication;
+using MealWiz.Shared.Services.FunctionApp;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
@@ -61,7 +62,7 @@ namespace MealWiz
             builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddSingleton(TimeProvider.System);
-            builder.Services.AddSingleton(new MealImportFunctionOptions(
+            builder.Services.AddSingleton(new FunctionAppOptions(
                 builder.Configuration["MealImportFunction:url"] ?? string.Empty,
                 builder.Configuration["MealImportFunction:key"]));
 

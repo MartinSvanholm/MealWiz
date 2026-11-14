@@ -392,7 +392,7 @@ detail for diagnosis.
     `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
     `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
-  - `Features/MealImport/Models/MealImportFunctionOptions.cs`: Function URL and key from appsettings.
+  - `Services/FunctionApp/FunctionAppOptions.cs`: the Function app's URL and key from appsettings (the `MealImportFunction` section); also used by Account's DeleteAccount.
 - **Migrations:**
   - `supabase/migrations/20260806120000_add_meal_imports_table.sql`: the table, plus adding it to the
     `supabase_realtime` publication.
@@ -651,6 +651,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
+- **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
@@ -705,13 +706,13 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
   - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
   - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
     `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
-    `MealImportFunctionOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
+    `FunctionAppOptions`, and the scoped Supabase `Client` (anon key, Realtime auto-connect).
   - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
   - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
   - Tests: `MealWiz/tests/MauiWASM.Tests/`.
 - **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
   - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
-    MediatR assembly scan, auth, `TimeProvider`, `MealImportFunctionOptions` and the Supabase `Client`
+    MediatR assembly scan, auth, `TimeProvider`, `FunctionAppOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
     `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
   - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.

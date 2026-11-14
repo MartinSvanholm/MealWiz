@@ -1,3 +1,4 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Reflection;
 using MauiWASM.Tests.TestInfrastructure;
 using MealWiz.Shared.Features.MealImport.Models;
@@ -57,7 +58,7 @@ public class ServiceRegistrationTests
             typeof(Supabase.Client),
             typeof(SessionKeeper),
             typeof(MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder),
-            typeof(MealImportFunctionOptions),
+            typeof(FunctionAppOptions),
             typeof(TimeProvider),
             typeof(HttpClient),
             typeof(IStringLocalizerFactory),

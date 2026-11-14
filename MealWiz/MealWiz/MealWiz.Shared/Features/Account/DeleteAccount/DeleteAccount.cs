@@ -1,7 +1,7 @@
+using MealWiz.Shared.Services.FunctionApp;
 using System.Net;
 using System.Net.Http.Json;
 using FluentResults;
-using MealWiz.Shared.Features.MealImport.Models;
 using MealWiz.Shared.Services.Authentication;
 using MediatR;
 using Microsoft.Extensions.Localization;
@@ -19,7 +19,7 @@ public static class DeleteAccount
 
     public class Handler(
         HttpClient httpClient,
-        MealImportFunctionOptions options,
+        FunctionAppOptions options,
         Client supabaseClient,
         SessionKeeper sessionKeeper,
         IStringLocalizer<AccountResource> localizer) : IRequestHandler<Command, Result>
