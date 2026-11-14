@@ -286,4 +286,21 @@ public class MealsPageTests : ComponentTestBase
         Assert.Empty(cut.FindAll(TestId("meal-list-item")));
         Assert.Equal("0 meals", cut.Find(TestId("screen-header-label")).TextContent.Trim());
     }
+
+    [Fact]
+    public void Each_card_has_a_cook_button_that_opens_the_cooking_view_and_tapping_the_card_still_edits()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+
+        Assert.Equal(3, cut.FindAll(TestId("meal-card-cook")).Count);
+        Assert.Equal("Cook Soup", cut.FindAll(TestId("meal-card-cook"))[1].GetAttribute("aria-label"));
+
+        cut.FindAll(TestId("meal-card-cook"))[1].Click();
+        Assert.Equal("meals/cook/3?from=meals", CurrentPath);
+
+        Navigation.NavigateTo("/meals");
+        cut.FindAll(TestId("meal-list-item"))[1].Click();
+        Assert.Equal("meals/edit", CurrentPath);
+        Assert.Same(_soup, Meals.MealToEdit);
+    }
 }

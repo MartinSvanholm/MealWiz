@@ -258,3 +258,15 @@
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
+
+/* The fullscreen icon floats in the recipe card's top-right corner */
+.mw-recipe-wrap {
+    position: relative;
+}
+
+.mw-recipe-wrap ::deep .mw-recipe-fullscreen {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    color: var(--mw-text-muted);
+}
