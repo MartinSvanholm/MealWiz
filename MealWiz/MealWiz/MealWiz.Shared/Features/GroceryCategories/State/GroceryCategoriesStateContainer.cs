@@ -18,6 +18,9 @@ public interface IGroceryCategoriesStateContainer
 
     /// <summary>Loads the user's categories, creating the eleven defaults the first time (when the user has none).</summary>
     Task LoadCategories();
+
+    /// <summary>The user's category for a grocery name (<see cref="CategoryResolver.Resolve"/>); null before the categories load.</summary>
+    GroceryCategory? CategoryFor(string? name);
 }
 
 public class GroceryCategoriesStateContainer(IMediator mediator) : StateContainerBase, IGroceryCategoriesStateContainer
@@ -40,4 +43,6 @@ public class GroceryCategoriesStateContainer(IMediator mediator) : StateContaine
         Categories = categories;
         NotifyStateChanged();
     }
+
+    public GroceryCategory? CategoryFor(string? name) => CategoryResolver.Resolve(name, Categories);
 }

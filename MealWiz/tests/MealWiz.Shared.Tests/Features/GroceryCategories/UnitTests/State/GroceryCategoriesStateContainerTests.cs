@@ -90,4 +90,18 @@ public class GroceryCategoriesStateContainerTests
         Assert.Empty(_container.Categories);
         Assert.Equal(0, _notifications);
     }
+
+    [Fact]
+    public async Task CategoryFor_PlacesANameInTheLoadedCategories()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+
+        Assert.Equal(DefaultCategoryKey.DairyEggs, _container.CategoryFor("mælk")?.DefaultKey);
+        Assert.True(_container.CategoryFor("flimflam")?.IsOther);
+    }
+
+    [Fact]
+    public void CategoryFor_BeforeTheCategoriesLoad_IsNull() =>
+        Assert.Null(_container.CategoryFor("milk"));
 }
