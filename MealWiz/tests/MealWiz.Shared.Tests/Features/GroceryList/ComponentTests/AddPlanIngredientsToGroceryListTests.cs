@@ -64,8 +64,9 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     }
 
     [Fact]
-    public void An_ingredient_already_on_the_list_with_another_unit_gets_an_empty_highlighted_amount()
+    public void An_ingredient_already_on_the_list_with_an_amount_that_cant_be_added_gets_an_empty_highlighted_amount()
     {
+        SetupItems(TestData.GroceryItem("Milk", "1 carton", id: 1));
         var cut = RenderLoaded(2);
 
         var amounts = cut.FindAll(TestId("plan-ingredient-amount"));
@@ -83,6 +84,45 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
 
         Assert.Equal("500 g", Amount(cut, 0));
         Assert.Equal("Plan 200g · In list 300 g", cut.FindAll(TestId("plan-ingredient-existing"))[0].TextContent.Trim());
+    }
+
+    [Fact]
+    public void Suggests_the_total_across_units_of_one_family_in_the_unit_that_reads_best()
+    {
+        SetupItems(TestData.GroceryItem("Flour", "1 kg", id: 2));
+        MealPlan.MealPlan = TestData.MealPlanWith(Day,
+            TestData.Meal("Bread", id: 5, ingredients: [TestData.Ingredient("Flour", "500 g", id: 11)]), plannedMealId: 101);
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("1.5 kg", Amount(cut, 0));
+    }
+
+    [Fact]
+    public void Same_name_ingredients_in_g_and_kg_from_two_planned_days_add_up()
+    {
+        SetupItems();
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, TestData.Meal("Bread", id: 8, ingredients: [TestData.Ingredient("Flour", "200 g", id: 21)]), 101),
+            (Day.AddDays(1), TestData.Meal("Cake", id: 9, ingredients: [TestData.Ingredient("flour", "0,5 kg", id: 22)]), 102));
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("700 g", Amount(cut, 0));
+    }
+
+    [Fact]
+    public void Amounts_in_different_families_leave_the_total_empty()
+    {
+        SetupItems();
+        MealPlan.MealPlan = TestData.MealPlanWithDays(
+            (Day, TestData.Meal("Bread", id: 8, ingredients: [TestData.Ingredient("Flour", "200 g", id: 21)]), 101),
+            (Day.AddDays(1), TestData.Meal("Cake", id: 9, ingredients: [TestData.Ingredient("flour", "1 dl", id: 22)]), 102));
+
+        var cut = RenderLoaded(1);
+
+        Assert.Equal("", Amount(cut, 0));
+        Assert.Contains("is-duplicate", cut.Find(TestId("plan-ingredient-amount")).ClassList);
     }
 
     [Fact]
@@ -191,6 +231,7 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     [Fact]
     public void Confirm_requires_an_amount_for_each_item()
     {
+        SetupItems(TestData.GroceryItem("Milk", "1 carton", id: 1));
         var cut = RenderLoaded(2);
 
         cut.Find(TestId("plan-ingredients-confirm")).Click();
