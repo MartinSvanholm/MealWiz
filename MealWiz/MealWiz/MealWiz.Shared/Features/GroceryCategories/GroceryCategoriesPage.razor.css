@@ -15,6 +15,12 @@
     padding: 0 16px var(--mw-nav-clearance);
 }
 
+/* The body scrolls; its children keep their height. Shrinking would clip the list (overflow: hidden) and hide its last
+   rows on a short screen. */
+.grocery-categories-body > * {
+    flex-shrink: 0;
+}
+
 .grocery-categories-hint {
     margin: 0;
     font-size: 14px;

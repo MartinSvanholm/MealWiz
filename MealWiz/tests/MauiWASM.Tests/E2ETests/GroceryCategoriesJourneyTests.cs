@@ -102,4 +102,25 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
         await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist"));
         await Expect(Section("meat_fish").GetByTestId("grocery-category-name")).ToHaveTextAsync("🥩 Protein");
     }
+
+    [Fact]
+    public async Task Categories_ShowEveryRow_OnAPhoneScreen_SoOtherCanBeReached()
+    {
+        await LoginAsync();
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("grocery-categories-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist/categories"));
+        await Expect(Page.GetByTestId("grocery-category-row")).ToHaveCountAsync(11);
+
+        // The list is taller than the screen: the page scrolls, and the list never clips its own rows (MEA-139 ship
+        // review: the list used to shrink to the screen and hide Snacks & sweets, Household and Other).
+        var list = Page.GetByTestId("grocery-categories-list");
+        var clipped = await list.EvaluateAsync<bool>("e => e.scrollHeight > e.clientHeight + 1");
+        Assert.False(clipped);
+
+        var other = Page.Locator("[data-testid=grocery-category-row][data-category=other]");
+        await other.ScrollIntoViewIfNeededAsync();
+        await Expect(other).ToBeInViewportAsync(new() { Ratio = 1 });
+        await Expect(Page.GetByTestId("follow-shopping-switch")).ToHaveCountAsync(1);
+    }
 }
