@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="DefaultCategory_Produce_Name" xml:space="preserve">
+    <value>Frugt &amp; grønt</value>
+  </data>
+  <data name="DefaultCategory_Bakery_Name" xml:space="preserve">
+    <value>Brød &amp; bagværk</value>
+  </data>
+  <data name="DefaultCategory_MeatFish_Name" xml:space="preserve">
+    <value>Kød &amp; fisk</value>
+  </data>
+  <data name="DefaultCategory_Deli_Name" xml:space="preserve">
+    <value>Pålæg &amp; delikatesse</value>
+  </data>
+  <data name="DefaultCategory_DairyEggs_Name" xml:space="preserve">
+    <value>Mejeri &amp; æg</value>
+  </data>
+  <data name="DefaultCategory_Frozen_Name" xml:space="preserve">
+    <value>Frost</value>
+  </data>
+  <data name="DefaultCategory_Pantry_Name" xml:space="preserve">
+    <value>Kolonial</value>
+  </data>
+  <data name="DefaultCategory_Drinks_Name" xml:space="preserve">
+    <value>Drikkevarer</value>
+  </data>
+  <data name="DefaultCategory_Snacks_Name" xml:space="preserve">
+    <value>Slik &amp; snacks</value>
+  </data>
+  <data name="DefaultCategory_Household_Name" xml:space="preserve">
+    <value>Husholdning &amp; pleje</value>
+  </data>
+  <data name="DefaultCategory_Other_Name" xml:space="preserve">
+    <value>Andet</value>
+  </data>
+</root>

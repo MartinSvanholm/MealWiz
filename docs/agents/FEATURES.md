@@ -237,7 +237,13 @@ source's remembered amount, so it isn't offered again.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
-"X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
+"X of N items", the add field, the to-buy items in supermarket sections (GroceryCategories) and "In the basket" as
+wrapping pills. Each section with something to buy (`grocery-category`, `data-category` = the default key or a custom
+category's id, `data-folded`) has a heading button (`grocery-category-heading`, `aria-expanded`) with
+`grocery-category-name` and `grocery-category-count` over one list of 44px rows; sections follow the categories'
+positions and rows keep their order inside a section. Tapping a heading folds the section (heading and count only),
+kept on the device. All sections sit in `grocery-to-buy`; when the categories fail to load, the error shows and the
+items are one list there without headings. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
 every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy row left (touch or mouse) past 80px
@@ -315,6 +321,51 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included)
   - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions)
+
+## GroceryCategories
+
+The supermarket sections the grocery list is grouped into (project Grocery categories). A category is never stored on
+a grocery item or an ingredient: `CategoryResolver` places a name each time, from the built-in English and Danish
+`CategoryDictionary` (both languages always), else Other. A user gets the eleven default categories the first time the
+grocery list loads (`LoadCategories` creates them when the user has none). A default category shows its name in the UI
+language until the user renames it (`DisplayName`). Folded sections are kept per device in local storage under
+`grocerylist_folded_sections` (a list of category ids).
+
+- **Folder:** `Features/GroceryCategories/`
+- **Texts:** `Features/GroceryCategories/GroceryCategoriesResource.cs` with `GroceryCategoriesResource.resx` / `.da.resx`:
+  the default names, `DefaultCategory_<Key>_Name`.
+- **Pages:** none yet; the sections render on `Features/GroceryList/GroceryListPage.razor`.
+- **Handlers:**
+
+  | Handler | Request → result | Does |
+  |---|---|---|
+  | GetGroceryCategories | `Query()` → `Result<List<GroceryCategory>>` | The user's categories by position |
+  | CreateDefaultGroceryCategories | `Command()` → `Result<List<GroceryCategory>>` | Inserts the eleven defaults, skipping any default key the user already has (upsert, ignore duplicates on (`created_by`, `default_key`)), then returns all the user's categories by position; `NotSignedIn` when signed out |
+
+- **State:** `Features/GroceryCategories/State/GroceryCategoriesStateContainer.cs` (`IGroceryCategoriesStateContainer`,
+  uses `ILocalStorageService`): `Categories`, `LoadCategories`, `CategoryFor(name)`, `IsFolded`, `ToggleFolded`,
+  `LoadFolded`.
+- **Models:**
+  - `Features/GroceryCategories/Models/GroceryCategory.cs` ↔ `Features/GroceryCategories/Models/GroceryCategoryDb.cs`,
+    table `grocery_categories`; `NewGroceryCategoryDb.cs` is the insert row without `id` (an upsert always sends the
+    primary key). `IsOther`; `GroceryCategory.Default(key)`.
+  - `Features/GroceryCategories/Models/DefaultCategoryKey.cs`: `produce`, `bakery`, `meat_fish`, `deli`, `dairy_eggs`,
+    `frozen`, `pantry`, `drinks`, `snacks`, `household`, `other` (positions 1 to 11), mapped with `ToDbValue`/`FromDbValue`.
+  - `Features/GroceryCategories/Models/GroceryCategoryDisplayName.cs`: `DisplayName(localizer)`, the emoji (when set)
+    before the user's name or the default's localized name.
+  - `Features/GroceryCategories/Models/CategoryDictionary.cs`: about 440 English and 375 Danish words and whole names,
+    each mapped to a default key.
+  - `Features/GroceryCategories/Models/CategoryResolver.cs`: pure. `ResolveKey(name)` matches the whole normalised name,
+    then each word from last to first, then a word ending in a dictionary word of four or more letters (Danish
+    compounds, longest ending first), else Other; `Resolve(name, categories)` returns the user's category with that
+    key, else their Other, else null.
+- **Migrations:** `supabase/migrations/20261115120000_add_grocery_categories.sql`
+- **Tests:**
+  - unit: `Features/GroceryCategories/UnitTests/` (Models, State)
+  - bUnit: the sections on the grocery list page, `Features/GroceryList/ComponentTests/GroceryListPageSectionsTests.cs`
+  - integration: `Features/GroceryCategories/IntegrationTests/GroceryCategoriesHandlerTests.cs`
+  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryCategoriesJourneyTests.cs`
+  - pgTAP: `supabase/tests/database/grocery_categories.test.sql`
 
 ## MealImport
 
@@ -730,6 +781,7 @@ table and policy list.
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
+| `grocery_categories` | GroceryCategories | `add_grocery_categories` | `default_key` (one of the eleven keys, or null for a custom category), `name` (null on a default = the translated name), `emoji`, `position`. Unique (`created_by`, `default_key`), NULLs distinct; a row needs a key or a name. Owner-only for every operation; anon holds no privilege |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |

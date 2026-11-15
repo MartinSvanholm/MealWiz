@@ -1,3 +1,4 @@
+using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.Ingredients.Models;
 using MealWiz.Shared.Features.MealPlans.Models;
@@ -19,6 +20,12 @@ public static class TestData
 
     public static Ingredient Ingredient(string name, string amount = "", int id = 0, bool showOnGroceryList = true) =>
         new() { Id = id, Name = name, Amount = amount, ShowOnGroceryList = showOnGroceryList };
+
+    /// <summary>The eleven default categories as loaded for a user: ids 1 (Produce) to 11 (Other), in position order.</summary>
+    public static List<GroceryCategory> DefaultGroceryCategories() =>
+        DefaultCategoryKeyExtensions.All
+            .Select(key => new GroceryCategory { Id = key.DefaultPosition(), DefaultKey = key, Position = key.DefaultPosition() })
+            .ToList();
 
     public static GroceryItem GroceryItem(string name, string amount = "", int id = 0, bool isPicked = false, bool isManual = true) =>
         new() { Id = id, Name = name, Amount = amount, IsPicked = isPicked, IsManual = isManual };
