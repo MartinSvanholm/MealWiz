@@ -5,7 +5,7 @@
    amount) opens the ingredient drawer, filled in with whatever was typed here and empty otherwise; the ingredient is
    saved only from the drawer. Enter moves from the name to the amount. New ingredients go on the grocery list; the
    drawer's switch changes that. *@
-<div class="mw-add-ingredient">
+<div class="mw-add-ingredient @(_amountHint is null ? "" : "mw-add-ingredient-with-hint")" data-testid="add-ingredient-row">
     <div class="mw-add-ingredient-name">
         <MudTextField T="string" @ref="_nameField" data-testid="add-ingredient-name" Placeholder="@L["AddIngredient_Name"]" aria-label="@L["AddIngredient_Name"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_name"
@@ -13,7 +13,7 @@
     </div>
     <div class="mw-add-ingredient-amount">
         <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="@L["AddIngredient_Amount"]" aria-label="@L["AddIngredient_Amount"]"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount" HelperText="@AmountText.Describe(_amount)"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount" HelperText="@_amountHint"
                       OnKeyDown="EnterKey.Then(OpenDrawer)" />
     </div>
     <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="@L["AddIngredient_Add"]"
@@ -25,6 +25,8 @@
 @code {
     private string _name = string.Empty;
     private string _amount = string.Empty;
+
+    private string? _amountHint => AmountText.Describe(_amount);
     private MudTextField<string> _nameField = default!;
     private MudTextField<string> _amountField = default!;
 

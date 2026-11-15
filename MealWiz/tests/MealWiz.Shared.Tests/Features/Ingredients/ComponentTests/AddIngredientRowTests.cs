@@ -40,6 +40,23 @@ public class AddIngredientRowTests : ComponentTestBase
         Assert.Empty(cut.FindAll(HelperText));
     }
 
+    [Fact]
+    public void The_row_makes_room_for_the_hint_only_while_it_shows()
+    {
+        // The hint hangs under the amount field; without room it covered the first ingredient card.
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        var cut = Render<AddIngredientRow>();
+        Assert.DoesNotContain(WithHint, cut.Find(TestId("add-ingredient-row")).ClassList);
+
+        cut.Find(InputOf("add-ingredient-amount")).Input("200 g");
+        Assert.Contains(WithHint, cut.Find(TestId("add-ingredient-row")).ClassList);
+
+        cut.Find(InputOf("add-ingredient-amount")).Input("");
+        Assert.DoesNotContain(WithHint, cut.Find(TestId("add-ingredient-row")).ClassList);
+    }
+
+    private const string WithHint = "mw-add-ingredient-with-hint";
+
     private const string HelperText = ".mud-input-helper-text";
 
     [Fact]

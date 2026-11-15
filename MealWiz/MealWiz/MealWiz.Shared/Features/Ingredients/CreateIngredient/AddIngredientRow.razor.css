@@ -15,7 +15,12 @@
     position: relative;
 }
 
-/* The hint sits under the field without making the row taller, so the name field and the button stay level. */
+/* The hint sits under the amount field, so the name field and the button stay level with it. The row makes room for
+   it below while it shows, so it doesn't cover the first ingredient card. */
+.mw-add-ingredient-with-hint {
+    padding-bottom: 20px;
+}
+
 .mw-add-ingredient-amount ::deep .mud-input-helper-text {
     position: absolute;
     top: 100%;
