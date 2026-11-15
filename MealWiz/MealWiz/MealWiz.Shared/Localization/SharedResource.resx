@@ -82,4 +82,73 @@
     <value>dddd d MMMM</value>
     <comment>.NET date format for a full date, e.g. Monday 3 November</comment>
   </data>
+  <data name="Unit_g_Short" xml:space="preserve">
+    <value>g</value>
+  </data>
+  <data name="Unit_kg_Short" xml:space="preserve">
+    <value>kg</value>
+  </data>
+  <data name="Unit_oz_Short" xml:space="preserve">
+    <value>oz</value>
+  </data>
+  <data name="Unit_lb_Short" xml:space="preserve">
+    <value>lb</value>
+  </data>
+  <data name="Unit_ml_Short" xml:space="preserve">
+    <value>ml</value>
+  </data>
+  <data name="Unit_dl_Short" xml:space="preserve">
+    <value>dl</value>
+  </data>
+  <data name="Unit_l_Short" xml:space="preserve">
+    <value>l</value>
+  </data>
+  <data name="Unit_cup_Short" xml:space="preserve">
+    <value>cup</value>
+  </data>
+  <data name="Unit_tsk_Short" xml:space="preserve">
+    <value>tsp</value>
+  </data>
+  <data name="Unit_spsk_Short" xml:space="preserve">
+    <value>tbsp</value>
+  </data>
+  <data name="Unit_g_Name" xml:space="preserve">
+    <value>gram</value>
+  </data>
+  <data name="Unit_kg_Name" xml:space="preserve">
+    <value>kilogram</value>
+  </data>
+  <data name="Unit_oz_Name" xml:space="preserve">
+    <value>ounce</value>
+  </data>
+  <data name="Unit_lb_Name" xml:space="preserve">
+    <value>pound</value>
+  </data>
+  <data name="Unit_ml_Name" xml:space="preserve">
+    <value>milliliter</value>
+  </data>
+  <data name="Unit_dl_Name" xml:space="preserve">
+    <value>deciliter</value>
+  </data>
+  <data name="Unit_l_Name" xml:space="preserve">
+    <value>liter</value>
+  </data>
+  <data name="Unit_cup_Name" xml:space="preserve">
+    <value>cup</value>
+  </data>
+  <data name="Unit_tsk_Name" xml:space="preserve">
+    <value>teaspoon</value>
+  </data>
+  <data name="Unit_spsk_Name" xml:space="preserve">
+    <value>tablespoon</value>
+  </data>
+  <data name="Unit_Count_Name" xml:space="preserve">
+    <value>pieces</value>
+  </data>
+  <data name="Amount_Understood" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Amount_SavedAsWritten" xml:space="preserve">
+    <value>Saved as written</value>
+  </data>
 </root>

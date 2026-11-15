@@ -193,4 +193,26 @@ public class MealImportModelTests
             i => { Assert.Equal("pasta", i.Name); Assert.Equal("500 g", i.Amount); Assert.True(i.ShowOnGroceryList); Assert.Equal(0, i.Id); },
             i => { Assert.Equal("salt", i.Name); Assert.Equal("", i.Amount); Assert.True(i.ShowOnGroceryList); Assert.Equal(0, i.Id); });
     }
+
+    // MEA-153: an imported amount is read the same way a typed one is, when the meal is saved.
+    [Fact]
+    public void ToMeal_AmountsAreReadIntoQuantityAndUnitWhenSaved()
+    {
+        var parsed = new ParsedMeal
+        {
+            Name = "Pancakes",
+            Ingredients =
+            [
+                new ParsedMealIngredient { Name = "milk", Amount = "2½ dl" },
+                new ParsedMealIngredient { Name = "pepper", Amount = "1 knivspids" }
+            ]
+        };
+
+        var rows = parsed.ToMeal().Ingredients.Select(i => i.MapToIngredientDb()).ToList();
+
+        Assert.Equal((2.5m, "dl"), (rows[0].AmountQuantity, rows[0].AmountUnit));
+        Assert.Equal("1 knivspids", rows[1].Amount);
+        Assert.Null(rows[1].AmountQuantity);
+        Assert.Null(rows[1].AmountUnit);
+    }
 }

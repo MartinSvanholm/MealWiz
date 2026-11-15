@@ -13,7 +13,7 @@
     </div>
     <div class="mw-add-ingredient-amount">
         <MudTextField T="string" @ref="_amountField" data-testid="add-ingredient-amount" Placeholder="@L["AddIngredient_Amount"]" aria-label="@L["AddIngredient_Amount"]"
-                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount"
+                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate @bind-Value="_amount" HelperText="@AmountText.Describe(_amount)"
                       OnKeyDown="EnterKey.Then(OpenDrawer)" />
     </div>
     <button type="button" class="mw-add-ingredient-button" data-testid="create-ingredient-button" aria-label="@L["AddIngredient_Add"]"

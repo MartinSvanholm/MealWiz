@@ -12,7 +12,7 @@
         </div>
         <div class="mw-field">
             <label class="mw-field-label" for="ingredient-amount">@L["IngredientDrawer_Amount"]</label>
-            <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
+            <MudTextField @ref="_amountField" data-testid="ingredient-amount-input" InputId="ingredient-amount" @bind-Value="_draft.Amount" Variant="Variant.Outlined" HelperText="@AmountText.Describe(_draft.Amount)"
                           Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
         </div>
     </div>
