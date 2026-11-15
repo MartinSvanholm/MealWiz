@@ -99,4 +99,16 @@
   <data name="GroceryCategory_Save" xml:space="preserve">
     <value>Gem kategori</value>
   </data>
+  <data name="GroceryCategory_DeleteAria" xml:space="preserve">
+    <value>Slet kategori</value>
+  </data>
+  <data name="DeleteGroceryCategory_Title" xml:space="preserve">
+    <value>Slet {0}?</value>
+  </data>
+  <data name="DeleteGroceryCategory_Question" xml:space="preserve">
+    <value>Hvilken kategori skal overtage dens varer?</value>
+  </data>
+  <data name="DeleteGroceryCategory_Confirm" xml:space="preserve">
+    <value>Slet</value>
+  </data>
 </root>

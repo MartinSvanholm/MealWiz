@@ -1,6 +1,7 @@
 @page "/grocerylist/categories"
 @attribute [Authorize]
 @using MealWiz.Shared.Features.GroceryCategories.Components
+@using MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory
 @inject IGroceryCategoriesStateContainer _categories
 @inject IDrawerStateContainer _drawerStateContainer
 @inject ISnackbar _snackbar
@@ -37,8 +38,10 @@
 @code {
     private void Add() => GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_AddTitle"], null);
 
+    // Other can be renamed but not deleted, so its drawer has no delete action.
     private void Edit(GroceryCategory category) =>
-        GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_EditTitle"], category);
+        GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_EditTitle"], category,
+            category.IsOther ? null : @<DeleteGroceryCategoryButton Category="category" />);
 
     protected override async Task OnInitializedAsync()
     {

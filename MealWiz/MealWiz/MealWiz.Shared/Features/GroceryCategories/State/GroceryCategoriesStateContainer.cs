@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
 using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
+using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
@@ -46,6 +47,12 @@ public interface IGroceryCategoriesStateContainer
 
     /// <summary>Renames a category and sets its emoji, then reloads; false when it failed (the error is shown).</summary>
     Task<bool> UpdateCategory(int id, string name, string? emoji);
+
+    /// <summary>
+    /// Deletes a category, handing its names and dictionary words to <paramref name="moveToId"/>, then reloads; false
+    /// when it failed (the error is shown).
+    /// </summary>
+    Task<bool> DeleteCategory(int id, int moveToId);
 
     /// <summary>
     /// Why <paramref name="name"/> can't be a category's name, or null: it is empty, or another category than
@@ -148,6 +155,15 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
     public async Task<bool> UpdateCategory(int id, string name, string? emoji)
     {
         var result = await mediator.Send(new UpdateGroceryCategoryAction.Command(id, name, emoji));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> DeleteCategory(int id, int moveToId)
+    {
+        var result = await mediator.Send(new DeleteGroceryCategoryAction.Command(id, moveToId));
         if (result.Handle(CurrentSnackbar).IsFailed) return false;
 
         await LoadCategories();

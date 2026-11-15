@@ -184,4 +184,24 @@ public class CategoryResolverTests
 
         Assert.Equal(101, CategoryResolver.Resolve("milk", categories, remembered)?.Id);
     }
+
+    [Fact]
+    public void Resolve_ADeletedDefaultsWords_LandInTheCategoryThatAbsorbedIt()
+    {
+        var categories = Categories(Produce, Frozen, Other);
+        categories[1].AbsorbedKeys = [DairyEggs, Bakery];
+
+        Assert.Equal(101, CategoryResolver.Resolve("milk", categories)?.Id);
+        Assert.Equal(101, CategoryResolver.Resolve("rugbrød", categories)?.Id);
+        Assert.Equal(102, CategoryResolver.Resolve("beer", categories)?.Id);
+    }
+
+    [Fact]
+    public void Resolve_AnAbsorbedKey_LosesToACategoryThatStillHasItAsItsOwn()
+    {
+        var categories = Categories(DairyEggs, Frozen, Other);
+        categories[1].AbsorbedKeys = [DairyEggs];
+
+        Assert.Equal(100, CategoryResolver.Resolve("milk", categories)?.Id);
+    }
 }
