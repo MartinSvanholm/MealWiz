@@ -156,4 +156,32 @@ public class CategoryResolverTests
     {
         Assert.Null(CategoryResolver.Resolve("milk", []));
     }
+
+    [Fact]
+    public void Resolve_ARememberedName_BeatsTheDictionary_IgnoringCaseAndSpaces()
+    {
+        var categories = Categories(Produce, DairyEggs, Frozen, Other);
+        var remembered = new Dictionary<string, int> { ["milk"] = 102, ["tofu"] = 100 };
+
+        Assert.Equal(102, CategoryResolver.Resolve("  MILK ", categories, remembered)?.Id);
+        Assert.Equal(100, CategoryResolver.Resolve("Tofu", categories, remembered)?.Id);
+    }
+
+    [Fact]
+    public void Resolve_ARememberedNameMatchesTheWholeName_NotItsWords()
+    {
+        var categories = Categories(Produce, DairyEggs, Frozen, Other);
+        var remembered = new Dictionary<string, int> { ["milk"] = 102 };
+
+        Assert.Equal(101, CategoryResolver.Resolve("oat milk", categories, remembered)?.Id);
+    }
+
+    [Fact]
+    public void Resolve_ARememberedCategoryThatIsNotLoaded_IsIgnored()
+    {
+        var categories = Categories(Produce, DairyEggs, Other);
+        var remembered = new Dictionary<string, int> { ["milk"] = 999 };
+
+        Assert.Equal(101, CategoryResolver.Resolve("milk", categories, remembered)?.Id);
+    }
 }

@@ -18,6 +18,9 @@ public class GroceryCategoryDb : BaseModel
     [Column("emoji")]
     public string? Emoji { get; set; }
 
+    [Column("absorbed_keys")]
+    public List<string> AbsorbedKeys { get; set; } = [];
+
     [Column("position")]
     public int Position { get; set; }
 

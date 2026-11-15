@@ -3,6 +3,8 @@ using Blazored.LocalStorage;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
+using MealWiz.Shared.Features.GroceryCategories.RememberGroceryName;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.State;
 using MediatR;
@@ -24,7 +26,17 @@ public class GroceryCategoriesStateContainerTests
     {
         _container = new GroceryCategoriesStateContainer(_mediator.Object, _localStorage.Object) { CurrentSnackbar = _snackbar.Object };
         _container.OnStateChanged += () => _notifications++;
+        SetupNames(Result.Ok(new List<RememberedGroceryName>()));
     }
+
+    private void SetupNames(Result<List<RememberedGroceryName>> result) =>
+        _mediator.Setup(m => m.Send(It.IsAny<GetRememberedGroceryNames.Query>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
+
+    private void SetupRemember(Result result) =>
+        _mediator.Setup(m => m.Send(It.IsAny<RememberGroceryName.Command>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
+
+    private List<RememberGroceryName.Command> RememberCalls =>
+        _mediator.Invocations.Select(i => i.Arguments.FirstOrDefault()).OfType<RememberGroceryName.Command>().ToList();
 
     internal static List<GroceryCategory> Defaults() =>
         DefaultCategoryKeyExtensions.All.Select(k => GroceryCategory.Default(k) is var c ? WithId(c, c.Position) : c).ToList();
@@ -163,5 +175,72 @@ public class GroceryCategoriesStateContainerTests
         await _container.LoadFolded();
 
         Assert.False(_container.IsFolded(4));
+    }
+
+    [Fact]
+    public async Task LoadCategories_AlsoLoadsTheRememberedNames_AndTheyBeatTheDictionary()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupNames(Result.Ok(new List<RememberedGroceryName> { new("milk", 6) }));
+
+        await _container.LoadCategories();
+
+        Assert.Equal(6, _container.RememberedNames["milk"]);
+        Assert.Equal(DefaultCategoryKey.Frozen, _container.CategoryFor("  MILK ")?.DefaultKey);
+        Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task LoadCategories_RememberedNamesFail_KeepsTheCategories()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupNames(Result.Fail<List<RememberedGroceryName>>("No response from server"));
+
+        await _container.LoadCategories();
+
+        Assert.Equal(11, _container.Categories.Count);
+        Assert.Empty(_container.RememberedNames);
+        _snackbar.Verify(s => s.Add("No response from server", It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()));
+    }
+
+    [Fact]
+    public async Task MoveName_RemembersTheName_AndItResolvesThereEverywhere()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupRemember(Result.Ok());
+        await _container.LoadCategories();
+
+        var moved = await _container.MoveName("Tofu", 3);
+
+        Assert.True(moved);
+        var command = Assert.Single(RememberCalls);
+        Assert.Equal(("Tofu", 3), (command.Name, command.CategoryId));
+        Assert.Equal(DefaultCategoryKey.MeatFish, _container.CategoryFor("tofu")?.DefaultKey);
+        Assert.Equal(2, _notifications);
+    }
+
+    [Fact]
+    public async Task MoveName_ToTheCategoryItAlreadyResolvesTo_SendsNothing()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+
+        Assert.True(await _container.MoveName("milk", 5));
+
+        Assert.Empty(RememberCalls);
+    }
+
+    [Fact]
+    public async Task MoveName_Fails_LeavesTheNameWhereItWas()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupRemember(Result.Fail("No response from server"));
+        await _container.LoadCategories();
+
+        var moved = await _container.MoveName("tofu", 3);
+
+        Assert.False(moved);
+        Assert.True(_container.CategoryFor("tofu")?.IsOther);
+        Assert.Equal(1, _notifications);
     }
 }

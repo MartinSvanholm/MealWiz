@@ -17,6 +17,10 @@ public class GroceryCategory
         Name = db.Name;
         Emoji = db.Emoji;
         Position = db.Position;
+        AbsorbedKeys = (db.AbsorbedKeys ?? [])
+            .Select(DefaultCategoryKeyExtensions.FromDbValue)
+            .OfType<DefaultCategoryKey>()
+            .ToList();
         CreatedBy = db.CreatedBy;
         CreatedAt = db.CreatedAt;
         UpdatedAt = db.UpdatedAt;
@@ -27,12 +31,21 @@ public class GroceryCategory
     public string? Name { get; set; }
     public string? Emoji { get; set; }
     public int Position { get; set; }
+
+    /// <summary>
+    /// Default keys this category took over when the categories they belonged to were deleted: dictionary words for
+    /// those keys land here.
+    /// </summary>
+    public IReadOnlyList<DefaultCategoryKey> AbsorbedKeys { get; set; } = [];
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>The catch-all section, last on the list; it can be renamed but not deleted.</summary>
     public bool IsOther => DefaultKey == DefaultCategoryKey.Other;
+
+    /// <summary>Whether dictionary words for <paramref name="key"/> land in this category.</summary>
+    public bool Takes(DefaultCategoryKey key) => DefaultKey == key || AbsorbedKeys.Contains(key);
 
     /// <summary>A new, unsaved default category at its default position.</summary>
     public static GroceryCategory Default(DefaultCategoryKey key) => new() { DefaultKey = key, Position = key.DefaultPosition() };
@@ -44,6 +57,7 @@ public class GroceryCategory
         Name = Name,
         Emoji = Emoji,
         Position = Position,
+        AbsorbedKeys = AbsorbedKeys.Select(k => k.ToDbValue()).ToList(),
         CreatedBy = CreatedBy,
         CreatedAt = CreatedAt,
         UpdatedAt = UpdatedAt,

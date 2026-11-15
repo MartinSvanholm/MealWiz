@@ -5,6 +5,7 @@ using FluentResults;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Features.Account.GetPendingEmailChange;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.State;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
@@ -145,6 +146,7 @@ public abstract class ComponentTestBase : BunitContext
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<GetGroceryCategories.Query, Result<List<GroceryCategory>>>(Result.Ok(TestData.DefaultGroceryCategories()));
+        SetupSend<GetRememberedGroceryNames.Query, Result<List<RememberedGroceryName>>>(Result.Ok(new List<RememberedGroceryName>()));
         SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>()));
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(null));
         SetupSend<GetMealPlannedDates.Query, Result<List<PlannedMealDate>>>(Result.Ok(new List<PlannedMealDate>()));
