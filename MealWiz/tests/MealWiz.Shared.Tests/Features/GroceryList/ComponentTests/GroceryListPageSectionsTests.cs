@@ -1,13 +1,16 @@
+using Blazored.LocalStorage;
 using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.Models;
+using MealWiz.Shared.Features.GroceryCategories.State;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MealWiz.Shared.Tests.TestInfrastructure;
+using Moq;
 using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.GroceryList.ComponentTests;
@@ -129,5 +132,44 @@ public class GroceryListPageSectionsTests : ComponentTestBase
         var names = cut.FindAll($"{TestId("grocery-to-buy")} {TestId("grocery-item-name")}").Select(n => n.TextContent.Trim());
         Assert.Equal(["Milk", "Apples", "mælk", "Flimflam", "Bread"], names);
         Assert.Contains("No response from server", SnackbarMessages);
+    }
+
+    [Fact]
+    public void TappingAHeading_FoldsTheSection_KeepingItsHeadingAndCount_AndSavesIt()
+    {
+        var cut = RenderWithPopovers<GroceryListPage>();
+        var heading = Section(cut, "dairy_eggs").QuerySelector(TestId("grocery-category-heading"))!;
+        Assert.Equal("true", heading.GetAttribute("aria-expanded"));
+
+        heading.Click();
+
+        var dairy = Section(cut, "dairy_eggs");
+        Assert.Equal("true", dairy.GetAttribute("data-folded"));
+        Assert.Equal("false", dairy.QuerySelector(TestId("grocery-category-heading"))!.GetAttribute("aria-expanded"));
+        Assert.Empty(dairy.QuerySelectorAll(TestId("grocery-item")));
+        Assert.Equal("Dairy & eggs", dairy.QuerySelector(TestId("grocery-category-name"))!.TextContent.Trim());
+        Assert.Equal("2", dairy.QuerySelector(TestId("grocery-category-count"))!.TextContent.Trim());
+        Assert.Equal(["Apples"], NamesIn(Section(cut, "produce")));
+        LocalStorage.Verify(l => l.SetItemAsync(GroceryCategoriesStateContainer.FoldedStorageKey,
+            It.Is<List<int>>(ids => ids.SequenceEqual(new[] { 5 })), It.IsAny<CancellationToken>()));
+
+        Section(cut, "dairy_eggs").QuerySelector(TestId("grocery-category-heading"))!.Click();
+
+        Assert.Equal(["Milk", "mælk"], NamesIn(Section(cut, "dairy_eggs")));
+    }
+
+    [Fact]
+    public void AFoldedSection_IsRememberedOnThisDevice()
+    {
+        // Dairy & eggs has id 5 in the default test categories.
+        LocalStorage.Setup(l => l.GetItemAsync<List<int>>(GroceryCategoriesStateContainer.FoldedStorageKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([5]);
+
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        var dairy = Section(cut, "dairy_eggs");
+        Assert.Equal("true", dairy.GetAttribute("data-folded"));
+        Assert.Empty(dairy.QuerySelectorAll(TestId("grocery-item")));
+        Assert.Equal("2", dairy.QuerySelector(TestId("grocery-category-count"))!.TextContent.Trim());
     }
 }

@@ -90,6 +90,43 @@
     color: var(--mw-text-muted);
 }
 
+/* A section heading is a button: the whole row folds the section. The chevron turns when folded. */
+.grocery-category-heading {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-height: var(--mw-touch);
+    margin: -10px 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.grocery-category-name {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grocery-category-heading ::deep .grocery-category-chevron {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    transition: transform 0.15s ease;
+}
+
+.grocery-category-heading ::deep .grocery-category-chevron.is-folded {
+    transform: rotate(-90deg);
+}
+
 /* To buy: one section per category, each one container with thin dividers and 44px rows
    (SwipeToDeleteGroceryItem lays out each row). */
 .grocery-categories {

@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Blazored.LocalStorage;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -21,10 +23,24 @@ public interface IGroceryCategoriesStateContainer
 
     /// <summary>The user's category for a grocery name (<see cref="CategoryResolver.Resolve"/>); null before the categories load.</summary>
     GroceryCategory? CategoryFor(string? name);
+
+    /// <summary>Whether a section is folded on the grocery list (heading and count only). Kept on this device.</summary>
+    bool IsFolded(int categoryId);
+
+    /// <summary>Folds or unfolds a section and saves the folded sections to local storage.</summary>
+    Task ToggleFolded(int categoryId);
+
+    /// <summary>Reads the folded sections from local storage; an unreadable value folds nothing.</summary>
+    Task LoadFolded();
 }
 
-public class GroceryCategoriesStateContainer(IMediator mediator) : StateContainerBase, IGroceryCategoriesStateContainer
+public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageService localStorage)
+    : StateContainerBase, IGroceryCategoriesStateContainer
 {
+    internal const string FoldedStorageKey = "grocerylist_folded_sections";
+
+    private HashSet<int> _folded = [];
+
     public IReadOnlyList<GroceryCategory> Categories { get; private set; } = [];
 
     public async Task LoadCategories()
@@ -45,4 +61,27 @@ public class GroceryCategoriesStateContainer(IMediator mediator) : StateContaine
     }
 
     public GroceryCategory? CategoryFor(string? name) => CategoryResolver.Resolve(name, Categories);
+
+    public bool IsFolded(int categoryId) => _folded.Contains(categoryId);
+
+    public async Task ToggleFolded(int categoryId)
+    {
+        if (!_folded.Remove(categoryId)) _folded.Add(categoryId);
+        NotifyStateChanged();
+        await localStorage.SetItemAsync(FoldedStorageKey, _folded.Order().ToList());
+    }
+
+    public async Task LoadFolded()
+    {
+        try
+        {
+            _folded = [.. await localStorage.GetItemAsync<List<int>>(FoldedStorageKey) ?? []];
+        }
+        catch (JsonException)
+        {
+            _folded = [];
+        }
+
+        NotifyStateChanged();
+    }
 }
