@@ -130,7 +130,7 @@ public class IngredientHandlerTests(LocalSupabaseFixture supabase) : IClassFixtu
 
     [Theory]
     [InlineData("1,5 dl", 1.5, "dl")]
-    [InlineData("2", 2, null)]
+    [InlineData("2", 2.0, null)]
     [InlineData("a pinch", null, null)]
     public async Task SaveIngredient_StoresTheAmountAsTextQuantityAndUnit(string amount, double? quantity, string? unit)
     {
