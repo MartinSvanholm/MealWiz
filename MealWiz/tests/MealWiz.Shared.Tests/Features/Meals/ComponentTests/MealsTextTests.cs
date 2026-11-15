@@ -56,4 +56,25 @@ public class MealsTextTests() : ComponentTestBase(echoResourceKeys: true)
         Assert.Equal("[EditMeal_Items_Other]", cut.Find(TestId("edit-meal-ingredient-count")).TextContent.Trim());
         Assert.Equal("[Common_Save]", cut.Find(TestId("save-meal-button")).TextContent.Trim());
     }
+
+    [Fact]
+    public void CookMealPage_texts()
+    {
+        var chili = TestData.Meal("Chili", id: 5, recipe: "Step one.", ingredients: [TestData.Ingredient("Beans", id: 1)]);
+        var soup = TestData.Meal("Soup", id: 6);
+        SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal> { chili, soup }));
+
+        var cut = Render<MealWiz.Shared.Features.Meals.CookMeal.CookMealPage>(p => p.Add(c => c.MealId, 5));
+        Assert.Equal("[CookMeal_Label]", cut.Find(TestId("screen-header-label")).TextContent.Trim());
+        Assert.Contains("[CookMeal_Ingredients]", cut.Find(TestId("cook-meal-ingredients")).TextContent);
+        Assert.Contains("[CookMeal_Recipe]", cut.Find(TestId("cook-meal-recipe")).TextContent);
+
+        var noRecipe = Render<MealWiz.Shared.Features.Meals.CookMeal.CookMealPage>(p => p.Add(c => c.MealId, 6));
+        Assert.Equal("[CookMeal_NoIngredients]", noRecipe.Find(TestId("cook-meal-no-ingredients")).TextContent.Trim());
+        Assert.Contains("[CookMeal_NoRecipe]", noRecipe.Find(TestId("cook-meal-no-recipe")).TextContent);
+        Assert.Equal("[CookMeal_AddRecipe]", noRecipe.Find(TestId("cook-meal-add-recipe")).TextContent.Trim());
+
+        var missing = Render<MealWiz.Shared.Features.Meals.CookMeal.CookMealPage>(p => p.Add(c => c.MealId, 99));
+        Assert.Equal("[CookMeal_NotFound]", missing.Find(TestId("cook-meal-not-found")).TextContent.Trim());
+    }
 }

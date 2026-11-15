@@ -114,7 +114,7 @@ TestInfrastructure/
 
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
-    `ILocalStorageService`, `IMealImportStateContainer` and `IThemeService`.
+    `ILocalStorageService`, `IMealImportStateContainer`, `IScreenWakeLock` (`WakeLock`) and `IThemeService`.
   - It uses the real Meals, GroceryList, MealPlan, PlanWeek and Drawer containers, running on the mocked mediator. `Time` is a `FakeTimeProvider` at Wednesday 2026-11-04 12:00 UTC; `PlanWeek` has a seeded `Random`.
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,

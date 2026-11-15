@@ -40,9 +40,18 @@ meals are planned this week, or that every meal has a recipe.
   - `Features/Meals/EditMeal/EditMealPage.razor` at `/meals/edit`: create or edit the meal in `MealToEdit`, including
     its ingredients. Orange header with back (`edit-meal-back`), Save and the name field (`meal-name-input`); then the
     recipe, the add-ingredient row, the ingredient rows and, for a saved meal, Delete meal.
+  - `Features/Meals/CookMeal/CookMealPage.razor` (+ `.razor.css`) at `/meals/cook/{MealId:int}?from=plan|meals`, `[Authorize]`: the
+    read-only cooking view. Reloads the meals on open, then shows the regular meal with that id: `SubPageHeader` (back
+    `cook-meal-back` goes to `/` for `from=plan`, else `/meals`; name `cook-meal-name`), the ingredients
+    (`cook-meal-ingredients`, `cook-meal-ingredient` with `-name` and `-amount`, or `cook-meal-no-ingredients`) and the
+    recipe, one `cook-meal-step` per non-blank line in large text (`cook-meal-recipe`), or `cook-meal-no-recipe` whose
+    `cook-meal-add-recipe` sets `MealToEdit` and opens `/meals/edit`. An unknown, deleted or system meal shows
+    `cook-meal-not-found`. It holds a screen wake lock while a meal shows (`IScreenWakeLock`). Texts: `CookMeal_*`.
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
+    Each cell also holds a round corner button (`meal-card-cook`) that opens the cooking view with `?from=meals`; tapping
+    the card itself still opens Edit meal. System meals get no cook button.
   - `Features/Meals/MealDisplayComponent.razor`: the selected day's card on the Meal plan page (details under
     MealPlans); its Add all to list opens GroceryList's merge drawer.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
@@ -74,7 +83,7 @@ meals are planned this week, or that every meal has a recipe.
   - `supabase/migrations/20260506130000_add_eat_out_meal.sql`
 - **Tests:**
   - unit: `Features/Meals/UnitTests/` (Models, State)
-  - bUnit: `Features/Meals/ComponentTests/`
+  - bUnit: `Features/Meals/ComponentTests/` (`CookMealPageTests.cs`: the cooking view, its wake lock and back target)
   - integration: `Features/Meals/IntegrationTests/MealHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meals.test.sql`
@@ -186,7 +195,9 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
     card. Add all to list (`add-all-to-list`) opens GroceryList's merge drawer for the selected day only
     (`AddPlanIngredientsToGroceryListDrawer.Open`, title "Add <meal> to list"); it's disabled when no ingredient is shown
-    on the grocery list.
+    on the grocery list. A regular meal also has Cook (`cook-meal-button`, after Swap meal) and, on the recipe card, a
+    floating fullscreen icon (`cook-meal-fullscreen`, only with a recipe); both open `/meals/cook/{id}?from=plan`.
+    Leftovers and Eat Out have neither.
   - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. `PickMeal` picks one regular meal for a single day (never the current one). Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
@@ -201,7 +212,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   | SaveGeneratedWeek | `Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days)` → `Result` | One call to the `save_generated_week` database function, so one transaction: creates the plan if missing, updates days that have a row (in place), inserts the rest |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
-  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, the week-ingredients offer (`OfferWeekIngredients(weekStart)`, called by Plan week's Save, and the one-shot `TakeWeekIngredientsOffer()`, which returns the week only once it is loaded and shown and has an ingredient for the list), and swap mode:
+  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, (keeps `SelectedDate` when it falls in the target week, so back from the cooking view re-opens the same day; otherwise today for this week, else Monday), `AddMealToPlan`, the week-ingredients offer (`OfferWeekIngredients(weekStart)`, called by Plan week's Save, and the one-shot `TakeWeekIngredientsOffer()`, which returns the week only once it is loaded and shown and has an ingredient for the list), and swap mode:
   `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (returns `Task<bool>`: true when saved; swap mode ends when the selected day changes).
   `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `ShuffleAll`, `ShuffleDay`, `PickMeal`, `ClearDay`, `HasSavedMeal`, `HasPreview`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
@@ -214,7 +225,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
   - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`, `RemoveMealWithGroceryItemsTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
+  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs` (also opens the cooking view from the day card and checks back keeps the day)
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
 ## GroceryList
@@ -664,6 +675,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
   - Tests: `MealWiz/tests/MealWiz.Shared.Tests/Amounts/UnitTests/`, against `MealWiz/tests/Contracts/amount_parsing.json`.
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
+- **`Services/ScreenWakeLock/`:** `IScreenWakeLock` (`RequestAsync()` / `ReleaseAsync()`, never throw; false where the browser has no screen wake lock) and `ScreenWakeLock`, the only code that calls `wwwroot/js/screenWakeLock.js` (re-requests the lock when the tab becomes visible again). Used by the cooking view.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`

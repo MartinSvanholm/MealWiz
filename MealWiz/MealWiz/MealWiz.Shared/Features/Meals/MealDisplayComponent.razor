@@ -35,6 +35,17 @@
                     </svg>
                     @L["DayCard_Swap"]
                 </button>
+                @if (Meal.IsRegular)
+                {
+                    <button type="button" class="mw-hero-button mw-hero-button-dark" data-testid="cook-meal-button"
+                            @onclick="OpenCookingView">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 13.9V9a6 6 0 0 1 12 0v4.9M6 14h12v6a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z"></path>
+                        </svg>
+                        @M["CookMeal_Button"]
+                    </button>
+                }
             </div>
         </section>
 
@@ -84,12 +95,17 @@
             {
                 <section class="mw-meal-section">
                     <h3 class="mw-meal-section-title">@L["DayCard_RecipeTitle"]</h3>
-                    <ol class="mw-meal-card mw-recipe" data-testid="meal-display-recipe">
-                        @foreach (var step in Meal.RecipeSteps)
-                        {
-                            <li>@step</li>
-                        }
-                    </ol>
+                    <div class="mw-recipe-wrap">
+                        <ol class="mw-meal-card mw-recipe" data-testid="meal-display-recipe">
+                            @foreach (var step in Meal.RecipeSteps)
+                            {
+                                <li>@step</li>
+                            }
+                        </ol>
+                        <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" Class="mw-recipe-fullscreen"
+                                       aria-label="@M["CookMeal_FullscreenAria"]" data-testid="cook-meal-fullscreen"
+                                       OnClick="OpenCookingView" />
+                    </div>
                 </section>
             }
         }
@@ -147,6 +163,13 @@
         // SelectedDate can carry a time of day; the drawer matches the plan's midnight keys.
         AddPlanIngredientsToGroceryListDrawer.Open(
             _drawerStateContainer, L["DayCard_AddAllTitle", Meal.Name], [_mealPlanStateContainer.SelectedDate.Date]);
+    }
+
+    private void OpenCookingView()
+    {
+        if (Meal is null || !Meal.IsRegular) return;
+
+        _navigationManager.NavigateTo($"/meals/cook/{Meal.Id}?from=plan");
     }
 
     private void EditMeal()

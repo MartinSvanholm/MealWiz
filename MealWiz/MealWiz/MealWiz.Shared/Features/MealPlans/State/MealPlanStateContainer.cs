@@ -90,7 +90,9 @@ public class MealPlanStateContainer(
     public async Task NavigateToWeek(DateTime targetDate)
     {
         SelectedWeekStart = targetDate.StartOfWeek().Date;
-        SelectedDate = IsCurrentWeek() ? DateTime.Now.Date : SelectedWeekStart;
+        // Coming back from the cooking view re-opens the plan on the same week: keep the day that was selected.
+        var keepsDay = SelectedDate.Date >= SelectedWeekStart && SelectedDate.Date < SelectedWeekStart.AddDays(7);
+        SelectedDate = keepsDay ? SelectedDate.Date : IsCurrentWeek() ? DateTime.Now.Date : SelectedWeekStart;
         IsLoadingWeek = true;
         NotifyStateChanged();
 

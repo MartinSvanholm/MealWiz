@@ -81,6 +81,30 @@ public class MealPlanStateContainerTests
     }
 
     [Fact]
+    public async Task NavigateToWeek_WeekHoldingTheSelectedDate_KeepsIt()
+    {
+        SetupLoad(Result.Ok<MealPlan?>(null));
+        await _container.NavigateToWeek(PastWednesday);
+        _container.SelectedDate = PastMonday.AddDays(3);
+
+        await _container.NavigateToWeek(PastWednesday);
+
+        Assert.Equal(PastMonday.AddDays(3), _container.SelectedDate);
+    }
+
+    [Fact]
+    public async Task NavigateToWeek_OtherWeekThanTheSelectedDate_SelectsItsMonday()
+    {
+        SetupLoad(Result.Ok<MealPlan?>(null));
+        await _container.NavigateToWeek(PastWednesday);
+        _container.SelectedDate = PastMonday.AddDays(3);
+
+        await _container.NavigateToWeek(PastWednesday.AddDays(7));
+
+        Assert.Equal(PastMonday.AddDays(7), _container.SelectedDate);
+    }
+
+    [Fact]
     public async Task NavigateToWeek_LoadFails_ShowsAnErrorAndFinishesLoadingWithNoPlan()
     {
         _container.MealPlan = new MealPlan(DateTime.Now);
