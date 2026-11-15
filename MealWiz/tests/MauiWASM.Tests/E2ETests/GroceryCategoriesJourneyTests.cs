@@ -61,4 +61,45 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
         await Expect(Section("dairy_eggs")).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("grocery-basket").GetByTestId("grocery-item")).ToHaveCountAsync(2);
     }
+
+    [Fact]
+    public async Task GroceryList_AMovedNameStaysMoved_AndARenamedCategoryShowsOnTheList()
+    {
+        await LoginAsync();
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist"));
+
+        // An unknown word lands in Other
+        await AddItemAsync("Tofu");
+        await Expect(Section("other").GetByTestId("grocery-item")).ToHaveCountAsync(1);
+
+        // Move it to Meat & fish with the chips in its drawer
+        await Row("grocery-item", "Tofu").GetByTestId("grocery-item-name").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit item");
+        await Drawer.Locator("[data-testid=category-chip][data-category=meat_fish]").ClickAsync();
+        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
+        await Expect(Section("meat_fish").GetByTestId("grocery-item")).ToHaveCountAsync(1);
+        await Expect(Section("other")).ToHaveCountAsync(0);
+
+        // A later tofu lands there too
+        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "tofu");
+        await Page.GetByTestId("add-grocery-item-button").ClickAsync();
+        await Expect(Drawer.Locator("[data-testid=category-chip][data-category=meat_fish]")).ToHaveAttributeAsync("aria-pressed", "true");
+        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
+        await Expect(Section("meat_fish").GetByTestId("grocery-category-count")).ToHaveTextAsync("2");
+
+        // Rename Meat & fish on the Categories page
+        await Page.GetByTestId("grocery-categories-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist/categories"));
+        await Page.Locator("[data-testid=grocery-category-row][data-category=meat_fish]").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Edit category");
+        await FillAsync(Drawer.GetByTestId("grocery-category-name-input"), "Protein");
+        await FillAsync(Drawer.GetByTestId("grocery-category-emoji-input"), "🥩");
+        await Drawer.GetByTestId("save-grocery-category").ClickAsync();
+        await Expect(Page.Locator("[data-testid=grocery-category-row][data-category=meat_fish]")).ToHaveTextAsync("🥩 Protein");
+
+        await Page.GetByTestId("grocery-categories-back").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist"));
+        await Expect(Section("meat_fish").GetByTestId("grocery-category-name")).ToHaveTextAsync("🥩 Protein");
+    }
 }

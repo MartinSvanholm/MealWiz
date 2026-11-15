@@ -441,6 +441,9 @@ return await Result.Try(async Task () => await supabaseClient.Rpc(
   maps that name to its message in `Result.Try`'s catch handler. Everything the call did rolls back.
 - The functions live in `supabase/migrations/20261114140000_add_atomic_write_functions.sql`, with pgTAP in
   `supabase/tests/database/atomic_write_functions.test.sql`. A new one gets its own migration and cases there.
+  The grocery categories' `add_grocery_category` and `delete_grocery_category` came with their table, in
+  `supabase/migrations/20261115130000_add_grocery_remembered_names.sql`, and are tested in
+  `supabase/tests/database/grocery_remembered_names.test.sql`.
 - Not converted yet: `SettleLinkedItems` in `GroceryListStateContainer` (three requests) and the meal-plus-ingredients
   saves (`SaveMealButton`, `MealImportStateContainer.SaveImportedMeal`).
 
