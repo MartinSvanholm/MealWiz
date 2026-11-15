@@ -441,6 +441,8 @@ return await Result.Try(async Task () => await supabaseClient.Rpc(
   maps that name to its message in `Result.Try`'s catch handler. Everything the call did rolls back.
 - The functions live in `supabase/migrations/20261114140000_add_atomic_write_functions.sql`, with pgTAP in
   `supabase/tests/database/atomic_write_functions.test.sql`. A new one gets its own migration and cases there.
+- A payload element that carries an `amount` also carries `amount_quantity` and `amount_unit` (from `ParsedAmount.Parse`),
+  and the function writes them; a missing key writes null.
 - Not converted yet: `SettleLinkedItems` in `GroceryListStateContainer` (three requests) and the meal-plus-ingredients
   saves (`SaveMealButton`, `MealImportStateContainer.SaveImportedMeal`).
 
