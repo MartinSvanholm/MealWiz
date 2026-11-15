@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, email, aud, role) values
     ('aaaaaaaa-0000-0000-0000-0000000000a1', 'user-a@rls.test', 'authenticated', 'authenticated'),
@@ -34,6 +34,10 @@ insert into public.grocery_item_sources (id, fk_grocery_item, fk_planned_meal, f
     (910001, 910001, 910001, 910001, '200 g', 'aaaaaaaa-0000-0000-0000-0000000000a1'),
     (910002, 910002, 910002, 910002, '1 dl',  'bbbbbbbb-0000-0000-0000-0000000000b2');
 
+insert into public.grocery_categories (id, default_key, position, created_by) values
+    (910001, 'produce', 1, 'aaaaaaaa-0000-0000-0000-0000000000a1'),
+    (910002, 'produce', 1, 'bbbbbbbb-0000-0000-0000-0000000000b2');
+
 insert into public.meal_imports (id, created_by, source_url, status) values
     ('00000000-0000-0000-0000-0000000a1001', 'aaaaaaaa-0000-0000-0000-0000000000a1', 'https://example.test/a', 'pending'),
     ('00000000-0000-0000-0000-0000000b1001', 'bbbbbbbb-0000-0000-0000-0000000000b2', 'https://example.test/b', 'pending');
@@ -48,6 +52,7 @@ select is((select count(*)::int from public.meal_plans where created_by = 'aaaaa
 select is((select count(*)::int from public."meal_plans-meals" where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'), 0, 'planned meals are gone');
 select is((select count(*)::int from public.grocery_items where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'), 0, 'grocery items are gone');
 select is((select count(*)::int from public.grocery_item_sources where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'), 0, 'grocery item sources are gone');
+select is((select count(*)::int from public.grocery_categories where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'), 0, 'grocery categories are gone');
 select is((select count(*)::int from public.meal_imports where created_by = 'aaaaaaaa-0000-0000-0000-0000000000a1'), 0, 'meal imports are gone');
 
 select is(
@@ -56,6 +61,7 @@ select is(
        join public."meal_plans-meals" pm on pm.fk_meal = m.id
        join public.grocery_item_sources s on s.fk_planned_meal = pm.id
        join public.meal_imports mi on mi.created_by = m.created_by
+       join public.grocery_categories gc on gc.created_by = m.created_by
       where m.created_by = 'bbbbbbbb-0000-0000-0000-0000000000b2'),
     1, 'user B keeps all their rows');
 

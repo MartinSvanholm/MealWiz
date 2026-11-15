@@ -1,0 +1,51 @@
+namespace MealWiz.Shared.Features.GroceryCategories.Models;
+
+/// <summary>
+/// A section of the grocery list. A default category has a <see cref="DefaultKey"/> and, until the user renames it,
+/// no <see cref="Name"/> (it is shown in the UI language); a custom category has a name and no key.
+/// </summary>
+public class GroceryCategory
+{
+    public GroceryCategory()
+    {
+    }
+
+    public GroceryCategory(GroceryCategoryDb db)
+    {
+        Id = db.Id;
+        DefaultKey = DefaultCategoryKeyExtensions.FromDbValue(db.DefaultKey);
+        Name = db.Name;
+        Emoji = db.Emoji;
+        Position = db.Position;
+        CreatedBy = db.CreatedBy;
+        CreatedAt = db.CreatedAt;
+        UpdatedAt = db.UpdatedAt;
+    }
+
+    public int Id { get; set; }
+    public DefaultCategoryKey? DefaultKey { get; set; }
+    public string? Name { get; set; }
+    public string? Emoji { get; set; }
+    public int Position { get; set; }
+    public Guid CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>The catch-all section, last on the list; it can be renamed but not deleted.</summary>
+    public bool IsOther => DefaultKey == DefaultCategoryKey.Other;
+
+    /// <summary>A new, unsaved default category at its default position.</summary>
+    public static GroceryCategory Default(DefaultCategoryKey key) => new() { DefaultKey = key, Position = key.DefaultPosition() };
+
+    public GroceryCategoryDb MapToDb() => new()
+    {
+        Id = Id,
+        DefaultKey = DefaultKey?.ToDbValue(),
+        Name = Name,
+        Emoji = Emoji,
+        Position = Position,
+        CreatedBy = CreatedBy,
+        CreatedAt = CreatedAt,
+        UpdatedAt = UpdatedAt,
+    };
+}
