@@ -94,6 +94,20 @@ public class LinkedGroceryAmountHandlerTests(LocalSupabaseFixture supabase) : IC
     }
 
     [Fact]
+    public async Task UpdateLinkedGroceryAmounts_CrossUnitTotal_WritesItsQuantityAndUnit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var (meal, _, items) = await PlanAndAddAsync(supabase.Client, Week(21), ("Flour", "500 g"));
+        await ChangeAmountAsync(meal.Ingredients[0], meal.Id, "0,7 kg");
+        var source = Assert.Single(await SourcesOfAsync(items[0].Id));
+
+        ResultAssert.Ok(await UpdateAsync(new LinkedAmountUpdate(source.Id, items[0].Id, "0,7 kg", "1,2 kg")));
+
+        var row = await GetItemRowAsync(items[0].Id);
+        Assert.Equal(("1,2 kg", 1.2m, "kg"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+    }
+
+    [Fact]
     public async Task UpdateLinkedGroceryAmounts_TwoSourcesOfOneItem_UpdatesTheItemOnceAndBothSources()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);

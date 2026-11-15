@@ -695,6 +695,46 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
         Assert.Equal(("100 g", 100m, "g"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
     }
 
+    [Fact]
+    public async Task AddPlanIngredientsToGroceryList_ExistingItem_CrossUnitTotal_WritesItsQuantityAndUnit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var existing = await new GroceryItemBuilder().WithName("Flour").WithAmount("1 kg").InsertAsync(supabase.Client);
+        var planned = await PlanAsync(42, supabase.Client, ("Flour", "200 g"));
+
+        ResultAssert.Ok(await AddAsync(planned.Entries(existing.Id, "1,2 kg")));
+
+        var row = await GetRowAsync(existing.Id);
+        Assert.Equal(("1,2 kg", 1.2m, "kg"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+    }
+
+    [Fact]
+    public async Task DeleteGroceryItemSources_AcrossUnits_LowersTheItemInTheUnitThatReadsBest()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        using var _ = CultureScope.Use("en-US");
+        var (flour, cake, bread) = await SharedGarlicAsync(43, pastaAmount: "0,5 kg", soupAmount: "200 g", itemAmount: "700 g");
+
+        var changed = ResultAssert.Ok(await DeleteSourcesAsync(cake.Id));
+
+        Assert.Equal("200 g", Assert.Single(changed).Amount);
+        var row = await GetRowAsync(flour.Id);
+        Assert.Equal(("200 g", 200m, "g"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+        Assert.Equal([bread.Id], (await GetSourceRowsAsync(flour.Id)).Select(s => s.Id));
+    }
+
+    [Fact]
+    public async Task DeleteGroceryItemSources_SourceInAnotherFamily_LeavesTheAmount()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var (flour, cake, _) = await SharedGarlicAsync(44, pastaAmount: "1 dl", soupAmount: "200 g", itemAmount: "700 g");
+
+        Assert.Empty(ResultAssert.Ok(await DeleteSourcesAsync(cake.Id)));
+
+        var row = await GetRowAsync(flour.Id);
+        Assert.Equal(("700 g", 700m, "g"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+    }
+
     private Task<FluentResults.Result<List<GroceryItem>>> DeleteSourcesAsync(params int[] ids) =>
         new DeleteGroceryItemSources.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new DeleteGroceryItemSources.Command([.. ids]), CancellationToken);
 
