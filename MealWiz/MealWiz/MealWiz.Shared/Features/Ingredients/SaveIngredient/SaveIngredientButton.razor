@@ -1,6 +1,7 @@
 ﻿@inject ISnackbar _snackbar
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IMealsStateContainer _mealsStateContainer
+@inject IGroceryCategoriesStateContainer _categories
 @inject IStringLocalizer<IngredientsResource> L
 
 <MudLoadingButton data-testid="save-ingredient-button" OnClick="SaveAsync" @bind-Loading="IsLoading" Variant="Variant.Filled" Color="Color.Primary" ButtonVariant="ButtonVariant.Button" FullWidth>@L["SaveIngredient_Button"]</MudLoadingButton>
@@ -15,6 +16,10 @@
     /// </summary>
     [Parameter]
     public Ingredient? Changes { get; set; }
+
+    /// <summary>The category chip the user picked, if any: once the ingredient is saved its name moves there.</summary>
+    [Parameter]
+    public int? CategoryId { get; set; }
 
     private bool IsLoading { get; set; }
 
@@ -42,6 +47,7 @@
             if (result.Handle(_snackbar).IsFailed) return;
 
             isSaved = true;
+            if (CategoryId is { } categoryId) await _categories.MoveName(Ingredient.Name, categoryId);
             _drawerStateContainer.CloseDrawer();
             if (wasSaved) _snackbar.Add(L["Ingredient_Saved"], Severity.Success);
         }

@@ -190,6 +190,13 @@ public abstract class ComponentTestBase : BunitContext
     protected IEnumerable<object> SentRequests =>
         Mediator.Invocations.Where(i => i.Method.Name == nameof(IMediator.Send)).Select(i => i.Arguments[0]);
 
+    /// <summary>
+    /// <see cref="SentRequests"/> without the category loads the category chips start (a drawer with chips on a page
+    /// that hasn't loaded them, such as Edit meal), for tests that check nothing is saved.
+    /// </summary>
+    protected IEnumerable<object> SentRequestsBesidesCategoryLoads =>
+        SentRequests.Where(r => r is not GetGroceryCategories.Query and not GetRememberedGroceryNames.Query);
+
     /// <summary>The requests of type <typeparamref name="TRequest"/> sent through the mocked mediator.</summary>
     protected List<TRequest> Sent<TRequest>() => SentRequests.OfType<TRequest>().ToList();
 

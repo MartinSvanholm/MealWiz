@@ -93,4 +93,8 @@
   <data name="RemoveIngredient_DeletedAndRemoved" xml:space="preserve">
     <value>Ingredient deleted and removed from the grocery list.</value>
   </data>
+  <data name="IngredientDrawer_Category" xml:space="preserve">
+    <value>Grocery section</value>
+    <comment>Label above the category chips in the ingredient drawer</comment>
+  </data>
 </root>

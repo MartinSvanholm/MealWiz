@@ -44,6 +44,9 @@ public class GroceryCategory
     /// <summary>The catch-all section, last on the list; it can be renamed but not deleted.</summary>
     public bool IsOther => DefaultKey == DefaultCategoryKey.Other;
 
+    /// <summary>The category's <c>data-category</c> in the markup: its default key, or its id for a custom category.</summary>
+    public string DataKey => DefaultKey?.ToDbValue() ?? Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
     /// <summary>Whether dictionary words for <paramref name="key"/> land in this category.</summary>
     public bool Takes(DefaultCategoryKey key) => DefaultKey == key || AbsorbedKeys.Contains(key);
 

@@ -244,4 +244,8 @@
     <value>Amount for {0}</value>
     <comment>{0} the ingredient name</comment>
   </data>
+  <data name="GroceryItem_Category" xml:space="preserve">
+    <value>Section</value>
+    <comment>Label above the category chips in the grocery item drawer</comment>
+  </data>
 </root>

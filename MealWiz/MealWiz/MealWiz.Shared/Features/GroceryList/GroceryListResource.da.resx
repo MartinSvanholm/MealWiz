@@ -201,4 +201,7 @@
   <data name="PlanIngredients_AmountAria" xml:space="preserve">
     <value>Mængde for {0}</value>
   </data>
+  <data name="GroceryItem_Category" xml:space="preserve">
+    <value>Afdeling</value>
+  </data>
 </root>

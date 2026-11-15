@@ -56,4 +56,8 @@
     <value>Other</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
+  <data name="CategoryChips_Aria" xml:space="preserve">
+    <value>Section</value>
+    <comment>Accessible name of a row of category chips without a visible label</comment>
+  </data>
 </root>

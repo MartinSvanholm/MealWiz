@@ -68,7 +68,7 @@
                     {
                         var folded = _groceryCategoriesStateContainer.IsFolded(category.Id);
                         @* Tapping the heading folds the section: the heading and count stay, the rows go. *@
-                        <section class="grocery-section" data-testid="grocery-category" data-category="@CategoryKey(category)"
+                        <section class="grocery-section" data-testid="grocery-category" data-category="@category.DataKey"
                                  data-folded="@(folded ? "true" : "false")" @key="category.Id">
                             <h2 class="grocery-section-heading">
                                 <button type="button" class="grocery-category-heading" data-testid="grocery-category-heading"
@@ -144,10 +144,6 @@
                 .ToList();
         }
     }
-
-    // data-category: the default key, or the id for a category the user added.
-    private static string CategoryKey(GroceryCategory category) =>
-        category.DefaultKey?.ToDbValue() ?? category.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     private RenderFragment Row(GroceryItem item) =>
         @<li class="grocery-row" data-testid="grocery-item" @key="item">

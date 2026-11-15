@@ -45,4 +45,7 @@
   <data name="DefaultCategory_Other_Name" xml:space="preserve">
     <value>Andet</value>
   </data>
+  <data name="CategoryChips_Aria" xml:space="preserve">
+    <value>Afdeling</value>
+  </data>
 </root>
