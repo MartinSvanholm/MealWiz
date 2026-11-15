@@ -12,47 +12,47 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="DefaultCategory_Produce" xml:space="preserve">
+  <data name="DefaultCategory_Produce_Name" xml:space="preserve">
     <value>Fruit &amp; vegetables</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Bakery" xml:space="preserve">
+  <data name="DefaultCategory_Bakery_Name" xml:space="preserve">
     <value>Bakery</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_MeatFish" xml:space="preserve">
+  <data name="DefaultCategory_MeatFish_Name" xml:space="preserve">
     <value>Meat &amp; fish</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Deli" xml:space="preserve">
+  <data name="DefaultCategory_Deli_Name" xml:space="preserve">
     <value>Deli &amp; cold cuts</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_DairyEggs" xml:space="preserve">
+  <data name="DefaultCategory_DairyEggs_Name" xml:space="preserve">
     <value>Dairy &amp; eggs</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Frozen" xml:space="preserve">
+  <data name="DefaultCategory_Frozen_Name" xml:space="preserve">
     <value>Frozen</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Pantry" xml:space="preserve">
+  <data name="DefaultCategory_Pantry_Name" xml:space="preserve">
     <value>Pantry</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Drinks" xml:space="preserve">
+  <data name="DefaultCategory_Drinks_Name" xml:space="preserve">
     <value>Drinks</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Snacks" xml:space="preserve">
+  <data name="DefaultCategory_Snacks_Name" xml:space="preserve">
     <value>Snacks &amp; sweets</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Household" xml:space="preserve">
+  <data name="DefaultCategory_Household_Name" xml:space="preserve">
     <value>Household &amp; personal care</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
-  <data name="DefaultCategory_Other" xml:space="preserve">
+  <data name="DefaultCategory_Other_Name" xml:space="preserve">
     <value>Other</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>

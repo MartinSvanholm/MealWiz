@@ -17,6 +17,6 @@ public static class GroceryCategoryDisplayName
         return string.IsNullOrWhiteSpace(category.Emoji) ? name : $"{category.Emoji} {name}";
     }
 
-    /// <summary>The resource key of a default category's name, e.g. <c>DefaultCategory_DairyEggs</c>.</summary>
-    public static string ResourceKey(DefaultCategoryKey key) => $"DefaultCategory_{key}";
+    /// <summary>The resource key of a default category's name, e.g. <c>DefaultCategory_DairyEggs_Name</c>.</summary>
+    public static string ResourceKey(DefaultCategoryKey key) => $"DefaultCategory_{key}_Name";
 }

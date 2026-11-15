@@ -34,7 +34,7 @@ public class GroceryListTextTests() : ComponentTestBase(echoResourceKeys: true)
         Assert.Equal("[GroceryList_Header_Other]", cut.Find(TestId("screen-header-label")).TextContent.Trim());
         Assert.Equal("[GroceryList_Progress_Other]", cut.Find(TestId("grocery-progress-count")).TextContent.Trim());
         Assert.Equal("[GroceryList_ProgressAria]", cut.Find(TestId("grocery-progress")).GetAttribute("aria-label"));
-        Assert.Equal("[GroceryList_ToBuy]", cut.Find(TestId("grocery-to-buy-heading")).TextContent.Trim());
+        Assert.Equal("[DefaultCategory_DairyEggs_Name]", cut.Find(TestId("grocery-category-name")).TextContent.Trim());
         Assert.Equal("[GroceryList_InBasket]", cut.Find(TestId("grocery-basket-heading")).TextContent.Trim());
         Assert.Equal("[GroceryList_ClearBasket]", cut.Find(TestId("clear-basket-button")).TextContent.Trim());
         Assert.Equal("[GroceryList_FromMealPlan]", cut.Find(TestId("add-plan-ingredients-button")).TextContent.Trim());

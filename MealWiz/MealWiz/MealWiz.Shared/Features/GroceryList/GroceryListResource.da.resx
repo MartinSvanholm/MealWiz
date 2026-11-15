@@ -129,9 +129,6 @@
   <data name="GroceryList_EmptyHint" xml:space="preserve">
     <value>Tilføj en vare ovenfor, eller hent ugens ingredienser fra din madplan.</value>
   </data>
-  <data name="GroceryList_ToBuy" xml:space="preserve">
-    <value>Skal købes · {0}</value>
-  </data>
   <data name="GroceryList_InBasket" xml:space="preserve">
     <value>I kurven · {0}</value>
   </data>

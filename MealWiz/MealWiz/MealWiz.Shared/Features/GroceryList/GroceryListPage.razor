@@ -6,7 +6,8 @@
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMealPlanStateContainer _mealPlanStateContainer
-@inject IStringLocalizer<GroceryListResource> L
+@inject IGroceryCategoriesStateContainer _groceryCategoriesStateContainer
+@inject IStringLocalizer<GroceryCategoriesResource> C
 @implements IDisposable
 
 @* Dense on purpose: the shopper needs to see everything left to find, so about ten to-buy rows fit on a phone. *@
@@ -47,30 +48,40 @@
             </div>
         }
 
-        @if (ToBuy.Count > 0)
+        @if (ToBuy.Count > 0 && _categoriesSettled)
         {
-            <section class="grocery-section">
-                <h2 class="grocery-section-heading" data-testid="grocery-to-buy-heading">@L["GroceryList_ToBuy", ToBuy.Count]</h2>
-                <ul class="grocery-to-buy" data-testid="grocery-to-buy">
-                    @foreach (var item in ToBuy)
+            @* One section per category with something to buy, in the user's order. Without categories (the load
+               failed) the items are one list without headings. *@
+            <div class="grocery-categories" data-testid="grocery-to-buy">
+                @if (_groceryCategoriesStateContainer.Categories.Count == 0)
+                {
+                    <ul class="grocery-rows">
+                        @foreach (var item in ToBuy)
+                        {
+                            @Row(item)
+                        }
+                    </ul>
+                }
+                else
+                {
+                    @foreach (var (category, items) in Sections)
                     {
-                        <li class="grocery-row" data-testid="grocery-item" @key="item">
-                            <SwipeToDeleteGroceryItem GroceryItem="item">
-                                <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
-                                        role="checkbox" aria-checked="false" aria-label="@L["GroceryList_CheckOffAria", item.Name]"
-                                        @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
-                                    <span class="grocery-check-box" aria-hidden="true"></span>
-                                </button>
-                                <EditGroceryItemButton GroceryItem="item" />
-                                @if (!string.IsNullOrWhiteSpace(item.Amount))
+                        <section class="grocery-section" data-testid="grocery-category" data-category="@CategoryKey(category)" @key="category.Id">
+                            <h2 class="grocery-section-heading">
+                                <span data-testid="grocery-category-name">@category.DisplayName(C)</span>
+                                <span aria-hidden="true">·</span>
+                                <span data-testid="grocery-category-count">@items.Count</span>
+                            </h2>
+                            <ul class="grocery-rows">
+                                @foreach (var item in items)
                                 {
-                                    <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
+                                    @Row(item)
                                 }
-                            </SwipeToDeleteGroceryItem>
-                        </li>
+                            </ul>
+                        </section>
                     }
-                </ul>
-            </section>
+                }
+            </div>
         }
 
         @if (Picked.Count > 0)
@@ -103,6 +114,46 @@
     private List<GroceryItem> ToBuy => Items.Where(i => !i.IsPicked).ToList();
     private List<GroceryItem> Picked => Items.Where(i => i.IsPicked).ToList();
 
+    // Set once the categories have loaded or failed to, so the list doesn't render ungrouped first and then jump.
+    private bool _categoriesSettled;
+
+    // Each to-buy item in its category; categories with nothing to buy are left out. Items keep their order.
+    private List<(GroceryCategory Category, List<GroceryItem> Items)> Sections
+    {
+        get
+        {
+            var categories = _groceryCategoriesStateContainer.Categories;
+            var byCategory = ToBuy
+                .GroupBy(i => _groceryCategoriesStateContainer.CategoryFor(i.Name)?.Id ?? categories[^1].Id)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            return categories
+                .Where(c => byCategory.ContainsKey(c.Id))
+                .Select(c => (c, byCategory[c.Id]))
+                .ToList();
+        }
+    }
+
+    // data-category: the default key, or the id for a category the user added.
+    private static string CategoryKey(GroceryCategory category) =>
+        category.DefaultKey?.ToDbValue() ?? category.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private RenderFragment Row(GroceryItem item) =>
+        @<li class="grocery-row" data-testid="grocery-item" @key="item">
+            <SwipeToDeleteGroceryItem GroceryItem="item">
+                <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
+                        role="checkbox" aria-checked="false" aria-label="@L["GroceryList_CheckOffAria", item.Name]"
+                        @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
+                    <span class="grocery-check-box" aria-hidden="true"></span>
+                </button>
+                <EditGroceryItemButton GroceryItem="item" />
+                @if (!string.IsNullOrWhiteSpace(item.Amount))
+                {
+                    <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
+                }
+            </SwipeToDeleteGroceryItem>
+        </li>;
+
     private int ProgressPercent => Items.Count == 0 ? 0 : (int)Math.Round(100.0 * Picked.Count / Items.Count);
 
     // The week the "From meal plan" drawer takes its ingredients from.
@@ -130,16 +181,25 @@
     protected override async Task OnInitializedAsync()
     {
         _groceryListStateContainer.OnStateChanged += StateHasChanged;
+        _groceryCategoriesStateContainer.OnStateChanged += StateHasChanged;
         _groceryListStateContainer.CurrentSnackbar = _snackbar;
-        await _groceryListStateContainer.LoadGroceryItems();
+        _groceryCategoriesStateContainer.CurrentSnackbar = _snackbar;
+        await Task.WhenAll(_groceryListStateContainer.LoadGroceryItems(), LoadCategories());
         await _groceryListStateContainer.LoadSources();
 
         await base.OnInitializedAsync();
     }
 
+    private async Task LoadCategories()
+    {
+        await _groceryCategoriesStateContainer.LoadCategories();
+        _categoriesSettled = true;
+    }
+
     public void Dispose()
     {
         _groceryListStateContainer.OnStateChanged -= StateHasChanged;
+        _groceryCategoriesStateContainer.OnStateChanged -= StateHasChanged;
         _drawerStateContainer.CloseDrawer();
     }
 }

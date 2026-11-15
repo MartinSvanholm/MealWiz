@@ -158,10 +158,6 @@
   <data name="GroceryList_EmptyHint" xml:space="preserve">
     <value>Add an item above, or take the week's ingredients from your meal plan.</value>
   </data>
-  <data name="GroceryList_ToBuy" xml:space="preserve">
-    <value>To buy · {0}</value>
-    <comment>Section heading; {0} the number of items</comment>
-  </data>
   <data name="GroceryList_InBasket" xml:space="preserve">
     <value>In the basket · {0}</value>
     <comment>Section heading; {0} the number of items</comment>

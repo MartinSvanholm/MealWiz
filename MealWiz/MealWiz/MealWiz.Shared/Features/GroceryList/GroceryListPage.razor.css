@@ -90,8 +90,15 @@
     color: var(--mw-text-muted);
 }
 
-/* To buy: one container, thin dividers, 44px rows (SwipeToDeleteGroceryItem lays out each row). */
-.grocery-to-buy {
+/* To buy: one section per category, each one container with thin dividers and 44px rows
+   (SwipeToDeleteGroceryItem lays out each row). */
+.grocery-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.grocery-rows {
     margin: 0;
     padding: 0;
     list-style: none;
