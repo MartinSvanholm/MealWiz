@@ -5,6 +5,7 @@ using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.ReorderGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.SetSectionOrderMode;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Microsoft.AspNetCore.Components.Web;
 using Moq;
@@ -12,7 +13,7 @@ using Xunit;
 
 namespace MealWiz.Shared.Tests.Features.GroceryCategories.ComponentTests;
 
-/// <summary>Dragging the categories into an order on the Categories page.</summary>
+/// <summary>Dragging the categories into an order on the Categories page, and handing the order back to learning.</summary>
 public class GroceryCategoriesOrderTests : ComponentTestBase
 {
     private List<GroceryCategory> _categories = TestData.DefaultGroceryCategories();
@@ -103,6 +104,58 @@ public class GroceryCategoriesOrderTests : ComponentTestBase
 
         cut.WaitForAssertion(() => Assert.Contains("No response from server", SnackbarMessages));
         Assert.Equal("produce", Keys(cut)[0]);
+        Assert.Equal(SectionOrderMode.Learned, GroceryCategories.Settings.OrderMode);
+    }
+
+    private static bool SwitchIsOn(IRenderedComponent<GroceryCategoriesPage> cut) =>
+        cut.Find(InputOf("follow-shopping-switch")).HasAttribute("checked");
+
+    [Fact]
+    public void TheSwitch_ShowsWhetherTheOrderIsLearned()
+    {
+        _settings = new GroceryListSettings(SectionOrderMode.Manual);
+
+        var cut = RenderWithPopovers<GroceryCategoriesPage>();
+
+        Assert.False(SwitchIsOn(cut));
+        Assert.Equal("Follow my shopping again", cut.Find(TestId("follow-shopping-switch")).Closest(".grocery-categories-order")!
+            .QuerySelector(".grocery-categories-order-label")!.TextContent.Trim());
+    }
+
+    [Fact]
+    public void TurningTheSwitchOn_HandsTheOrderBackToLearning()
+    {
+        _settings = new GroceryListSettings(SectionOrderMode.Manual);
+        SetupSend<SetSectionOrderMode.Command, Result>(Result.Ok());
+        var cut = RenderWithPopovers<GroceryCategoriesPage>();
+
+        cut.Find(InputOf("follow-shopping-switch")).Change(true);
+
+        Assert.Equal(SectionOrderMode.Learned, Assert.Single(Sent<SetSectionOrderMode.Command>()).Mode);
+        cut.WaitForAssertion(() => Assert.True(SwitchIsOn(cut)));
+    }
+
+    [Fact]
+    public void ADrag_TurnsTheSwitchOff()
+    {
+        var cut = RenderWithPopovers<GroceryCategoriesPage>();
+        Assert.True(SwitchIsOn(cut));
+
+        Drag(cut, "produce", 2 * GroceryCategoriesPage.RowHeight);
+
+        cut.WaitForAssertion(() => Assert.False(SwitchIsOn(cut)));
+    }
+
+    [Fact]
+    public void AFailedSwitch_ShowsTheError_AndPutsTheSwitchBack()
+    {
+        SetupSend<SetSectionOrderMode.Command, Result>(Result.Fail("No response from server"));
+        var cut = RenderWithPopovers<GroceryCategoriesPage>();
+
+        cut.Find(InputOf("follow-shopping-switch")).Change(false);
+
+        cut.WaitForAssertion(() => Assert.Contains("No response from server", SnackbarMessages));
+        Assert.True(SwitchIsOn(cut));
         Assert.Equal(SectionOrderMode.Learned, GroceryCategories.Settings.OrderMode);
     }
 }

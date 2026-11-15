@@ -9,6 +9,7 @@ using MealWiz.Shared.Features.GroceryList.Models;
 using ApplyLearnedSectionOrderAction = MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder.ApplyLearnedSectionOrder;
 using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
 using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
+using SetSectionOrderModeAction = MealWiz.Shared.Features.GroceryCategories.SetSectionOrderMode.SetSectionOrderMode;
 using ReorderGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.ReorderGroceryCategories.ReorderGroceryCategories;
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
@@ -73,6 +74,12 @@ public interface IGroceryCategoriesStateContainer
     /// order shows at once; a failed save shows the error and puts the old order back. False when it failed.
     /// </summary>
     Task<bool> Reorder(IReadOnlyList<int> categoryIds);
+
+    /// <summary>
+    /// Learned ("Follow my shopping again") or manual. False when the save failed (the error is shown and the mode
+    /// stays as it was).
+    /// </summary>
+    Task<bool> SetOrderMode(SectionOrderMode mode);
 
     /// <summary>
     /// Learns the section order from the finished shopping trips among <paramref name="picked"/> (ticks after
@@ -174,6 +181,20 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
 
         Settings = Settings with { OrderMode = SectionOrderMode.Manual };
         await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> SetOrderMode(SectionOrderMode mode)
+    {
+        var result = await mediator.Send(new SetSectionOrderModeAction.Command(mode));
+        if (result.Handle(CurrentSnackbar).IsFailed)
+        {
+            NotifyStateChanged();
+            return false;
+        }
+
+        Settings = Settings with { OrderMode = mode };
+        NotifyStateChanged();
         return true;
     }
 

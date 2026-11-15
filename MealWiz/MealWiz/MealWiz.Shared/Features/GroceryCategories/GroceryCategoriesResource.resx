@@ -130,4 +130,11 @@
     <value>Drag to move {0}</value>
     <comment>{0} is the category's name</comment>
   </data>
+  <data name="GroceryCategories_FollowShopping" xml:space="preserve">
+    <value>Follow my shopping again</value>
+    <comment>Switch: when on, the order is learned from the order items are ticked off in</comment>
+  </data>
+  <data name="GroceryCategories_FollowShoppingHint" xml:space="preserve">
+    <value>The order learns from the order you tick things off. Dragging a category turns this off.</value>
+  </data>
 </root>

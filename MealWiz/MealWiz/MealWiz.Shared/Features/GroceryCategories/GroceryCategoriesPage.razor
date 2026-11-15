@@ -50,6 +50,16 @@
             <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
             @C["GroceryCategories_Add"]
         </button>
+        @* The order follows the shopping walk until the first drag; this hands it back to learning. *@
+        <div class="grocery-categories-order">
+            <div class="grocery-categories-order-text">
+                <span class="grocery-categories-order-label">@C["GroceryCategories_FollowShopping"]</span>
+                <span class="grocery-categories-order-hint">@C["GroceryCategories_FollowShoppingHint"]</span>
+            </div>
+            <MudSwitch T="bool" data-testid="follow-shopping-switch" Color="Color.Primary"
+                       Value="@(_categories.Settings.OrderMode == SectionOrderMode.Learned)" ValueChanged="SetFollowShoppingAsync"
+                       aria-label="@C["GroceryCategories_FollowShopping"]" />
+        </div>
     </div>
 </div>
 
@@ -116,6 +126,9 @@
     {
         if (_drag?.PointerId == e.PointerId) _drag = null;
     }
+
+    private Task SetFollowShoppingAsync(bool follow) =>
+        _categories.SetOrderMode(follow ? SectionOrderMode.Learned : SectionOrderMode.Manual);
 
     private void Add() => GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_AddTitle"], null);
 
