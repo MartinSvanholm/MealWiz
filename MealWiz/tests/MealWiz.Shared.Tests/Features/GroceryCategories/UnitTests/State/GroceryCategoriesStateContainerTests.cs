@@ -3,6 +3,8 @@ using Blazored.LocalStorage;
 using FluentResults;
 using MealWiz.Shared.Features.GroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory;
+using MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder;
+using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory;
 using MealWiz.Shared.Tests.TestInfrastructure;
@@ -24,12 +26,13 @@ public class GroceryCategoriesStateContainerTests
     private readonly Mock<IMediator> _mediator = new();
     private readonly Mock<ISnackbar> _snackbar = new();
     private readonly Mock<ILocalStorageService> _localStorage = new();
+    private readonly Microsoft.Extensions.Time.Testing.FakeTimeProvider _time = new(new DateTimeOffset(2026, 11, 15, 20, 0, 0, TimeSpan.Zero));
     private readonly GroceryCategoriesStateContainer _container;
     private int _notifications;
 
     public GroceryCategoriesStateContainerTests()
     {
-        _container = new GroceryCategoriesStateContainer(_mediator.Object, _localStorage.Object) { CurrentSnackbar = _snackbar.Object };
+        _container = new GroceryCategoriesStateContainer(_mediator.Object, _localStorage.Object, _time) { CurrentSnackbar = _snackbar.Object };
         _container.OnStateChanged += () => _notifications++;
         SetupNames(Result.Ok(new List<RememberedGroceryName>()));
         SetupSettings(Result.Ok(new GroceryListSettings()));
@@ -348,5 +351,79 @@ public class GroceryCategoriesStateContainerTests
 
         Assert.Equal(11, _container.Categories.Count);
         Assert.Equal(SectionOrderMode.Learned, _container.Settings.OrderMode);
+    }
+
+    // The clock is 20:00; these ticks end at 10:20, so their trip is over.
+    private static GroceryItem Ticked(string name, int minute) =>
+        new() { Name = name, IsPicked = true, PickedAt = new DateTime(2026, 11, 15, 10, minute, 0, DateTimeKind.Utc) };
+
+    private void SetupApply(Result result) =>
+        _mediator.Setup(m => m.Send(It.IsAny<ApplyLearnedSectionOrder.Command>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
+
+    private List<ApplyLearnedSectionOrder.Command> ApplyCalls =>
+        _mediator.Invocations.Select(i => i.Arguments.FirstOrDefault()).OfType<ApplyLearnedSectionOrder.Command>().ToList();
+
+    [Fact]
+    public async Task LearnFromTicks_AFinishedTrip_LearnsFromEachCategorysFirstTick_AndRemembersWhereItGot()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupApply(Result.Ok());
+        await _container.LoadCategories();
+
+        // Dairy first (milk), then bakery; the second milk tick doesn't count.
+        await _container.LearnFromTicks([Ticked("milk", 0), Ticked("bread", 10), Ticked("cheese", 20)], basketCleared: false);
+
+        var command = Assert.Single(ApplyCalls);
+        Assert.Equal(new DateTime(2026, 11, 15, 10, 20, 0, DateTimeKind.Utc), command.LearnedUntil);
+        Assert.Equal(11, command.Categories.Count);
+        var dairy = command.Categories.Single(c => c.CategoryId == 5);
+        var bakery = command.Categories.Single(c => c.CategoryId == 2);
+        Assert.True(dairy.Score < 5 && bakery.Score > 2);
+        Assert.Equal(command.LearnedUntil, _container.Settings.LearnedUntil);
+        Assert.Equal(dairy.Score, _container.Categories.Single(c => c.Id == 5).OrderScore);
+    }
+
+    [Fact]
+    public async Task LearnFromTicks_NothingFinished_SendsNothing()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+        var lastTick = new DateTime(2026, 11, 15, 19, 0, 0, DateTimeKind.Utc);
+
+        await _container.LearnFromTicks(
+            [new GroceryItem { Name = "milk", IsPicked = true, PickedAt = lastTick.AddMinutes(-10) },
+             new GroceryItem { Name = "bread", IsPicked = true, PickedAt = lastTick }],
+            basketCleared: false);
+
+        Assert.Empty(ApplyCalls);
+    }
+
+    [Fact]
+    public async Task LearnFromTicks_InManualMode_OnlyMovesLearnedUntil()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupSettings(Result.Ok(new GroceryListSettings(SectionOrderMode.Manual)));
+        SetupApply(Result.Ok());
+        await _container.LoadCategories();
+
+        await _container.LearnFromTicks([Ticked("milk", 0), Ticked("bread", 10)], basketCleared: true);
+
+        var command = Assert.Single(ApplyCalls);
+        Assert.Empty(command.Categories);
+        Assert.Equal(new DateTime(2026, 11, 15, 10, 10, 0, DateTimeKind.Utc), _container.Settings.LearnedUntil);
+    }
+
+    [Fact]
+    public async Task LearnFromTicks_AFailedWrite_ShowsTheError_AndChangesNothing()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupApply(Result.Fail("No response from server"));
+        await _container.LoadCategories();
+
+        await _container.LearnFromTicks([Ticked("milk", 0), Ticked("bread", 10)], basketCleared: false);
+
+        Assert.Null(_container.Settings.LearnedUntil);
+        Assert.All(_container.Categories, c => Assert.Null(c.OrderScore));
+        _snackbar.Verify(s => s.Add("No response from server", It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()));
     }
 }

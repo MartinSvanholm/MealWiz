@@ -5,6 +5,8 @@ using MealWiz.Shared.Helpers;
 using MediatR;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
+using MealWiz.Shared.Features.GroceryList.Models;
+using ApplyLearnedSectionOrderAction = MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder.ApplyLearnedSectionOrder;
 using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
 using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
@@ -65,6 +67,14 @@ public interface IGroceryCategoriesStateContainer
     /// </summary>
     string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer);
 
+    /// <summary>
+    /// Learns the section order from the finished shopping trips among <paramref name="picked"/> (ticks after
+    /// <see cref="GroceryListSettings.LearnedUntil"/>; a trip is finished two hours after its last tick, or when the
+    /// basket is cleared). In manual mode it only records that those ticks were seen. Nothing finished: nothing sent.
+    /// A failed write shows its error and changes nothing.
+    /// </summary>
+    Task LearnFromTicks(IReadOnlyList<GroceryItem> picked, bool basketCleared);
+
     /// <summary>Whether a section is folded on the grocery list (heading and count only). Kept on this device.</summary>
     bool IsFolded(int categoryId);
 
@@ -75,7 +85,7 @@ public interface IGroceryCategoriesStateContainer
     Task LoadFolded();
 }
 
-public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageService localStorage)
+public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageService localStorage, TimeProvider time)
     : StateContainerBase, IGroceryCategoriesStateContainer
 {
     internal const string FoldedStorageKey = "grocerylist_folded_sections";
@@ -129,6 +139,34 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
         RememberedNames = new Dictionary<string, int>(RememberedNames) { [CategoryResolver.Normalise(name)] = categoryId };
         NotifyStateChanged();
         return true;
+    }
+
+    public async Task LearnFromTicks(IReadOnlyList<GroceryItem> picked, bool basketCleared)
+    {
+        if (Categories.Count == 0) return;
+
+        var trips = SectionOrderLearner.CompleteTrips(picked, Settings.LearnedUntil, time.GetUtcNow().UtcDateTime, basketCleared);
+        if (trips.Count == 0) return;
+
+        var learnedUntil = trips[^1][^1].PickedAt!.Value;
+        var learned = Categories;
+        var orders = new List<LearnedCategoryOrder>();
+        if (Settings.OrderMode == SectionOrderMode.Learned)
+        {
+            foreach (var trip in trips)
+            {
+                var observed = trip.Select(item => CategoryFor(item.Name)?.Id).OfType<int>().Distinct().ToList();
+                orders = SectionOrderLearner.Learn(learned, observed);
+                learned = SectionOrderLearner.Apply(learned, orders);
+            }
+        }
+
+        var result = await mediator.Send(new ApplyLearnedSectionOrderAction.Command(orders, learnedUntil));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        Categories = learned;
+        Settings = Settings with { LearnedUntil = learnedUntil };
+        NotifyStateChanged();
     }
 
     public bool IsFolded(int categoryId) => _folded.Contains(categoryId);

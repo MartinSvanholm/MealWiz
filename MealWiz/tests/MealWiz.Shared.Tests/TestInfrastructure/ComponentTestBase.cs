@@ -103,7 +103,7 @@ public abstract class ComponentTestBase : BunitContext
 
         Meals = new MealsStateContainer(Mediator.Object);
         GroceryList = new GroceryListStateContainer(Mediator.Object, Time);
-        GroceryCategories = new GroceryCategoriesStateContainer(Mediator.Object, LocalStorage.Object);
+        GroceryCategories = new GroceryCategoriesStateContainer(Mediator.Object, LocalStorage.Object, Time);
         MealPlan = new MealPlanStateContainer(Mediator.Object, LocalStorage.Object);
 
         Services.AddSingleton(Mediator.Object);

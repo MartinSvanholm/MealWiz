@@ -1,3 +1,7 @@
+using MealWiz.Shared.Features.GroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder;
+using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.SetSectionOrderMode;
@@ -48,5 +52,42 @@ public class SectionOrderHandlerTests(LocalSupabaseFixture supabase) : IClassFix
         var result = await new SetSectionOrderMode.Handler(signedOut).Handle(new SetSectionOrderMode.Command(SectionOrderMode.Manual), CancellationToken);
 
         ResultAssert.Failed(result, ErrorMessages.NotSignedIn);
+    }
+
+    private static readonly Microsoft.Extensions.Localization.IStringLocalizer<GroceryCategoriesResource> Localizer =
+        TestLocalizer.For<GroceryCategoriesResource>();
+
+    private static async Task<List<GroceryCategory>> DefaultsAsync(Supabase.Client client) =>
+        ResultAssert.Ok(await new CreateDefaultGroceryCategories.Handler(client).Handle(new CreateDefaultGroceryCategories.Command(), CancellationToken));
+
+    [Fact]
+    public async Task ApplyLearnedSectionOrder_WritesPositionsScoresAndLearnedUntil()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = (await supabase.CreateSignedInUserAsync()).Client;
+        var categories = await DefaultsAsync(client);
+        var learnedUntil = new DateTime(2026, 11, 15, 10, 20, 0, DateTimeKind.Utc);
+        var orders = SectionOrderLearner.Learn(categories, [categories[4].Id, categories[1].Id]);
+
+        ResultAssert.Ok(await new ApplyLearnedSectionOrder.Handler(client, Localizer)
+            .Handle(new ApplyLearnedSectionOrder.Command(orders, learnedUntil), CancellationToken));
+
+        var after = ResultAssert.Ok(await new GetGroceryCategories.Handler(client).Handle(new GetGroceryCategories.Query(), CancellationToken));
+        Assert.Equal(orders.Select(o => (o.CategoryId, o.Position, o.Score)), after.Select(c => (c.Id, c.Position, c.OrderScore ?? -1)));
+        Assert.Equal(learnedUntil, (await SettingsAsync(client)).LearnedUntil?.ToUniversalTime());
+    }
+
+    [Fact]
+    public async Task ApplyLearnedSectionOrder_WithNoCategories_OnlyMovesLearnedUntil()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = (await supabase.CreateSignedInUserAsync()).Client;
+        await DefaultsAsync(client);
+        var learnedUntil = new DateTime(2026, 11, 15, 12, 0, 0, DateTimeKind.Utc);
+
+        ResultAssert.Ok(await new ApplyLearnedSectionOrder.Handler(client, Localizer)
+            .Handle(new ApplyLearnedSectionOrder.Command([], learnedUntil), CancellationToken));
+
+        Assert.Equal(learnedUntil, (await SettingsAsync(client)).LearnedUntil?.ToUniversalTime());
     }
 }

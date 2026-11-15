@@ -54,6 +54,9 @@ public class GroceryCategory
     /// <summary>Whether dictionary words for <paramref name="key"/> land in this category.</summary>
     public bool Takes(DefaultCategoryKey key) => DefaultKey == key || AbsorbedKeys.Contains(key);
 
+    /// <summary>A shallow copy, so a working order can change without touching the loaded categories.</summary>
+    public GroceryCategory Copy() => (GroceryCategory)MemberwiseClone();
+
     /// <summary>A new, unsaved default category at its default position.</summary>
     public static GroceryCategory Default(DefaultCategoryKey key) => new() { DefaultKey = key, Position = key.DefaultPosition() };
 
