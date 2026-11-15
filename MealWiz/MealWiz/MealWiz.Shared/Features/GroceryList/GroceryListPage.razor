@@ -15,6 +15,10 @@
     <ScreenHeader Label="@HeaderLabel" Title="@L["GroceryList_Title"]">
         <Actions>
             <AddIngredientsToGroceryListButton />
+            <a class="grocery-categories-button" href="grocerylist/categories" data-testid="grocery-categories-button"
+               aria-label="@L["GroceryList_CategoriesAria"]">
+                <MudIcon Icon="@Icons.Material.Outlined.Category" Size="Size.Small" />
+            </a>
         </Actions>
     </ScreenHeader>
 

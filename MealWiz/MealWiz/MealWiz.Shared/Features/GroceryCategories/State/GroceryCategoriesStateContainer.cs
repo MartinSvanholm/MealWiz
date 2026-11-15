@@ -3,7 +3,10 @@ using Blazored.LocalStorage;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
+using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
+using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
 using GetRememberedGroceryNamesAction = MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames.GetRememberedGroceryNames;
@@ -37,6 +40,18 @@ public interface IGroceryCategoriesStateContainer
     /// already did (nothing is sent). On failure the error shows and nothing changes.
     /// </summary>
     Task<bool> MoveName(string name, int categoryId);
+
+    /// <summary>Adds a category just above Other, then reloads; false when it failed (the error is shown).</summary>
+    Task<bool> AddCategory(string name, string? emoji);
+
+    /// <summary>Renames a category and sets its emoji, then reloads; false when it failed (the error is shown).</summary>
+    Task<bool> UpdateCategory(int id, string name, string? emoji);
+
+    /// <summary>
+    /// Why <paramref name="name"/> can't be a category's name, or null: it is empty, or another category than
+    /// <paramref name="categoryId"/> already shows that name in the current language (ignoring case and spaces).
+    /// </summary>
+    string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer);
 
     /// <summary>Whether a section is folded on the grocery list (heading and count only). Kept on this device.</summary>
     bool IsFolded(int categoryId);
@@ -119,5 +134,33 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
         }
 
         NotifyStateChanged();
+    }
+
+    public async Task<bool> AddCategory(string name, string? emoji)
+    {
+        var result = await mediator.Send(new AddGroceryCategoryAction.Command(name, emoji));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> UpdateCategory(int id, string name, string? emoji)
+    {
+        var result = await mediator.Send(new UpdateGroceryCategoryAction.Command(id, name, emoji));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer)
+    {
+        var normalised = CategoryResolver.Normalise(name);
+        if (normalised.Length == 0) return localizer["GroceryCategory_NameRequired"];
+
+        var taken = Categories.Any(c => c.Id != categoryId
+            && CategoryResolver.Normalise(c.DisplayNameWithoutEmoji(localizer)) == normalised);
+        return taken ? localizer["GroceryCategory_NameTaken"] : null;
     }
 }

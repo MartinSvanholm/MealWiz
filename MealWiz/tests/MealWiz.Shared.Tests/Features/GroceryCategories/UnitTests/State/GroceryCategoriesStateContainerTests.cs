@@ -1,7 +1,11 @@
 using System.Text.Json;
 using Blazored.LocalStorage;
 using FluentResults;
+using MealWiz.Shared.Features.GroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory;
 using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory;
+using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
 using MealWiz.Shared.Features.GroceryCategories.RememberGroceryName;
@@ -242,5 +246,78 @@ public class GroceryCategoriesStateContainerTests
         Assert.False(moved);
         Assert.True(_container.CategoryFor("tofu")?.IsOther);
         Assert.Equal(1, _notifications);
+    }
+
+    private static readonly Microsoft.Extensions.Localization.IStringLocalizer<GroceryCategoriesResource> Localizer =
+        TestLocalizer.For<GroceryCategoriesResource>();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task ValidateName_Empty_IsRequired(string? name)
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+
+        Assert.Equal("Give the category a name", _container.ValidateName(name, null, Localizer));
+    }
+
+    [Theory]
+    [InlineData("dairy & EGGS ")]
+    [InlineData("Other")]
+    public async Task ValidateName_AnotherCategorysName_IsTaken_IgnoringCaseAndSpaces(string name)
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+
+        Assert.Equal("A category with that name already exists", _container.ValidateName(name, null, Localizer));
+    }
+
+    [Fact]
+    public async Task ValidateName_ItsOwnName_OrANewOne_IsFine()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+
+        Assert.Null(_container.ValidateName("Dairy & eggs", 5, Localizer));
+        Assert.Null(_container.ValidateName("Health food", null, Localizer));
+    }
+
+    [Fact]
+    public async Task ValidateName_ComparesWithTheNamesShownInTheAppLanguage()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        await _container.LoadCategories();
+        using var _ = CultureScope.Use("da");
+
+        Assert.NotNull(_container.ValidateName("mejeri & æg", null, Localizer));
+        Assert.Null(_container.ValidateName("Dairy & eggs", null, Localizer));
+    }
+
+    [Fact]
+    public async Task AddCategory_Success_ReloadsTheCategories()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        _mediator.Setup(m => m.Send(It.IsAny<AddGroceryCategory.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Ok(new GroceryCategory { Id = 12, Name = "Health food", Position = 11 }));
+
+        Assert.True(await _container.AddCategory("Health food", "🥗"));
+
+        var command = (AddGroceryCategory.Command)_mediator.Invocations.Single(i => i.Arguments[0] is AddGroceryCategory.Command).Arguments[0];
+        Assert.Equal(("Health food", "🥗"), (command.Name, command.Emoji));
+        Assert.Single(_mediator.Invocations, i => i.Arguments[0] is GetGroceryCategories.Query);
+    }
+
+    [Fact]
+    public async Task UpdateCategory_Failure_ShowsTheError_AndReloadsNothing()
+    {
+        _mediator.Setup(m => m.Send(It.IsAny<UpdateGroceryCategory.Command>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Fail<GroceryCategory>("A category with that name already exists"));
+
+        Assert.False(await _container.UpdateCategory(3, "Bakery", null));
+
+        Assert.DoesNotContain(_mediator.Invocations, i => i.Arguments[0] is GetGroceryCategories.Query);
+        _snackbar.Verify(s => s.Add("A category with that name already exists", It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()));
     }
 }

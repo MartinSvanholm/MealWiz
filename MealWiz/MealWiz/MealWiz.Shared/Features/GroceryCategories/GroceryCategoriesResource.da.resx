@@ -46,6 +46,57 @@
     <value>Andet</value>
   </data>
   <data name="CategoryChips_Aria" xml:space="preserve">
-    <value>Afdeling</value>
+    <value>Kategori</value>
+  </data>
+  <data name="GroceryCategory_NameTaken" xml:space="preserve">
+    <value>Der findes allerede en kategori med det navn</value>
+  </data>
+  <data name="GroceryCategory_NameRequired" xml:space="preserve">
+    <value>Giv kategorien et navn</value>
+  </data>
+  <data name="GroceryCategory_NotAdded" xml:space="preserve">
+    <value>Kategorien blev ikke tilføjet. Prøv igen.</value>
+  </data>
+  <data name="GroceryCategory_NotFound" xml:space="preserve">
+    <value>Den kategori findes ikke længere</value>
+  </data>
+  <data name="GroceryCategory_OtherCannotBeDeleted" xml:space="preserve">
+    <value>Andet kan ikke slettes</value>
+  </data>
+  <data name="GroceryCategory_MoveToItself" xml:space="preserve">
+    <value>Vælg en anden kategori til dens varer</value>
+  </data>
+  <data name="GroceryCategories_Label" xml:space="preserve">
+    <value>Indkøb</value>
+  </data>
+  <data name="GroceryCategories_Title" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="GroceryCategories_Hint" xml:space="preserve">
+    <value>Din indkøbsliste er delt op i disse kategorier.</value>
+  </data>
+  <data name="GroceryCategories_Add" xml:space="preserve">
+    <value>Tilføj kategori</value>
+  </data>
+  <data name="GroceryCategories_EditAria" xml:space="preserve">
+    <value>Redigér {0}</value>
+  </data>
+  <data name="GroceryCategory_AddTitle" xml:space="preserve">
+    <value>Ny kategori</value>
+  </data>
+  <data name="GroceryCategory_EditTitle" xml:space="preserve">
+    <value>Redigér kategori</value>
+  </data>
+  <data name="GroceryCategory_Name" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="GroceryCategory_Emoji" xml:space="preserve">
+    <value>Emoji</value>
+  </data>
+  <data name="GroceryCategory_EmojiPlaceholder" xml:space="preserve">
+    <value>Valgfri</value>
+  </data>
+  <data name="GroceryCategory_Save" xml:space="preserve">
+    <value>Gem kategori</value>
   </data>
 </root>

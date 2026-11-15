@@ -1,0 +1,81 @@
+/* Categories: one bordered list of 52px rows, then "Add category". Tokens only (UI-02). */
+.grocery-categories-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.grocery-categories-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px var(--mw-nav-clearance);
+}
+
+.grocery-categories-hint {
+    margin: 0;
+    font-size: 14px;
+    color: var(--mw-text-muted);
+}
+
+.grocery-categories-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background-color: var(--mw-surface);
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    overflow: hidden;
+}
+
+.grocery-categories-list > li + li {
+    border-top: 1px solid var(--mw-chip-bg);
+}
+
+.grocery-categories-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 10px 0 16px;
+    border: 0;
+    background: transparent;
+    color: var(--mw-text);
+    font-family: var(--mw-font-body);
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.grocery-categories-row-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.grocery-categories-row ::deep .grocery-categories-row-chevron {
+    flex: 0 0 auto;
+    color: var(--mw-text-muted);
+}
+
+.grocery-categories-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 52px;
+    border: 1.5px dashed var(--mw-border-dashed);
+    border-radius: var(--mw-radius-m);
+    background: transparent;
+    color: var(--mw-orange-text);
+    font-family: var(--mw-font-body);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}

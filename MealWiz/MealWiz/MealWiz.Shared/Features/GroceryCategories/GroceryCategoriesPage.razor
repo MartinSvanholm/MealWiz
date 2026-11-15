@@ -1,0 +1,55 @@
+@page "/grocerylist/categories"
+@attribute [Authorize]
+@using MealWiz.Shared.Features.GroceryCategories.Components
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<GroceryCategoriesResource> C
+@implements IDisposable
+
+@* The user's grocery categories in list order: tap one to rename it or change its emoji, or add one (it goes just
+   above Other). Opened from the grocery list header. *@
+<div class="mw-page grocery-categories-page" data-testid="grocery-categories-page">
+    <SubPageHeader Label="@C["GroceryCategories_Label"]" Title="@C["GroceryCategories_Title"]" BackHref="/grocerylist"
+                   BackTestId="grocery-categories-back" />
+
+    <div class="grocery-categories-body">
+        <p class="grocery-categories-hint">@C["GroceryCategories_Hint"]</p>
+        <ul class="grocery-categories-list">
+            @foreach (var category in _categories.Categories)
+            {
+                <li @key="category.Id">
+                    <button type="button" class="grocery-categories-row" data-testid="grocery-category-row" data-category="@category.DataKey"
+                            aria-label="@C["GroceryCategories_EditAria", category.DisplayName(C)]" @onclick="() => Edit(category)">
+                        <span class="grocery-categories-row-name" data-testid="grocery-category-row-name">@category.DisplayName(C)</span>
+                        <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Class="grocery-categories-row-chevron" />
+                    </button>
+                </li>
+            }
+        </ul>
+        <button type="button" class="grocery-categories-add" data-testid="add-grocery-category" @onclick="Add">
+            <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+            @C["GroceryCategories_Add"]
+        </button>
+    </div>
+</div>
+
+@code {
+    private void Add() => GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_AddTitle"], null);
+
+    private void Edit(GroceryCategory category) =>
+        GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_EditTitle"], category);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories.OnStateChanged += StateHasChanged;
+        _categories.CurrentSnackbar = _snackbar;
+        await _categories.LoadCategories();
+    }
+
+    public void Dispose()
+    {
+        _categories.OnStateChanged -= StateHasChanged;
+        _drawerStateContainer.CloseDrawer();
+    }
+}

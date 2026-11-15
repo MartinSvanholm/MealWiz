@@ -17,6 +17,20 @@
     white-space: nowrap;
 }
 
+/* The Categories button next to it: a 40px square surface tile with an icon. */
+.grocery-categories-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    margin-left: 8px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+}
+
 .grocery-top {
     flex: 0 0 auto;
     display: flex;

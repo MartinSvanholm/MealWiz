@@ -245,7 +245,7 @@
     <comment>{0} the ingredient name</comment>
   </data>
   <data name="GroceryItem_Category" xml:space="preserve">
-    <value>Section</value>
+    <value>Category</value>
     <comment>Label above the category chips in the grocery item drawer</comment>
   </data>
   <data name="GroceryList_Sort" xml:space="preserve">
@@ -264,9 +264,13 @@
     <comment>Which item of how many</comment>
   </data>
   <data name="SortItems_Hint" xml:space="preserve">
-    <value>Which section is it in?</value>
+    <value>Which category is it?</value>
   </data>
   <data name="SortItems_Skip" xml:space="preserve">
     <value>Skip</value>
+  </data>
+  <data name="GroceryList_CategoriesAria" xml:space="preserve">
+    <value>Categories</value>
+    <comment>Header button that opens the Categories page</comment>
   </data>
 </root>
