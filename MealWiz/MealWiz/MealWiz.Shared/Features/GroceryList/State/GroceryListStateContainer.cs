@@ -46,7 +46,7 @@ public interface IGroceryListStateContainer
 }
 
 public class GroceryListStateContainer(
-    IMediator mediator) : StateContainerBase, IGroceryListStateContainer
+    IMediator mediator, TimeProvider time) : StateContainerBase, IGroceryListStateContainer
 {
     private Models.GroceryList groceryList { get; set; } = new();
     public Models.GroceryList GroceryList => groceryList;
@@ -100,12 +100,16 @@ public class GroceryListStateContainer(
 
     public async Task ToggleIsPicked(GroceryItem item)
     {
+        // Ticking off records when, so the section order can learn from shopping trips (MEA-139).
+        var pickedAtBefore = item.PickedAt;
         item.IsPicked = !item.IsPicked;
+        item.PickedAt = item.IsPicked ? time.GetUtcNow().UtcDateTime : null;
 
         var result = await mediator.Send(new UpdateGroceryItem.UpdateGroceryItem.Command(item));
         if (result.Handle(CurrentSnackbar).IsFailed)
         {
             item.IsPicked = !item.IsPicked;
+            item.PickedAt = pickedAtBefore;
             return;
         }
 

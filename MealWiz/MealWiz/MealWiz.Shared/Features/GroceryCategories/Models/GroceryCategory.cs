@@ -17,6 +17,7 @@ public class GroceryCategory
         Name = db.Name;
         Emoji = db.Emoji;
         Position = db.Position;
+        OrderScore = db.OrderScore;
         AbsorbedKeys = (db.AbsorbedKeys ?? [])
             .Select(DefaultCategoryKeyExtensions.FromDbValue)
             .OfType<DefaultCategoryKey>()
@@ -31,6 +32,9 @@ public class GroceryCategory
     public string? Name { get; set; }
     public string? Emoji { get; set; }
     public int Position { get; set; }
+
+    /// <summary>The learned, fractional place (MEA-139); null means <see cref="Position"/>.</summary>
+    public double? OrderScore { get; set; }
 
     /// <summary>
     /// Default keys this category took over when the categories they belonged to were deleted: dictionary words for
@@ -50,6 +54,9 @@ public class GroceryCategory
     /// <summary>Whether dictionary words for <paramref name="key"/> land in this category.</summary>
     public bool Takes(DefaultCategoryKey key) => DefaultKey == key || AbsorbedKeys.Contains(key);
 
+    /// <summary>A shallow copy, so a working order can change without touching the loaded categories.</summary>
+    public GroceryCategory Copy() => (GroceryCategory)MemberwiseClone();
+
     /// <summary>A new, unsaved default category at its default position.</summary>
     public static GroceryCategory Default(DefaultCategoryKey key) => new() { DefaultKey = key, Position = key.DefaultPosition() };
 
@@ -60,6 +67,7 @@ public class GroceryCategory
         Name = Name,
         Emoji = Emoji,
         Position = Position,
+        OrderScore = OrderScore,
         AbsorbedKeys = AbsorbedKeys.Select(k => k.ToDbValue()).ToList(),
         CreatedBy = CreatedBy,
         CreatedAt = CreatedAt,

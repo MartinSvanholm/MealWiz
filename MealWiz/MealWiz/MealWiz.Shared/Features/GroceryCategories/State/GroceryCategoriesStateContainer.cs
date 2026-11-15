@@ -5,11 +5,16 @@ using MealWiz.Shared.Helpers;
 using MediatR;
 using Microsoft.Extensions.Localization;
 using MudBlazor;
+using MealWiz.Shared.Features.GroceryList.Models;
+using ApplyLearnedSectionOrderAction = MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder.ApplyLearnedSectionOrder;
 using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
 using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
+using SetSectionOrderModeAction = MealWiz.Shared.Features.GroceryCategories.SetSectionOrderMode.SetSectionOrderMode;
+using ReorderGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.ReorderGroceryCategories.ReorderGroceryCategories;
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
+using GetGroceryListSettingsAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings.GetGroceryListSettings;
 using GetRememberedGroceryNamesAction = MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames.GetRememberedGroceryNames;
 using RememberGroceryNameAction = MealWiz.Shared.Features.GroceryCategories.RememberGroceryName.RememberGroceryName;
 
@@ -24,12 +29,16 @@ public interface IGroceryCategoriesStateContainer
 
     event Action OnStateChanged;
 
+    /// <summary>The account's grocery list settings (section order mode, what was learned); loaded with the categories.</summary>
+    GroceryListSettings Settings { get; }
+
     /// <summary>Normalised grocery name → the category the user put it in; loaded with the categories.</summary>
     IReadOnlyDictionary<string, int> RememberedNames { get; }
 
     /// <summary>
     /// Loads the user's categories, creating the eleven defaults the first time (when the user has none), and the
-    /// remembered names. A failed remembered-names load shows its error and keeps the categories.
+    /// remembered names and the settings. A failed remembered-names or settings load shows its error and keeps the
+    /// categories (and the default settings).
     /// </summary>
     Task LoadCategories();
 
@@ -60,6 +69,26 @@ public interface IGroceryCategoriesStateContainer
     /// </summary>
     string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer);
 
+    /// <summary>
+    /// Puts the categories in the user's own order (every id once; Other is kept last) and stops learning. The new
+    /// order shows at once; a failed save shows the error and puts the old order back. False when it failed.
+    /// </summary>
+    Task<bool> Reorder(IReadOnlyList<int> categoryIds);
+
+    /// <summary>
+    /// Learned ("Follow my shopping again") or manual. False when the save failed (the error is shown and the mode
+    /// stays as it was).
+    /// </summary>
+    Task<bool> SetOrderMode(SectionOrderMode mode);
+
+    /// <summary>
+    /// Learns the section order from the finished shopping trips among <paramref name="picked"/> (ticks after
+    /// <see cref="GroceryListSettings.LearnedUntil"/>; a trip is finished two hours after its last tick, or when the
+    /// basket is cleared). In manual mode it only records that those ticks were seen. Nothing finished: nothing sent.
+    /// A failed write shows its error and changes nothing.
+    /// </summary>
+    Task LearnFromTicks(IReadOnlyList<GroceryItem> picked, bool basketCleared);
+
     /// <summary>Whether a section is folded on the grocery list (heading and count only). Kept on this device.</summary>
     bool IsFolded(int categoryId);
 
@@ -70,7 +99,7 @@ public interface IGroceryCategoriesStateContainer
     Task LoadFolded();
 }
 
-public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageService localStorage)
+public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageService localStorage, TimeProvider time)
     : StateContainerBase, IGroceryCategoriesStateContainer
 {
     internal const string FoldedStorageKey = "grocerylist_folded_sections";
@@ -81,17 +110,23 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
 
     public IReadOnlyDictionary<string, int> RememberedNames { get; private set; } = new Dictionary<string, int>();
 
+    public GroceryListSettings Settings { get; private set; } = new();
+
     public async Task LoadCategories()
     {
         var categoriesTask = LoadCategoriesOnly();
         var namesTask = mediator.Send(new GetRememberedGroceryNamesAction.Query());
+        var settingsTask = mediator.Send(new GetGroceryListSettingsAction.Query());
         var categories = await categoriesTask;
         var names = await namesTask;
+        var settings = await settingsTask;
         if (categories is null) return;
 
         Categories = categories;
         if (names.Handle(CurrentSnackbar).IsSuccess)
             RememberedNames = names.Value.ToDictionary(n => n.Name, n => n.CategoryId);
+        if (settings.Handle(CurrentSnackbar).IsSuccess)
+            Settings = settings.Value;
         NotifyStateChanged();
     }
 
@@ -118,6 +153,77 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
         RememberedNames = new Dictionary<string, int>(RememberedNames) { [CategoryResolver.Normalise(name)] = categoryId };
         NotifyStateChanged();
         return true;
+    }
+
+    public async Task<bool> Reorder(IReadOnlyList<int> categoryIds)
+    {
+        var before = Categories;
+        var byId = Categories.ToDictionary(c => c.Id);
+        var ids = categoryIds.Where(byId.ContainsKey).Distinct()
+            .OrderBy(id => byId[id].IsOther)
+            .ToList();
+        Categories = ids.Select((id, index) =>
+        {
+            var copy = byId[id].Copy();
+            copy.Position = index + 1;
+            copy.OrderScore = null;
+            return copy;
+        }).ToList();
+        NotifyStateChanged();
+
+        var result = await mediator.Send(new ReorderGroceryCategoriesAction.Command(ids));
+        if (result.Handle(CurrentSnackbar).IsFailed)
+        {
+            Categories = before;
+            NotifyStateChanged();
+            return false;
+        }
+
+        Settings = Settings with { OrderMode = SectionOrderMode.Manual };
+        await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> SetOrderMode(SectionOrderMode mode)
+    {
+        var result = await mediator.Send(new SetSectionOrderModeAction.Command(mode));
+        if (result.Handle(CurrentSnackbar).IsFailed)
+        {
+            NotifyStateChanged();
+            return false;
+        }
+
+        Settings = Settings with { OrderMode = mode };
+        NotifyStateChanged();
+        return true;
+    }
+
+    public async Task LearnFromTicks(IReadOnlyList<GroceryItem> picked, bool basketCleared)
+    {
+        if (Categories.Count == 0) return;
+
+        var trips = SectionOrderLearner.CompleteTrips(picked, Settings.LearnedUntil, time.GetUtcNow().UtcDateTime, basketCleared);
+        if (trips.Count == 0) return;
+
+        var learnedUntil = trips[^1][^1].PickedAt!.Value;
+        var learned = Categories;
+        var orders = new List<LearnedCategoryOrder>();
+        if (Settings.OrderMode == SectionOrderMode.Learned)
+        {
+            foreach (var trip in trips)
+            {
+                var observed = trip.Select(item => CategoryFor(item.Name)?.Id).OfType<int>().Distinct().ToList();
+                orders = SectionOrderLearner.Learn(learned, observed);
+                learned = SectionOrderLearner.Apply(learned, orders);
+            }
+        }
+
+        var result = await mediator.Send(new ApplyLearnedSectionOrderAction.Command(orders, learnedUntil));
+        if (result.Handle(CurrentSnackbar).IsFailed) return;
+
+        Categories = learned;
+        Settings = Settings with { LearnedUntil = learnedUntil };
+        NotifyStateChanged();
     }
 
     public bool IsFolded(int categoryId) => _folded.Contains(categoryId);

@@ -209,6 +209,8 @@
         _groceryListStateContainer.CurrentSnackbar = _snackbar;
         _groceryCategoriesStateContainer.CurrentSnackbar = _snackbar;
         await Task.WhenAll(_groceryListStateContainer.LoadGroceryItems(), LoadCategories(), _groceryCategoriesStateContainer.LoadFolded());
+        // A shopping trip that ended (two hours after its last tick) teaches the section order (MEA-139).
+        await _groceryCategoriesStateContainer.LearnFromTicks(Picked, basketCleared: false);
         await _groceryListStateContainer.LoadSources();
 
         await base.OnInitializedAsync();

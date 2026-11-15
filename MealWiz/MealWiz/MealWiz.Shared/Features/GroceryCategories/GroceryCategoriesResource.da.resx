@@ -111,4 +111,13 @@
   <data name="DeleteGroceryCategory_Confirm" xml:space="preserve">
     <value>Slet</value>
   </data>
+  <data name="GroceryCategories_DragAria" xml:space="preserve">
+    <value>Træk for at flytte {0}</value>
+  </data>
+  <data name="GroceryCategories_FollowShopping" xml:space="preserve">
+    <value>Følg mine indkøb igen</value>
+  </data>
+  <data name="GroceryCategories_FollowShoppingHint" xml:space="preserve">
+    <value>Rækkefølgen lærer af den rækkefølge, du krydser varer af i. Når du trækker en kategori, slås det fra.</value>
+  </data>
 </root>

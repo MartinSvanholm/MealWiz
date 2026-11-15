@@ -10,6 +10,7 @@ using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.GroceryList.UnlinkGroceryItems;
 using MealWiz.Shared.Features.GroceryList.UpdateGroceryItem;
 using MediatR;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using MudBlazor;
 using MealWiz.Shared.Tests.TestInfrastructure;
@@ -21,12 +22,13 @@ public class GroceryListStateContainerTests
 {
     private readonly Mock<IMediator> _mediator = new();
     private readonly Mock<ISnackbar> _snackbar = new();
+    private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 11, 15, 10, 0, 0, TimeSpan.Zero));
     private readonly GroceryListStateContainer _container;
     private int _notifications;
 
     public GroceryListStateContainerTests()
     {
-        _container = new GroceryListStateContainer(_mediator.Object) { CurrentSnackbar = _snackbar.Object };
+        _container = new GroceryListStateContainer(_mediator.Object, _time) { CurrentSnackbar = _snackbar.Object };
         _container.OnStateChanged += () => _notifications++;
     }
 
@@ -161,6 +163,34 @@ public class GroceryListStateContainerTests
         Assert.True(milk.IsPicked);
         Assert.Equal(new[] { "bread", "milk" }, Names());
         Assert.Equal(1, _notifications);
+    }
+
+    [Fact]
+    public async Task ToggleIsPicked_RecordsWhenItWasTickedOff_AndPuttingItBackClearsIt()
+    {
+        SetupUpdate(Result.Ok(1));
+        var milk = Item(1, "milk");
+
+        await _container.ToggleIsPicked(milk);
+        Assert.Equal(new DateTime(2026, 11, 15, 10, 0, 0, DateTimeKind.Utc), milk.PickedAt);
+
+        await _container.ToggleIsPicked(milk);
+        Assert.Null(milk.PickedAt);
+    }
+
+    [Fact]
+    public async Task ToggleIsPicked_Failure_PutsTheTickTimeBack()
+    {
+        SetupUpdate(Result.Fail<int>("Update failed"));
+        var before = new DateTime(2026, 11, 14, 9, 0, 0, DateTimeKind.Utc);
+        var milk = Item(1, "milk");
+        milk.IsPicked = true;
+        milk.PickedAt = before;
+
+        await _container.ToggleIsPicked(milk);
+
+        Assert.True(milk.IsPicked);
+        Assert.Equal(before, milk.PickedAt);
     }
 
     [Fact]
