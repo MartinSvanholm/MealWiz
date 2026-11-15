@@ -56,4 +56,74 @@
     <value>Other</value>
     <comment>Default grocery list section, shown until the user renames it</comment>
   </data>
+  <data name="CategoryChips_Aria" xml:space="preserve">
+    <value>Category</value>
+    <comment>Accessible name of a row of category chips without a visible label</comment>
+  </data>
+  <data name="GroceryCategory_NameTaken" xml:space="preserve">
+    <value>A category with that name already exists</value>
+  </data>
+  <data name="GroceryCategory_NameRequired" xml:space="preserve">
+    <value>Give the category a name</value>
+  </data>
+  <data name="GroceryCategory_NotAdded" xml:space="preserve">
+    <value>The category wasn't added. Try again.</value>
+  </data>
+  <data name="GroceryCategory_NotFound" xml:space="preserve">
+    <value>That category no longer exists</value>
+  </data>
+  <data name="GroceryCategory_OtherCannotBeDeleted" xml:space="preserve">
+    <value>Other can't be deleted</value>
+  </data>
+  <data name="GroceryCategory_MoveToItself" xml:space="preserve">
+    <value>Pick another category to take over its items</value>
+  </data>
+  <data name="GroceryCategories_Label" xml:space="preserve">
+    <value>Groceries</value>
+    <comment>Small label above the Categories page title</comment>
+  </data>
+  <data name="GroceryCategories_Title" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="GroceryCategories_Hint" xml:space="preserve">
+    <value>Your grocery list is grouped in these categories.</value>
+  </data>
+  <data name="GroceryCategories_Add" xml:space="preserve">
+    <value>Add category</value>
+  </data>
+  <data name="GroceryCategories_EditAria" xml:space="preserve">
+    <value>Edit {0}</value>
+    <comment>{0} is the category's name</comment>
+  </data>
+  <data name="GroceryCategory_AddTitle" xml:space="preserve">
+    <value>New category</value>
+  </data>
+  <data name="GroceryCategory_EditTitle" xml:space="preserve">
+    <value>Edit category</value>
+  </data>
+  <data name="GroceryCategory_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="GroceryCategory_Emoji" xml:space="preserve">
+    <value>Emoji</value>
+  </data>
+  <data name="GroceryCategory_EmojiPlaceholder" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="GroceryCategory_Save" xml:space="preserve">
+    <value>Save category</value>
+  </data>
+  <data name="GroceryCategory_DeleteAria" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="DeleteGroceryCategory_Title" xml:space="preserve">
+    <value>Delete {0}?</value>
+    <comment>{0} is the category's name</comment>
+  </data>
+  <data name="DeleteGroceryCategory_Question" xml:space="preserve">
+    <value>Which category takes over its items?</value>
+  </data>
+  <data name="DeleteGroceryCategory_Confirm" xml:space="preserve">
+    <value>Delete</value>
+  </data>
 </root>

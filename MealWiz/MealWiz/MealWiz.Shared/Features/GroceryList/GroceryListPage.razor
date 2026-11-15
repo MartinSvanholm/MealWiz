@@ -15,6 +15,10 @@
     <ScreenHeader Label="@HeaderLabel" Title="@L["GroceryList_Title"]">
         <Actions>
             <AddIngredientsToGroceryListButton />
+            <a class="grocery-categories-button" href="grocerylist/categories" data-testid="grocery-categories-button"
+               aria-label="@L["GroceryList_CategoriesAria"]">
+                <MudIcon Icon="@Icons.Material.Outlined.Category" Size="Size.Small" />
+            </a>
         </Actions>
     </ScreenHeader>
 
@@ -68,18 +72,27 @@
                     {
                         var folded = _groceryCategoriesStateContainer.IsFolded(category.Id);
                         @* Tapping the heading folds the section: the heading and count stay, the rows go. *@
-                        <section class="grocery-section" data-testid="grocery-category" data-category="@CategoryKey(category)"
+                        <section class="grocery-section" data-testid="grocery-category" data-category="@category.DataKey"
                                  data-folded="@(folded ? "true" : "false")" @key="category.Id">
-                            <h2 class="grocery-section-heading">
-                                <button type="button" class="grocery-category-heading" data-testid="grocery-category-heading"
-                                        aria-expanded="@(folded ? "false" : "true")"
-                                        @onclick="() => _groceryCategoriesStateContainer.ToggleFolded(category.Id)">
-                                    <MudIcon Icon="@Icons.Material.Rounded.ExpandMore" Class="@(folded ? "grocery-category-chevron is-folded" : "grocery-category-chevron")" />
-                                    <span class="grocery-category-name" data-testid="grocery-category-name">@category.DisplayName(C)</span>
-                                    <span aria-hidden="true">·</span>
-                                    <span data-testid="grocery-category-count">@items.Count</span>
-                                </button>
-                            </h2>
+                            <div class="grocery-section-row">
+                                <h2 class="grocery-section-heading">
+                                    <button type="button" class="grocery-category-heading" data-testid="grocery-category-heading"
+                                            aria-expanded="@(folded ? "false" : "true")"
+                                            @onclick="() => _groceryCategoriesStateContainer.ToggleFolded(category.Id)">
+                                        <MudIcon Icon="@Icons.Material.Rounded.ExpandMore" Class="@(folded ? "grocery-category-chevron is-folded" : "grocery-category-chevron")" />
+                                        <span class="grocery-category-name" data-testid="grocery-category-name">@category.DisplayName(C)</span>
+                                        <span aria-hidden="true">·</span>
+                                        <span data-testid="grocery-category-count">@items.Count</span>
+                                    </button>
+                                </h2>
+                                @if (category.IsOther)
+                                {
+                                    <button type="button" class="grocery-sort-button" data-testid="grocery-sort-other"
+                                            aria-label="@L["GroceryList_SortAria", category.DisplayName(C)]" @onclick="() => OpenSort(items)">
+                                        @L["GroceryList_Sort"]
+                                    </button>
+                                }
+                            </div>
                             @if (!folded)
                             {
                                 <ul class="grocery-rows">
@@ -145,10 +158,6 @@
         }
     }
 
-    // data-category: the default key, or the id for a category the user added.
-    private static string CategoryKey(GroceryCategory category) =>
-        category.DefaultKey?.ToDbValue() ?? category.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
     private RenderFragment Row(GroceryItem item) =>
         @<li class="grocery-row" data-testid="grocery-item" @key="item">
             <SwipeToDeleteGroceryItem GroceryItem="item">
@@ -182,6 +191,10 @@
     private int StaleCount => _groceryListStateContainer.StaleItems.Count;
 
     private string StaleText => L.Plural("StaleBanner_Text", StaleCount);
+
+    // Sort: the Other items one at a time, as they are listed now.
+    private void OpenSort(List<GroceryItem> otherItems) =>
+        SortOtherItemsDrawer.Open(_drawerStateContainer, L["SortItems_Title"], otherItems.ToList());
 
     private void OpenReview() =>
         ReviewGroceryItemsDrawer.Open(

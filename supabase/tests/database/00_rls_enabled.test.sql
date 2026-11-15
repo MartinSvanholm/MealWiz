@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(12);
+select plan(13);
 
 select is_empty(
     $$ select c.relname::text
@@ -17,7 +17,7 @@ select is_empty(
 
 select tables_are(
     'public',
-    array['grocery_categories', 'grocery_item_sources', 'grocery_items', 'ingredients', 'meal_imports', 'meal_plans', 'meal_plans-meals', 'meals'],
+    array['grocery_categories', 'grocery_item_sources', 'grocery_items', 'grocery_remembered_names', 'ingredients', 'meal_imports', 'meal_plans', 'meal_plans-meals', 'meals'],
     'public has only the tables these tests cover'
 );
 
@@ -29,6 +29,13 @@ select policies_are('public', 'grocery_categories', array[
 ]);
 
 select policies_are('public', 'grocery_item_sources', array[
+    'Enable delete for users based on user_id',
+    'Enable insert for users based on user_id',
+    'Enable update for users based on user_id',
+    'Enable users to view their own data only'
+]);
+
+select policies_are('public', 'grocery_remembered_names', array[
     'Enable delete for users based on user_id',
     'Enable insert for users based on user_id',
     'Enable update for users based on user_id',

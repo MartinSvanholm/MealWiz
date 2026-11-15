@@ -3,9 +3,15 @@ using Blazored.LocalStorage;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
+using Microsoft.Extensions.Localization;
 using MudBlazor;
+using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
+using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
+using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
+using GetRememberedGroceryNamesAction = MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames.GetRememberedGroceryNames;
+using RememberGroceryNameAction = MealWiz.Shared.Features.GroceryCategories.RememberGroceryName.RememberGroceryName;
 
 namespace MealWiz.Shared.Features.GroceryCategories.State;
 
@@ -18,11 +24,41 @@ public interface IGroceryCategoriesStateContainer
 
     event Action OnStateChanged;
 
-    /// <summary>Loads the user's categories, creating the eleven defaults the first time (when the user has none).</summary>
+    /// <summary>Normalised grocery name → the category the user put it in; loaded with the categories.</summary>
+    IReadOnlyDictionary<string, int> RememberedNames { get; }
+
+    /// <summary>
+    /// Loads the user's categories, creating the eleven defaults the first time (when the user has none), and the
+    /// remembered names. A failed remembered-names load shows its error and keeps the categories.
+    /// </summary>
     Task LoadCategories();
 
     /// <summary>The user's category for a grocery name (<see cref="CategoryResolver.Resolve"/>); null before the categories load.</summary>
     GroceryCategory? CategoryFor(string? name);
+
+    /// <summary>
+    /// Puts a name in a category everywhere (remembered). True when the name now resolves there, including when it
+    /// already did (nothing is sent). On failure the error shows and nothing changes.
+    /// </summary>
+    Task<bool> MoveName(string name, int categoryId);
+
+    /// <summary>Adds a category just above Other, then reloads; false when it failed (the error is shown).</summary>
+    Task<bool> AddCategory(string name, string? emoji);
+
+    /// <summary>Renames a category and sets its emoji, then reloads; false when it failed (the error is shown).</summary>
+    Task<bool> UpdateCategory(int id, string name, string? emoji);
+
+    /// <summary>
+    /// Deletes a category, handing its names and dictionary words to <paramref name="moveToId"/>, then reloads; false
+    /// when it failed (the error is shown).
+    /// </summary>
+    Task<bool> DeleteCategory(int id, int moveToId);
+
+    /// <summary>
+    /// Why <paramref name="name"/> can't be a category's name, or null: it is empty, or another category than
+    /// <paramref name="categoryId"/> already shows that name in the current language (ignoring case and spaces).
+    /// </summary>
+    string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer);
 
     /// <summary>Whether a section is folded on the grocery list (heading and count only). Kept on this device.</summary>
     bool IsFolded(int categoryId);
@@ -43,24 +79,46 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
 
     public IReadOnlyList<GroceryCategory> Categories { get; private set; } = [];
 
+    public IReadOnlyDictionary<string, int> RememberedNames { get; private set; } = new Dictionary<string, int>();
+
     public async Task LoadCategories()
     {
-        var result = await mediator.Send(new GetGroceryCategoriesAction.Query());
-        if (result.Handle(CurrentSnackbar).IsFailed) return;
-
-        var categories = result.Value;
-        if (categories.Count == 0)
-        {
-            var created = await mediator.Send(new CreateDefaultGroceryCategoriesAction.Command());
-            if (created.Handle(CurrentSnackbar).IsFailed) return;
-            categories = created.Value;
-        }
+        var categoriesTask = LoadCategoriesOnly();
+        var namesTask = mediator.Send(new GetRememberedGroceryNamesAction.Query());
+        var categories = await categoriesTask;
+        var names = await namesTask;
+        if (categories is null) return;
 
         Categories = categories;
+        if (names.Handle(CurrentSnackbar).IsSuccess)
+            RememberedNames = names.Value.ToDictionary(n => n.Name, n => n.CategoryId);
         NotifyStateChanged();
     }
 
-    public GroceryCategory? CategoryFor(string? name) => CategoryResolver.Resolve(name, Categories);
+    // The categories, after creating the defaults for a user who has none; null when a request failed (shown).
+    private async Task<List<GroceryCategory>?> LoadCategoriesOnly()
+    {
+        var result = await mediator.Send(new GetGroceryCategoriesAction.Query());
+        if (result.Handle(CurrentSnackbar).IsFailed) return null;
+        if (result.Value.Count > 0) return result.Value;
+
+        var created = await mediator.Send(new CreateDefaultGroceryCategoriesAction.Command());
+        return created.Handle(CurrentSnackbar).IsFailed ? null : created.Value;
+    }
+
+    public GroceryCategory? CategoryFor(string? name) => CategoryResolver.Resolve(name, Categories, RememberedNames);
+
+    public async Task<bool> MoveName(string name, int categoryId)
+    {
+        if (CategoryFor(name)?.Id == categoryId) return true;
+
+        var result = await mediator.Send(new RememberGroceryNameAction.Command(name, categoryId));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        RememberedNames = new Dictionary<string, int>(RememberedNames) { [CategoryResolver.Normalise(name)] = categoryId };
+        NotifyStateChanged();
+        return true;
+    }
 
     public bool IsFolded(int categoryId) => _folded.Contains(categoryId);
 
@@ -83,5 +141,42 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
         }
 
         NotifyStateChanged();
+    }
+
+    public async Task<bool> AddCategory(string name, string? emoji)
+    {
+        var result = await mediator.Send(new AddGroceryCategoryAction.Command(name, emoji));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> UpdateCategory(int id, string name, string? emoji)
+    {
+        var result = await mediator.Send(new UpdateGroceryCategoryAction.Command(id, name, emoji));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public async Task<bool> DeleteCategory(int id, int moveToId)
+    {
+        var result = await mediator.Send(new DeleteGroceryCategoryAction.Command(id, moveToId));
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
+
+        await LoadCategories();
+        return true;
+    }
+
+    public string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer)
+    {
+        var normalised = CategoryResolver.Normalise(name);
+        if (normalised.Length == 0) return localizer["GroceryCategory_NameRequired"];
+
+        var taken = Categories.Any(c => c.Id != categoryId
+            && CategoryResolver.Normalise(c.DisplayNameWithoutEmoji(localizer)) == normalised);
+        return taken ? localizer["GroceryCategory_NameTaken"] : null;
     }
 }

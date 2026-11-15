@@ -39,15 +39,25 @@ public static class CategoryResolver
     }
 
     /// <summary>
-    /// The user's category for <paramref name="name"/>: the one with the resolved default key, else the user's Other,
-    /// else null (no categories loaded).
+    /// The user's category for <paramref name="name"/>: the category the user remembered for the whole normalised name
+    /// (when it is among <paramref name="categories"/>); else the category that takes the dictionary key, by its own
+    /// default key or one it absorbed; else the user's Other; else null (no categories loaded).
     /// </summary>
-    public static GroceryCategory? Resolve(string? name, IReadOnlyList<GroceryCategory> categories)
+    public static GroceryCategory? Resolve(
+        string? name,
+        IReadOnlyList<GroceryCategory> categories,
+        IReadOnlyDictionary<string, int>? rememberedNames = null)
     {
         if (categories.Count == 0) return null;
 
+        if (rememberedNames is not null
+            && rememberedNames.TryGetValue(Normalise(name), out var rememberedId)
+            && categories.FirstOrDefault(c => c.Id == rememberedId) is { } remembered)
+            return remembered;
+
         var key = ResolveKey(name);
         return categories.FirstOrDefault(c => c.DefaultKey == key)
+            ?? categories.FirstOrDefault(c => c.Takes(key))
             ?? categories.FirstOrDefault(c => c.IsOther);
     }
 

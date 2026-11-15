@@ -17,6 +17,20 @@
     white-space: nowrap;
 }
 
+/* The Categories button next to it: a 40px square surface tile with an icon. */
+.grocery-categories-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--mw-touch);
+    height: var(--mw-touch);
+    margin-left: 8px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-s);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+}
+
 .grocery-top {
     flex: 0 0 auto;
     display: flex;
@@ -125,6 +139,26 @@
 
 .grocery-category-heading ::deep .grocery-category-chevron.is-folded {
     transform: rotate(-90deg);
+}
+
+.grocery-section-row > .grocery-section-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* "Sort" on the Other heading: an orange text button, like the stale banner's Review. */
+.grocery-sort-button {
+    flex: 0 0 auto;
+    min-height: var(--mw-touch);
+    margin: -10px 0;
+    padding: 0 4px 0 12px;
+    border: 0;
+    background: transparent;
+    font-family: var(--mw-font-body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-orange-text);
+    cursor: pointer;
 }
 
 /* To buy: one section per category, each one container with thin dividers and 44px rows

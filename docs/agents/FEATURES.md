@@ -95,8 +95,9 @@ items are unlinked silently.
   - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): name, amount
     chip (`ingredient-amount-chip`, `data-empty`; "+ amount" when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
     (`drawer-delete-ingredient`).
-  - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
-    list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a
+  - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the category chips
+    (`CategoryChips`, following the name until one is tapped; Save moves the name to a picked one, also for a new
+    meal's pending ingredients), the "Add to grocery list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a
     copy; `SaveIngredientButton` applies it to the ingredient on Save (and undoes that if the save fails).
   - `Features/Ingredients/CreateIngredient/AddIngredientRow.razor`: the add row (`add-ingredient-name`,
     `add-ingredient-amount`, `create-ingredient-button`). The button, or Enter in the amount, opens the drawer filled
@@ -243,7 +244,10 @@ category's id, `data-folded`) has a heading button (`grocery-category-heading`, 
 `grocery-category-name` and `grocery-category-count` over one list of 44px rows; sections follow the categories'
 positions and rows keep their order inside a section. Tapping a heading folds the section (heading and count only),
 kept on the device. All sections sit in `grocery-to-buy`; when the categories fail to load, the error shows and the
-items are one list there without headings. Tapping an
+items are one list there without headings. The Other section's heading row has Sort (`grocery-sort-other`, outside the
+fold button), which opens `Features/GroceryList/Components/SortOtherItemsDrawer.razor` (`sort-progress`,
+`sort-item-name`, the chips without Other, `sort-skip`): the Other items one at a time, a chip moving the name and
+going to the next item still in Other. The header's `grocery-categories-button` opens the Categories page. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
 every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy row left (touch or mouse) past 80px
@@ -255,8 +259,8 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 - **Components:**
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
     opens `GroceryItemDrawer` with the typed name filled in.
-  - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, "Save item" in a
-    `DrawerFooter`. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
+  - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, the category chips
+    (`CategoryChips`), "Save item" in a `DrawerFooter`; a picked chip moves the name after the item is saved. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
     `UpdateGroceryItem` swaps the saved copy into the list, so closing without saving changes nothing.
   - `Features/GroceryList/Components/SaveGroceryItemButton.razor`
   - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
@@ -325,47 +329,86 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 ## GroceryCategories
 
 The supermarket sections the grocery list is grouped into (project Grocery categories). A category is never stored on
-a grocery item or an ingredient: `CategoryResolver` places a name each time, from the built-in English and Danish
-`CategoryDictionary` (both languages always), else Other. A user gets the eleven default categories the first time the
-grocery list loads (`LoadCategories` creates them when the user has none). A default category shows its name in the UI
-language until the user renames it (`DisplayName`). Folded sections are kept per device in local storage under
-`grocerylist_folded_sections` (a list of category ids).
+a grocery item or an ingredient: `CategoryResolver` places a name each time, from the name the user remembered
+(`grocery_remembered_names`), else the built-in English and Danish `CategoryDictionary` (both languages always), else
+Other. A user gets the eleven default categories the first time the grocery list loads (`LoadCategories` creates them
+when the user has none). A default category shows its name in the UI language until the user renames it
+(`DisplayName`). Folded sections are kept per device in local storage under `grocerylist_folded_sections` (a list of
+category ids).
+
+Picking another category chip in the grocery item drawer, the ingredient drawer or the Sort flow moves the name there
+everywhere (`MoveName`, a remembered row; nothing is written when the name already resolves there). The Categories
+page adds a category just above Other, renames one (unique among the user's names as shown, ignoring case) and sets an
+optional emoji; deleting one asks which category takes over: its remembered names move there and the target absorbs
+its default key, so its dictionary words land there too. Other can be renamed but not deleted.
 
 - **Folder:** `Features/GroceryCategories/`
 - **Texts:** `Features/GroceryCategories/GroceryCategoriesResource.cs` with `GroceryCategoriesResource.resx` / `.da.resx`:
-  the default names, `DefaultCategory_<Key>_Name`.
-- **Pages:** none yet; the sections render on `Features/GroceryList/GroceryListPage.razor`.
+  the default names (`DefaultCategory_<Key>_Name`), the page, the drawers and the errors.
+- **Pages:** `Features/GroceryCategories/GroceryCategoriesPage.razor` at `/grocerylist/categories` (with `.razor.css`),
+  `[Authorize]`, opened by `grocery-categories-button` in the grocery list header. `SubPageHeader` back
+  (`grocery-categories-back`) to `/grocerylist`; rows `grocery-category-row` (`data-category`) with
+  `grocery-category-row-name`; `add-grocery-category`.
+- **Components:**
+  - `Features/GroceryCategories/Components/CategoryChips.razor`, with `.razor.css`: the categories as one sideways
+    scrolling row (`category-chips`, chips `category-chip` with `data-category` and `aria-pressed`). Presses
+    `SelectedCategoryId`, else the category `Name` resolves to; `ExcludeOther`, `ExcludeCategoryId`, `Label`. Loads the
+    categories itself when no page has (Edit meal).
+  - `Features/GroceryCategories/Components/GroceryCategoryDrawer.razor`, with `.razor.css`: add or edit
+    (`grocery-category-name-input`, `grocery-category-emoji-input`, inline `grocery-category-name-error`,
+    `save-grocery-category`); `Open(drawer, title, category, headerAction)`.
+  - `Features/GroceryCategories/DeleteGroceryCategory/DeleteGroceryCategoryButton.razor`: the red header action
+    `delete-grocery-category` (not on Other).
+  - `Features/GroceryCategories/DeleteGroceryCategory/DeleteGroceryCategoryDrawer.razor`, with `.razor.css`: "Delete X?",
+    the other categories as chips and `confirm-delete-grocery-category`, off until one is picked.
 - **Handlers:**
 
   | Handler | Request → result | Does |
   |---|---|---|
   | GetGroceryCategories | `Query()` → `Result<List<GroceryCategory>>` | The user's categories by position |
   | CreateDefaultGroceryCategories | `Command()` → `Result<List<GroceryCategory>>` | Inserts the eleven defaults, skipping any default key the user already has (upsert, ignore duplicates on (`created_by`, `default_key`)), then returns all the user's categories by position; `NotSignedIn` when signed out |
+  | GetRememberedGroceryNames | `Query()` → `Result<List<RememberedGroceryName>>` | The user's remembered names (normalised name, category id) |
+  | RememberGroceryName | `Command(string Name, int CategoryId)` → `Result` | Normalises the name and upserts its row (merge on (`created_by`, `name`)); `NotSignedIn` when signed out |
+  | AddGroceryCategory | `Command(string Name, string? Emoji)` → `Result<GroceryCategory>` | `add_grocery_category` (just above Other, Other moves down), then reads the row back |
+  | UpdateGroceryCategory | `Command(int Id, string Name, string? Emoji)` → `Result<GroceryCategory>` | Sets the name and emoji (blank = none); a taken name fails with "A category with that name already exists", no row with "That category no longer exists" |
+  | DeleteGroceryCategory | `Command(int Id, int MoveToId)` → `Result` | `delete_grocery_category`; its refusals (Other, the same id, not found) become messages (`GroceryCategoryErrors`) |
 
 - **State:** `Features/GroceryCategories/State/GroceryCategoriesStateContainer.cs` (`IGroceryCategoriesStateContainer`,
-  uses `ILocalStorageService`): `Categories`, `LoadCategories`, `CategoryFor(name)`, `IsFolded`, `ToggleFolded`,
-  `LoadFolded`.
+  uses `ILocalStorageService`): `Categories`, `RememberedNames`, `LoadCategories` (both; a remembered-names failure keeps
+  the categories), `CategoryFor(name)`, `MoveName`, `AddCategory`, `UpdateCategory`, `DeleteCategory` (each reloads on
+  success), `ValidateName`, `IsFolded`, `ToggleFolded`, `LoadFolded`. Ingredients and GroceryList use it too.
 - **Models:**
   - `Features/GroceryCategories/Models/GroceryCategory.cs` ↔ `Features/GroceryCategories/Models/GroceryCategoryDb.cs`,
     table `grocery_categories`; `NewGroceryCategoryDb.cs` is the insert row without `id` (an upsert always sends the
-    primary key). `IsOther`; `GroceryCategory.Default(key)`.
+    primary key). `IsOther`, `AbsorbedKeys`, `Takes(key)`, `DataKey`; `GroceryCategory.Default(key)`.
+  - `Features/GroceryCategories/Models/RememberedGroceryName.cs` ↔ `Features/GroceryCategories/Models/RememberedGroceryNameDb.cs`
+    (with `NewRememberedGroceryNameDb`, the upsert row), table `grocery_remembered_names`.
   - `Features/GroceryCategories/Models/DefaultCategoryKey.cs`: `produce`, `bakery`, `meat_fish`, `deli`, `dairy_eggs`,
     `frozen`, `pantry`, `drinks`, `snacks`, `household`, `other` (positions 1 to 11), mapped with `ToDbValue`/`FromDbValue`.
   - `Features/GroceryCategories/Models/GroceryCategoryDisplayName.cs`: `DisplayName(localizer)`, the emoji (when set)
-    before the user's name or the default's localized name.
+    before `DisplayNameWithoutEmoji`, the user's name or the default's localized name.
+  - `Features/GroceryCategories/Models/GroceryCategoryErrors.cs`: maps a taken name (23505) and the delete function's
+    refusals to messages.
   - `Features/GroceryCategories/Models/CategoryDictionary.cs`: about 440 English and 375 Danish words and whole names,
     each mapped to a default key.
   - `Features/GroceryCategories/Models/CategoryResolver.cs`: pure. `ResolveKey(name)` matches the whole normalised name,
     then each word from last to first, then a word ending in a dictionary word of four or more letters (Danish
-    compounds, longest ending first), else Other; `Resolve(name, categories)` returns the user's category with that
-    key, else their Other, else null.
-- **Migrations:** `supabase/migrations/20261115120000_add_grocery_categories.sql`
+    compounds, longest ending first), else Other; `Resolve(name, categories, rememberedNames)` returns the remembered
+    category (whole name), else the category whose own key is that key, else one that absorbed it, else Other, else null.
+- **Migrations:**
+  - `supabase/migrations/20261115120000_add_grocery_categories.sql`
+  - `supabase/migrations/20261115130000_add_grocery_remembered_names.sql`: `grocery_remembered_names`, `absorbed_keys`,
+    the unique name index, the emoji check, and the functions `add_grocery_category` and `delete_grocery_category`.
 - **Tests:**
   - unit: `Features/GroceryCategories/UnitTests/` (Models, State)
-  - bUnit: the sections on the grocery list page, `Features/GroceryList/ComponentTests/GroceryListPageSectionsTests.cs`
-  - integration: `Features/GroceryCategories/IntegrationTests/GroceryCategoriesHandlerTests.cs`
+  - bUnit: `Features/GroceryCategories/ComponentTests/` (chips in both drawers, the Categories page, deleting), and on
+    the grocery list page `Features/GroceryList/ComponentTests/GroceryListPageSectionsTests.cs` and
+    `Features/GroceryList/ComponentTests/SortOtherItemsTests.cs`
+  - integration: `Features/GroceryCategories/IntegrationTests/` (`GroceryCategoriesHandlerTests.cs`,
+    `RememberedGroceryNamesHandlerTests.cs`, `GroceryCategoryEditHandlerTests.cs`, `DeleteGroceryCategoryHandlerTests.cs`)
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryCategoriesJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/grocery_categories.test.sql`
+  - pgTAP: `supabase/tests/database/grocery_categories.test.sql`, `supabase/tests/database/grocery_remembered_names.test.sql`
+    (the table and both functions)
 
 ## MealImport
 
@@ -781,7 +824,8 @@ table and policy list.
 | `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
 | `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
 | `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
-| `grocery_categories` | GroceryCategories | `add_grocery_categories` | `default_key` (one of the eleven keys, or null for a custom category), `name` (null on a default = the translated name), `emoji`, `position`. Unique (`created_by`, `default_key`), NULLs distinct; a row needs a key or a name. Owner-only for every operation; anon holds no privilege |
+| `grocery_categories` | GroceryCategories | `add_grocery_categories` | `default_key` (one of the eleven keys, or null for a custom category), `name` (null on a default = the translated name), `emoji`, `position`. Unique (`created_by`, `default_key`), NULLs distinct; a row needs a key or a name. Owner-only for every operation; anon holds no privilege. Since `add_grocery_remembered_names`: `absorbed_keys` (default keys taken over from deleted categories), a unique index on (`created_by`, `lower(name)`), emoji ≤ 16 characters, and the write functions `add_grocery_category` and `delete_grocery_category` |
+| `grocery_remembered_names` | GroceryCategories | `add_grocery_remembered_names` | `name` (normalised), `fk_category` → `grocery_categories` on delete cascade; unique (`created_by`, `name`). INSERT and UPDATE also require your own category; anon holds no privilege |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |

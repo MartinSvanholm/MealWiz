@@ -15,11 +15,13 @@ public interface IGroceryListStateContainer
 
     event Action OnStateChanged;
 
-    Task AddGroceryItemToGroceryList(GroceryItem groceryItem);
+    /// <summary>Adds the item; false when the save failed (the error is shown).</summary>
+    Task<bool> AddGroceryItemToGroceryList(GroceryItem groceryItem);
     Task LoadGroceryItems();
     Task LoadSources();
     void NotifyStateChanged();
-    Task UpdateGroceryItem(GroceryItem groceryItem);
+    /// <summary>Saves the item; false when the save failed (the error is shown).</summary>
+    Task<bool> UpdateGroceryItem(GroceryItem groceryItem);
     Task ToggleIsPicked(GroceryItem item);
     Task DeleteGroceryItem(GroceryItem groceryItem);
     /// <summary>Deletes every picked item ("Clear" next to "In the basket").</summary>
@@ -70,28 +72,30 @@ public class GroceryListStateContainer(
         NotifyStateChanged();
     }
 
-    public async Task AddGroceryItemToGroceryList(GroceryItem groceryItem)
+    public async Task<bool> AddGroceryItemToGroceryList(GroceryItem groceryItem)
     {
         var result = await mediator.Send(new AddGroceryItem.AddGroceryItem.Command(groceryItem));
-        if (result.Handle(CurrentSnackbar).IsFailed) return;
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
 
         // Keep the saved row, not the item we sent: it has the owner and timestamps an update needs
         groceryList.Items.Add(result.Value);
         groceryList.SortItemsByIsPicked();
 
         NotifyStateChanged();
+        return true;
     }
 
-    public async Task UpdateGroceryItem(GroceryItem groceryItem)
+    public async Task<bool> UpdateGroceryItem(GroceryItem groceryItem)
     {
         var result = await mediator.Send(new UpdateGroceryItem.UpdateGroceryItem.Command(groceryItem));
-        if (result.Handle(CurrentSnackbar).IsFailed) return;
+        if (result.Handle(CurrentSnackbar).IsFailed) return false;
 
         // The edit drawer saves a copy of the listed item, so swap the saved copy in (MEA-76)
         var index = groceryList.Items.FindIndex(item => item.Id == groceryItem.Id);
         if (index >= 0) groceryList.Items[index] = groceryItem;
 
         NotifyStateChanged();
+        return true;
     }
 
     public async Task ToggleIsPicked(GroceryItem item)
