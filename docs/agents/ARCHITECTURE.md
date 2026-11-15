@@ -442,9 +442,9 @@ return await Result.Try(async Task () => await supabaseClient.Rpc(
 - The functions live in `supabase/migrations/20261114140000_add_atomic_write_functions.sql`, with pgTAP in
   `supabase/tests/database/atomic_write_functions.test.sql`. A new one gets its own migration and cases there.
   The grocery categories' `add_grocery_category` and `delete_grocery_category` came with their table, in
-  `supabase/migrations/20261115130000_add_grocery_remembered_names.sql`, and are tested in
+  `supabase/migrations/20261115160000_add_grocery_remembered_names.sql`, and are tested in
   `supabase/tests/database/grocery_remembered_names.test.sql`; the section order's `reorder_grocery_categories` and
-  `apply_learned_section_order` are in `supabase/migrations/20261115140000_add_grocery_section_order.sql`, tested in
+  `apply_learned_section_order` are in `supabase/migrations/20261115170000_add_grocery_section_order.sql`, tested in
   `supabase/tests/database/grocery_list_settings.test.sql`.
 - Not converted yet: `SettleLinkedItems` in `GroceryListStateContainer` (three requests) and the meal-plus-ingredients
   saves (`SaveMealButton`, `MealImportStateContainer.SaveImportedMeal`).

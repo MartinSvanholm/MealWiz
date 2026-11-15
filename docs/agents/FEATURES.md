@@ -420,10 +420,10 @@ manual mode the trips are still marked as seen (`learned_until`), so turning lea
     compounds, longest ending first), else Other; `Resolve(name, categories, rememberedNames)` returns the remembered
     category (whole name), else the category whose own key is that key, else one that absorbed it, else Other, else null.
 - **Migrations:**
-  - `supabase/migrations/20261115120000_add_grocery_categories.sql`
-  - `supabase/migrations/20261115130000_add_grocery_remembered_names.sql`: `grocery_remembered_names`, `absorbed_keys`,
+  - `supabase/migrations/20261115150000_add_grocery_categories.sql`
+  - `supabase/migrations/20261115160000_add_grocery_remembered_names.sql`: `grocery_remembered_names`, `absorbed_keys`,
     the unique name index, the emoji check, and the functions `add_grocery_category` and `delete_grocery_category`.
-  - `supabase/migrations/20261115140000_add_grocery_section_order.sql`: `grocery_items.picked_at`,
+  - `supabase/migrations/20261115170000_add_grocery_section_order.sql`: `grocery_items.picked_at`,
     `grocery_categories.order_score`, `grocery_list_settings`, and the functions `reorder_grocery_categories` and
     `apply_learned_section_order`.
 - **Tests:**
