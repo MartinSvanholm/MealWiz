@@ -17,6 +17,7 @@ public class GroceryCategory
         Name = db.Name;
         Emoji = db.Emoji;
         Position = db.Position;
+        OrderScore = db.OrderScore;
         AbsorbedKeys = (db.AbsorbedKeys ?? [])
             .Select(DefaultCategoryKeyExtensions.FromDbValue)
             .OfType<DefaultCategoryKey>()
@@ -31,6 +32,9 @@ public class GroceryCategory
     public string? Name { get; set; }
     public string? Emoji { get; set; }
     public int Position { get; set; }
+
+    /// <summary>The learned, fractional place (MEA-139); null means <see cref="Position"/>.</summary>
+    public double? OrderScore { get; set; }
 
     /// <summary>
     /// Default keys this category took over when the categories they belonged to were deleted: dictionary words for
@@ -60,6 +64,7 @@ public class GroceryCategory
         Name = Name,
         Emoji = Emoji,
         Position = Position,
+        OrderScore = OrderScore,
         AbsorbedKeys = AbsorbedKeys.Select(k => k.ToDbValue()).ToList(),
         CreatedBy = CreatedBy,
         CreatedAt = CreatedAt,

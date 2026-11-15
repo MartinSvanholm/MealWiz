@@ -5,6 +5,7 @@ using FluentResults;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Features.Account.GetPendingEmailChange;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
 using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.State;
@@ -101,7 +102,7 @@ public abstract class ComponentTestBase : BunitContext
             Services.AddSingleton<IStringLocalizerFactory, EchoStringLocalizerFactory>();
 
         Meals = new MealsStateContainer(Mediator.Object);
-        GroceryList = new GroceryListStateContainer(Mediator.Object);
+        GroceryList = new GroceryListStateContainer(Mediator.Object, Time);
         GroceryCategories = new GroceryCategoriesStateContainer(Mediator.Object, LocalStorage.Object);
         MealPlan = new MealPlanStateContainer(Mediator.Object, LocalStorage.Object);
 
@@ -147,6 +148,7 @@ public abstract class ComponentTestBase : BunitContext
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
         SetupSend<GetGroceryCategories.Query, Result<List<GroceryCategory>>>(Result.Ok(TestData.DefaultGroceryCategories()));
         SetupSend<GetRememberedGroceryNames.Query, Result<List<RememberedGroceryName>>>(Result.Ok(new List<RememberedGroceryName>()));
+        SetupSend<GetGroceryListSettings.Query, Result<GroceryListSettings>>(Result.Ok(new GroceryListSettings()));
         SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>()));
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(null));
         SetupSend<GetMealPlannedDates.Query, Result<List<PlannedMealDate>>>(Result.Ok(new List<PlannedMealDate>()));
@@ -195,7 +197,7 @@ public abstract class ComponentTestBase : BunitContext
     /// that hasn't loaded them, such as Edit meal), for tests that check nothing is saved.
     /// </summary>
     protected IEnumerable<object> SentRequestsBesidesCategoryLoads =>
-        SentRequests.Where(r => r is not GetGroceryCategories.Query and not GetRememberedGroceryNames.Query);
+        SentRequests.Where(r => r is not GetGroceryCategories.Query and not GetRememberedGroceryNames.Query and not GetGroceryListSettings.Query);
 
     /// <summary>The requests of type <typeparamref name="TRequest"/> sent through the mocked mediator.</summary>
     protected List<TRequest> Sent<TRequest>() => SentRequests.OfType<TRequest>().ToList();

@@ -10,6 +10,7 @@ using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.De
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
+using GetGroceryListSettingsAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings.GetGroceryListSettings;
 using GetRememberedGroceryNamesAction = MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames.GetRememberedGroceryNames;
 using RememberGroceryNameAction = MealWiz.Shared.Features.GroceryCategories.RememberGroceryName.RememberGroceryName;
 
@@ -24,12 +25,16 @@ public interface IGroceryCategoriesStateContainer
 
     event Action OnStateChanged;
 
+    /// <summary>The account's grocery list settings (section order mode, what was learned); loaded with the categories.</summary>
+    GroceryListSettings Settings { get; }
+
     /// <summary>Normalised grocery name → the category the user put it in; loaded with the categories.</summary>
     IReadOnlyDictionary<string, int> RememberedNames { get; }
 
     /// <summary>
     /// Loads the user's categories, creating the eleven defaults the first time (when the user has none), and the
-    /// remembered names. A failed remembered-names load shows its error and keeps the categories.
+    /// remembered names and the settings. A failed remembered-names or settings load shows its error and keeps the
+    /// categories (and the default settings).
     /// </summary>
     Task LoadCategories();
 
@@ -81,17 +86,23 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
 
     public IReadOnlyDictionary<string, int> RememberedNames { get; private set; } = new Dictionary<string, int>();
 
+    public GroceryListSettings Settings { get; private set; } = new();
+
     public async Task LoadCategories()
     {
         var categoriesTask = LoadCategoriesOnly();
         var namesTask = mediator.Send(new GetRememberedGroceryNamesAction.Query());
+        var settingsTask = mediator.Send(new GetGroceryListSettingsAction.Query());
         var categories = await categoriesTask;
         var names = await namesTask;
+        var settings = await settingsTask;
         if (categories is null) return;
 
         Categories = categories;
         if (names.Handle(CurrentSnackbar).IsSuccess)
             RememberedNames = names.Value.ToDictionary(n => n.Name, n => n.CategoryId);
+        if (settings.Handle(CurrentSnackbar).IsSuccess)
+            Settings = settings.Value;
         NotifyStateChanged();
     }
 

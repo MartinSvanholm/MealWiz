@@ -7,6 +7,7 @@ using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
 using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
 using MealWiz.Shared.Features.GroceryCategories.RememberGroceryName;
 using MealWiz.Shared.Features.GroceryCategories.Models;
@@ -31,7 +32,11 @@ public class GroceryCategoriesStateContainerTests
         _container = new GroceryCategoriesStateContainer(_mediator.Object, _localStorage.Object) { CurrentSnackbar = _snackbar.Object };
         _container.OnStateChanged += () => _notifications++;
         SetupNames(Result.Ok(new List<RememberedGroceryName>()));
+        SetupSettings(Result.Ok(new GroceryListSettings()));
     }
+
+    private void SetupSettings(Result<GroceryListSettings> result) =>
+        _mediator.Setup(m => m.Send(It.IsAny<GetGroceryListSettings.Query>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
 
     private void SetupNames(Result<List<RememberedGroceryName>> result) =>
         _mediator.Setup(m => m.Send(It.IsAny<GetRememberedGroceryNames.Query>(), It.IsAny<CancellationToken>())).ReturnsAsync(result);
@@ -319,5 +324,29 @@ public class GroceryCategoriesStateContainerTests
 
         Assert.DoesNotContain(_mediator.Invocations, i => i.Arguments[0] is GetGroceryCategories.Query);
         _snackbar.Verify(s => s.Add("A category with that name already exists", It.IsAny<Severity>(), It.IsAny<Action<SnackbarOptions>>(), It.IsAny<string>()));
+    }
+
+    [Fact]
+    public async Task LoadCategories_AlsoLoadsTheSettings()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        var learnedUntil = new DateTime(2026, 11, 14, 18, 0, 0, DateTimeKind.Utc);
+        SetupSettings(Result.Ok(new GroceryListSettings(SectionOrderMode.Manual, learnedUntil)));
+
+        await _container.LoadCategories();
+
+        Assert.Equal(new GroceryListSettings(SectionOrderMode.Manual, learnedUntil), _container.Settings);
+    }
+
+    [Fact]
+    public async Task LoadCategories_SettingsFail_KeepsTheCategoriesAndLearnedMode()
+    {
+        SetupGet(Result.Ok(Defaults()));
+        SetupSettings(Result.Fail<GroceryListSettings>("No response from server"));
+
+        await _container.LoadCategories();
+
+        Assert.Equal(11, _container.Categories.Count);
+        Assert.Equal(SectionOrderMode.Learned, _container.Settings.OrderMode);
     }
 }

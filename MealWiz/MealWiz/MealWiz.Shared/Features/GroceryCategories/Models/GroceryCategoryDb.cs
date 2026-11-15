@@ -21,6 +21,9 @@ public class GroceryCategoryDb : BaseModel
     [Column("absorbed_keys")]
     public List<string> AbsorbedKeys { get; set; } = [];
 
+    [Column("order_score")]
+    public double? OrderScore { get; set; }
+
     [Column("position")]
     public int Position { get; set; }
 
