@@ -248,4 +248,25 @@
     <value>Section</value>
     <comment>Label above the category chips in the grocery item drawer</comment>
   </data>
+  <data name="GroceryList_Sort" xml:space="preserve">
+    <value>Sort</value>
+    <comment>Button on the Other section's heading that walks through its items</comment>
+  </data>
+  <data name="GroceryList_SortAria" xml:space="preserve">
+    <value>Sort the items in {0}</value>
+    <comment>{0} is the Other section's name</comment>
+  </data>
+  <data name="SortItems_Title" xml:space="preserve">
+    <value>Sort items</value>
+  </data>
+  <data name="SortItems_Progress" xml:space="preserve">
+    <value>{0} of {1}</value>
+    <comment>Which item of how many</comment>
+  </data>
+  <data name="SortItems_Hint" xml:space="preserve">
+    <value>Which section is it in?</value>
+  </data>
+  <data name="SortItems_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
 </root>

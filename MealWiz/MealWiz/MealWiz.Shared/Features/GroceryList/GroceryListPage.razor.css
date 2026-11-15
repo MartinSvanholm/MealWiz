@@ -127,6 +127,26 @@
     transform: rotate(-90deg);
 }
 
+.grocery-section-row > .grocery-section-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* "Sort" on the Other heading: an orange text button, like the stale banner's Review. */
+.grocery-sort-button {
+    flex: 0 0 auto;
+    min-height: var(--mw-touch);
+    margin: -10px 0;
+    padding: 0 4px 0 12px;
+    border: 0;
+    background: transparent;
+    font-family: var(--mw-font-body);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--mw-orange-text);
+    cursor: pointer;
+}
+
 /* To buy: one section per category, each one container with thin dividers and 44px rows
    (SwipeToDeleteGroceryItem lays out each row). */
 .grocery-categories {
