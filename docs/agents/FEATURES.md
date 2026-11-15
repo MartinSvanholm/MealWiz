@@ -233,11 +233,15 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
 A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "From meal plan"
 opens a merge drawer (reusable for one planned day or a whole week) that lists the planned ingredients not linked
 from their planned day yet; with everything linked it says "Everything is already on your list". A to-buy item with the
-same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
-empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
+same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts can be added, else
+empty to type. Amounts add when all are understood (`ParsedAmount`) and in one family: mass and volume convert
+(200 g + 0,5 kg = 700 g), a count, cup, tsk or spsk only adds to itself. The total is written in the unit that reads
+best: the largest metric unit giving a number of at least 1 with at most 2 decimals (oz and lb only when every amount
+is), else the smallest, rounded. Amounts the parser doesn't understand still add when each is a number and the same
+word ("3 cloves" + "2 cloves"; case, a trailing "." and a plural s ignored). Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
 Dropping a planned meal's link from an item another meal or the user still needs lowers the item's amount by that
-link's amount (Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
+link's amount, on the same rules (Flour 700 g − Cake's 0,5 kg = 200 g; Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
 A banner at the top of the list ("N items are from meals no longer in your plan", `stale-items-banner`) appears when
 plan-added items come from meals that were swapped out or removed from the plan with the switch off (every source
 stale; basket and manual items never count). Review opens a drawer of those items grouped by their old meal, all
@@ -245,8 +249,8 @@ ticked; Remove deletes the ticked items and unlinks the rest, which become manua
 
 A linked ingredient whose amount changed after it was added (the source's amount differs from the ingredient's current
 amount, trimmed and ignoring case; the item is still to buy; the source isn't stale) is offered again in the same
-drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all share
-a unit and the result is above zero, else an empty required field. Confirming updates the item's amount and the
+drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all can be
+added (as above) and the result is above zero, else an empty required field. Confirming updates the item's amount and the
 source's remembered amount, so it isn't offered again.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
@@ -304,7 +308,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
   | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true, in one transaction (`unlink_grocery_items`); ids RLS hides are skipped |
-  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources and lowers each to-buy item's amount by the dropped sources' amounts in one transaction (`drop_grocery_item_sources`) (`AmountHelper.Subtract`: same unit, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
+  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources and lowers each to-buy item's amount by the dropped sources' amounts in one transaction (`drop_grocery_item_sources`) (`AmountHelper.Subtract`: one family or the same word, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
   `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
@@ -315,7 +319,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
   - `GroceryItem.IsManual` (`is_manual`).
-  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`, and `Subtract`, which alone tolerates a plural s: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust` and `Subtract` on `ParsedAmount`, across units of one family, with the same-word fallback: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
   - `Features/GroceryList/Models/LinkedGroceryItems.cs`: a deleted meal's or ingredient's items sorted into `ToBuy`,
     `InBasket` and `SourceIdsToDrop` (manual items and items another live link needs only lose its links).

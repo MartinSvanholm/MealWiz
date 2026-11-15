@@ -260,6 +260,48 @@ public class GroceryListJourneyTests : E2ETestBase
     }
 
     [Fact]
+    public async Task GroceryList_AddsAmountsAcrossUnits_AndLowersThemWhenAMealIsRemoved()
+    {
+        const string bread = "E2E Bread";
+        const string cake = "E2E Cake";
+        await Supabase.InsertMealAsync(User, bread,
+            new SeedIngredient("Flour", "200 g", ShowOnGroceryList: true));
+        await Supabase.InsertMealAsync(User, cake,
+            new SeedIngredient("Flour", "0,5 kg", ShowOnGroceryList: true),
+            new SeedIngredient("Sugar", "100 g", ShowOnGroceryList: true));
+
+        await LoginAsync();
+        await PlanOnDayAsync(0, bread);
+        await PlanOnDayAsync(1, cake);
+
+        // 200 g + 0,5 kg are offered as one total
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Page.GetByTestId("add-plan-ingredients-button").ClickAsync();
+        var flourRow = Drawer.GetByTestId("plan-ingredient-item").Filter(new() { HasText = "Flour" });
+        await Expect(flourRow.GetByTestId("plan-ingredient-amount-input")).ToHaveValueAsync("700 g");
+        await Drawer.GetByTestId("plan-ingredients-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Flour").GetByTestId("grocery-item-amount")).ToHaveTextAsync("700 g");
+
+        // Removing the cake takes its sugar and lowers the flour by 0,5 kg
+        await Page.GetByTestId("nav-meal-plan").ClickAsync();
+        await Day(1).ClickAsync();
+        await Expect(Day(1)).ToHaveClassAsync(SelectedDay);
+        await Page.GetByTestId("remove-meal-button").ClickAsync();
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync($"Remove {cake}?");
+        await Expect(Drawer.Locator("input[data-testid=remove-meal-grocery-switch], [data-testid=remove-meal-grocery-switch] input")).ToBeCheckedAsync();
+        await Drawer.GetByTestId("remove-meal-confirm").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
+
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Row("grocery-item", "Sugar")).ToHaveCountAsync(0);
+        await Expect(Row("grocery-item", "Flour").GetByTestId("grocery-item-amount")).ToHaveTextAsync("200 g");
+
+        await Page.ReloadAsync();
+        await Expect(Row("grocery-item", "Flour").GetByTestId("grocery-item-amount")).ToHaveTextAsync("200 g");
+    }
+
+    [Fact]
     public async Task GroceryList_SwappingAPlannedMeal_AsksAndRemovesItsOwnItems_AndReducesSharedOnes()
     {
         const string pasta = "E2E Garlic pasta";

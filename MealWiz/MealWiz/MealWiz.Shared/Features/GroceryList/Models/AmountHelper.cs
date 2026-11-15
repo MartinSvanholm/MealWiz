@@ -1,83 +1,121 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using MealWiz.Shared.Amounts;
 
 namespace MealWiz.Shared.Features.GroceryList.Models;
 
 /// <summary>
-/// Adds up grocery amounts typed as text ("200 g", "1,5 dl"). Any single word of letters counts as a unit; units
-/// are compared ignoring case and a trailing ".", and never converted. Anything it can't read (fractions, ranges,
-/// thousands separators, more than two decimals) makes the suggestion null so the user types the total.
+/// Adds and subtracts grocery amounts typed as text ("200 g", "0,5 kg"), read through <see cref="ParsedAmount"/>.
+/// Amounts combine when all are understood and in one family: mass and volume convert exactly, a count, cup, tsk or
+/// spsk only adds to itself. The result is written by <see cref="AmountText.Format"/> in the unit that reads best.
+/// Amounts the parser doesn't understand still combine when each is a number and the same word ("3 cloves" +
+/// "2 cloves"; case, a trailing "." and a plural "s" ignored). Anything else gives null, so the user types the total
+/// or the amount stays as it is.
 /// </summary>
 public static partial class AmountHelper
 {
-    [GeneratedRegex(@"^(\d+(?:[.,]\d{1,2})?)\s*(\p{L}+\.?)?$", RegexOptions.CultureInvariant)]
-    private static partial Regex AmountPattern();
+    // A number and one word the parser doesn't know ("3 cloves", "1,5 fed").
+    [GeneratedRegex(@"^([0-9]{1,6}(?:[.,][0-9]{1,2})?)[ \t]*(\p{L}+\.?)$", RegexOptions.CultureInvariant)]
+    private static partial Regex WordAmountPattern();
 
-    public static bool TryParse(string? amount, out decimal quantity, out string unit)
-    {
-        var parsed = Parse(amount);
-        quantity = parsed?.Quantity ?? 0;
-        unit = parsed?.Unit.TrimEnd('.') ?? string.Empty;
-        return parsed != null;
-    }
+    private static readonly string[] MetricMass = ["g", "kg"];
+    private static readonly string[] ImperialMass = ["oz", "lb"];
+    private static readonly string[] MetricVolume = ["ml", "dl", "l"];
 
-    /// <summary>The summed amount in the first amount's unit and decimal separator, or null when it can't be added.</summary>
+    /// <summary>The sum of the amounts, or null when they can't be added.</summary>
     public static string? SuggestTotal(IEnumerable<string?> amounts)
     {
-        var parsed = new List<Parsed>();
-        foreach (var amount in amounts)
-        {
-            var one = Parse(amount);
-            if (one == null) return null;
-            parsed.Add(one);
-        }
+        var list = amounts.ToList();
+        if (list.Count == 0) return null;
 
-        if (parsed.Count == 0) return null;
-
-        var unit = parsed[0].Unit;
-        if (parsed.Any(p => !string.Equals(p.Unit.TrimEnd('.'), unit.TrimEnd('.'), StringComparison.OrdinalIgnoreCase)))
-            return null;
-
-        return Format(parsed.Sum(p => p.Quantity), parsed, unit);
+        return Combine(list.Select(a => (a, 1)).ToList());
     }
 
-    /// <summary>item − old + new when all three share a unit and the result is above zero, else null.</summary>
-    public static string? Adjust(string? itemAmount, string? oldAmount, string? newAmount)
+    /// <summary>item − old + new, or null when they can't be combined or the result isn't above zero.</summary>
+    public static string? Adjust(string? itemAmount, string? oldAmount, string? newAmount) =>
+        Combine([(itemAmount, 1), (oldAmount, -1), (newAmount, 1)]);
+
+    /// <summary>item − removed, or null (leave the amount unchanged) when they can't be combined or the result isn't above zero.</summary>
+    public static string? Subtract(string? itemAmount, string? removedAmount) =>
+        Combine([(itemAmount, 1), (removedAmount, -1)]);
+
+    private static string? Combine(IReadOnlyList<(string? Text, int Sign)> terms)
     {
-        var item = Parse(itemAmount);
-        var old = Parse(oldAmount);
-        var current = Parse(newAmount);
-        if (item == null || old == null || current == null) return null;
+        if (terms.Any(t => string.IsNullOrWhiteSpace(t.Text))) return null;
 
-        var unit = item.Unit.TrimEnd('.');
-        if (!string.Equals(old.Unit.TrimEnd('.'), unit, StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(current.Unit.TrimEnd('.'), unit, StringComparison.OrdinalIgnoreCase))
-            return null;
+        var parsed = terms.Select(t => ParsedAmount.Parse(t.Text)).ToList();
+        if (parsed.All(p => p.IsUnderstood)) return CombineUnderstood(parsed, terms);
+        if (parsed.All(p => !p.IsUnderstood)) return CombineSameWord(terms);
+        return null;
+    }
 
-        var result = item.Quantity - old.Quantity + current.Quantity;
-        return result > 0 ? Format(result, [item, old, current], item.Unit) : null;
+    private static string? CombineUnderstood(IReadOnlyList<ParsedAmount> parsed, IReadOnlyList<(string? Text, int Sign)> terms)
+    {
+        var family = parsed[0].Family;
+        if (parsed.Any(p => p.Family != family)) return null;
+
+        // Cup, tsk and spsk have one unit and a factor of 1; a count has no unit.
+        var total = 0m;
+        for (var i = 0; i < parsed.Count; i++)
+            total += terms[i].Sign * parsed[i].Quantity!.Value * (parsed[i].Unit?.Factor ?? 1m);
+        if (total <= 0) return null;
+
+        if (family is not (UnitFamily.Mass or UnitFamily.Volume))
+            return AmountText.Format(Math.Round(total, 2, MidpointRounding.AwayFromZero), parsed[0].Unit);
+
+        var (quantity, unit) = InBestUnit(total, Candidates(family.Value, parsed));
+        return AmountText.Format(quantity, unit);
+    }
+
+    /// <summary>The family's metric units, or oz and lb when every amount is in oz or lb; smallest first.</summary>
+    private static List<AmountUnit> Candidates(UnitFamily family, IEnumerable<ParsedAmount> parsed)
+    {
+        var codes = family == UnitFamily.Volume ? MetricVolume
+            : parsed.All(p => ImperialMass.Contains(p.UnitCode)) ? ImperialMass
+            : MetricMass;
+        return codes.Select(c => AmountUnit.FromCode(c)!).OrderBy(u => u.Factor).ToList();
     }
 
     /// <summary>
-    /// itemAmount minus removedAmount when both parse to the same unit and the result is above zero; else null
-    /// (leave the amount unchanged). For this subtraction only, a plural "s" is tolerated ("clove" = "cloves"), and a
-    /// result of exactly 1 is written singular ("1 clove"). MEA-99.
+    /// The largest unit whose number is at least 1 and exact to 2 decimals (700 g, 1,2 kg, 7,5 dl); else the smallest
+    /// unit, rounded to 2 decimals.
     /// </summary>
-    public static string? Subtract(string? itemAmount, string? removedAmount)
+    private static (decimal Quantity, AmountUnit Unit) InBestUnit(decimal baseTotal, IReadOnlyList<AmountUnit> smallestFirst)
     {
-        var item = Parse(itemAmount);
-        var removed = Parse(removedAmount);
-        if (item == null || removed == null) return null;
-        if (!UnitsMatchIgnoringPlural(item.Unit.TrimEnd('.'), removed.Unit.TrimEnd('.'))) return null;
+        foreach (var unit in smallestFirst.Reverse())
+        {
+            var quantity = baseTotal / unit.Factor;
+            if (quantity >= 1 && quantity == Math.Round(quantity, 2)) return (quantity, unit);
+        }
 
-        var result = item.Quantity - removed.Quantity;
-        if (result <= 0) return null;
-
-        var unit = item.Unit.Trim();
-        return Format(result, [item, removed], result == 1 ? Singular(unit) : unit);
+        var smallest = smallestFirst[0];
+        return (Math.Round(baseTotal / smallest.Factor, 2, MidpointRounding.AwayFromZero), smallest);
     }
 
-    private static bool UnitsMatchIgnoringPlural(string a, string b)
+    private static string? CombineSameWord(IReadOnlyList<(string? Text, int Sign)> terms)
+    {
+        var total = 0m;
+        string? word = null;
+        foreach (var (text, sign) in terms)
+        {
+            var match = WordAmountPattern().Match(text!.Trim(' ', '\t', '\r', '\n'));
+            if (!match.Success) return null;
+
+            var thisWord = match.Groups[2].Value;
+            if (word == null) word = thisWord;
+            else if (!WordsMatch(word.TrimEnd('.'), thisWord.TrimEnd('.'))) return null;
+
+            total += sign * decimal.Parse(match.Groups[1].Value.Replace(',', '.'), CultureInfo.InvariantCulture);
+        }
+
+        if (total <= 0) return null;
+
+        var number = total.ToString("0.##", CultureInfo.CurrentCulture);
+        return $"{number} {(total == 1 ? Singular(word!) : word)}";
+    }
+
+    /// <summary>Equal ignoring case, or one is the other plus a plural "s" (3+ letters: "clove" = "cloves").</summary>
+    private static bool WordsMatch(string a, string b)
     {
         if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return true;
 
@@ -88,35 +126,10 @@ public static partial class AmountHelper
                && string.Equals(longer[..^1], shorter, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>"cloves" → "clove", "Cups" → "Cup"; short units ("tbs"), "-ss" words ("glass") and "stk." stay.</summary>
-    private static string Singular(string unit) =>
-        unit.Length >= 4 && (unit.EndsWith('s') || unit.EndsWith('S'))
-                         && !unit.EndsWith("ss", StringComparison.OrdinalIgnoreCase)
-            ? unit[..^1]
-            : unit;
-
-    private static string Format(decimal value, IReadOnlyList<Parsed> inputs, string unit)
-    {
-        var number = value.ToString("0.##", CultureInfo.InvariantCulture);
-        if (inputs.FirstOrDefault(p => p.Separator != null)?.Separator == ',')
-            number = number.Replace('.', ',');
-
-        return unit.Length == 0 ? number : $"{number} {unit}";
-    }
-
-    private static Parsed? Parse(string? amount)
-    {
-        if (string.IsNullOrWhiteSpace(amount)) return null;
-
-        var match = AmountPattern().Match(amount.Trim());
-        if (!match.Success) return null;
-
-        var number = match.Groups[1].Value;
-        var separator = number.Contains(',') ? ',' : number.Contains('.') ? '.' : (char?)null;
-        var quantity = decimal.Parse(number.Replace(',', '.'), CultureInfo.InvariantCulture);
-
-        return new Parsed(quantity, match.Groups[2].Value, separator);
-    }
-
-    private sealed record Parsed(decimal Quantity, string Unit, char? Separator);
+    /// <summary>"cloves" → "clove", "Cups" → "Cup"; short words ("tbs"), "-ss" words ("glass") and "stk." stay.</summary>
+    private static string Singular(string word) =>
+        word.Length >= 4 && (word.EndsWith('s') || word.EndsWith('S'))
+                         && !word.EndsWith("ss", StringComparison.OrdinalIgnoreCase)
+            ? word[..^1]
+            : word;
 }
