@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder;
 using MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
+using MealWiz.Shared.Features.GroceryCategories.ReorderGroceryCategories;
 using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryCategories.SetSectionOrderMode;
 using MealWiz.Shared.Helpers;
@@ -89,5 +90,38 @@ public class SectionOrderHandlerTests(LocalSupabaseFixture supabase) : IClassFix
             .Handle(new ApplyLearnedSectionOrder.Command([], learnedUntil), CancellationToken));
 
         Assert.Equal(learnedUntil, (await SettingsAsync(client)).LearnedUntil?.ToUniversalTime());
+    }
+
+    [Fact]
+    public async Task ReorderGroceryCategories_WritesThePositionsInOrder_AndStopsLearning()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = (await supabase.CreateSignedInUserAsync()).Client;
+        var categories = await DefaultsAsync(client);
+        var ids = categories.Select(c => c.Id).ToList();
+        (ids[0], ids[3]) = (ids[3], ids[0]);
+
+        ResultAssert.Ok(await new ReorderGroceryCategories.Handler(client, Localizer)
+            .Handle(new ReorderGroceryCategories.Command(ids), CancellationToken));
+
+        var after = ResultAssert.Ok(await new GetGroceryCategories.Handler(client).Handle(new GetGroceryCategories.Query(), CancellationToken));
+        Assert.Equal(ids, after.Select(c => c.Id));
+        Assert.Equal(SectionOrderMode.Manual, (await SettingsAsync(client)).OrderMode);
+    }
+
+    [Fact]
+    public async Task ReorderGroceryCategories_WithAnotherUsersCategory_Fails()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var client = (await supabase.CreateSignedInUserAsync()).Client;
+        var mine = await DefaultsAsync(client);
+        var theirs = await DefaultsAsync((await supabase.CreateSignedInUserAsync()).Client);
+        var ids = mine.Select(c => c.Id).ToList();
+        ids[0] = theirs[0].Id;
+
+        var result = await new ReorderGroceryCategories.Handler(client, Localizer)
+            .Handle(new ReorderGroceryCategories.Command(ids), CancellationToken);
+
+        ResultAssert.Failed(result, "That category no longer exists");
     }
 }

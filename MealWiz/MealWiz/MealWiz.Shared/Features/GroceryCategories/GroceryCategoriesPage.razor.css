@@ -35,13 +35,49 @@
     border-top: 1px solid var(--mw-chip-bg);
 }
 
+.grocery-categories-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: var(--mw-surface);
+}
+
+/* The row being dragged follows the pointer above the others. */
+.grocery-categories-item.is-dragging {
+    z-index: 1;
+    box-shadow: var(--mw-menu-shadow);
+}
+
+.grocery-categories-list[data-dragging="true"] {
+    overflow: visible;
+    user-select: none;
+}
+
+/* The drag handle: a 44px target that keeps the browser from scrolling while it is held. */
+.grocery-categories-handle,
+.grocery-categories-handle-space {
+    flex: 0 0 auto;
+    width: var(--mw-touch);
+    height: 52px;
+}
+
+.grocery-categories-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mw-text-muted);
+    cursor: grab;
+    touch-action: none;
+}
+
 .grocery-categories-row {
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    width: 100%;
     min-height: 52px;
-    padding: 0 10px 0 16px;
+    padding: 0 10px 0 0;
     border: 0;
     background: transparent;
     color: var(--mw-text);

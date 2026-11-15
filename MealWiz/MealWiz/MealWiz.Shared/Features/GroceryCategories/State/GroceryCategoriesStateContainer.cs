@@ -9,6 +9,7 @@ using MealWiz.Shared.Features.GroceryList.Models;
 using ApplyLearnedSectionOrderAction = MealWiz.Shared.Features.GroceryCategories.ApplyLearnedSectionOrder.ApplyLearnedSectionOrder;
 using AddGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.AddGroceryCategory.AddGroceryCategory;
 using DeleteGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory.DeleteGroceryCategory;
+using ReorderGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.ReorderGroceryCategories.ReorderGroceryCategories;
 using UpdateGroceryCategoryAction = MealWiz.Shared.Features.GroceryCategories.UpdateGroceryCategory.UpdateGroceryCategory;
 using CreateDefaultGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.CreateDefaultGroceryCategories.CreateDefaultGroceryCategories;
 using GetGroceryCategoriesAction = MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories.GetGroceryCategories;
@@ -66,6 +67,12 @@ public interface IGroceryCategoriesStateContainer
     /// <paramref name="categoryId"/> already shows that name in the current language (ignoring case and spaces).
     /// </summary>
     string? ValidateName(string? name, int? categoryId, IStringLocalizer<GroceryCategoriesResource> localizer);
+
+    /// <summary>
+    /// Puts the categories in the user's own order (every id once; Other is kept last) and stops learning. The new
+    /// order shows at once; a failed save shows the error and puts the old order back. False when it failed.
+    /// </summary>
+    Task<bool> Reorder(IReadOnlyList<int> categoryIds);
 
     /// <summary>
     /// Learns the section order from the finished shopping trips among <paramref name="picked"/> (ticks after
@@ -138,6 +145,35 @@ public class GroceryCategoriesStateContainer(IMediator mediator, ILocalStorageSe
 
         RememberedNames = new Dictionary<string, int>(RememberedNames) { [CategoryResolver.Normalise(name)] = categoryId };
         NotifyStateChanged();
+        return true;
+    }
+
+    public async Task<bool> Reorder(IReadOnlyList<int> categoryIds)
+    {
+        var before = Categories;
+        var byId = Categories.ToDictionary(c => c.Id);
+        var ids = categoryIds.Where(byId.ContainsKey).Distinct()
+            .OrderBy(id => byId[id].IsOther)
+            .ToList();
+        Categories = ids.Select((id, index) =>
+        {
+            var copy = byId[id].Copy();
+            copy.Position = index + 1;
+            copy.OrderScore = null;
+            return copy;
+        }).ToList();
+        NotifyStateChanged();
+
+        var result = await mediator.Send(new ReorderGroceryCategoriesAction.Command(ids));
+        if (result.Handle(CurrentSnackbar).IsFailed)
+        {
+            Categories = before;
+            NotifyStateChanged();
+            return false;
+        }
+
+        Settings = Settings with { OrderMode = SectionOrderMode.Manual };
+        await LoadCategories();
         return true;
     }
 

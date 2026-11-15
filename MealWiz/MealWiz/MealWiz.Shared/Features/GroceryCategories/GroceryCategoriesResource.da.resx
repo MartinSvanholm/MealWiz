@@ -111,4 +111,7 @@
   <data name="DeleteGroceryCategory_Confirm" xml:space="preserve">
     <value>Slet</value>
   </data>
+  <data name="GroceryCategories_DragAria" xml:space="preserve">
+    <value>Træk for at flytte {0}</value>
+  </data>
 </root>
