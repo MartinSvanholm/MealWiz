@@ -16,6 +16,32 @@ namespace MealWiz.Shared.Tests.Features.Ingredients.ComponentTests;
 /// </summary>
 public class AddIngredientRowTests : ComponentTestBase
 {
+    // MEA-153: the row says what it understood under the amount field.
+    [Theory]
+    [InlineData("200 g", "200 · gram")]
+    [InlineData("2", "2 · pieces")]
+    [InlineData("a pinch", "Saved as written")]
+    public void The_amount_field_shows_what_the_app_understood(string typed, string expected)
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        var cut = Render<AddIngredientRow>();
+
+        cut.Find(InputOf("add-ingredient-amount")).Input(typed);
+
+        Assert.Equal(expected, cut.Find(HelperText).TextContent.Trim());
+    }
+
+    [Fact]
+    public void An_empty_amount_field_shows_no_hint()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        var cut = Render<AddIngredientRow>();
+
+        Assert.Empty(cut.FindAll(HelperText));
+    }
+
+    private const string HelperText = ".mud-input-helper-text";
+
     [Fact]
     public void The_add_button_opens_an_empty_drawer_when_nothing_was_typed()
     {

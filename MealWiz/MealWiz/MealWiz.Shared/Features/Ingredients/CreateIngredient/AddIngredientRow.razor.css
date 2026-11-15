@@ -12,6 +12,16 @@
 .mw-add-ingredient-amount {
     flex: 0 0 96px;
     width: 96px;
+    position: relative;
+}
+
+/* The hint sits under the field without making the row taller, so the name field and the button stay level. */
+.mw-add-ingredient-amount ::deep .mud-input-helper-text {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .mw-add-ingredient ::deep .mud-input-control {

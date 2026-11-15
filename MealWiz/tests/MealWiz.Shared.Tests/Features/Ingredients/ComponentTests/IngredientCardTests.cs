@@ -8,6 +8,20 @@ namespace MealWiz.Shared.Tests.Features.Ingredients.ComponentTests;
 /// <summary>IngredientCard (a row of the edit meal form) and the IngredientDrawer it opens.</summary>
 public class IngredientCardTests : ComponentTestBase
 {
+    // MEA-153: the drawer says what it understood under the amount field.
+    [Theory]
+    [InlineData("200 g", "200 · gram")]
+    [InlineData("2", "2 · pieces")]
+    [InlineData("a pinch", "Saved as written")]
+    public void The_drawer_shows_what_the_app_understood_of_the_amount(string typed, string expected)
+    {
+        var cut = Render<IngredientDrawer>(p => p.Add(d => d.Ingredient, TestData.Ingredient("Salt")));
+
+        cut.Find(InputOf("ingredient-amount-input")).Input(typed);
+
+        Assert.Equal(expected, cut.Find(".mud-input-helper-text").TextContent.Trim());
+    }
+
     [Fact]
     public void Renders_the_name_and_a_green_amount_chip()
     {

@@ -607,6 +607,94 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
 
     // ---- DeleteGroceryItemSources (MEA-93) ----
 
+    // ---- Amount quantity and unit (MEA-153) ----
+
+    [Theory]
+    [InlineData("1,5 dl", 1.5, "dl")]
+    [InlineData("2", 2.0, null)]
+    [InlineData("a pinch", null, null)]
+    public async Task AddGroceryItem_StoresTheAmountAsTextQuantityAndUnit(string amount, double? quantity, string? unit)
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var item = new GroceryItemBuilder().WithName("Milk").WithAmount(amount).Build();
+
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new AddGroceryItem.Command(item), CancellationToken));
+
+        var row = await GetRowAsync(added.Id);
+        Assert.Equal(amount, row!.Amount);
+        Assert.Equal((decimal?)quantity, row.AmountQuantity);
+        Assert.Equal(unit, row.AmountUnit);
+    }
+
+    [Fact]
+    public async Task UpdateGroceryItem_ChangesQuantityAndUnitWithTheText()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var item = await new GroceryItemBuilder().WithAmount("200 g").InsertAsync(supabase.Client);
+
+        item.Amount = "0,5 kg";
+        ResultAssert.Ok(await UpdateAsync(item));
+        var row = await GetRowAsync(item.Id);
+        Assert.Equal((0.5m, "kg"), (row!.AmountQuantity, row.AmountUnit));
+
+        item.Amount = "a pinch";
+        ResultAssert.Ok(await UpdateAsync(item));
+        row = await GetRowAsync(item.Id);
+        Assert.Equal("a pinch", row!.Amount);
+        Assert.Null(row.AmountQuantity);
+        Assert.Null(row.AmountUnit);
+    }
+
+    [Fact]
+    public async Task AddPlanIngredientsToGroceryList_WritesQuantityAndUnitOnItemsAndSources()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var planned = await PlanAsync(40, supabase.Client, ("Flour", "500 g"), ("Yeast", "1 packet"));
+
+        var added = ResultAssert.Ok(await AddAsync(planned.Entries()));
+
+        var flour = added.Single(i => i.Name == "Flour");
+        var yeast = added.Single(i => i.Name == "Yeast");
+        var flourRow = await GetRowAsync(flour.Id);
+        Assert.Equal((500m, "g"), (flourRow!.AmountQuantity, flourRow.AmountUnit));
+        var flourSource = Assert.Single(await GetSourceRowsAsync(flour.Id));
+        Assert.Equal((500m, "g"), (flourSource.AmountQuantity, flourSource.AmountUnit));
+        var yeastRow = await GetRowAsync(yeast.Id);
+        Assert.Equal("1 packet", yeastRow!.Amount);
+        Assert.Null(yeastRow.AmountQuantity);
+        Assert.Null(yeastRow.AmountUnit);
+        var yeastSource = Assert.Single(await GetSourceRowsAsync(yeast.Id));
+        Assert.Null(yeastSource.AmountQuantity);
+        Assert.Null(yeastSource.AmountUnit);
+    }
+
+    [Fact]
+    public async Task AddPlanIngredientsToGroceryList_ExistingItem_WritesTheNewTotalsQuantityAndUnit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var existing = await new GroceryItemBuilder().WithName("Rice").WithAmount("1 dl").InsertAsync(supabase.Client);
+        var planned = await PlanAsync(41, supabase.Client, ("Rice", "2 dl"));
+
+        ResultAssert.Ok(await AddAsync(planned.Entries(existing.Id, "3 dl")));
+
+        var row = await GetRowAsync(existing.Id);
+        Assert.Equal(("3 dl", 3m, "dl"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+        var source = Assert.Single(await GetSourceRowsAsync(existing.Id));
+        Assert.Equal((2m, "dl"), (source.AmountQuantity, source.AmountUnit));
+    }
+
+    [Fact]
+    public async Task DeleteGroceryItemSources_LoweredAmount_WritesQuantityAndUnit()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var (garlic, pasta, _) = await SharedGarlicAsync(40, pastaAmount: "200 g", soupAmount: "100 g", itemAmount: "300 g");
+
+        ResultAssert.Ok(await DeleteSourcesAsync(pasta.Id));
+
+        var row = await GetRowAsync(garlic.Id);
+        Assert.Equal(("100 g", 100m, "g"), (row!.Amount, row.AmountQuantity, row.AmountUnit));
+    }
+
     private Task<FluentResults.Result<List<GroceryItem>>> DeleteSourcesAsync(params int[] ids) =>
         new DeleteGroceryItemSources.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>()).Handle(new DeleteGroceryItemSources.Command([.. ids]), CancellationToken);
 

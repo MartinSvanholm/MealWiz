@@ -124,11 +124,14 @@ items are unlinked silently.
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
   ingredient saved before the switch existed, and defaults the column to true.
+  `supabase/migrations/20261115120000_add_amount_quantity_and_unit.sql` adds `amount_quantity` and `amount_unit`, filled
+  from the typed text by `MapToIngredientDb` (`ParsedAmount`); the text stays the source of truth and reads ignore the columns.
+  The amount fields (`AddIngredientRow`, `IngredientDrawer`) show `AmountText.Describe` as their helper text.
 - **Tests:**
   - unit: `Features/Ingredients/UnitTests/Models/`
   - bUnit: `Features/Ingredients/ComponentTests/`
   - integration: `Features/Ingredients/IntegrationTests/IngredientHandlerTests.cs`
-  - pgTAP: `supabase/tests/database/ingredients.test.sql`
+  - pgTAP: `supabase/tests/database/ingredients.test.sql`, `supabase/tests/database/amounts.test.sql`
 
 ## MealPlans
 
@@ -313,8 +316,8 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - bUnit: `Features/GroceryList/ComponentTests/`
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included)
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions)
+  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included), `supabase/tests/database/amounts.test.sql` (`parse_amount`, the amount checks, the backfill)
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions), `supabase/migrations/20261115120000_add_amount_quantity_and_unit.sql` (`amount_quantity` and `amount_unit` on items and links; three write functions replaced so they write them; the handlers send both next to the text, and `GroceryItemDrawer` shows the amount hint)
 
 ## MealImport
 
@@ -649,6 +652,16 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
+- **`Amounts/`:** an amount typed as text, read as a quantity and a unit (namespace `MealWiz.Shared.Amounts`, in
+  `_Imports.razor`). Not a feature folder: Ingredients and GroceryList both use it.
+  - `ParsedAmount.cs`: `ParsedAmount.Parse(text)` (never null; `Quantity` is null when the text can't be read; `Unit` is
+    null for a count; `Family`, `UnitCode`). The rules are in the type's remarks; the SQL function
+    `public.parse_amount` follows the same ones.
+  - `AmountUnit.cs` (the ten units, `Family`, exact `Factor`, `InFamily`), `UnitFamily.cs` (Count, Mass, Volume, Cup,
+    Teaspoon, Tablespoon; only Mass and Volume convert).
+  - `AmountText.cs`: `Format(quantity, unit)` ("1,5 dl" in Danish) and `Describe(text)`, the helper text under an amount
+    field ("200 · gram", "Saved as written", null when empty). Texts are `Unit_*` and `Amount_*` in `SharedResource`.
+  - Tests: `MealWiz/tests/MealWiz.Shared.Tests/Amounts/UnitTests/`, against `MealWiz/tests/Contracts/amount_parsing.json`.
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
@@ -727,9 +740,9 @@ table and policy list.
 | Table | Feature | Created in | Notes |
 |---|---|---|---|
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
-| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
-| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
-| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
+| `ingredients` | Ingredients | `remote_schema` | `amount_quantity` (> 0) and `amount_unit` (one of the ten codes) added in `add_amount_quantity_and_unit`; a unit needs a quantity. `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
+| `grocery_items` | GroceryList | `remote_schema` | `amount_quantity` and `amount_unit` as on `ingredients`. `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
+| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `amount_quantity` and `amount_unit` as on `ingredients`. `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
@@ -738,6 +751,7 @@ table and policy list.
 
 | Function | Feature | Created in | Notes |
 |---|---|---|---|
+| `public.parse_amount(amount)` | Ingredients, GroceryList | `add_amount_quantity_and_unit` | Reads an amount text into `(quantity, unit)` with the rules of `ParsedAmount`; pinned by `amount_parsing.json`. `immutable`, `security invoker`; nobody may execute it through the API (it runs the backfill) |
 | `public.expired_meal_import_pictures(cutoff)` | MealImport | `add_expired_meal_import_pictures` | Names the pictures of `meal-import-pictures` created before the cutoff. `security definer`; only `service_role` may execute it. The clean-up Function removes them through the Storage API |
 
 ### Storage buckets
