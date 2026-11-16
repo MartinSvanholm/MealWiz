@@ -92,6 +92,7 @@ public class CookMealPageTests : ComponentTestBase
     [Theory]
     [InlineData("plan", "/")]
     [InlineData("meals", "/meals")]
+    [InlineData("edit", "/meals/edit")]
     [InlineData(null, "/meals")]
     public void Back_goes_to_where_the_page_was_opened_from(string? from, string expected)
     {
@@ -100,6 +101,18 @@ public class CookMealPageTests : ComponentTestBase
         cut.Find(TestId("cook-meal-back")).Click();
 
         Assert.Equal(expected, new Uri(Navigation.Uri).AbsolutePath);
+    }
+
+    [Fact]
+    public void Opened_from_edit_meal_without_it_in_state_back_edits_the_meal_shown()
+    {
+        // A reload or deep link with ?from=edit starts with an empty form; back must still edit this meal.
+        var cut = RenderPage(5, "edit");
+
+        cut.Find(TestId("cook-meal-back")).Click();
+
+        Assert.Equal("/meals/edit", new Uri(Navigation.Uri).AbsolutePath);
+        Assert.Same(_chili, Meals.MealToEdit);
     }
 
     [Fact]

@@ -8,8 +8,8 @@
 @implements IAsyncDisposable
 
 @* The cooking view: a read-only page to cook from. The ingredients with their amounts at the top, the recipe below in
-   large text, one step per line. Opens from the Meal plan's day card and from the Meals page; back goes to where it
-   was opened (?from=plan or ?from=meals). It shows no input, so nothing on it can be edited. *@
+   large text, one step per line. Opens from the Meal plan's day card and from Edit meal; back goes to where it
+   was opened (?from=plan, ?from=edit or the Meals page otherwise). It shows no input, so nothing on it can be edited. *@
 <div class="mw-page mw-cook" data-testid="cook-meal-page">
     <SubPageHeader Label="@L["CookMeal_Label"]" BackHref="@BackHref" BackTestId="cook-meal-back">
         <TitleContent><span data-testid="cook-meal-name">@_meal?.Name</span></TitleContent>
@@ -77,7 +77,7 @@
     [Parameter]
     public int MealId { get; set; }
 
-    /// <summary>Where the page was opened from: "plan" goes back to the Meal plan, anything else to the Meals page.</summary>
+    /// <summary>Where the page was opened from: "plan" goes back to the Meal plan, "edit" to Edit meal, anything else to the Meals page.</summary>
     [SupplyParameterFromQuery(Name = "from")]
     public string? From { get; set; }
 
@@ -86,7 +86,12 @@
     private IReadOnlyList<string> _steps = [];
     private bool _wakeLockRequested;
 
-    private string BackHref => From == "plan" ? "/" : "/meals";
+    private string BackHref => From switch
+    {
+        "plan" => "/",
+        "edit" => "/meals/edit",
+        _ => "/meals"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,6 +102,11 @@
         await _mealsStateContainer.LoadMeals();
         Refresh();
         _loading = false;
+
+        // Back to Edit meal edits this meal. After a reload or a deep link the form holds nothing, so give it the meal;
+        // if it already holds this meal (with any unsaved changes), leave it.
+        if (From == "edit" && _meal is not null && _mealsStateContainer.MealToEdit.Id != _meal.Id)
+            _mealsStateContainer.MealToEdit = _meal;
     }
 
     private void Refresh()

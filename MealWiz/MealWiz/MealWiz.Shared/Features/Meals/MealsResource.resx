@@ -248,8 +248,4 @@
     <value>Open in cooking view</value>
     <comment>Day card recipe corner button: screen reader label</comment>
   </data>
-  <data name="CookMeal_CardAria" xml:space="preserve">
-    <value>Cook {0}</value>
-    <comment>Meal card corner button: screen reader label, {0} is the meal name</comment>
-  </data>
 </root>

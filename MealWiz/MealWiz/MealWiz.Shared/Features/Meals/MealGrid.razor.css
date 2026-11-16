@@ -40,36 +40,3 @@
     color: var(--mw-text-muted);
     font-size: 12px;
 }
-
-/* One grid cell: the card button, with the cook button floating in the corner of its tile */
-.mw-meal-cell {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-}
-
-.mw-meal-cell > .mw-meal-card {
-    flex: 1 1 auto;
-}
-
-.mw-meal-card-cook {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--mw-surface);
-    color: var(--mw-text);
-    cursor: pointer;
-}
-
-.mw-meal-card-cook:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-}

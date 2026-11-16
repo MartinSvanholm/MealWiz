@@ -40,9 +40,9 @@ meals are planned this week, or that every meal has a recipe.
   - `Features/Meals/EditMeal/EditMealPage.razor` at `/meals/edit`: create or edit the meal in `MealToEdit`, including
     its ingredients. Orange header with back (`edit-meal-back`), Save and the name field (`meal-name-input`); then the
     recipe, the add-ingredient row, the ingredient rows and, for a saved meal, Delete meal.
-  - `Features/Meals/CookMeal/CookMealPage.razor` (+ `.razor.css`) at `/meals/cook/{MealId:int}?from=plan|meals`, `[Authorize]`: the
+  - `Features/Meals/CookMeal/CookMealPage.razor` (+ `.razor.css`) at `/meals/cook/{MealId:int}?from=plan|edit`, `[Authorize]`: the
     read-only cooking view. Reloads the meals on open, then shows the regular meal with that id: `SubPageHeader` (back
-    `cook-meal-back` goes to `/` for `from=plan`, else `/meals`; name `cook-meal-name`), the ingredients
+    `cook-meal-back` goes to `/` for `from=plan`, `/meals/edit` for `from=edit` (setting `MealToEdit` to this meal if the form holds another), else `/meals`; name `cook-meal-name`), the ingredients
     (`cook-meal-ingredients`, `cook-meal-ingredient` with `-name` and `-amount`, or `cook-meal-no-ingredients`) and the
     recipe, one `cook-meal-step` per non-blank line in large text (`cook-meal-recipe`), or `cook-meal-no-recipe` whose
     `cook-meal-add-recipe` sets `MealToEdit` and opens `/meals/edit`. An unknown, deleted or system meal shows
@@ -50,14 +50,14 @@ meals are planned this week, or that every meal has a recipe.
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
-    Each cell also holds a round corner button (`meal-card-cook`) that opens the cooking view with `?from=meals`; tapping
-    the card itself still opens Edit meal. System meals get no cook button.
+    Tapping a card opens Edit meal.
   - `Features/Meals/MealDisplayComponent.razor`: the selected day's card on the Meal plan page (details under
     MealPlans); its Add all to list opens GroceryList's merge drawer.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
     `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
     (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
-  - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header.
+  - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header. Beside it, a saved
+    regular meal also gets Cook (`edit-meal-cook`), which opens its cooking view with `?from=edit`.
   - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: "Delete meal" on the Edit meal page; deletes after a confirm
     drawer, then returns to `/meals`. If grocery items still to buy are linked to the meal's ingredients, it opens
     `ReviewGroceryItemsDrawer` ("Remove from grocery list?", one group under the meal's name) and deletes the meal only

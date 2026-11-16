@@ -189,7 +189,4 @@
   <data name="CookMeal_FullscreenAria" xml:space="preserve">
     <value>Åbn i madlavningsvisning</value>
   </data>
-  <data name="CookMeal_CardAria" xml:space="preserve">
-    <value>Lav {0}</value>
-  </data>
 </root>

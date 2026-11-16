@@ -288,17 +288,13 @@ public class MealsPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void Each_card_has_a_cook_button_that_opens_the_cooking_view_and_tapping_the_card_still_edits()
+    public void Cards_have_no_cook_button_and_tapping_a_card_edits()
     {
         var cut = RenderWithPopovers<MealsPage>();
 
-        Assert.Equal(3, cut.FindAll(TestId("meal-card-cook")).Count);
-        Assert.Equal("Cook Soup", cut.FindAll(TestId("meal-card-cook"))[1].GetAttribute("aria-label"));
+        // The cooking view opens from Edit meal and the plan, not from the grid.
+        Assert.Empty(cut.FindAll(TestId("meal-card-cook")));
 
-        cut.FindAll(TestId("meal-card-cook"))[1].Click();
-        Assert.Equal("meals/cook/3?from=meals", CurrentPath);
-
-        Navigation.NavigateTo("/meals");
         cut.FindAll(TestId("meal-list-item"))[1].Click();
         Assert.Equal("meals/edit", CurrentPath);
         Assert.Same(_soup, Meals.MealToEdit);

@@ -1,31 +1,19 @@
 @* The Meals page's two-column grid: a card per meal with its coloured initial tile (alternating orange and green by
-   position, with the day it's planned this week), its name and ingredient count. Tapping the card opens Edit meal;
-   the round button in its top-right corner opens the cooking view. Buttons can't nest, so each cell holds the card
-   button and the cook button side by side. *@
+   position, with the day it's planned this week), its name and ingredient count. *@
 @inject IStringLocalizer<MealsResource> L
-@inject NavigationManager _navigationManager
 
 <div class="mw-meal-grid" data-testid="meal-grid">
     @{ var index = 0; }
     @foreach (var meal in Meals)
     {
         var position = index++;
-        <div class="mw-meal-cell">
-            <button type="button" class="mw-meal-card" data-testid="meal-list-item" @onclick="() => OnMealClick.InvokeAsync(meal)">
-                <MealTile Name="@meal.Name" Index="position" DayTag="@DayTagFor(meal)" Size="MealTile.TileSize.Large" />
-                <span class="mw-meal-card-text">
-                    <span class="mw-meal-card-name" data-testid="meal-card-name">@meal.Name</span>
-                    <span class="mw-meal-card-meta" data-testid="meal-card-meta">@IngredientCount(meal)</span>
-                </span>
-            </button>
-            @if (meal.IsRegular)
-            {
-                <button type="button" class="mw-meal-card-cook" data-testid="meal-card-cook"
-                        aria-label="@L["CookMeal_CardAria", meal.Name]" @onclick="() => Cook(meal)">
-                    <MudIcon Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" Color="Color.Inherit" />
-                </button>
-            }
-        </div>
+        <button type="button" class="mw-meal-card" data-testid="meal-list-item" @onclick="() => OnMealClick.InvokeAsync(meal)">
+            <MealTile Name="@meal.Name" Index="position" DayTag="@DayTagFor(meal)" Size="MealTile.TileSize.Large" />
+            <span class="mw-meal-card-text">
+                <span class="mw-meal-card-name" data-testid="meal-card-name">@meal.Name</span>
+                <span class="mw-meal-card-meta" data-testid="meal-card-meta">@IngredientCount(meal)</span>
+            </span>
+        </button>
     }
 </div>
 
@@ -46,6 +34,4 @@
             : null;
 
     private string IngredientCount(Meal meal) => L.Plural("MealGrid_Ingredients", meal.Ingredients.Count);
-
-    private void Cook(Meal meal) => _navigationManager.NavigateTo($"/meals/cook/{meal.Id}?from=meals");
 }
