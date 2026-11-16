@@ -71,6 +71,25 @@ public class GroceryListHandlerTests(LocalSupabaseFixture supabase) : IClassFixt
     }
 
     [Fact]
+    public async Task UpdateGroceryItem_StoresWhenItWasTickedOff_AndPuttingItBackClearsIt()
+    {
+        Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);
+        var added = ResultAssert.Ok(await new AddGroceryItem.Handler(supabase.Client, TestLocalizer.For<GroceryListResource>())
+            .Handle(new AddGroceryItem.Command(new GroceryItemBuilder().WithName("Ticked").Build()), CancellationToken));
+        var tickedAt = new DateTime(2026, 11, 15, 9, 30, 0, DateTimeKind.Utc);
+
+        added.IsPicked = true;
+        added.PickedAt = tickedAt;
+        ResultAssert.Ok(await UpdateAsync(added));
+        Assert.Equal(tickedAt, (await GetRowAsync(added.Id))!.PickedAt?.ToUniversalTime());
+
+        added.IsPicked = false;
+        added.PickedAt = null;
+        ResultAssert.Ok(await UpdateAsync(added));
+        Assert.Null((await GetRowAsync(added.Id))!.PickedAt);
+    }
+
+    [Fact]
     public async Task AddGroceryItem_SignedOut_FailsWithNotSignedIn()
     {
         Assert.SkipUnless(supabase.IsAvailable, supabase.SkipReason ?? string.Empty);

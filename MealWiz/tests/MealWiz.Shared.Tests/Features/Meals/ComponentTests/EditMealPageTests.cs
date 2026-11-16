@@ -96,7 +96,7 @@ public class EditMealPageTests : ComponentTestBase
         Assert.Contains("Eggs", card.TextContent);
         Assert.Contains("3", card.TextContent);
         Assert.Equal("1 item", cut.Find(TestId("edit-meal-ingredient-count")).TextContent.Trim());
-        Assert.Empty(SentRequests);
+        Assert.Empty(SentRequestsBesidesCategoryLoads);
     }
 
     [Fact]

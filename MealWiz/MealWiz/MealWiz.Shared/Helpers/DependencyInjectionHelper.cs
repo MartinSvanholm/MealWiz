@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Features.GroceryList.State;
+﻿using MealWiz.Shared.Features.GroceryCategories.State;
+using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport.State;
@@ -28,6 +29,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<IMealPlanStateContainer, MealPlanStateContainer>();
         services.AddScoped<IPlanWeekStateContainer, PlanWeekStateContainer>();
         services.AddScoped<IGroceryListStateContainer, GroceryListStateContainer>();
+        services.AddScoped<IGroceryCategoriesStateContainer, GroceryCategoriesStateContainer>();
         services.AddScoped<IThemeService, ThemeService>();
         services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();

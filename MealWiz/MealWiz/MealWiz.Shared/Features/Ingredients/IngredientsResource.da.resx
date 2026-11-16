@@ -75,4 +75,7 @@
   <data name="RemoveIngredient_DeletedAndRemoved" xml:space="preserve">
     <value>Ingrediens slettet og fjernet fra indkøbslisten.</value>
   </data>
+  <data name="IngredientDrawer_Category" xml:space="preserve">
+    <value>Kategori i butikken</value>
+  </data>
 </root>

@@ -1,3 +1,4 @@
+using MealWiz.Shared.Features.GroceryCategories.State;
 using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealImport.State;
 using MealWiz.Shared.Features.MealPlans.State;
@@ -18,6 +19,7 @@ public class DependencyInjectionHelperTests
     [InlineData(typeof(IMealPlanStateContainer), typeof(MealPlanStateContainer))]
     [InlineData(typeof(IPlanWeekStateContainer), typeof(PlanWeekStateContainer))]
     [InlineData(typeof(IGroceryListStateContainer), typeof(GroceryListStateContainer))]
+    [InlineData(typeof(IGroceryCategoriesStateContainer), typeof(GroceryCategoriesStateContainer))]
     [InlineData(typeof(IMealImportStateContainer), typeof(MealImportStateContainer))]
     public void RegisterScopedServices_RegistersEachStateContainerAsScoped(Type service, Type implementation)
     {
