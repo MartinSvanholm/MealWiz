@@ -29,6 +29,26 @@ public class MealPlanJourneyTests : E2ETestBase
         await AssignAsync(day: 2, "Eat Out");
         await Expect(Page.GetByTestId("week-day-meal-indicator")).ToHaveCountAsync(3);
 
+        // Cooking view: opens from the day card, shows the meal read-only, and back keeps the selected day
+        await Day(0).ClickAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(chili);
+        await Page.GetByTestId("cook-meal-button").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"meals/cook/\d+\?from=plan"));
+        await Expect(Page.GetByTestId("cook-meal-name")).ToHaveTextAsync(chili);
+        await Expect(Page.GetByTestId("cook-meal-ingredient")).ToContainTextAsync("Kidney beans");
+        await Expect(Page.GetByTestId("cook-meal-ingredient")).ToContainTextAsync("400 g");
+        await Expect(Page.GetByTestId("cook-meal-step")).ToHaveCountAsync(2);
+        await Expect(Page.GetByTestId("cook-meal-step").First).ToHaveTextAsync("Step one.");
+        await Expect(Page.Locator("input, textarea")).ToHaveCountAsync(0);
+        await Page.GetByTestId("cook-meal-back").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor(""));
+        await Expect(Day(0)).ToHaveClassAsync(SelectedDay);
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(chili);
+        await Page.GetByTestId("cook-meal-fullscreen").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(new Regex(@"meals/cook/\d+\?from=plan"));
+        await Page.GoBackAsync();
+        await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(chili);
+
         // Swap: the pick list replaces the card, without the day's own meal, and a pick replaces the meal
         await Day(0).ClickAsync();
         await Expect(Page.GetByTestId("meal-display-name")).ToHaveTextAsync(chili);

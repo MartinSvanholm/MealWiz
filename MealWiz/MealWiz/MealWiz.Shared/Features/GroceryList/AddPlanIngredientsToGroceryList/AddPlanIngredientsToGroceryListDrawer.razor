@@ -2,7 +2,6 @@
 @using MealWiz.Shared.Features.Ingredients.Models
 @using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems
 @inject IStringLocalizer<GroceryListResource> L
-@inject IStringLocalizer<SharedResource> S
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
 @inject IMediator _mediator
@@ -54,9 +53,7 @@ else
                                       Immediate
                                       OnKeyDown="EnterKey.Then(() => OnAmountEnter(index))"
                                       Variant="Variant.Outlined"
-                                      Margin="Margin.Dense"
-                                      Required="true"
-                                      RequiredError="@S["Common_Required"]" />
+                                      Margin="Margin.Dense" />
                     </div>
                 </li>
             }

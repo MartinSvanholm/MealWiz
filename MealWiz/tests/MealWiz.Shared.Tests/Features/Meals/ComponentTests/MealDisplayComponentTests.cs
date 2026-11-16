@@ -18,6 +18,44 @@ public class MealDisplayComponentTests : ComponentTestBase
     private void Plan(Meal meal) => MealPlan.MealPlan = TestData.MealPlanWith(MealPlan.SelectedDate, meal);
 
     [Fact]
+    public void Cook_button_and_the_recipe_fullscreen_icon_open_the_cooking_view_from_the_plan()
+    {
+        Plan(TestData.Meal("Chili", id: 5, recipe: "Step one."));
+        var cut = Render<MealDisplayComponent>();
+
+        cut.Find(TestId("cook-meal-button")).Click();
+        Assert.Equal("meals/cook/5?from=plan", CurrentPath);
+
+        Navigation.NavigateTo("/");
+        cut.Find(TestId("cook-meal-fullscreen")).Click();
+        Assert.Equal("meals/cook/5?from=plan", CurrentPath);
+    }
+
+    [Fact]
+    public void The_fullscreen_icon_needs_a_recipe_but_the_cook_button_does_not()
+    {
+        Plan(TestData.Meal("Lasagne", id: 5));
+
+        var cut = Render<MealDisplayComponent>();
+
+        Assert.Empty(cut.FindAll(TestId("cook-meal-fullscreen")));
+        Assert.Equal("Cook", cut.Find(TestId("cook-meal-button")).TextContent.Trim());
+    }
+
+    [Theory]
+    [InlineData(MealType.Leftover)]
+    [InlineData(MealType.EatOut)]
+    public void System_meals_have_no_cooking_entry(MealType type)
+    {
+        Plan(TestData.Meal("Leftovers", id: 2, type: type));
+
+        var cut = Render<MealDisplayComponent>();
+
+        Assert.Empty(cut.FindAll(TestId("cook-meal-button")));
+        Assert.Empty(cut.FindAll(TestId("cook-meal-fullscreen")));
+    }
+
+    [Fact]
     public void Shows_the_meal_with_its_ingredient_count_ingredients_and_recipe_steps()
     {
         Plan(TestData.Meal(

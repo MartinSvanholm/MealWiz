@@ -1,0 +1,122 @@
+/* Cooking view. Colours and radii from the --mw-* tokens only (UI-02). */
+.mw-cook {
+    display: flex;
+    flex-direction: column;
+    background: var(--mw-bg);
+    color: var(--mw-text);
+}
+
+.mw-cook-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 8px 16px var(--mw-nav-clearance);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.mw-cook-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mw-cook-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mw-text-muted);
+}
+
+.mw-cook-ingredients {
+    margin: 0;
+    padding: 4px 16px;
+    list-style: none;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-l);
+    background-color: var(--mw-surface);
+}
+
+.mw-cook-ingredient {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    font-size: 17px;
+}
+
+.mw-cook-ingredient + .mw-cook-ingredient {
+    border-top: 1px solid var(--mw-border);
+}
+
+.mw-cook-ingredient-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.mw-cook-ingredient-amount {
+    flex: 0 0 auto;
+    color: var(--mw-text-muted);
+    font-size: 15px;
+}
+
+.mw-cook-step {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.mw-cook-empty {
+    margin: 0;
+    color: var(--mw-text-muted);
+}
+
+.mw-cook-no-recipe {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-radius: var(--mw-radius-l);
+    border: 1.5px dashed var(--mw-border-dashed);
+}
+
+.mw-cook-no-recipe-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mw-cook-no-recipe-title {
+    font-weight: 700;
+}
+
+.mw-cook-no-recipe-hint {
+    color: var(--mw-text-muted);
+    font-size: 13px;
+}
+
+.mw-cook-link {
+    flex: 0 0 auto;
+    padding: 8px 4px;
+    border: none;
+    background: none;
+    color: var(--mw-orange-text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-cook-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}

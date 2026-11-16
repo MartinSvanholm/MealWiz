@@ -159,4 +159,34 @@
   <data name="EditMeal_Retrying" xml:space="preserve">
     <value>Prøver igen…</value>
   </data>
+  <data name="CookMeal_Label" xml:space="preserve">
+    <value>Madlavning</value>
+  </data>
+  <data name="CookMeal_Ingredients" xml:space="preserve">
+    <value>Ingredienser</value>
+  </data>
+  <data name="CookMeal_Recipe" xml:space="preserve">
+    <value>Opskrift</value>
+  </data>
+  <data name="CookMeal_NoIngredients" xml:space="preserve">
+    <value>Ingen ingredienser</value>
+  </data>
+  <data name="CookMeal_NoRecipe" xml:space="preserve">
+    <value>Ingen opskrift endnu</value>
+  </data>
+  <data name="CookMeal_NoRecipeHint" xml:space="preserve">
+    <value>Tilføj trinene, så du kan lave maden herfra.</value>
+  </data>
+  <data name="CookMeal_AddRecipe" xml:space="preserve">
+    <value>Tilføj opskrift</value>
+  </data>
+  <data name="CookMeal_NotFound" xml:space="preserve">
+    <value>Retten kan ikke findes</value>
+  </data>
+  <data name="CookMeal_Button" xml:space="preserve">
+    <value>Lav mad</value>
+  </data>
+  <data name="CookMeal_FullscreenAria" xml:space="preserve">
+    <value>Åbn i madlavningsvisning</value>
+  </data>
 </root>

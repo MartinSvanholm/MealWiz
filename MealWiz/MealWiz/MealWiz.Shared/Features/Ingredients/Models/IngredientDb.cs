@@ -15,6 +15,12 @@ public class IngredientDb : BaseModel
     [Column("amount")]
     public string Amount { get; set; }
 
+    [Column("amount_quantity")]
+    public decimal? AmountQuantity { get; set; }
+
+    [Column("amount_unit")]
+    public string? AmountUnit { get; set; }
+
     [Column("show_on_grocery_list")]
     public bool ShowOnGroceryList { get; set; }
 

@@ -15,6 +15,12 @@ public class GroceryItemDb : BaseModel
     [Column("amount")]
     public string? Amount { get; set; }
 
+    [Column("amount_quantity")]
+    public decimal? AmountQuantity { get; set; }
+
+    [Column("amount_unit")]
+    public string? AmountUnit { get; set; }
+
     [Column("is_picked")]
     public bool IsPicked { get; set; }
 

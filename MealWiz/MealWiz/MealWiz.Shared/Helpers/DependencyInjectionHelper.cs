@@ -3,6 +3,7 @@ using MealWiz.Shared.Features.GroceryList.State;
 using MealWiz.Shared.Features.MealPlans.State;
 using MealWiz.Shared.Features.Meals.State;
 using MealWiz.Shared.Features.MealImport.State;
+using MealWiz.Shared.Services.ScreenWakeLock;
 using MealWiz.Shared.Localization;
 using MealWiz.Shared.Services.DrawerStateContainer;
 using MealWiz.Shared.Theme;
@@ -33,6 +34,7 @@ public static class DependencyInjectionHelper
         services.AddScoped<MealWiz.Shared.Features.Authentication.EmailLinks.EmailLinkBuilder>(); // each head registers its EmailLinkOptions
         services.AddScoped<IMealImportStateContainer, MealImportStateContainer>();
         services.AddScoped<IMealPictureShrinker, MealPictureShrinker>();
+        services.AddScoped<IScreenWakeLock, ScreenWakeLock>();
         services.AddScoped(_ => new HttpClient { Timeout = HttpClientTimeout });
 
         // IStringLocalizer<T> over the .resx resources (no ResourcesPath: resources sit beside their marker type),

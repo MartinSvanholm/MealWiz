@@ -1,4 +1,5 @@
 using FluentResults;
+using MealWiz.Shared.Amounts;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -58,11 +59,19 @@ public static class UpdateLinkedGroceryAmounts
             // One call, one transaction: each item's amount once, then each link's remembered amount.
             var itemAmounts = request.Updates
                 .GroupBy(u => u.GroceryItemId)
-                .Select(group => new { id = group.Key, amount = group.First().FinalAmount })
+                .Select(group =>
+                {
+                    var amount = ParsedAmount.Parse(group.First().FinalAmount);
+                    return new { id = group.Key, amount = amount.Text, amount_quantity = amount.Quantity, amount_unit = amount.UnitCode };
+                })
                 .ToList();
             var sourceAmounts = request.Updates
                 .GroupBy(u => u.SourceId)
-                .Select(group => new { id = group.Key, amount = group.Last().SourceAmount })
+                .Select(group =>
+                {
+                    var amount = ParsedAmount.Parse(group.Last().SourceAmount);
+                    return new { id = group.Key, amount = amount.Text, amount_quantity = amount.Quantity, amount_unit = amount.UnitCode };
+                })
                 .ToList();
 
             var written = await Result.Try(

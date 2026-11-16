@@ -208,4 +208,44 @@
     <value>Trying again…</value>
     <comment>Shown while the pictures are analysed again</comment>
   </data>
+  <data name="CookMeal_Label" xml:space="preserve">
+    <value>Cooking</value>
+    <comment>Small label above the meal name on the cooking page</comment>
+  </data>
+  <data name="CookMeal_Ingredients" xml:space="preserve">
+    <value>Ingredients</value>
+    <comment>Cooking page: ingredients section title</comment>
+  </data>
+  <data name="CookMeal_Recipe" xml:space="preserve">
+    <value>Recipe</value>
+    <comment>Cooking page: recipe section title</comment>
+  </data>
+  <data name="CookMeal_NoIngredients" xml:space="preserve">
+    <value>No ingredients</value>
+    <comment>Cooking page: the meal has no ingredients</comment>
+  </data>
+  <data name="CookMeal_NoRecipe" xml:space="preserve">
+    <value>No recipe yet</value>
+    <comment>Cooking page: the meal has no recipe</comment>
+  </data>
+  <data name="CookMeal_NoRecipeHint" xml:space="preserve">
+    <value>Add the steps to cook it from here.</value>
+    <comment>Cooking page: hint under No recipe yet</comment>
+  </data>
+  <data name="CookMeal_AddRecipe" xml:space="preserve">
+    <value>Add recipe</value>
+    <comment>Cooking page: opens Edit meal</comment>
+  </data>
+  <data name="CookMeal_NotFound" xml:space="preserve">
+    <value>This meal can't be found</value>
+    <comment>Cooking page: unknown, deleted or system meal</comment>
+  </data>
+  <data name="CookMeal_Button" xml:space="preserve">
+    <value>Cook</value>
+    <comment>Day card button: opens the cooking page</comment>
+  </data>
+  <data name="CookMeal_FullscreenAria" xml:space="preserve">
+    <value>Open in cooking view</value>
+    <comment>Day card recipe corner button: screen reader label</comment>
+  </data>
 </root>

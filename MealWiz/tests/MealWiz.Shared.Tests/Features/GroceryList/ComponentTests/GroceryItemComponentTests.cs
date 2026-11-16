@@ -22,6 +22,28 @@ public class GroceryItemComponentTests : ComponentTestBase
         Assert.Equal("1 l", cut.Find(InputOf("grocery-item-amount-input")).GetAttribute("value"));
     }
 
+    // MEA-153: the drawer says what it understood under the amount field.
+    [Theory]
+    [InlineData("200 g", "200 · gram")]
+    [InlineData("2", "2 · pieces")]
+    [InlineData("a pinch", "Saved as written")]
+    public void Drawer_shows_what_the_app_understood_of_the_amount(string typed, string expected)
+    {
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, TestData.GroceryItem("Milk", "", id: 1)));
+
+        cut.Find(InputOf("grocery-item-amount-input")).Input(typed);
+
+        Assert.Equal(expected, cut.Find(".mud-input-helper-text").TextContent.Trim());
+    }
+
+    [Fact]
+    public void Drawer_shows_no_hint_for_an_empty_amount()
+    {
+        var cut = Render<GroceryItemDrawer>(p => p.Add(d => d.GroceryItem, TestData.GroceryItem("Milk", "", id: 1)));
+
+        Assert.Empty(cut.FindAll(".mud-input-helper-text"));
+    }
+
     // MEA-76: the drawer used to edit the listed item itself, so closing it without saving left the change showing.
     [Fact]
     public void Editing_in_the_drawer_leaves_the_listed_item_alone_until_saved()
@@ -110,19 +132,17 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
-    public void Add_field_opens_the_drawer_with_a_new_item_named_as_typed()
+    public void Add_field_with_a_name_adds_it_without_opening_the_drawer()
     {
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(TestData.GroceryItem("Eggs", id: 5)));
         var cut = RenderWithPopovers<AddGroceryItemField>();
 
         cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
         cut.Find(TestId("add-grocery-item-button")).Click();
 
-        Assert.True(Drawer.IsDrawerOpen);
-        Assert.Equal("Add item", Drawer.StateParameters.Title);
-        Assert.Equal(typeof(GroceryItemDrawer), Drawer.StateParameters.Content);
-        var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
-        Assert.Equal((0, "Eggs"), (item.Id, item.Name));
-        Assert.Null(Drawer.StateParameters.HeaderAction);
+        Assert.False(Drawer.IsDrawerOpen);
+        var item = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal((0, "Eggs", ""), (item.Id, item.Name, item.Amount));
     }
 
     [Fact]

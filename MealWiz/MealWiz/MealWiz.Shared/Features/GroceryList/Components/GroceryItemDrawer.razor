@@ -13,7 +13,7 @@
     </div>
     <div class="mw-field">
         <label class="mw-field-label" for="grocery-item-amount">@L["GroceryItem_Amount"]</label>
-        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="@L["GroceryItem_AmountPlaceholder"]" @bind-Value="_draft.Amount" Variant="Variant.Outlined"
+        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="@L["GroceryItem_AmountPlaceholder"]" @bind-Value="_draft.Amount" Variant="Variant.Outlined" HelperText="@AmountText.Describe(_draft.Amount)"
                       Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
     </div>
 </div>
@@ -23,8 +23,8 @@
 </DrawerFooter>
 
 @code {
-    /// <summary>Fits the header, the labelled fields and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
-    public const string DrawerHeight = "calc(348px + env(safe-area-inset-bottom))";
+    /// <summary>Fits the header, the labelled fields, the category chips, the amount hint and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
+    public const string DrawerHeight = "calc(372px + env(safe-area-inset-bottom))";
 
     [Parameter]
     public GroceryItem GroceryItem { get; set; } = new();

@@ -131,38 +131,52 @@ public class GroceryListPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void The_add_field_opens_the_add_drawer_with_the_typed_name_and_saves_the_item()
+    public void A_name_in_the_add_field_is_added_as_typed_without_a_drawer()
     {
-        RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();
 
-        cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
+        cut.Find(TestId("add-grocery-item-input")).Input("  Eggs ");
         cut.Find(TestId("add-grocery-item-button")).Click();
 
-        Assert.Equal("Add item", Drawer.StateParameters.Title);
-        Assert.Equal("Eggs", DrawerHost.Find(InputOf("grocery-item-name-input")).GetAttribute("value"));
-        Assert.Equal("", cut.Find(TestId("add-grocery-item-input")).GetAttribute("value") ?? "");
-        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("12");
-        DrawerHost.Find(TestId("save-grocery-item-button")).Click();
-
         cut.WaitForAssertion(() => Assert.Equal(3, ToBuy(cut).Count));
-        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
-        Assert.Equal(("Eggs", "12"), (added.Name, added.Amount));
-        Assert.Contains(GroceryList.GroceryList.Items, i => i is { Id: 99, Name: "Eggs" });
         Assert.False(Drawer.IsDrawerOpen);
+        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal(("Eggs", ""), (added.Name, added.Amount));
+        Assert.Contains(GroceryList.GroceryList.Items, i => i is { Id: 99, Name: "Eggs" });
+        Assert.Equal("", cut.Find(TestId("add-grocery-item-input")).GetAttribute("value") ?? "");
     }
 
     [Fact]
-    public void Enter_in_the_add_field_opens_the_add_drawer()
+    public void Enter_in_the_add_field_adds_the_item_as_typed()
     {
         var cut = RenderWithPopovers<GroceryListPage>();
 
         cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
         PressEnter(cut.Find(TestId("add-grocery-item-input")));
 
-        Assert.True(Drawer.IsDrawerOpen);
-        var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
-        Assert.Equal(("Eggs", 0), (item.Name, item.Id));
+        cut.WaitForAssertion(() => Assert.Single(Sent<AddGroceryItem.Command>()));
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void An_empty_add_field_opens_the_add_drawer_and_saves_the_item_from_it()
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        cut.Find(TestId("add-grocery-item-input")).Input("   ");
+        cut.Find(TestId("add-grocery-item-button")).Click();
+
+        Assert.Equal("Add item", Drawer.StateParameters.Title);
+        Assert.Empty(Sent<AddGroceryItem.Command>());
+        DrawerHost.Find(InputOf("grocery-item-name-input")).Change("Eggs");
+        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("12");
+        DrawerHost.Find(TestId("save-grocery-item-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(3, ToBuy(cut).Count));
+        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal(("Eggs", "12"), (added.Name, added.Amount));
+        Assert.False(Drawer.IsDrawerOpen);
     }
 
     [Fact]

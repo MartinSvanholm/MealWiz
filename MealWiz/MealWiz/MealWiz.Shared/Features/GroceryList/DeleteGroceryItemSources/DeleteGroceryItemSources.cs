@@ -1,4 +1,5 @@
 using FluentResults;
+using MealWiz.Shared.Amounts;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -58,7 +59,11 @@ public static class DeleteGroceryItemSources
                 async Task () => await supabaseClient.Rpc("drop_grocery_item_sources", new Dictionary<string, object>
                 {
                     ["source_ids"] = sources.Select(s => s.Id).ToList(),
-                    ["item_amounts"] = changes.Select(change => new { id = change.Id, amount = change.Amount }).ToList()
+                    ["item_amounts"] = changes.Select(change =>
+                    {
+                        var amount = ParsedAmount.Parse(change.Amount);
+                        return new { id = change.Id, amount = amount.Text, amount_quantity = amount.Quantity, amount_unit = amount.UnitCode };
+                    }).ToList()
                 }),
                 exception => exception.Message.Contains("grocery_item_not_found")
                     ? new Error(localizer["LinkedAmounts_ItemNotFound"]).CausedBy(exception)

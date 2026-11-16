@@ -114,7 +114,7 @@ TestInfrastructure/
 
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
-    `ILocalStorageService`, `IMealImportStateContainer` and `IThemeService`.
+    `ILocalStorageService`, `IMealImportStateContainer`, `IScreenWakeLock` (`WakeLock`) and `IThemeService`.
   - It uses the real Meals, GroceryList, MealPlan, PlanWeek and Drawer containers, running on the mocked mediator. `Time` is a `FakeTimeProvider` at Wednesday 2026-11-04 12:00 UTC; `PlanWeek` has a seeded `Random`.
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
@@ -200,6 +200,8 @@ they open sockets, but they don't need Supabase. `ScrapeRecipeHandlerTests` need
 **Contract tests:** `Shared/UnitTests/Models/ContractTests.cs` (here) and
 `MealWiz/tests/MealWiz.Shared.Tests/Features/MealImport/UnitTests/Models/MealImportModelTests.cs` (Shared side)
 (including `IsGuessed` and the ten error codes) compare each side's types with `MealWiz/tests/Contracts/*.json`. Both projects link these files.
+`amount_parsing.json` is the Shared side's own: `Amounts/UnitTests/ParsedAmountTests.cs` runs every case through `ParsedAmount.Parse`
+and checks that the copy embedded in `amounts.test.sql` equals the file (the SQL file is linked into the test project).
 
 Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoint_WritesFailedStatus`.
 
@@ -252,7 +254,9 @@ Storage policies live on `storage.objects`, which `supabase_storage_admin` owns:
 Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
 through the Storage API instead).
 `atomic_write_functions.test.sql` covers the database functions handlers call for a multi-step write: all or nothing, RLS
-still applied, signed-in users only.
+still applied, signed-in users only, and that they write the amount columns.
+`amounts.test.sql` pins `public.parse_amount` to the contract `amount_parsing.json` (pasted between its `-- contract:begin` and
+`-- contract:end` markers), and covers the amount checks on the three tables, who may call the function, and the backfill.
 `delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
 another user's). Each table file follows the same pattern:
 

@@ -446,6 +446,8 @@ return await Result.Try(async Task () => await supabaseClient.Rpc(
   `supabase/tests/database/grocery_remembered_names.test.sql`; the section order's `reorder_grocery_categories` and
   `apply_learned_section_order` are in `supabase/migrations/20261115170000_add_grocery_section_order.sql`, tested in
   `supabase/tests/database/grocery_list_settings.test.sql`.
+- A payload element that carries an `amount` also carries `amount_quantity` and `amount_unit` (from `ParsedAmount.Parse`),
+  and the function writes them; a missing key writes null.
 - Not converted yet: `SettleLinkedItems` in `GroceryListStateContainer` (three requests) and the meal-plus-ingredients
   saves (`SaveMealButton`, `MealImportStateContainer.SaveImportedMeal`).
 

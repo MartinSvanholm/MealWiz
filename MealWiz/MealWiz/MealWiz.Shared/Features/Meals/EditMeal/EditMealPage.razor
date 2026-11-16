@@ -16,7 +16,16 @@
                 <button type="button" class="mw-edit-meal-back" data-testid="edit-meal-back" aria-label="@L["EditMeal_Back"]" @onclick="OnBackClick">
                     <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" />
                 </button>
-                <SaveMealButton />
+                <div class="mw-edit-meal-actions">
+                    @if (_mealsStateContainer.IsEdit && _mealsStateContainer.MealToEdit.IsRegular)
+                    {
+                        <button type="button" class="mw-edit-meal-cook" data-testid="edit-meal-cook" @onclick="OpenCookingView">
+                            <MudIcon Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small" Color="Color.Inherit" />
+                            @L["CookMeal_Button"]
+                        </button>
+                    }
+                    <SaveMealButton />
+                </div>
             </div>
             <label class="mw-edit-meal-name-label" for="meal-name-input">@L["EditMeal_NameLabel"]</label>
             <input id="meal-name-input" class="mw-edit-meal-name" data-testid="meal-name-input" placeholder="@L["EditMeal_NamePlaceholder"]"
@@ -126,6 +135,10 @@
     // The hint stays in its field while the retry runs and after a failed one, so the user can try again. A successful
     // retry replaces the form's job, and the section starts over.
     private async Task OnRetryClick() => await _mealImportStateContainer.RetryWithHint(_hint);
+
+    // The saved meal in the cooking view; back returns here (?from=edit).
+    private void OpenCookingView() =>
+        _navigationManager.NavigateTo($"/meals/cook/{_mealsStateContainer.MealToEdit.Id}?from=edit");
 
     private void OnBackClick()
     {

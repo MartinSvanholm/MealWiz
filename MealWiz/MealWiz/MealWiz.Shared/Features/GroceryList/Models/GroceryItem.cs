@@ -1,4 +1,5 @@
-﻿using MealWiz.Shared.Features.Ingredients.Models;
+﻿using MealWiz.Shared.Amounts;
+using MealWiz.Shared.Features.Ingredients.Models;
 
 namespace MealWiz.Shared.Features.GroceryList.Models;
 
@@ -51,11 +52,14 @@ public class GroceryItem
 
     public GroceryItemDb MapToDb()
     {
+        var amount = ParsedAmount.Parse(Amount);
         return new ()
         {
             Id = Id,
             Name = Name,
             Amount = Amount,
+            AmountQuantity = amount.Quantity,
+            AmountUnit = amount.UnitCode,
             IsPicked = IsPicked,
             IsManual = IsManual,
             PickedAt = PickedAt,
