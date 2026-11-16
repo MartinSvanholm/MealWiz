@@ -160,6 +160,12 @@
   <data name="MealPlan_PlanWeek" xml:space="preserve">
     <value>Plan the week</value>
   </data>
+  <data name="MealPlan_EmptyWeekTitle" xml:space="preserve">
+    <value>Nothing planned yet</value>
+  </data>
+  <data name="MealPlan_EmptyWeekBody" xml:space="preserve">
+    <value>Plan the whole week in one go, then tweak any day.</value>
+  </data>
   <data name="MealPlan_Account" xml:space="preserve">
     <value>Account</value>
   </data>
