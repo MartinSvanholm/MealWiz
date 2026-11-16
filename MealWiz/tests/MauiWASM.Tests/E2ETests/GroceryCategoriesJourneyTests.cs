@@ -81,8 +81,10 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
         await Expect(Section("meat_fish").GetByTestId("grocery-item")).ToHaveCountAsync(1);
         await Expect(Section("other")).ToHaveCountAsync(0);
 
-        // A later tofu lands there too
-        await AddItemAsync("tofu");
+        // A later tofu lands there too (added as typed; "Tofu" is already a row, so count the section)
+        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "tofu");
+        await Page.GetByTestId("add-grocery-item-button").ClickAsync();
+        await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Section("meat_fish").GetByTestId("grocery-category-count")).ToHaveTextAsync("2");
 
         // Rename Meat & fish on the Categories page
