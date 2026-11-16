@@ -158,7 +158,7 @@ public class MealPlanPageTests : ComponentTestBase
         Assert.Contains("Plan the whole week in one go, then tweak any day.", section.TextContent);
         Assert.Equal("Plan the week", cut.Find(TestId("meal-plan-empty-week-plan")).TextContent.Trim());
         // First in the body, above the pick list.
-        Assert.Equal("meal-plan-empty-week", cut.Find(".mw-meal-plan-body").FirstElementChild!.GetAttribute("data-testid"));
+        Assert.Equal("meal-plan-empty-week", cut.Find(TestId("meal-plan-body")).FirstElementChild!.GetAttribute("data-testid"));
         Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading")));
     }
 
