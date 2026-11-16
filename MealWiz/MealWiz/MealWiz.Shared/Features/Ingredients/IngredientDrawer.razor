@@ -1,6 +1,7 @@
 @* The ingredient drawer's content: name and amount side by side, the "Add to grocery list" switch row, and the Save
    button in the footer. The drawer header's delete action comes from IngredientCard (HeaderAction). The fields edit a
-   copy that Save applies, so closing without saving changes nothing (MEA-77). *@
+   copy that Save applies, so closing without saving changes nothing (MEA-77). The category chips follow the typed name
+   until one is tapped; Save moves the name there (GroceryCategories). *@
 @inject IStringLocalizer<IngredientsResource> L
 
 <div class="mw-ingredient-drawer">
@@ -16,6 +17,7 @@
                           Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveAsync())" />
         </div>
     </div>
+    <CategoryChips Label="@L["IngredientDrawer_Category"]" SelectedCategoryId="_pickedCategoryId" Name="@_draft.Name" SelectedCategoryIdChanged="id => _pickedCategoryId = id" />
     <div class="mw-ingredient-drawer-switch">
         <span class="mw-ingredient-drawer-switch-icon">
             <MudIcon Icon="@Icons.Material.Outlined.ShoppingCart" Color="Color.Inherit" Size="Size.Small" />
@@ -24,7 +26,7 @@
                    Label="@L["IngredientDrawer_AddToGroceryList"]" LabelPlacement="Placement.Start" Color="Color.Primary" />
     </div>
     <DrawerFooter>
-        <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" Changes="_draft" />
+        <SaveIngredientButton @ref="_saveButton" Ingredient="Ingredient" Changes="_draft" CategoryId="_pickedCategoryId" />
     </DrawerFooter>
 </div>
 
@@ -32,8 +34,14 @@
     [Parameter]
     public Ingredient Ingredient { get; set; }
 
+    /// <summary>The drawer's height: the fields, the category chips, the switch and Save.</summary>
+    public const string DrawerHeight = "calc(45% + 76px)";
+
     private Ingredient _draft = new();
     private Ingredient? _draftOf;
+
+    // The chip the user tapped; until then the chips press the category the name resolves to.
+    private int? _pickedCategoryId;
 
     private MudTextField<string> _amountField = default!;
     private SaveIngredientButton _saveButton = default!;
@@ -45,5 +53,6 @@
 
         _draftOf = Ingredient;
         _draft = Ingredient.Clone();
+        _pickedCategoryId = null;
     }
 }

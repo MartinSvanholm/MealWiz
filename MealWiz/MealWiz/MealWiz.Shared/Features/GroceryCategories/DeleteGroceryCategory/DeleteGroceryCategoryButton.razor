@@ -1,0 +1,12 @@
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<GroceryCategoriesResource> C
+
+@* The red delete action in the category drawer's header (not shown for Other). Opens the drawer that asks which
+   category takes over its items. *@
+<MudIconButton data-testid="delete-grocery-category" aria-label="@C["GroceryCategory_DeleteAria"].Value" Icon="@Icons.Material.Outlined.Delete"
+               Class="mw-text-red" OnClick="() => DeleteGroceryCategoryDrawer.Open(_drawerStateContainer, C, Category)" />
+
+@code {
+    [Parameter]
+    public GroceryCategory Category { get; set; } = default!;
+}

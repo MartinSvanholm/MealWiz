@@ -215,8 +215,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     every handler and every component's injected services.
 - **E2E** (`E2ETests/`): drives the **published** app (Release, trimmed) in headless Chromium against local Supabase.
   It is the only level that catches broken JS interop, routing, session persistence and the meal import's polling. The journeys are
-  `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
-  `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
+  `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `GroceryCategoriesJourneyTests`
+  (E2E only, not Smoke), `MealPlanJourneyTests` and `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
   refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
   email from the Account page, and deleting the account (a Playwright route plays the Function: it deletes the user through
   the admin API and answers 204; a second route answers 403). The local GoTrue applies an email change on the first click of the new address's link
@@ -247,7 +247,7 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 ### pgTAP: `supabase/tests/database/`
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
-`grocery_item_sources`, `meal_imports`, and `meal_import_pictures` for the Storage bucket), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+`grocery_item_sources`, `grocery_categories`, `grocery_remembered_names` (also the category write functions), `grocery_list_settings` (also `picked_at` and the order functions), `meal_imports`, and `meal_import_pictures` for the Storage bucket), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
 Storage policies live on `storage.objects`, which `supabase_storage_admin` owns: never `alter table` it, only add policies.
 Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
 through the Storage API instead).

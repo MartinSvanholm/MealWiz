@@ -1,0 +1,31 @@
+.sort-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 16px 12px;
+}
+
+.sort-items-progress {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--mw-text-muted);
+}
+
+.sort-items-name {
+    font-family: var(--mw-font-heading);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--mw-text);
+    overflow-wrap: anywhere;
+}
+
+.sort-items-hint {
+    font-size: 14px;
+    color: var(--mw-text-muted);
+}
+
+.sort-items-skip {
+    width: 100%;
+}

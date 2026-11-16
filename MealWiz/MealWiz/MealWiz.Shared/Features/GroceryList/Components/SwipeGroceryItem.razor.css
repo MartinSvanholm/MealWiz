@@ -1,20 +1,36 @@
-/* A to-buy row over a red delete layer. The row's own content (checkbox, name, amount) is styled by the page. */
+/* A to-buy row over two layers: orange "move" on the left half, red "delete" on the right half. A swipe right uncovers
+   the left one, a swipe left the right one. The row's own content (checkbox, name, amount) is styled by the page. */
 .grocery-swipe {
     position: relative;
     overflow: hidden;
 }
 
+.grocery-swipe-move,
 .grocery-swipe-delete {
     position: absolute;
-    inset: 0;
+    top: 0;
+    bottom: 0;
     display: flex;
     align-items: center;
+}
+
+.grocery-swipe-move {
+    left: 0;
+    right: 50%;
+    justify-content: flex-start;
+    padding-left: 14px;
+    background-color: var(--mw-orange);
+}
+
+.grocery-swipe-delete {
+    left: 50%;
+    right: 0;
     justify-content: flex-end;
     padding-right: 14px;
     background-color: var(--mw-red);
 }
 
-.grocery-swipe-delete ::deep .grocery-swipe-delete-icon {
+.grocery-swipe ::deep .grocery-swipe-icon {
     color: var(--mw-text-on-color);
 }
 

@@ -1,0 +1,89 @@
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<GroceryCategoriesResource> C
+
+@* Add or edit a category: the name (non-empty and not another category's) and an optional emoji typed from the
+   keyboard. A default category's field starts with its name in the app language; saving keeps what was typed, so it
+   shows as typed in either language. *@
+<div class="grocery-category-fields">
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-category-name">@C["GroceryCategory_Name"]</label>
+        <MudTextField data-testid="grocery-category-name-input" InputId="grocery-category-name" @bind-Value="_name"
+                      Variant="Variant.Outlined" OnKeyDown="EnterKey.Then(SaveAsync)" />
+    </div>
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-category-emoji">@C["GroceryCategory_Emoji"]</label>
+        <MudTextField data-testid="grocery-category-emoji-input" InputId="grocery-category-emoji" @bind-Value="_emoji"
+                      Placeholder="@C["GroceryCategory_EmojiPlaceholder"]" MaxLength="16" Variant="Variant.Outlined"
+                      OnKeyDown="EnterKey.Then(SaveAsync)" />
+    </div>
+</div>
+@if (_error is not null)
+{
+    <p class="grocery-category-error" role="alert" data-testid="grocery-category-name-error">@_error</p>
+}
+<DrawerFooter>
+    <MudButton data-testid="save-grocery-category" OnClick="SaveAsync" Disabled="_saving" Color="Color.Primary" Variant="Variant.Filled">
+        @C["GroceryCategory_Save"]
+    </MudButton>
+</DrawerFooter>
+
+@code {
+    /// <summary>Fits the header, the two fields, an error line and Save.</summary>
+    public const string DrawerHeight = "calc(300px + env(safe-area-inset-bottom))";
+
+    /// <summary>The category to edit; null adds one.</summary>
+    [Parameter]
+    public GroceryCategory? Category { get; set; }
+
+    private string? _name;
+    private string? _emoji;
+    private string? _error;
+    private bool _saving;
+    private GroceryCategory? _fieldsOf;
+    private bool _opened;
+
+    /// <summary>Opens the drawer to add (<paramref name="category"/> null) or edit a category.</summary>
+    public static void Open(IDrawerStateContainer drawer, string title, GroceryCategory? category, RenderFragment? headerAction = null) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(GroceryCategoryDrawer),
+            Title = title,
+            Height = DrawerHeight,
+            HeaderAction = headerAction,
+            ContentParameters = new() { { nameof(Category), category! } },
+        });
+
+    // Fill the fields only when the drawer gets another category, so a re-render keeps what was typed.
+    protected override void OnParametersSet()
+    {
+        if (_opened && ReferenceEquals(_fieldsOf, Category)) return;
+
+        _opened = true;
+        _fieldsOf = Category;
+        _name = Category?.DisplayNameWithoutEmoji(C);
+        _emoji = Category?.Emoji;
+        _error = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_saving) return;
+
+        _error = _categories.ValidateName(_name, Category?.Id, C);
+        if (_error is not null) return;
+
+        _saving = true;
+        try
+        {
+            var saved = Category is null
+                ? await _categories.AddCategory(_name!, _emoji)
+                : await _categories.UpdateCategory(Category.Id, _name!, _emoji);
+            if (saved) _drawerStateContainer.CloseDrawer();
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

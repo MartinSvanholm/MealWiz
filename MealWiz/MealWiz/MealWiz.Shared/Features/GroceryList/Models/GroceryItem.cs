@@ -18,6 +18,7 @@ public class GroceryItem
         Amount = groceryItemDb.Amount ?? string.Empty;
         IsPicked = groceryItemDb.IsPicked;
         IsManual = groceryItemDb.IsManual;
+        PickedAt = groceryItemDb.PickedAt;
         CreatedBy = groceryItemDb.CreatedBy;
         CreatedAt = groceryItemDb.CreatedAt;
         UpdatedAt = groceryItemDb.UpdatedAt;
@@ -39,6 +40,8 @@ public class GroceryItem
     public bool IsPicked { get; set; }
     /// <summary>True for items typed by hand and items from before source links; false for items added from the meal plan.</summary>
     public bool IsManual { get; set; }
+    /// <summary>When the item was ticked off; null while it is to buy. Learning the section order reads it.</summary>
+    public DateTime? PickedAt { get; set; }
     public Guid CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -55,6 +58,7 @@ public class GroceryItem
             Amount = Amount,
             IsPicked = IsPicked,
             IsManual = IsManual,
+            PickedAt = PickedAt,
             CreatedBy = CreatedBy,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt

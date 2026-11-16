@@ -2,6 +2,8 @@ using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using FluentResults;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
@@ -26,6 +28,10 @@ public class GroceryListPageTests : ComponentTestBase
     public GroceryListPageTests()
     {
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread }));
+        // Dairy & eggs before Bakery, so Milk is the first row, as these tests expect; sections have their own tests.
+        var categories = TestData.DefaultGroceryCategories();
+        categories.Single(c => c.DefaultKey == DefaultCategoryKey.DairyEggs).Position = 0;
+        SetupSend<GetGroceryCategories.Query, Result<List<GroceryCategory>>>(Result.Ok(categories.OrderBy(c => c.Position).ToList()));
         // AddGroceryItem returns the saved row: the item with its new id
         Mediator
             .Setup(m => m.Send(It.IsAny<AddGroceryItem.Command>(), It.IsAny<CancellationToken>()))
@@ -53,7 +59,6 @@ public class GroceryListPageTests : ComponentTestBase
         Assert.Equal(["Milk", "Bread"], ToBuy(cut));
         var amounts = cut.FindAll(TestId("grocery-item-amount")).Select(a => a.TextContent.Trim()).ToList();
         Assert.Equal(["1 l"], amounts);
-        Assert.Contains("To buy · 2", cut.Find(TestId("grocery-to-buy-heading")).TextContent);
         Assert.Empty(cut.FindAll(TestId("grocery-basket")));
     }
 
@@ -237,9 +242,8 @@ public class GroceryListPageTests : ComponentTestBase
 
     [Theory]
     [InlineData(-40, 0)]   // too short
-    [InlineData(120, 0)]   // to the right
     [InlineData(-30, 120)] // mostly vertical: the page scrolls
-    public void A_short_right_or_vertical_swipe_does_not_delete(double dx, double dy)
+    public void A_short_or_vertical_swipe_does_not_delete(double dx, double dy)
     {
         RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();

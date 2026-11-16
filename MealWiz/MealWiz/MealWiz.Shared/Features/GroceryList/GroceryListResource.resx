@@ -158,10 +158,6 @@
   <data name="GroceryList_EmptyHint" xml:space="preserve">
     <value>Add an item above, or take the week's ingredients from your meal plan.</value>
   </data>
-  <data name="GroceryList_ToBuy" xml:space="preserve">
-    <value>To buy · {0}</value>
-    <comment>Section heading; {0} the number of items</comment>
-  </data>
   <data name="GroceryList_InBasket" xml:space="preserve">
     <value>In the basket · {0}</value>
     <comment>Section heading; {0} the number of items</comment>
@@ -247,5 +243,42 @@
   <data name="PlanIngredients_AmountAria" xml:space="preserve">
     <value>Amount for {0}</value>
     <comment>{0} the ingredient name</comment>
+  </data>
+  <data name="GroceryItem_Category" xml:space="preserve">
+    <value>Category</value>
+    <comment>Label above the category chips in the grocery item drawer</comment>
+  </data>
+  <data name="GroceryList_Sort" xml:space="preserve">
+    <value>Sort</value>
+    <comment>Button on the Other section's heading that walks through its items</comment>
+  </data>
+  <data name="GroceryList_SortAria" xml:space="preserve">
+    <value>Sort the items in {0}</value>
+    <comment>{0} is the Other section's name</comment>
+  </data>
+  <data name="SortItems_Title" xml:space="preserve">
+    <value>Sort items</value>
+  </data>
+  <data name="SortItems_Progress" xml:space="preserve">
+    <value>{0} of {1}</value>
+    <comment>Which item of how many</comment>
+  </data>
+  <data name="SortItems_Hint" xml:space="preserve">
+    <value>Which category is it?</value>
+  </data>
+  <data name="SortItems_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="MoveItem_Title" xml:space="preserve">
+    <value>Move {0}</value>
+    <comment>Title of the drawer a swipe right opens; {0} is the item's name</comment>
+  </data>
+  <data name="MoveItem_Hint" xml:space="preserve">
+    <value>Pick a category. Every {0} moves there, on the list and in your meals.</value>
+    <comment>{0} is the item's name</comment>
+  </data>
+  <data name="GroceryList_CategoriesAria" xml:space="preserve">
+    <value>Categories</value>
+    <comment>Header button that opens the Categories page</comment>
   </data>
 </root>

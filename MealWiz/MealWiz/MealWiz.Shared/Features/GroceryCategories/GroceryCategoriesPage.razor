@@ -1,0 +1,152 @@
+@page "/grocerylist/categories"
+@attribute [Authorize]
+@using MealWiz.Shared.Features.GroceryCategories.Components
+@using MealWiz.Shared.Features.GroceryCategories.DeleteGroceryCategory
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+@inject IStringLocalizer<GroceryCategoriesResource> C
+@implements IDisposable
+
+@* The user's grocery categories in list order: tap one to rename it or change its emoji, or add one (it goes just
+   above Other). Opened from the grocery list header. *@
+<div class="mw-page grocery-categories-page" data-testid="grocery-categories-page">
+    <SubPageHeader Label="@C["GroceryCategories_Label"]" Title="@C["GroceryCategories_Title"]" BackHref="/grocerylist"
+                   BackTestId="grocery-categories-back" />
+
+    <div class="grocery-categories-body">
+        <p class="grocery-categories-hint">@C["GroceryCategories_Hint"]</p>
+        @* Drag a row by its handle to reorder (not Other, which stays last). Plain pointer events, so touch and mouse
+           both work: the handle starts the drag, the list follows the pointer, and letting go (or leaving the list)
+           drops it. A drop that changes the order saves it and stops learning. *@
+        <ul class="grocery-categories-list" data-testid="grocery-categories-list" data-dragging="@(_drag is null ? "false" : "true")"
+            @onpointermove="OnPointerMove" @onpointerup="OnPointerUp" @onpointerleave="OnPointerUp" @onpointercancel="OnPointerCancel">
+            @foreach (var category in _categories.Categories)
+            {
+                var dragged = _drag?.CategoryId == category.Id;
+                <li @key="category.Id" class="@(dragged ? "grocery-categories-item is-dragging" : "grocery-categories-item")"
+                    style="@(dragged ? $"transform: translateY({_drag!.Offset.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture)}px)" : null)">
+                    @if (!category.IsOther)
+                    {
+                        <span class="grocery-categories-handle" data-testid="grocery-category-drag-handle" role="img"
+                              aria-label="@C["GroceryCategories_DragAria", category.DisplayName(C)]"
+                              @onpointerdown="e => OnPointerDown(e, category)">
+                            <MudIcon Icon="@Icons.Material.Rounded.DragIndicator" />
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="grocery-categories-handle-space" aria-hidden="true"></span>
+                    }
+                    <button type="button" class="grocery-categories-row" data-testid="grocery-category-row" data-category="@category.DataKey"
+                            aria-label="@C["GroceryCategories_EditAria", category.DisplayName(C)]" @onclick="() => Edit(category)">
+                        <span class="grocery-categories-row-name" data-testid="grocery-category-row-name">@category.DisplayName(C)</span>
+                        <MudIcon Icon="@Icons.Material.Rounded.ChevronRight" Class="grocery-categories-row-chevron" />
+                    </button>
+                </li>
+            }
+        </ul>
+        <button type="button" class="grocery-categories-add" data-testid="add-grocery-category" @onclick="Add">
+            <MudIcon Icon="@Icons.Material.Rounded.Add" Size="Size.Small" />
+            @C["GroceryCategories_Add"]
+        </button>
+        @* The order follows the shopping walk until the first drag; this hands it back to learning. *@
+        <div class="grocery-categories-order">
+            <div class="grocery-categories-order-text">
+                <span class="grocery-categories-order-label">@C["GroceryCategories_FollowShopping"]</span>
+                <span class="grocery-categories-order-hint">@C["GroceryCategories_FollowShoppingHint"]</span>
+            </div>
+            <MudSwitch T="bool" data-testid="follow-shopping-switch" Color="Color.Primary"
+                       Value="@(_categories.Settings.OrderMode == SectionOrderMode.Learned)" ValueChanged="SetFollowShoppingAsync"
+                       aria-label="@C["GroceryCategories_FollowShopping"]" />
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>A row's height in pixels (52px plus its 1px divider); a drag moves one row per this many pixels.</summary>
+    public const double RowHeight = 53;
+
+    private sealed record Drag(int CategoryId, long PointerId, double StartY, int StartIndex)
+    {
+        public double Offset { get; set; }
+    }
+
+    private Drag? _drag;
+
+    // Pointer events fire on every hover, so only re-render when a drag actually moves.
+    private bool _skipRender;
+
+    protected override bool ShouldRender()
+    {
+        var render = !_skipRender;
+        _skipRender = false;
+        return render;
+    }
+
+    private void OnPointerDown(PointerEventArgs e, GroceryCategory category)
+    {
+        if (_drag is not null || (e.PointerType == "mouse" && e.Button != 0)) return;
+
+        var index = _categories.Categories.ToList().FindIndex(c => c.Id == category.Id);
+        _drag = new Drag(category.Id, e.PointerId, e.ClientY, index);
+    }
+
+    private void OnPointerMove(PointerEventArgs e)
+    {
+        if (_drag is null || _drag.PointerId != e.PointerId)
+        {
+            _skipRender = true;
+            return;
+        }
+
+        _drag.Offset = e.ClientY - _drag.StartY;
+    }
+
+    private async Task OnPointerUp(PointerEventArgs e)
+    {
+        if (_drag is not { } drag || drag.PointerId != e.PointerId)
+        {
+            _skipRender = true;
+            return;
+        }
+
+        _drag = null;
+        var order = _categories.Categories.Select(c => c.Id).ToList();
+        var lastMovable = _categories.Categories.Count(c => !c.IsOther) - 1;
+        var target = Math.Clamp(drag.StartIndex + (int)Math.Round((e.ClientY - drag.StartY) / RowHeight), 0, lastMovable);
+        if (target == drag.StartIndex) return;
+
+        order.RemoveAt(drag.StartIndex);
+        order.Insert(target, drag.CategoryId);
+        await _categories.Reorder(order);
+    }
+
+    private void OnPointerCancel(PointerEventArgs e)
+    {
+        if (_drag?.PointerId == e.PointerId) _drag = null;
+    }
+
+    private Task SetFollowShoppingAsync(bool follow) =>
+        _categories.SetOrderMode(follow ? SectionOrderMode.Learned : SectionOrderMode.Manual);
+
+    private void Add() => GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_AddTitle"], null);
+
+    // Other can be renamed but not deleted, so its drawer has no delete action.
+    private void Edit(GroceryCategory category) =>
+        GroceryCategoryDrawer.Open(_drawerStateContainer, C["GroceryCategory_EditTitle"], category,
+            category.IsOther ? null : @<DeleteGroceryCategoryButton Category="category" />);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories.OnStateChanged += StateHasChanged;
+        _categories.CurrentSnackbar = _snackbar;
+        await _categories.LoadCategories();
+    }
+
+    public void Dispose()
+    {
+        _categories.OnStateChanged -= StateHasChanged;
+        _drawerStateContainer.CloseDrawer();
+    }
+}

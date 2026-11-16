@@ -46,7 +46,7 @@ public class AddIngredientRowTests : ComponentTestBase
         DrawerHost.WaitForAssertion(() => Assert.Equal("Eggs", DrawerHost.Find(InputOf("ingredient-name-input")).GetAttribute("value")));
         Assert.Equal("3", DrawerHost.Find(InputOf("ingredient-amount-input")).GetAttribute("value"));
         Assert.Empty(Meals.MealToEdit.Ingredients);
-        Assert.Empty(SentRequests);
+        Assert.Empty(SentRequestsBesidesCategoryLoads);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class AddIngredientRowTests : ComponentTestBase
         Assert.Equal("Eggs", eggs.Name);
         Assert.Equal("3", eggs.Amount);
         Assert.True(eggs.ShowOnGroceryList);
-        Assert.Empty(SentRequests);
+        Assert.Empty(SentRequestsBesidesCategoryLoads);
         Assert.False(Drawer.IsDrawerOpen);
 
         // The row was cleared when the drawer opened: the next add starts empty.

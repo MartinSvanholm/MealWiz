@@ -1,0 +1,68 @@
+@implements IDisposable
+@inject IGroceryCategoriesStateContainer _categories
+@inject IStringLocalizer<GroceryCategoriesResource> C
+@inject ISnackbar _snackbar
+
+@* The user's categories as one horizontally scrolling row of chips; the selected one is pressed. Used by the grocery
+   item and ingredient drawers, the Sort flow and the delete drawer. Loads the categories if no page has yet (Edit
+   meal). *@
+<div class="category-chips-field">
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="mw-field-label category-chips-label">@Label</span>
+    }
+    <div class="category-chips" data-testid="category-chips" role="group" aria-label="@(Label ?? C["CategoryChips_Aria"])">
+        @foreach (var category in Shown)
+        {
+            var selected = category.Id == PressedId;
+            <button type="button" class="@(selected ? "category-chip is-selected" : "category-chip")" data-testid="category-chip"
+                    data-category="@category.DataKey" aria-pressed="@(selected ? "true" : "false")" @key="category.Id"
+                    @onclick="() => SelectAsync(category.Id)">
+                @category.DisplayName(C)
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The chip the user picked; null presses the category <see cref="Name"/> resolves to, if any.</summary>
+    [Parameter]
+    public int? SelectedCategoryId { get; set; }
+
+    /// <summary>The grocery name whose category is pressed until the user picks a chip.</summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedCategoryIdChanged { get; set; }
+
+    /// <summary>Leaves out Other (the Sort flow places items out of it).</summary>
+    [Parameter]
+    public bool ExcludeOther { get; set; }
+
+    /// <summary>Leaves out one category (the delete drawer leaves out the one being deleted).</summary>
+    [Parameter]
+    public int? ExcludeCategoryId { get; set; }
+
+    /// <summary>A visible label above the row; also the group's accessible name.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    private IEnumerable<GroceryCategory> Shown => _categories.Categories
+        .Where(c => !(ExcludeOther && c.IsOther) && c.Id != ExcludeCategoryId);
+
+    private int? PressedId => SelectedCategoryId ?? (Name is null ? null : _categories.CategoryFor(Name)?.Id);
+
+    private Task SelectAsync(int categoryId) => SelectedCategoryIdChanged.InvokeAsync(categoryId);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories.OnStateChanged += OnCategoriesChanged;
+        _categories.CurrentSnackbar ??= _snackbar;
+        if (_categories.Categories.Count == 0) await _categories.LoadCategories();
+    }
+
+    private void OnCategoriesChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => _categories.OnStateChanged -= OnCategoriesChanged;
+}

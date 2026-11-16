@@ -4,6 +4,11 @@ using Bunit.TestDoubles;
 using FluentResults;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Features.Account.GetPendingEmailChange;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryListSettings;
+using MealWiz.Shared.Features.GroceryCategories.GetRememberedGroceryNames;
+using MealWiz.Shared.Features.GroceryCategories.Models;
+using MealWiz.Shared.Features.GroceryCategories.State;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItemSources;
 using MealWiz.Shared.Features.GroceryList.GetAllGroceryItems;
 using MealWiz.Shared.Features.GroceryList.GetGroceryItemSources;
@@ -38,8 +43,8 @@ using Xunit;
 namespace MealWiz.Shared.Tests.TestInfrastructure;
 
 /// <summary>
-/// bUnit context for MealWiz.Shared components. MediatR is mocked; the Meals, GroceryList, MealPlan and Drawer
-/// state containers are the real in-memory ones running on that mock, so a test can assert the actual request a
+/// bUnit context for MealWiz.Shared components. MediatR is mocked; the Meals, GroceryList, GroceryCategories, MealPlan
+/// and Drawer state containers are the real in-memory ones running on that mock, so a test can assert the actual request a
 /// click ends in. The MealImport container is mocked (it drives timers and polling; its own unit tests cover it).
 /// Elements are found by <c>data-testid</c>, never by MudBlazor markup.
 /// </summary>
@@ -61,6 +66,7 @@ public abstract class ComponentTestBase : BunitContext
     protected DrawerStateContainer Drawer { get; } = new();
     protected MealsStateContainer Meals { get; }
     protected GroceryListStateContainer GroceryList { get; }
+    protected GroceryCategoriesStateContainer GroceryCategories { get; }
     protected MealPlanStateContainer MealPlan { get; }
 
     /// <summary>The real Plan week container, on the mocked MediatR and <see cref="Time"/>, with a seeded Random.</summary>
@@ -96,7 +102,8 @@ public abstract class ComponentTestBase : BunitContext
             Services.AddSingleton<IStringLocalizerFactory, EchoStringLocalizerFactory>();
 
         Meals = new MealsStateContainer(Mediator.Object);
-        GroceryList = new GroceryListStateContainer(Mediator.Object);
+        GroceryList = new GroceryListStateContainer(Mediator.Object, Time);
+        GroceryCategories = new GroceryCategoriesStateContainer(Mediator.Object, LocalStorage.Object, Time);
         MealPlan = new MealPlanStateContainer(Mediator.Object, LocalStorage.Object);
 
         Services.AddSingleton(Mediator.Object);
@@ -109,6 +116,7 @@ public abstract class ComponentTestBase : BunitContext
         Services.AddSingleton<IDrawerStateContainer>(Drawer);
         Services.AddSingleton<IMealsStateContainer>(Meals);
         Services.AddSingleton<IGroceryListStateContainer>(GroceryList);
+        Services.AddSingleton<IGroceryCategoriesStateContainer>(GroceryCategories);
         Services.AddSingleton<IMealPlanStateContainer>(MealPlan);
         Time.SetLocalTimeZone(TimeZoneInfo.Utc);
         Services.AddSingleton<TimeProvider>(Time);
@@ -131,12 +139,16 @@ public abstract class ComponentTestBase : BunitContext
         // Pages set CurrentSnackbar themselves; leaf components (buttons, drawers) rely on a page having done it.
         Meals.CurrentSnackbar = Snackbar;
         GroceryList.CurrentSnackbar = Snackbar;
+        GroceryCategories.CurrentSnackbar = Snackbar;
         MealPlan.CurrentSnackbar = Snackbar;
 
         // Empty-but-successful defaults for the loads that pages and containers fire on init.
         SetupSend<GetPendingEmailChange.Query, Result<string?>>(Result.Ok<string?>(null));
         SetupSend<GetAllMeals.Query, Result<List<Meal>>>(Result.Ok(new List<Meal>()));
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem>()));
+        SetupSend<GetGroceryCategories.Query, Result<List<GroceryCategory>>>(Result.Ok(TestData.DefaultGroceryCategories()));
+        SetupSend<GetRememberedGroceryNames.Query, Result<List<RememberedGroceryName>>>(Result.Ok(new List<RememberedGroceryName>()));
+        SetupSend<GetGroceryListSettings.Query, Result<GroceryListSettings>>(Result.Ok(new GroceryListSettings()));
         SetupSend<GetGroceryItemSources.Query, Result<List<GroceryItemSource>>>(Result.Ok(new List<GroceryItemSource>()));
         SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(null));
         SetupSend<GetMealPlannedDates.Query, Result<List<PlannedMealDate>>>(Result.Ok(new List<PlannedMealDate>()));
@@ -179,6 +191,13 @@ public abstract class ComponentTestBase : BunitContext
     /// <summary>Every request sent through the mocked mediator, in order.</summary>
     protected IEnumerable<object> SentRequests =>
         Mediator.Invocations.Where(i => i.Method.Name == nameof(IMediator.Send)).Select(i => i.Arguments[0]);
+
+    /// <summary>
+    /// <see cref="SentRequests"/> without the category loads the category chips start (a drawer with chips on a page
+    /// that hasn't loaded them, such as Edit meal), for tests that check nothing is saved.
+    /// </summary>
+    protected IEnumerable<object> SentRequestsBesidesCategoryLoads =>
+        SentRequests.Where(r => r is not GetGroceryCategories.Query and not GetRememberedGroceryNames.Query and not GetGroceryListSettings.Query);
 
     /// <summary>The requests of type <typeparamref name="TRequest"/> sent through the mocked mediator.</summary>
     protected List<TRequest> Sent<TRequest>() => SentRequests.OfType<TRequest>().ToList();
