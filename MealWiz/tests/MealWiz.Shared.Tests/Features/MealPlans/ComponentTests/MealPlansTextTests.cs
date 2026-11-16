@@ -29,6 +29,9 @@ public class MealPlansTextTests() : ComponentTestBase(echoResourceKeys: true)
         Assert.Equal("[WeekStrip_Aria]", cut.Find("nav.mw-week-strip").GetAttribute("aria-label"));
         Assert.Equal("[PickMeal_Heading]", cut.Find(TestId("meal-selection-heading")).TextContent.Trim());
         Assert.Equal("[PickMeal_Hint]", cut.Find(TestId("meal-selection-hint")).TextContent.Trim());
+        Assert.Equal("[MealPlan_EmptyWeekTitle]", cut.Find(TestId("meal-plan-empty-week-title")).TextContent.Trim());
+        Assert.Equal("[MealPlan_EmptyWeekBody]", cut.Find(TestId("meal-plan-empty-week-body")).TextContent.Trim());
+        Assert.Equal("[MealPlan_PlanWeek]", cut.Find(TestId("meal-plan-empty-week-plan")).TextContent.Trim());
     }
 
     [Fact]

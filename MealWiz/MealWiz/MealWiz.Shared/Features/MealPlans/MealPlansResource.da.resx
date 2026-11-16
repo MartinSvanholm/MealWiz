@@ -132,6 +132,12 @@
   <data name="MealPlan_PlanWeek" xml:space="preserve">
     <value>Planlæg ugen</value>
   </data>
+  <data name="MealPlan_EmptyWeekTitle" xml:space="preserve">
+    <value>Intet planlagt endnu</value>
+  </data>
+  <data name="MealPlan_EmptyWeekBody" xml:space="preserve">
+    <value>Planlæg hele ugen på én gang, og ret de dage du vil.</value>
+  </data>
   <data name="MealPlan_Account" xml:space="preserve">
     <value>Konto</value>
   </data>

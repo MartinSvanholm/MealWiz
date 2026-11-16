@@ -91,3 +91,28 @@
     overflow-y: auto;
     padding: 6px 16px var(--mw-nav-clearance);
 }
+
+/* MEA-157: the Plan the week section on an empty week, first in the body. */
+.mw-meal-plan-empty-week {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 16px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-m);
+    background-color: var(--mw-surface);
+}
+
+.mw-meal-plan-empty-week-title {
+    margin: 0;
+    font-family: var(--mw-font-heading);
+    font-size: 18px;
+    color: var(--mw-text);
+}
+
+.mw-meal-plan-empty-week-body {
+    margin: 0 0 6px;
+    color: var(--mw-text-muted);
+}

@@ -159,7 +159,9 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   `ScreenHeader` with the label "Week NN · Month" and a title relative to this week ("This week", "Next week",
   "In 3 weeks"; `meal-plan-week-title`). On another week the title is a button back to this week
   (`meal-plan-current-week`). Header actions: `week-prev`, `week-next`, `plan-week-button` (opens `/plan-week?week=` on the viewed week) and
-  the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then the selected
+  the avatar with the user's initial (`account-button`, opens `/account`). Below it the day strip, then, on a loaded
+  week from this week on with no planned meal, the "Nothing planned yet" section first in the body
+  (`meal-plan-empty-week`, its button `meal-plan-empty-week-plan` opens Plan week like `plan-week-button`), then the selected
   day's meal (`Features/Meals/MealDisplayComponent.razor`, with `RemoveMealButton` in its `HeroAction` corner) or the
   pick list for an empty day or while swapping the day's meal. After Plan week's Save it asks once whether to add the
   saved week's ingredients to the grocery list (`AddWeekIngredientsPromptDrawer`, opened from `OnAfterRender` when
