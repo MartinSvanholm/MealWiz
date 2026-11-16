@@ -57,7 +57,18 @@
         <MealPlanWeekOverview />
     </div>
 
-    <div class="mw-meal-plan-body">
+    <div class="mw-meal-plan-body" data-testid="meal-plan-body">
+        @if (ShowEmptyWeekSection)
+        {
+            <section class="mw-meal-plan-empty-week" data-testid="meal-plan-empty-week">
+                <h2 class="mw-meal-plan-empty-week-title" data-testid="meal-plan-empty-week-title">@L["MealPlan_EmptyWeekTitle"]</h2>
+                <p class="mw-meal-plan-empty-week-body" data-testid="meal-plan-empty-week-body">@L["MealPlan_EmptyWeekBody"]</p>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" data-testid="meal-plan-empty-week-plan"
+                           StartIcon="@Icons.Material.Outlined.CalendarMonth"
+                           OnClick="NavigateToPlanWeek">@L["MealPlan_PlanWeek"]</MudButton>
+            </section>
+        }
+
         @if (_mealPlanStateContainer.IsLoadingWeek)
         {
             <MudProgressLinear Indeterminate Color="@Color.Primary" Rounded />
@@ -106,6 +117,12 @@
     }
 
     private DateTime WeekStart => _mealPlanStateContainer.SelectedWeekStart;
+
+    // MEA-157: an empty week from this week on leads to Plan week (which opens a past week on this week instead).
+    private bool ShowEmptyWeekSection =>
+        !_mealPlanStateContainer.IsLoadingWeek
+        && WeekStart >= DateTime.Now.StartOfWeek().Date
+        && !Enumerable.Range(0, 7).Any(day => _mealPlanStateContainer.DateHasMeal(WeekStart.AddDays(day)));
 
     private string WeekLabel => WeekStart.ToWeekLabel();
 

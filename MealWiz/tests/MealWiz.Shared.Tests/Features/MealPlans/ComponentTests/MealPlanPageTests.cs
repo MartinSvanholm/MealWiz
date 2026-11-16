@@ -146,6 +146,57 @@ public class MealPlanPageTests : ComponentTestBase
         Assert.Equal("account", CurrentPath);
     }
 
+    // ---- The Plan the week section on an empty week (MEA-157) ----
+
+    [Fact]
+    public void An_empty_week_shows_the_plan_the_week_section_above_the_pick_list()
+    {
+        var cut = Render<MealPlanPage>();
+
+        var section = cut.Find(TestId("meal-plan-empty-week"));
+        Assert.Contains("Nothing planned yet", section.TextContent);
+        Assert.Contains("Plan the whole week in one go, then tweak any day.", section.TextContent);
+        Assert.Equal("Plan the week", cut.Find(TestId("meal-plan-empty-week-plan")).TextContent.Trim());
+        // First in the body, above the pick list.
+        Assert.Equal("meal-plan-empty-week", cut.Find(TestId("meal-plan-body")).FirstElementChild!.GetAttribute("data-testid"));
+        Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading")));
+    }
+
+    [Fact]
+    public void An_empty_later_week_shows_the_section_and_its_button_plans_that_week()
+    {
+        var cut = Render<MealPlanPage>();
+        cut.Find(TestId("week-next")).Click();
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("meal-plan-empty-week-plan"))));
+
+        cut.Find(TestId("meal-plan-empty-week-plan")).Click();
+
+        Assert.EndsWith($"plan-week?week={ThisMonday.AddDays(7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}", Navigation.Uri);
+    }
+
+    [Fact]
+    public void A_week_with_a_meal_on_another_day_has_no_section()
+    {
+        var otherDay = DateTime.Today == ThisMonday ? ThisMonday.AddDays(1) : ThisMonday;
+        SetupSend<GetMealPlanByDate.Query, Result<MealPlan?>>(Result.Ok<MealPlan?>(TestData.MealPlanWith(otherDay, TestData.Meal("Tacos", id: 8))));
+
+        var cut = Render<MealPlanPage>();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading"))));
+        Assert.Empty(cut.FindAll(TestId("meal-plan-empty-week")));
+    }
+
+    [Fact]
+    public void An_empty_past_week_has_no_section()
+    {
+        var cut = Render<MealPlanPage>();
+        cut.Find(TestId("week-prev")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(ThisMonday.AddDays(-7), MealPlan.SelectedWeekStart));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(TestId("meal-selection-heading"))));
+        Assert.Empty(cut.FindAll(TestId("meal-plan-empty-week")));
+    }
+
     // ---- The prompt after Plan week's Save (MEA-83) ----
 
     private void PlanTacosThisWeek(bool withIngredient = true) =>
