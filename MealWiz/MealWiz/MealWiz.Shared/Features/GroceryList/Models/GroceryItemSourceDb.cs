@@ -22,6 +22,12 @@ public class GroceryItemSourceDb : BaseModel
     [Column("amount")]
     public string Amount { get; set; } = string.Empty;
 
+    [Column("amount_quantity")]
+    public decimal? AmountQuantity { get; set; }
+
+    [Column("amount_unit")]
+    public string? AmountUnit { get; set; }
+
     [Column("created_by")]
     public Guid CreatedBy { get; set; }
 

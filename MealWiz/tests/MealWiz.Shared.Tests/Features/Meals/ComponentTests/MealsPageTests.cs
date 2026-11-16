@@ -286,4 +286,17 @@ public class MealsPageTests : ComponentTestBase
         Assert.Empty(cut.FindAll(TestId("meal-list-item")));
         Assert.Equal("0 meals", cut.Find(TestId("screen-header-label")).TextContent.Trim());
     }
+
+    [Fact]
+    public void Cards_have_no_cook_button_and_tapping_a_card_edits()
+    {
+        var cut = RenderWithPopovers<MealsPage>();
+
+        // The cooking view opens from Edit meal and the plan, not from the grid.
+        Assert.Empty(cut.FindAll(TestId("meal-card-cook")));
+
+        cut.FindAll(TestId("meal-list-item"))[1].Click();
+        Assert.Equal("meals/edit", CurrentPath);
+        Assert.Same(_soup, Meals.MealToEdit);
+    }
 }

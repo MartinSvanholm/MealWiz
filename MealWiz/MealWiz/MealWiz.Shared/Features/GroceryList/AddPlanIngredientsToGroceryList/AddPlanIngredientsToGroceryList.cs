@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentResults;
+using MealWiz.Shared.Amounts;
 using MealWiz.Shared.Features.GroceryList.Models;
 using MealWiz.Shared.Helpers;
 using MediatR;
@@ -52,7 +53,11 @@ public static class AddPlanIngredientsToGroceryList
             var existingItems = entries
                 .Where(e => e.ExistingGroceryItemId != null)
                 .GroupBy(e => e.ExistingGroceryItemId!.Value)
-                .Select(group => new { id = group.Key, amount = group.First().FinalAmount })
+                .Select(group =>
+                {
+                    var amount = ParsedAmount.Parse(group.First().FinalAmount);
+                    return new { id = group.Key, amount = amount.Text, amount_quantity = amount.Quantity, amount_unit = amount.UnitCode };
+                })
                 .ToList();
 
             var newGroups = entries
@@ -60,20 +65,30 @@ public static class AddPlanIngredientsToGroceryList
                 .GroupBy(e => e.Ingredient.Name.Trim(), StringComparer.OrdinalIgnoreCase)
                 .ToList();
             var newItems = newGroups
-                .Select((group, key) => new { key, name = group.Key, amount = group.First().FinalAmount })
+                .Select((group, key) =>
+                {
+                    var amount = ParsedAmount.Parse(group.First().FinalAmount);
+                    return new { key, name = group.Key, amount = amount.Text, amount_quantity = amount.Quantity, amount_unit = amount.UnitCode };
+                })
                 .ToList();
 
             var newItemKeyOfEntry = new Dictionary<PlanIngredientToAdd, int>();
             for (var key = 0; key < newGroups.Count; key++)
                 foreach (var entry in newGroups[key]) newItemKeyOfEntry[entry] = key;
 
-            var sources = entries.ConvertAll(entry => new
+            var sources = entries.ConvertAll(entry =>
             {
-                item_id = entry.ExistingGroceryItemId,
-                new_item_key = entry.ExistingGroceryItemId == null ? newItemKeyOfEntry[entry] : (int?)null,
-                planned_meal_id = entry.PlannedMealId,
-                ingredient_id = entry.Ingredient.Id,
-                amount = entry.Ingredient.Amount ?? string.Empty
+                var amount = ParsedAmount.Parse(entry.Ingredient.Amount);
+                return new
+                {
+                    item_id = entry.ExistingGroceryItemId,
+                    new_item_key = entry.ExistingGroceryItemId == null ? newItemKeyOfEntry[entry] : (int?)null,
+                    planned_meal_id = entry.PlannedMealId,
+                    ingredient_id = entry.Ingredient.Id,
+                    amount = amount.Text,
+                    amount_quantity = amount.Quantity,
+                    amount_unit = amount.UnitCode
+                };
             });
 
             // One call, one transaction: the amounts, the new items and every link are written together or not at all.

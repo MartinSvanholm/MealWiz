@@ -2,6 +2,8 @@ using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using FluentResults;
+using MealWiz.Shared.Features.GroceryCategories.GetGroceryCategories;
+using MealWiz.Shared.Features.GroceryCategories.Models;
 using MealWiz.Shared.Features.GroceryList;
 using MealWiz.Shared.Features.GroceryList.AddGroceryItem;
 using MealWiz.Shared.Features.GroceryList.DeleteGroceryItems;
@@ -26,6 +28,10 @@ public class GroceryListPageTests : ComponentTestBase
     public GroceryListPageTests()
     {
         SetupSend<GetAllGroceryItems.Query, Result<List<GroceryItem>>>(Result.Ok(new List<GroceryItem> { _milk, _bread }));
+        // Dairy & eggs before Bakery, so Milk is the first row, as these tests expect; sections have their own tests.
+        var categories = TestData.DefaultGroceryCategories();
+        categories.Single(c => c.DefaultKey == DefaultCategoryKey.DairyEggs).Position = 0;
+        SetupSend<GetGroceryCategories.Query, Result<List<GroceryCategory>>>(Result.Ok(categories.OrderBy(c => c.Position).ToList()));
         // AddGroceryItem returns the saved row: the item with its new id
         Mediator
             .Setup(m => m.Send(It.IsAny<AddGroceryItem.Command>(), It.IsAny<CancellationToken>()))
@@ -53,7 +59,6 @@ public class GroceryListPageTests : ComponentTestBase
         Assert.Equal(["Milk", "Bread"], ToBuy(cut));
         var amounts = cut.FindAll(TestId("grocery-item-amount")).Select(a => a.TextContent.Trim()).ToList();
         Assert.Equal(["1 l"], amounts);
-        Assert.Contains("To buy · 2", cut.Find(TestId("grocery-to-buy-heading")).TextContent);
         Assert.Empty(cut.FindAll(TestId("grocery-basket")));
     }
 
@@ -126,38 +131,52 @@ public class GroceryListPageTests : ComponentTestBase
     }
 
     [Fact]
-    public void The_add_field_opens_the_add_drawer_with_the_typed_name_and_saves_the_item()
+    public void A_name_in_the_add_field_is_added_as_typed_without_a_drawer()
     {
-        RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();
 
-        cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
+        cut.Find(TestId("add-grocery-item-input")).Input("  Eggs ");
         cut.Find(TestId("add-grocery-item-button")).Click();
 
-        Assert.Equal("Add item", Drawer.StateParameters.Title);
-        Assert.Equal("Eggs", DrawerHost.Find(InputOf("grocery-item-name-input")).GetAttribute("value"));
-        Assert.Equal("", cut.Find(TestId("add-grocery-item-input")).GetAttribute("value") ?? "");
-        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("12");
-        DrawerHost.Find(TestId("save-grocery-item-button")).Click();
-
         cut.WaitForAssertion(() => Assert.Equal(3, ToBuy(cut).Count));
-        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
-        Assert.Equal(("Eggs", "12"), (added.Name, added.Amount));
-        Assert.Contains(GroceryList.GroceryList.Items, i => i is { Id: 99, Name: "Eggs" });
         Assert.False(Drawer.IsDrawerOpen);
+        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal(("Eggs", ""), (added.Name, added.Amount));
+        Assert.Contains(GroceryList.GroceryList.Items, i => i is { Id: 99, Name: "Eggs" });
+        Assert.Equal("", cut.Find(TestId("add-grocery-item-input")).GetAttribute("value") ?? "");
     }
 
     [Fact]
-    public void Enter_in_the_add_field_opens_the_add_drawer()
+    public void Enter_in_the_add_field_adds_the_item_as_typed()
     {
         var cut = RenderWithPopovers<GroceryListPage>();
 
         cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
         PressEnter(cut.Find(TestId("add-grocery-item-input")));
 
-        Assert.True(Drawer.IsDrawerOpen);
-        var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
-        Assert.Equal(("Eggs", 0), (item.Name, item.Id));
+        cut.WaitForAssertion(() => Assert.Single(Sent<AddGroceryItem.Command>()));
+        Assert.False(Drawer.IsDrawerOpen);
+    }
+
+    [Fact]
+    public void An_empty_add_field_opens_the_add_drawer_and_saves_the_item_from_it()
+    {
+        RenderDrawers();
+        var cut = RenderWithPopovers<GroceryListPage>();
+
+        cut.Find(TestId("add-grocery-item-input")).Input("   ");
+        cut.Find(TestId("add-grocery-item-button")).Click();
+
+        Assert.Equal("Add item", Drawer.StateParameters.Title);
+        Assert.Empty(Sent<AddGroceryItem.Command>());
+        DrawerHost.Find(InputOf("grocery-item-name-input")).Change("Eggs");
+        DrawerHost.Find(InputOf("grocery-item-amount-input")).Input("12");
+        DrawerHost.Find(TestId("save-grocery-item-button")).Click();
+
+        cut.WaitForAssertion(() => Assert.Equal(3, ToBuy(cut).Count));
+        var added = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal(("Eggs", "12"), (added.Name, added.Amount));
+        Assert.False(Drawer.IsDrawerOpen);
     }
 
     [Fact]
@@ -237,9 +256,8 @@ public class GroceryListPageTests : ComponentTestBase
 
     [Theory]
     [InlineData(-40, 0)]   // too short
-    [InlineData(120, 0)]   // to the right
     [InlineData(-30, 120)] // mostly vertical: the page scrolls
-    public void A_short_right_or_vertical_swipe_does_not_delete(double dx, double dy)
+    public void A_short_or_vertical_swipe_does_not_delete(double dx, double dy)
     {
         RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();

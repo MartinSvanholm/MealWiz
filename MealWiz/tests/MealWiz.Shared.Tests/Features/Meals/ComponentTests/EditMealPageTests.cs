@@ -49,6 +49,26 @@ public class EditMealPageTests : ComponentTestBase
     }
 
     [Fact]
+    public void Cook_opens_the_cooking_view_for_a_saved_meal()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 7);
+        var cut = Render<EditMealPage>();
+
+        cut.Find(TestId("edit-meal-cook")).Click();
+
+        Assert.Equal("meals/cook/7?from=edit", CurrentPath);
+    }
+
+    [Fact]
+    public void A_new_meal_has_no_cook_button()
+    {
+        Meals.MealToEdit = TestData.Meal("Pancakes", id: 0);
+        var cut = Render<EditMealPage>();
+
+        Assert.Empty(cut.FindAll(TestId("edit-meal-cook")));
+    }
+
+    [Fact]
     public void Back_returns_to_the_meals_page()
     {
         var cut = Render<EditMealPage>();
@@ -76,7 +96,7 @@ public class EditMealPageTests : ComponentTestBase
         Assert.Contains("Eggs", card.TextContent);
         Assert.Contains("3", card.TextContent);
         Assert.Equal("1 item", cut.Find(TestId("edit-meal-ingredient-count")).TextContent.Trim());
-        Assert.Empty(SentRequests);
+        Assert.Empty(SentRequestsBesidesCategoryLoads);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
-﻿namespace MealWiz.Shared.Features.Ingredients.Models;
+﻿using MealWiz.Shared.Amounts;
+
+namespace MealWiz.Shared.Features.Ingredients.Models;
 
 public class Ingredient
 {
@@ -40,11 +42,14 @@ public class Ingredient
 
     public IngredientDb MapToIngredientDb()
     {
+        var amount = ParsedAmount.Parse(Amount);
         return new IngredientDb
         {
             Id = Id,
             Name = Name,
             Amount = Amount,
+            AmountQuantity = amount.Quantity,
+            AmountUnit = amount.UnitCode,
             ShowOnGroceryList = ShowOnGroceryList,
             CreatedBy = CreatedBy,
             CreatedAt = CreatedAt,

@@ -1,0 +1,44 @@
+/* One row of chips that scrolls sideways, so the drawers keep a fixed height. Tokens only (UI-02). */
+.category-chips-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.category-chips {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 16px 6px;
+    scrollbar-width: none;
+}
+
+.category-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.category-chips-label {
+    padding: 0 16px;
+}
+
+.category-chip {
+    flex: 0 0 auto;
+    min-height: var(--mw-touch);
+    padding: 0 14px;
+    border: 1px solid var(--mw-border);
+    border-radius: var(--mw-radius-pill);
+    background-color: var(--mw-surface);
+    color: var(--mw-text);
+    font-family: var(--mw-font-body);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.category-chip.is-selected {
+    border-color: var(--mw-orange);
+    background-color: var(--mw-orange);
+    color: var(--mw-text-on-color);
+}

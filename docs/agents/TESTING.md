@@ -114,7 +114,7 @@ TestInfrastructure/
 
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
-    `ILocalStorageService`, `IMealImportStateContainer` and `IThemeService`.
+    `ILocalStorageService`, `IMealImportStateContainer`, `IScreenWakeLock` (`WakeLock`) and `IThemeService`.
   - It uses the real Meals, GroceryList, MealPlan, PlanWeek and Drawer containers, running on the mocked mediator. `Time` is a `FakeTimeProvider` at Wednesday 2026-11-04 12:00 UTC; `PlanWeek` has a seeded `Random`.
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
@@ -200,6 +200,8 @@ they open sockets, but they don't need Supabase. `ScrapeRecipeHandlerTests` need
 **Contract tests:** `Shared/UnitTests/Models/ContractTests.cs` (here) and
 `MealWiz/tests/MealWiz.Shared.Tests/Features/MealImport/UnitTests/Models/MealImportModelTests.cs` (Shared side)
 (including `IsGuessed` and the ten error codes) compare each side's types with `MealWiz/tests/Contracts/*.json`. Both projects link these files.
+`amount_parsing.json` is the Shared side's own: `Amounts/UnitTests/ParsedAmountTests.cs` runs every case through `ParsedAmount.Parse`
+and checks that the copy embedded in `amounts.test.sql` equals the file (the SQL file is linked into the test project).
 
 Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoint_WritesFailedStatus`.
 
@@ -215,8 +217,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     every handler and every component's injected services.
 - **E2E** (`E2ETests/`): drives the **published** app (Release, trimmed) in headless Chromium against local Supabase.
   It is the only level that catches broken JS interop, routing, session persistence and the meal import's polling. The journeys are
-  `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `MealPlanJourneyTests` and
-  `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
+  `SmokeTests`, `AuthJourneyTests`, `MealJourneyTests`, `GroceryListJourneyTests`, `GroceryCategoriesJourneyTests`
+  (E2E only, not Smoke), `MealPlanJourneyTests` and `MealImportJourneyTests`. `AuthJourneyTests` also covers an expired access token (refreshed at startup), a revoked
   refresh token (sent to `/login`) and logout (reload on `/login`, dark mode kept), and changing the password and the
   email from the Account page, and deleting the account (a Playwright route plays the Function: it deletes the user through
   the admin API and answers 204; a second route answers 403). The local GoTrue applies an email change on the first click of the new address's link
@@ -247,12 +249,14 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
 ### pgTAP: `supabase/tests/database/`
 
 There's one file per table (`meals`, `ingredients`, `meal_plans`, `meal_plans_meals`, `grocery_items`,
-`grocery_item_sources`, `meal_imports`, and `meal_import_pictures` for the Storage bucket), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
+`grocery_item_sources`, `grocery_categories`, `grocery_remembered_names` (also the category write functions), `grocery_list_settings` (also `picked_at` and the order functions), `meal_imports`, and `meal_import_pictures` for the Storage bucket), plus `00_rls_enabled.test.sql`, which pins the exact table list, RLS-on, and each table's policy
 Storage policies live on `storage.objects`, which `supabase_storage_admin` owns: never `alter table` it, only add policies.
 Deleting an object through SQL needs `select set_config('storage.allow_delete_query', 'true', true)` (the app deletes
 through the Storage API instead).
 `atomic_write_functions.test.sql` covers the database functions handlers call for a multi-step write: all or nothing, RLS
-still applied, signed-in users only.
+still applied, signed-in users only, and that they write the amount columns.
+`amounts.test.sql` pins `public.parse_amount` to the contract `amount_parsing.json` (pasted between its `-- contract:begin` and
+`-- contract:end` markers), and covers the amount checks on the three tables, who may call the function, and the backfill.
 `delete_account_cascade.test.sql` is the exception: one `delete from auth.users` must remove every row of the user (and keep
 another user's). Each table file follows the same pattern:
 

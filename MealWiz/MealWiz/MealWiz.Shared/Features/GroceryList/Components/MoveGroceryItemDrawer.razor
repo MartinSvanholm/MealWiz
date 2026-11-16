@@ -1,0 +1,44 @@
+@using MealWiz.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+
+@* Move, opened by swiping a to-buy row right: the category chips with the item's category pressed. Tapping one moves
+   the name there, for every item and meal with that name (as the drawers' chips do), and closes the drawer. A failed
+   move shows its error and stays open. *@
+<p class="move-item-hint" data-testid="move-item-hint">@L["MoveItem_Hint", Item.Name]</p>
+<CategoryChips Name="@Item.Name" SelectedCategoryIdChanged="MoveAsync" />
+
+@code {
+    /// <summary>Fits the header, the hint and one row of chips.</summary>
+    public const string DrawerHeight = "calc(210px + env(safe-area-inset-bottom))";
+
+    [Parameter]
+    public GroceryItem Item { get; set; } = new();
+
+    private bool _moving;
+
+    public static void Open(IDrawerStateContainer drawer, string title, GroceryItem item) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(MoveGroceryItemDrawer),
+            Title = title,
+            Height = DrawerHeight,
+            ContentParameters = new() { { nameof(Item), item } },
+        });
+
+    private async Task MoveAsync(int categoryId)
+    {
+        if (_moving) return;
+
+        _moving = true;
+        try
+        {
+            if (await _categories.MoveName(Item.Name, categoryId)) _drawerStateContainer.CloseDrawer();
+        }
+        finally
+        {
+            _moving = false;
+        }
+    }
+}

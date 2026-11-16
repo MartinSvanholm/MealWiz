@@ -1,0 +1,51 @@
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IStringLocalizer<GroceryCategoriesResource> C
+@inject IStringLocalizer<SharedResource> S
+
+@* Deleting a category asks which category takes over its items (Other included); Delete stays off until one is
+   picked. Its remembered names and dictionary words then land in the picked category. *@
+<p class="delete-grocery-category-question" data-testid="delete-grocery-category-question">@C["DeleteGroceryCategory_Question"]</p>
+<CategoryChips ExcludeCategoryId="Category.Id" SelectedCategoryId="_moveToId" SelectedCategoryIdChanged="id => _moveToId = id" />
+<DrawerFooter>
+    <div class="mw-sheet-footer-pair">
+        <MudButton data-testid="cancel-delete-grocery-category" Variant="Variant.Filled" Class="mw-sheet-footer-cancel" Disabled="_deleting"
+                   OnClick="_drawerStateContainer.CloseDrawer">@S["Common_Cancel"]</MudButton>
+        <Button data-testid="confirm-delete-grocery-category" Color="Color.Error" Class="mw-sheet-footer-danger"
+                IsDisabled="_moveToId is null" IsLoading="_deleting" OnClick="DeleteAsync">@C["DeleteGroceryCategory_Confirm"]</Button>
+    </div>
+</DrawerFooter>
+
+@code {
+    public const string DrawerHeight = "calc(260px + env(safe-area-inset-bottom))";
+
+    [Parameter]
+    public GroceryCategory Category { get; set; } = default!;
+
+    private int? _moveToId;
+    private bool _deleting;
+
+    public static void Open(IDrawerStateContainer drawer, IStringLocalizer<GroceryCategoriesResource> localizer, GroceryCategory category) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(DeleteGroceryCategoryDrawer),
+            Title = localizer["DeleteGroceryCategory_Title", category.DisplayName(localizer)],
+            Height = DrawerHeight,
+            ContentParameters = new() { { nameof(Category), category } },
+        });
+
+    private async Task DeleteAsync()
+    {
+        if (_moveToId is not { } moveToId || _deleting) return;
+
+        _deleting = true;
+        try
+        {
+            if (await _categories.DeleteCategory(Category.Id, moveToId)) _drawerStateContainer.CloseDrawer();
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+}

@@ -40,15 +40,24 @@ meals are planned this week, or that every meal has a recipe.
   - `Features/Meals/EditMeal/EditMealPage.razor` at `/meals/edit`: create or edit the meal in `MealToEdit`, including
     its ingredients. Orange header with back (`edit-meal-back`), Save and the name field (`meal-name-input`); then the
     recipe, the add-ingredient row, the ingredient rows and, for a saved meal, Delete meal.
+  - `Features/Meals/CookMeal/CookMealPage.razor` (+ `.razor.css`) at `/meals/cook/{MealId:int}?from=plan|edit`, `[Authorize]`: the
+    read-only cooking view. Reloads the meals on open, then shows the regular meal with that id: `SubPageHeader` (back
+    `cook-meal-back` goes to `/` for `from=plan`, `/meals/edit` for `from=edit` (setting `MealToEdit` to this meal if the form holds another), else `/meals`; name `cook-meal-name`), the ingredients
+    (`cook-meal-ingredients`, `cook-meal-ingredient` with `-name` and `-amount`, or `cook-meal-no-ingredients`) and the
+    recipe, one `cook-meal-step` per non-blank line in large text (`cook-meal-recipe`), or `cook-meal-no-recipe` whose
+    `cook-meal-add-recipe` sets `MealToEdit` and opens `/meals/edit`. An unknown, deleted or system meal shows
+    `cook-meal-not-found`. It holds a screen wake lock while a meal shows (`IScreenWakeLock`). Texts: `CookMeal_*`.
 - **Components:**
   - `Features/Meals/MealGrid.razor`: the Meals page's two-column grid of cards (`meal-list-item`) with a
     `MealTile` (orange/green by position, day tag), the name (`meal-card-name`) and ingredient count (`meal-card-meta`).
+    Tapping a card opens Edit meal.
   - `Features/Meals/MealDisplayComponent.razor`: the selected day's card on the Meal plan page (details under
     MealPlans); its Add all to list opens GroceryList's merge drawer.
   - `Features/Meals/AddMealMenu.razor`: the orange "New" button (`add-meal-menu`, with `add-meal-menu-dot` and
     `data-state="in-progress|failed"` while an import runs or has failed) and its menu: "Create manually"
     (`add-meal-create-manually`) and the import item (`add-meal-import`), whose text follows the import status.
-  - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header.
+  - `Features/Meals/SaveMeal/SaveMealButton.razor`: the dark Save button in the Edit meal header. Beside it, a saved
+    regular meal also gets Cook (`edit-meal-cook`), which opens its cooking view with `?from=edit`.
   - `Features/Meals/DeleteMeal/DeleteMealButton.razor`: "Delete meal" on the Edit meal page; deletes after a confirm
     drawer, then returns to `/meals`. If grocery items still to buy are linked to the meal's ingredients, it opens
     `ReviewGroceryItemsDrawer` ("Remove from grocery list?", one group under the meal's name) and deletes the meal only
@@ -74,7 +83,7 @@ meals are planned this week, or that every meal has a recipe.
   - `supabase/migrations/20260506130000_add_eat_out_meal.sql`
 - **Tests:**
   - unit: `Features/Meals/UnitTests/` (Models, State)
-  - bUnit: `Features/Meals/ComponentTests/`
+  - bUnit: `Features/Meals/ComponentTests/` (`CookMealPageTests.cs`: the cooking view, its wake lock and back target)
   - integration: `Features/Meals/IntegrationTests/MealHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meals.test.sql`
@@ -95,8 +104,9 @@ items are unlinked silently.
   - `Features/Ingredients/IngredientCard.razor`: one ingredient row (`ingredient-card`): name, amount
     chip (`ingredient-amount-chip`, `data-empty`; "+ amount" when empty) and trash. The row and the chip open the drawer ("Edit ingredient") with a delete action in its header
     (`drawer-delete-ingredient`).
-  - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the "Add to grocery
-    list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a
+  - `Features/Ingredients/IngredientDrawer.razor`: drawer content: name and amount side by side, the category chips
+    (`CategoryChips`, following the name until one is tapped; Save moves the name to a picked one, also for a new
+    meal's pending ingredients), the "Add to grocery list" switch row, and Save ingredient in a `DrawerFooter`. No field is focused when it opens. The fields edit a
     copy; `SaveIngredientButton` applies it to the ingredient on Save (and undoes that if the save fails).
   - `Features/Ingredients/CreateIngredient/AddIngredientRow.razor`: the add row (`add-ingredient-name`,
     `add-ingredient-amount`, `create-ingredient-button`). The button, or Enter in the amount, opens the drawer filled
@@ -124,11 +134,14 @@ items are unlinked silently.
   `ingredients` (`fk_meal` → `meals`, on delete cascade).
 - **Migrations:** `supabase/migrations/20261028130000_backfill_show_on_grocery_list.sql`: turns the flag on for every
   ingredient saved before the switch existed, and defaults the column to true.
+  `supabase/migrations/20261115120000_add_amount_quantity_and_unit.sql` adds `amount_quantity` and `amount_unit`, filled
+  from the typed text by `MapToIngredientDb` (`ParsedAmount`); the text stays the source of truth and reads ignore the columns.
+  The amount fields (`AddIngredientRow`, `IngredientDrawer`) show `AmountText.Describe` as their helper text.
 - **Tests:**
   - unit: `Features/Ingredients/UnitTests/Models/`
   - bUnit: `Features/Ingredients/ComponentTests/`
   - integration: `Features/Ingredients/IntegrationTests/IngredientHandlerTests.cs`
-  - pgTAP: `supabase/tests/database/ingredients.test.sql`
+  - pgTAP: `supabase/tests/database/ingredients.test.sql`, `supabase/tests/database/amounts.test.sql`
 
 ## MealPlans
 
@@ -183,7 +196,9 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
     Swap meal (`swap-meal-button`) calls `StartSwap()`, and the page shows the pick list in swap mode instead of the
     card. Add all to list (`add-all-to-list`) opens GroceryList's merge drawer for the selected day only
     (`AddPlanIngredientsToGroceryListDrawer.Open`, title "Add <meal> to list"); it's disabled when no ingredient is shown
-    on the grocery list.
+    on the grocery list. A regular meal also has Cook (`cook-meal-button`, after Swap meal) and, on the recipe card, a
+    floating fullscreen icon (`cook-meal-fullscreen`, only with a recipe); both open `/meals/cook/{id}?from=plan`.
+    Leftovers and Eat Out have neither.
   - `Features/MealPlans/PlanWeek/WeekGenerator.cs`: pure, seeded `Random`. `PickMeal` picks one regular meal for a single day (never the current one). Picks random regular meals for unlocked days; skips meals used within N weeks before or after the week or already in it; falls back to the meals used longest ago (`UsedFallback`); repeats only after every meal is used; with leftovers on, an unlocked day right after a cooked (regular) meal gets Leftovers.
 - **Handlers:**
 
@@ -198,7 +213,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   | SaveGeneratedWeek | `Command(DateTime WeekStart, IReadOnlyList<PlannedDay> Days)` → `Result` | One call to the `save_generated_week` database function, so one transaction: creates the plan if missing, updates days that have a row (in place), inserts the rest |
 
 - **State:** `Features/MealPlans/State/MealPlanStateContainer.cs` (`IMealPlanStateContainer`, uses `ILocalStorageService`):
-  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, `AddMealToPlan`, the week-ingredients offer (`OfferWeekIngredients(weekStart)`, called by Plan week's Save, and the one-shot `TakeWeekIngredientsOffer()`, which returns the week only once it is loaded and shown and has an ingredient for the list), and swap mode:
+  `MealPlan`, `SelectedDate`, `SelectedWeekStart`, `LoadMealPlan`, `NavigateToWeek`, (keeps `SelectedDate` when it falls in the target week, so back from the cooking view re-opens the same day; otherwise today for this week, else Monday), `AddMealToPlan`, the week-ingredients offer (`OfferWeekIngredients(weekStart)`, called by Plan week's Save, and the one-shot `TakeWeekIngredientsOffer()`, which returns the week only once it is loaded and shown and has an ingredient for the list), and swap mode:
   `IsSwappingMeal`, `StartSwap`, `CancelSwap`, `SwapMealOnSelectedDate` (returns `Task<bool>`: true when saved; swap mode ends when the selected day changes).
   `Features/MealPlans/State/PlanWeekStateContainer.cs` (`IPlanWeekStateContainer`, uses `ILocalStorageService`, `TimeProvider`, `IMealPlanStateContainer`): `Open`, `NavigateToWeek`, `WeekStart`, `Settings`, `SetWeeksBack`, `SetLeftoversAfterEveryMeal`, `Days`, `ToggleLock`, `Generate`, `ShuffleAll`, `ShuffleDay`, `PickMeal`, `ClearDay`, `HasSavedMeal`, `HasPreview`, `Save`, `IsDirty`, `CanGenerate`, `CanSave`, `UsedFallback`, `HasNoRegularMeals`.
 - **Models:**
@@ -211,7 +226,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
   - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`, `RemoveMealWithGroceryItemsTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs`
+  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs` (also opens the cooking view from the day card and checks back keeps the day)
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
 ## GroceryList
@@ -219,11 +234,15 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
 A per-user shopping list. You can add, edit and delete items, and tick items off (`is_picked`). "From meal plan"
 opens a merge drawer (reusable for one planned day or a whole week) that lists the planned ingredients not linked
 from their planned day yet; with everything linked it says "Everything is already on your list". A to-buy item with the
-same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts have one unit, else
-empty to type. Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
+same name (ignoring case) is merged into: the total is pre-filled by `AmountHelper` when the amounts can be added, else
+empty to type. Amounts add when all are understood (`ParsedAmount`) and in one family: mass and volume convert
+(200 g + 0,5 kg = 700 g), a count, cup, tsk or spsk only adds to itself. The total is written in the unit that reads
+best: the largest metric unit giving a number of at least 1 with at most 2 decimals (oz and lb only when every amount
+is), else the smallest, rounded. Amounts the parser doesn't understand still add when each is a number and the same
+word ("3 cloves" + "2 cloves"; case, a trailing "." and a plural s ignored). Every item added or merged gets a `grocery_item_sources` link (planned day, ingredient, amount); items
 added from the plan have `is_manual` false, older and hand-typed items true and are never "from the plan".
 Dropping a planned meal's link from an item another meal or the user still needs lowers the item's amount by that
-link's amount (Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
+link's amount, on the same rules (Flour 700 g − Cake's 0,5 kg = 200 g; Garlic 3 cloves − Pasta's 2 cloves = 1 clove).
 A banner at the top of the list ("N items are from meals no longer in your plan", `stale-items-banner`) appears when
 plan-added items come from meals that were swapped out or removed from the plan with the switch off (every source
 stale; basket and manual items never count). Review opens a drawer of those items grouped by their old meal, all
@@ -231,16 +250,28 @@ ticked; Remove deletes the ticked items and unlinks the rest, which become manua
 
 A linked ingredient whose amount changed after it was added (the source's amount differs from the ingredient's current
 amount, trimmed and ignoring case; the item is still to buy; the source isn't stale) is offered again in the same
-drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all share
-a unit and the result is above zero, else an empty required field. Confirming updates the item's amount and the
+drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all can be
+added (as above) and the result is above zero, else an empty field. No total is required: an empty one is saved as no
+amount. Confirming updates the item's amount and the
 source's remembered amount, so it isn't offered again.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
 (W is the ISO week of `IMealPlanStateContainer.SelectedWeekStart`, the week the drawer merges), a green progress bar
-"X of N items", the add field, "To buy" as one list of 44px rows and "In the basket" as wrapping pills. Tapping an
+"X of N items", the add field, the to-buy items in supermarket sections (GroceryCategories) and "In the basket" as
+wrapping pills. Each section with something to buy (`grocery-category`, `data-category` = the default key or a custom
+category's id, `data-folded`) has a heading button (`grocery-category-heading`, `aria-expanded`) with
+`grocery-category-name` and `grocery-category-count` over one list of 44px rows; sections follow the categories'
+positions and rows keep their order inside a section. Tapping a heading folds the section (heading and count only),
+kept on the device. All sections sit in `grocery-to-buy`; when the categories fail to load, the error shows and the
+items are one list there without headings. The Other section's heading row has Sort (`grocery-sort-other`, outside the
+fold button), which opens `Features/GroceryList/Components/SortOtherItemsDrawer.razor` (`sort-progress`,
+`sort-item-name`, the chips without Other, `sort-skip`): the Other items one at a time, a chip moving the name and
+going to the next item still in Other. Swiping a to-buy row right opens Move (`MoveGroceryItemDrawer`), the
+chips for that item's name. The header's `grocery-categories-button` opens the Categories page. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
-every picked item after the confirm drawer ("Clear 2 items?"). Swiping a to-buy row left (touch or mouse) past 80px
+every picked item after the confirm drawer ("Clear 2 items?"), after the trip has taught the section order
+(`LearnFromTicks`). Swiping a to-buy row left (touch or mouse) past 80px
 also deletes it after the same confirm drawer; basket pills don't swipe.
 
 - **Folder:** `Features/GroceryList/`
@@ -248,9 +279,10 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
 - **Components:**
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
-    opens `GroceryItemDrawer` with the typed name filled in.
-  - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, "Save item" in a
-    `DrawerFooter`. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
+    adds the typed name (trimmed) as an item with no amount, through `AddGroceryItemToGroceryList`, and clears the field
+    (a failed add puts the name back). With nothing typed they open an empty `GroceryItemDrawer` instead.
+  - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, the category chips
+    (`CategoryChips`), "Save item" in a `DrawerFooter`; a picked chip moves the name after the item is saved. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
     `UpdateGroceryItem` swaps the saved copy into the list, so closing without saving changes nothing.
   - `Features/GroceryList/Components/SaveGroceryItemButton.razor`
   - `Features/GroceryList/UpdateGroceryItem/EditGroceryItemButton.razor`: the item's name on its row; opens the edit
@@ -258,9 +290,13 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
     header; deletes after a confirm drawer ("Delete Milk?"). That confirm lives in
     `Features/GroceryList/DeleteGroceryItem/ConfirmDeleteGroceryItem.cs`, shared with the swipe.
-  - `Features/GroceryList/DeleteGroceryItem/SwipeToDeleteGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's
-    content. Blazor pointer events (no JS) move the row over a red layer; `touch-action: pan-y` keeps vertical
-    scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
+  - `Features/GroceryList/Components/SwipeGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's content. Blazor
+    pointer events (no JS) move the row over a red layer (left) or an orange one (right); `touch-action: pan-y` keeps
+    vertical scrolling native. Letting go past `SwipeDistance` to the left opens `ConfirmDeleteGroceryItem`; to the
+    right (only once the categories have loaded) it opens `MoveGroceryItemDrawer`.
+  - `Features/GroceryList/Components/MoveGroceryItemDrawer.razor`, with `.razor.css`: "Move Milk", a hint
+    (`move-item-hint`) and `CategoryChips` with the item's category pressed; a tap calls `MoveName` (the name moves
+    everywhere) and closes the drawer, a failed move shows its error and stays open.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
   - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
@@ -290,18 +326,19 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   | DeleteGroceryItem | `Command(GroceryItem)` → `Result<int>` | Delete one item; fails if no row matches |
   | DeleteGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the given items in one request; sources cascade; ids RLS hides are skipped |
   | UnlinkGroceryItems | `Command(List<int> GroceryItemIds)` → `Result` | Delete the items' sources and set `is_manual` = true, in one transaction (`unlink_grocery_items`); ids RLS hides are skipped |
-  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources and lowers each to-buy item's amount by the dropped sources' amounts in one transaction (`drop_grocery_item_sources`) (`AmountHelper.Subtract`: same unit, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
+  | DeleteGroceryItemSources | `Command(List<int> SourceIds)` → `Result<List<GroceryItem>>` | Deletes the given sources and lowers each to-buy item's amount by the dropped sources' amounts in one transaction (`drop_grocery_item_sources`) (`AmountHelper.Subtract`: one family or the same word, result > 0, else unchanged; basket items keep theirs); returns the items whose amount changed (`Result<List<GroceryItem>>`); ids RLS hides are skipped |
 
 - **State:** `Features/GroceryList/State/GroceryListStateContainer.cs` (`IGroceryListStateContainer`): `GroceryList`,
-  `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked`, `DeleteGroceryItem`,
+  `LoadGroceryItems`, `AddGroceryItemToGroceryList`, `UpdateGroceryItem`, `ToggleIsPicked` (sets `PickedAt` from its
+  `TimeProvider` when ticking, clears it when putting back), `DeleteGroceryItem`,
   `ClearBasket`, `Sources`, `LoadSources`, `StaleItems`, `DeleteAndUnlinkGroceryItems`, and for a meal or ingredient
   being deleted `LoadItemsLinkedToMeal`, `LoadItemsLinkedToIngredient` and `SettleLinkedItems` (delete, unlink with the
   basket, drop links and apply the lowered amounts; failures returned unreported).
 - **Models:**
   - `Features/GroceryList/Models/GroceryItem.cs` ↔ `Features/GroceryList/Models/GroceryItemDb.cs`, table
     `grocery_items`. `GroceryItem` has a constructor from `Ingredient` and maps with `MapToDb()`.
-  - `GroceryItem.IsManual` (`is_manual`).
-  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust`, and `Subtract`, which alone tolerates a plural s: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
+  - `GroceryItem.IsManual` (`is_manual`); `GroceryItem.PickedAt` (`picked_at`, when it was ticked off).
+  - `Features/GroceryList/Models/GroceryItemSource.cs` ↔ `GroceryItemSourceDb.cs` (writes) and `GroceryItemSourceDetailsDb.cs` (reads, with the planned day and ingredient), table `grocery_item_sources`; `PlanIngredientToAdd.cs`; `LinkedAmountUpdate.cs`; `Features/GroceryList/GroceryListResource.cs` (+ `.resx`, `.da.resx`): the merge drawer's and `UpdateLinkedGroceryAmounts`' texts; `AmountHelper.cs` (`SuggestTotal`, `Adjust` and `Subtract` on `ParsedAmount`, across units of one family, with the same-word fallback: "3 cloves" − "2 cloves" = "1 clove"). `GroceryItemSource` also carries `IngredientAmount` and `HasChangedAmount`.
   - `Features/GroceryList/Models/GroceryList.cs`: an in-memory aggregate with no table.
   - `Features/GroceryList/Models/LinkedGroceryItems.cs`: a deleted meal's or ingredient's items sorted into `ToBuy`,
     `InBasket` and `SourceIdsToDrop` (manual items and items another live link needs only lose its links).
@@ -313,8 +350,119 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - bUnit: `Features/GroceryList/ComponentTests/`
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
   - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
-  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included)
-  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions)
+  - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included), `supabase/tests/database/amounts.test.sql` (`parse_amount`, the amount checks, the backfill)
+  - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions), `supabase/migrations/20261115120000_add_amount_quantity_and_unit.sql` (`amount_quantity` and `amount_unit` on items and links; three write functions replaced so they write them; the handlers send both next to the text, and `GroceryItemDrawer` shows the amount hint)
+
+## GroceryCategories
+
+The supermarket sections the grocery list is grouped into (project Grocery categories). A category is never stored on
+a grocery item or an ingredient: `CategoryResolver` places a name each time, from the name the user remembered
+(`grocery_remembered_names`), else the built-in English and Danish `CategoryDictionary` (both languages always), else
+Other. A user gets the eleven default categories the first time the grocery list loads (`LoadCategories` creates them
+when the user has none). A default category shows its name in the UI language until the user renames it
+(`DisplayName`). Folded sections are kept per device in local storage under `grocerylist_folded_sections` (a list of
+category ids).
+
+Picking another category chip in the grocery item drawer, the ingredient drawer or the Sort flow moves the name there
+everywhere (`MoveName`, a remembered row; nothing is written when the name already resolves there). The Categories
+page adds a category just above Other, renames one (unique among the user's names as shown, ignoring case) and sets an
+optional emoji; deleting one asks which category takes over: its remembered names move there and the target absorbs
+its default key, so its dictionary words land there too. Other can be renamed but not deleted.
+
+The section order is learned until the user sets it (MEA-139). Ticking an item off records `picked_at`. A trip is the
+ticks less than two hours apart; once it is over (two hours after its last tick, or when the basket is cleared, since
+Clear deletes the ticks) `SectionOrderLearner` moves each ticked category's fractional `order_score` 35% of the way
+toward the slot of its first tick, so a neighbouring swap takes two consistent trips; positions follow the scores, and
+Other stays last. The grocery list learns after it loads, and Clear basket learns before it deletes. On the Categories
+page each row but Other has a drag handle (Blazor pointer events, no JS); a drag saves the order and stops learning
+(manual mode, stored on the account in `grocery_list_settings`), and "Follow my shopping again" hands it back. In
+manual mode the trips are still marked as seen (`learned_until`), so turning learning back on doesn't replay them.
+
+- **Folder:** `Features/GroceryCategories/`
+- **Texts:** `Features/GroceryCategories/GroceryCategoriesResource.cs` with `GroceryCategoriesResource.resx` / `.da.resx`:
+  the default names (`DefaultCategory_<Key>_Name`), the page, the drawers and the errors.
+- **Pages:** `Features/GroceryCategories/GroceryCategoriesPage.razor` at `/grocerylist/categories` (with `.razor.css`),
+  `[Authorize]`, opened by `grocery-categories-button` in the grocery list header. `SubPageHeader` back
+  (`grocery-categories-back`) to `/grocerylist`; rows `grocery-category-row` (`data-category`) with
+  `grocery-category-row-name`; drag handles `grocery-category-drag-handle` (not on Other) in `grocery-categories-list`
+  (`data-dragging` while a drag runs, one row per `GroceryCategoriesPage.RowHeight` px); `add-grocery-category`; the
+  switch `follow-shopping-switch`.
+- **Components:**
+  - `Features/GroceryCategories/Components/CategoryChips.razor`, with `.razor.css`: the categories as one sideways
+    scrolling row (`category-chips`, chips `category-chip` with `data-category` and `aria-pressed`). Presses
+    `SelectedCategoryId`, else the category `Name` resolves to; `ExcludeOther`, `ExcludeCategoryId`, `Label`. Loads the
+    categories itself when no page has (Edit meal).
+  - `Features/GroceryCategories/Components/GroceryCategoryDrawer.razor`, with `.razor.css`: add or edit
+    (`grocery-category-name-input`, `grocery-category-emoji-input`, inline `grocery-category-name-error`,
+    `save-grocery-category`); `Open(drawer, title, category, headerAction)`.
+  - `Features/GroceryCategories/DeleteGroceryCategory/DeleteGroceryCategoryButton.razor`: the red header action
+    `delete-grocery-category` (not on Other).
+  - `Features/GroceryCategories/DeleteGroceryCategory/DeleteGroceryCategoryDrawer.razor`, with `.razor.css`: "Delete X?",
+    the other categories as chips and `confirm-delete-grocery-category`, off until one is picked.
+- **Handlers:**
+
+  | Handler | Request → result | Does |
+  |---|---|---|
+  | GetGroceryCategories | `Query()` → `Result<List<GroceryCategory>>` | The user's categories by position |
+  | CreateDefaultGroceryCategories | `Command()` → `Result<List<GroceryCategory>>` | Inserts the eleven defaults, skipping any default key the user already has (upsert, ignore duplicates on (`created_by`, `default_key`)), then returns all the user's categories by position; `NotSignedIn` when signed out |
+  | GetRememberedGroceryNames | `Query()` → `Result<List<RememberedGroceryName>>` | The user's remembered names (normalised name, category id) |
+  | RememberGroceryName | `Command(string Name, int CategoryId)` → `Result` | Normalises the name and upserts its row (merge on (`created_by`, `name`)); `NotSignedIn` when signed out |
+  | AddGroceryCategory | `Command(string Name, string? Emoji)` → `Result<GroceryCategory>` | `add_grocery_category` (just above Other, Other moves down), then reads the row back |
+  | UpdateGroceryCategory | `Command(int Id, string Name, string? Emoji)` → `Result<GroceryCategory>` | Sets the name and emoji (blank = none); a taken name fails with "A category with that name already exists", no row with "That category no longer exists" |
+  | DeleteGroceryCategory | `Command(int Id, int MoveToId)` → `Result` | `delete_grocery_category`; its refusals (Other, the same id, not found) become messages (`GroceryCategoryErrors`) |
+  | GetGroceryListSettings | `Query()` → `Result<GroceryListSettings>` | The order mode and `learned_until`; the defaults (learned, nothing learned) without a row |
+  | SetSectionOrderMode | `Command(SectionOrderMode Mode)` → `Result` | Upserts the mode on (`created_by`), keeping `learned_until`; `NotSignedIn` when signed out |
+  | ReorderGroceryCategories | `Command(List<int> CategoryIds)` → `Result` | `reorder_grocery_categories`: every one of the user's ids once, positions in that order, scores dropped, manual mode |
+  | ApplyLearnedSectionOrder | `Command(List<LearnedCategoryOrder> Categories, DateTime LearnedUntil)` → `Result` | `apply_learned_section_order`: positions, scores and `learned_until` in one call (no categories: only `learned_until`) |
+
+- **State:** `Features/GroceryCategories/State/GroceryCategoriesStateContainer.cs` (`IGroceryCategoriesStateContainer`,
+  uses `ILocalStorageService`): `Categories`, `RememberedNames`, `LoadCategories` (both; a remembered-names failure keeps
+  the categories), `CategoryFor(name)`, `MoveName`, `AddCategory`, `UpdateCategory`, `DeleteCategory` (each reloads on
+  success), `ValidateName`, `Settings` (loaded with the categories), `Reorder` (shows the order at once, restores it on
+  failure), `SetOrderMode`, `LearnFromTicks(picked, basketCleared)`, `IsFolded`, `ToggleFolded`, `LoadFolded`. Takes a
+  `TimeProvider`. Ingredients and GroceryList use it too.
+- **Models:**
+  - `Features/GroceryCategories/Models/GroceryCategory.cs` ↔ `Features/GroceryCategories/Models/GroceryCategoryDb.cs`,
+    table `grocery_categories`; `NewGroceryCategoryDb.cs` is the insert row without `id` (an upsert always sends the
+    primary key). `IsOther`, `AbsorbedKeys`, `Takes(key)`, `DataKey`; `GroceryCategory.Default(key)`.
+  - `Features/GroceryCategories/Models/RememberedGroceryName.cs` ↔ `Features/GroceryCategories/Models/RememberedGroceryNameDb.cs`
+    (with `NewRememberedGroceryNameDb`, the upsert row), table `grocery_remembered_names`.
+  - `Features/GroceryCategories/Models/DefaultCategoryKey.cs`: `produce`, `bakery`, `meat_fish`, `deli`, `dairy_eggs`,
+    `frozen`, `pantry`, `drinks`, `snacks`, `household`, `other` (positions 1 to 11), mapped with `ToDbValue`/`FromDbValue`.
+  - `Features/GroceryCategories/Models/GroceryCategoryDisplayName.cs`: `DisplayName(localizer)`, the emoji (when set)
+    before `DisplayNameWithoutEmoji`, the user's name or the default's localized name.
+  - `Features/GroceryCategories/Models/GroceryListSettings.cs` ↔ `Features/GroceryCategories/Models/GroceryListSettingsDb.cs`
+    (with `GroceryListOrderModeDb`, the mode-only upsert row), table `grocery_list_settings`; `SectionOrderMode`
+    (`learned`, `manual`).
+  - `Features/GroceryCategories/Models/SectionOrderLearner.cs`: pure. `CompleteTrips`, `Learn` (one trip) and `Apply`;
+    `LearnedCategoryOrder`.
+  - `Features/GroceryCategories/Models/GroceryCategoryErrors.cs`: maps a taken name (23505) and the delete function's
+    refusals to messages.
+  - `Features/GroceryCategories/Models/CategoryDictionary.cs`: about 440 English and 375 Danish words and whole names,
+    each mapped to a default key.
+  - `Features/GroceryCategories/Models/CategoryResolver.cs`: pure. `ResolveKey(name)` matches the whole normalised name,
+    then each word from last to first, then a word ending in a dictionary word of four or more letters (Danish
+    compounds, longest ending first), else Other; `Resolve(name, categories, rememberedNames)` returns the remembered
+    category (whole name), else the category whose own key is that key, else one that absorbed it, else Other, else null.
+- **Migrations:**
+  - `supabase/migrations/20261115150000_add_grocery_categories.sql`
+  - `supabase/migrations/20261115160000_add_grocery_remembered_names.sql`: `grocery_remembered_names`, `absorbed_keys`,
+    the unique name index, the emoji check, and the functions `add_grocery_category` and `delete_grocery_category`.
+  - `supabase/migrations/20261115170000_add_grocery_section_order.sql`: `grocery_items.picked_at`,
+    `grocery_categories.order_score`, `grocery_list_settings`, and the functions `reorder_grocery_categories` and
+    `apply_learned_section_order`.
+- **Tests:**
+  - unit: `Features/GroceryCategories/UnitTests/` (Models, State)
+  - bUnit: `Features/GroceryCategories/ComponentTests/` (chips in both drawers, the Categories page, deleting), and on
+    the grocery list page `Features/GroceryList/ComponentTests/GroceryListPageSectionsTests.cs` and
+    `Features/GroceryList/ComponentTests/SortOtherItemsTests.cs` and `Features/GroceryList/ComponentTests/MoveGroceryItemTests.cs`
+  - integration: `Features/GroceryCategories/IntegrationTests/` (`GroceryCategoriesHandlerTests.cs`,
+    `RememberedGroceryNamesHandlerTests.cs`, `GroceryCategoryEditHandlerTests.cs`, `DeleteGroceryCategoryHandlerTests.cs`,
+    `SectionOrderHandlerTests.cs`)
+  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryCategoriesJourneyTests.cs`
+  - pgTAP: `supabase/tests/database/grocery_categories.test.sql`, `supabase/tests/database/grocery_remembered_names.test.sql`
+    (the table and both functions), `supabase/tests/database/grocery_list_settings.test.sql` (the table, `picked_at` and
+    the two order functions)
 
 ## MealImport
 
@@ -649,8 +797,19 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
+- **`Amounts/`:** an amount typed as text, read as a quantity and a unit (namespace `MealWiz.Shared.Amounts`, in
+  `_Imports.razor`). Not a feature folder: Ingredients and GroceryList both use it.
+  - `ParsedAmount.cs`: `ParsedAmount.Parse(text)` (never null; `Quantity` is null when the text can't be read; `Unit` is
+    null for a count; `Family`, `UnitCode`). The rules are in the type's remarks; the SQL function
+    `public.parse_amount` follows the same ones.
+  - `AmountUnit.cs` (the ten units, `Family`, exact `Factor`, `InFamily`), `UnitFamily.cs` (Count, Mass, Volume, Cup,
+    Teaspoon, Tablespoon; only Mass and Volume convert).
+  - `AmountText.cs`: `Format(quantity, unit)` ("1,5 dl" in Danish) and `Describe(text)`, the helper text under an amount
+    field ("200 · gram", "Saved as written", null when empty). Texts are `Unit_*` and `Amount_*` in `SharedResource`.
+  - Tests: `MealWiz/tests/MealWiz.Shared.Tests/Amounts/UnitTests/`, against `MealWiz/tests/Contracts/amount_parsing.json`.
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
+- **`Services/ScreenWakeLock/`:** `IScreenWakeLock` (`RequestAsync()` / `ReleaseAsync()`, never throw; false where the browser has no screen wake lock) and `ScreenWakeLock`, the only code that calls `wwwroot/js/screenWakeLock.js` (re-requests the lock when the tab becomes visible again). Used by the cooking view.
 - **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
 - **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
@@ -727,9 +886,12 @@ table and policy list.
 | Table | Feature | Created in | Notes |
 |---|---|---|---|
 | `meals` | Meals | `remote_schema` | `meal_type` added in `add_leftovers_meal`. SELECT also shows system meals (`meal_type <> 'regular'`); INSERT, UPDATE and DELETE only for your own `regular` meals |
-| `ingredients` | Ingredients | `remote_schema` | `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
-| `grocery_items` | GroceryList | `remote_schema` | `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`) |
-| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
+| `ingredients` | Ingredients | `remote_schema` | `amount_quantity` (> 0) and `amount_unit` (one of the ten codes) added in `add_amount_quantity_and_unit`; a unit needs a quantity. `fk_meal` → `meals` on delete cascade. INSERT and UPDATE also require `fk_meal` to be your own meal |
+| `grocery_items` | GroceryList | `remote_schema` | `amount_quantity` and `amount_unit` as on `ingredients`. `is_picked`, `amount`, `is_manual` (default true; false for plan-added items; since `add_grocery_item_sources`), `picked_at` (null while to buy; since `add_grocery_section_order`) |
+| `grocery_item_sources` | GroceryList | `add_grocery_item_sources` | `amount_quantity` and `amount_unit` as on `ingredients`. `fk_grocery_item` → `grocery_items` on delete cascade; `fk_planned_meal` → `meal_plans-meals` and `fk_ingredient` → `ingredients`, both on delete set null; unique (`fk_planned_meal`, `fk_ingredient`), NULLs distinct. INSERT and UPDATE also require your own item, and your own planned day and ingredient when set |
+| `grocery_categories` | GroceryCategories | `add_grocery_categories` | `default_key` (one of the eleven keys, or null for a custom category), `name` (null on a default = the translated name), `emoji`, `position`. Unique (`created_by`, `default_key`), NULLs distinct; a row needs a key or a name. Owner-only for every operation; anon holds no privilege. Since `add_grocery_remembered_names`: `absorbed_keys` (default keys taken over from deleted categories), a unique index on (`created_by`, `lower(name)`), emoji ≤ 16 characters, and the write functions `add_grocery_category` and `delete_grocery_category`. Since `add_grocery_section_order`: `order_score` (learned place, null = `position`) and the functions `reorder_grocery_categories` and `apply_learned_section_order` |
+| `grocery_remembered_names` | GroceryCategories | `add_grocery_remembered_names` | `name` (normalised), `fk_category` → `grocery_categories` on delete cascade; unique (`created_by`, `name`). INSERT and UPDATE also require your own category; anon holds no privilege |
+| `grocery_list_settings` | GroceryCategories | `add_grocery_section_order` | One row per user (unique `created_by`): `order_mode` (`learned` default, `manual`), `learned_until`. Owner-only; anon holds no privilege |
 | `meal_plans` | MealPlans | `remote_schema` | `start_date`, `end_date`. One plan per user and week: unique (`created_by`, `start_date`), since `one_plan_per_week_and_meal_per_day`, which merged existing duplicates into the lowest id |
 | `meal_plans-meals` | MealPlans | `remote_schema` | `fk_meal_plan`, `fk_meal` (→ `meals` on delete cascade, since `remove_deleted_meals_from_plans`), `meal_date`. The hyphen means it always needs quoting. INSERT and UPDATE also require your own plan, and your own meal or a system meal. One planned meal per plan and date: unique (`fk_meal_plan`, `meal_date`), since `one_plan_per_week_and_meal_per_day`, which kept the newest of existing duplicates. `fk_meal_plan` has no ON DELETE action, so a plan that still has planned meals can't be deleted |
 | `meal_imports` | MealImport | `add_meal_imports_table` | uuid id. The client may only update its own row `pending` → `failed`, and only `status`, `error_code`, `error_message`, `updated_at` and `updated_by` (column grants); `error_code` is checked against the ten codes in `meal_import_error_code.json`; the Function writes the result with the service role; since `add_meal_import_pictures` it is a link job or a picture job (`source_url` nullable; `picture_paths` 1–3, `language`, `hint`, checked by `meal_imports_kind_check`), and the client can set the new columns on insert only |
@@ -738,6 +900,7 @@ table and policy list.
 
 | Function | Feature | Created in | Notes |
 |---|---|---|---|
+| `public.parse_amount(amount)` | Ingredients, GroceryList | `add_amount_quantity_and_unit` | Reads an amount text into `(quantity, unit)` with the rules of `ParsedAmount`; pinned by `amount_parsing.json`. `immutable`, `security invoker`; nobody may execute it through the API (it runs the backfill) |
 | `public.expired_meal_import_pictures(cutoff)` | MealImport | `add_expired_meal_import_pictures` | Names the pictures of `meal-import-pictures` created before the cutoff. `security definer`; only `service_role` may execute it. The clean-up Function removes them through the Storage API |
 
 ### Storage buckets

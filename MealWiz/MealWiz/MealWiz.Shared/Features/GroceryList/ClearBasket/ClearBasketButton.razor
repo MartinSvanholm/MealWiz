@@ -1,10 +1,11 @@
-@using MealWiz.Shared.Features.GroceryList
+﻿@using MealWiz.Shared.Features.GroceryList
 @inject IStringLocalizer<GroceryListResource> L
 @inject IDrawerStateContainer _drawerStateContainer
 @inject IGroceryListStateContainer _groceryListStateContainer
+@inject IGroceryCategoriesStateContainer _groceryCategoriesStateContainer
 
 @* The red "Clear" next to "In the basket". Deletes every picked item after the confirm drawer. Styled by the page
-   (.grocery-clear). *@
+   (.grocery-clear). Clearing deletes the tick times, so the trip teaches the section order first (MEA-139). *@
 <button type="button" class="grocery-clear" data-testid="clear-basket-button" @onclick="OnClearClick">@L["GroceryList_ClearBasket"]</button>
 
 @code {
@@ -17,6 +18,8 @@
 
     private async Task OnConfirmClear()
     {
+        var picked = _groceryListStateContainer.GroceryList.Items.Where(item => item.IsPicked).ToList();
+        await _groceryCategoriesStateContainer.LearnFromTicks(picked, basketCleared: true);
         await _groceryListStateContainer.ClearBasket();
         _drawerStateContainer.CloseDrawer();
     }

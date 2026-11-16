@@ -27,6 +27,33 @@
     margin-bottom: 6px;
 }
 
+/* Cook (saved meals only) and Save, side by side on the right. */
+.mw-edit-meal-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mw-edit-meal-cook {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--mw-touch);
+    padding: 0 14px;
+    border: none;
+    border-radius: var(--mw-radius-s);
+    background-color: color-mix(in srgb, var(--mw-text-on-color) 12%, transparent);
+    color: var(--mw-text-on-color);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.mw-edit-meal-cook:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 .mw-edit-meal-back {
     display: flex;
     align-items: center;

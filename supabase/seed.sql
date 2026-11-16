@@ -104,3 +104,14 @@ CROSS JOIN (VALUES
     ('Parmesan', '50 g'),
     ('Croutons', '1 cup')
 ) AS v(name, amount);
+
+-- Amounts as a quantity and a unit (add_amount_quantity_and_unit): the seed runs after the migrations, so the rows
+-- inserted above get their columns the way the migration gave them to existing rows.
+UPDATE public.ingredients t
+SET (amount_quantity, amount_unit) = (SELECT p.quantity, p.unit FROM public.parse_amount(t.amount) p);
+
+UPDATE public.grocery_items t
+SET (amount_quantity, amount_unit) = (SELECT p.quantity, p.unit FROM public.parse_amount(t.amount) p);
+
+UPDATE public.grocery_item_sources t
+SET (amount_quantity, amount_unit) = (SELECT p.quantity, p.unit FROM public.parse_amount(t.amount) p);

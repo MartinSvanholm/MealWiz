@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="DefaultCategory_Produce_Name" xml:space="preserve">
+    <value>Frugt &amp; grønt</value>
+  </data>
+  <data name="DefaultCategory_Bakery_Name" xml:space="preserve">
+    <value>Brød &amp; bagværk</value>
+  </data>
+  <data name="DefaultCategory_MeatFish_Name" xml:space="preserve">
+    <value>Kød &amp; fisk</value>
+  </data>
+  <data name="DefaultCategory_Deli_Name" xml:space="preserve">
+    <value>Pålæg &amp; delikatesse</value>
+  </data>
+  <data name="DefaultCategory_DairyEggs_Name" xml:space="preserve">
+    <value>Mejeri &amp; æg</value>
+  </data>
+  <data name="DefaultCategory_Frozen_Name" xml:space="preserve">
+    <value>Frost</value>
+  </data>
+  <data name="DefaultCategory_Pantry_Name" xml:space="preserve">
+    <value>Kolonial</value>
+  </data>
+  <data name="DefaultCategory_Drinks_Name" xml:space="preserve">
+    <value>Drikkevarer</value>
+  </data>
+  <data name="DefaultCategory_Snacks_Name" xml:space="preserve">
+    <value>Slik &amp; snacks</value>
+  </data>
+  <data name="DefaultCategory_Household_Name" xml:space="preserve">
+    <value>Husholdning &amp; pleje</value>
+  </data>
+  <data name="DefaultCategory_Other_Name" xml:space="preserve">
+    <value>Andet</value>
+  </data>
+  <data name="CategoryChips_Aria" xml:space="preserve">
+    <value>Kategori</value>
+  </data>
+  <data name="GroceryCategory_NameTaken" xml:space="preserve">
+    <value>Der findes allerede en kategori med det navn</value>
+  </data>
+  <data name="GroceryCategory_NameRequired" xml:space="preserve">
+    <value>Giv kategorien et navn</value>
+  </data>
+  <data name="GroceryCategory_NotAdded" xml:space="preserve">
+    <value>Kategorien blev ikke tilføjet. Prøv igen.</value>
+  </data>
+  <data name="GroceryCategory_NotFound" xml:space="preserve">
+    <value>Den kategori findes ikke længere</value>
+  </data>
+  <data name="GroceryCategory_OtherCannotBeDeleted" xml:space="preserve">
+    <value>Andet kan ikke slettes</value>
+  </data>
+  <data name="GroceryCategory_MoveToItself" xml:space="preserve">
+    <value>Vælg en anden kategori til dens varer</value>
+  </data>
+  <data name="GroceryCategories_Label" xml:space="preserve">
+    <value>Indkøb</value>
+  </data>
+  <data name="GroceryCategories_Title" xml:space="preserve">
+    <value>Kategorier</value>
+  </data>
+  <data name="GroceryCategories_Hint" xml:space="preserve">
+    <value>Din indkøbsliste er delt op i disse kategorier.</value>
+  </data>
+  <data name="GroceryCategories_Add" xml:space="preserve">
+    <value>Tilføj kategori</value>
+  </data>
+  <data name="GroceryCategories_EditAria" xml:space="preserve">
+    <value>Redigér {0}</value>
+  </data>
+  <data name="GroceryCategory_AddTitle" xml:space="preserve">
+    <value>Ny kategori</value>
+  </data>
+  <data name="GroceryCategory_EditTitle" xml:space="preserve">
+    <value>Redigér kategori</value>
+  </data>
+  <data name="GroceryCategory_Name" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="GroceryCategory_Emoji" xml:space="preserve">
+    <value>Emoji</value>
+  </data>
+  <data name="GroceryCategory_EmojiPlaceholder" xml:space="preserve">
+    <value>Valgfri</value>
+  </data>
+  <data name="GroceryCategory_Save" xml:space="preserve">
+    <value>Gem kategori</value>
+  </data>
+  <data name="GroceryCategory_DeleteAria" xml:space="preserve">
+    <value>Slet kategori</value>
+  </data>
+  <data name="DeleteGroceryCategory_Title" xml:space="preserve">
+    <value>Slet {0}?</value>
+  </data>
+  <data name="DeleteGroceryCategory_Question" xml:space="preserve">
+    <value>Hvilken kategori skal overtage dens varer?</value>
+  </data>
+  <data name="DeleteGroceryCategory_Confirm" xml:space="preserve">
+    <value>Slet</value>
+  </data>
+  <data name="GroceryCategories_DragAria" xml:space="preserve">
+    <value>Træk for at flytte {0}</value>
+  </data>
+  <data name="GroceryCategories_FollowShopping" xml:space="preserve">
+    <value>Følg mine indkøb igen</value>
+  </data>
+  <data name="GroceryCategories_FollowShoppingHint" xml:space="preserve">
+    <value>Rækkefølgen lærer af den rækkefølge, du krydser varer af i. Når du trækker en kategori, slås det fra.</value>
+  </data>
+</root>
