@@ -269,6 +269,14 @@
   <data name="SortItems_Skip" xml:space="preserve">
     <value>Skip</value>
   </data>
+  <data name="MoveItem_Title" xml:space="preserve">
+    <value>Move {0}</value>
+    <comment>Title of the drawer a swipe right opens; {0} is the item's name</comment>
+  </data>
+  <data name="MoveItem_Hint" xml:space="preserve">
+    <value>Pick a category. Every {0} moves there, on the list and in your meals.</value>
+    <comment>{0} is the item's name</comment>
+  </data>
   <data name="GroceryList_CategoriesAria" xml:space="preserve">
     <value>Categories</value>
     <comment>Header button that opens the Categories page</comment>

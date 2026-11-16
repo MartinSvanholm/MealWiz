@@ -123,4 +123,34 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
         await Expect(other).ToBeInViewportAsync(new() { Ratio = 1 });
         await Expect(Page.GetByTestId("follow-shopping-switch")).ToHaveCountAsync(1);
     }
+
+    [Fact]
+    public async Task GroceryList_SwipingAnItemRight_MovesItToAnotherSection()
+    {
+        await LoginAsync();
+        await Page.GetByTestId("nav-grocery-list").ClickAsync();
+        await Expect(Page).ToHaveURLAsync(UrlFor("grocerylist"));
+
+        await AddItemAsync("Oat milk");
+        await Expect(Section("dairy_eggs").GetByTestId("grocery-item")).ToHaveCountAsync(1);
+
+        // Drag the row to the right with the mouse: Move opens with Dairy & eggs pressed
+        var row = Row("grocery-item", "Oat milk").GetByTestId("grocery-item-swipe");
+        var box = (await row.BoundingBoxAsync())!;
+        var y = box.Y + box.Height / 2;
+        await Page.Mouse.MoveAsync(box.X + 60, y);
+        await Page.Mouse.DownAsync();
+        for (var step = 1; step <= 6; step++)
+            await Page.Mouse.MoveAsync(box.X + 60 + step * 25, y);
+        await Page.Mouse.UpAsync();
+
+        await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Move Oat milk");
+        await Expect(Drawer.Locator("[data-testid=category-chip][data-category=dairy_eggs]")).ToHaveAttributeAsync("aria-pressed", "true");
+
+        // Tap Drinks: the drawer closes and the item is in Drinks
+        await Drawer.Locator("[data-testid=category-chip][data-category=drinks]").ClickAsync();
+        await Expect(Drawer).ToBeHiddenAsync();
+        await Expect(Section("drinks").GetByTestId("grocery-item")).ToHaveCountAsync(1);
+        await Expect(Section("dairy_eggs")).ToHaveCountAsync(0);
+    }
 }

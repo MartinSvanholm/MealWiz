@@ -242,9 +242,8 @@ public class GroceryListPageTests : ComponentTestBase
 
     [Theory]
     [InlineData(-40, 0)]   // too short
-    [InlineData(120, 0)]   // to the right
     [InlineData(-30, 120)] // mostly vertical: the page scrolls
-    public void A_short_right_or_vertical_swipe_does_not_delete(double dx, double dy)
+    public void A_short_or_vertical_swipe_does_not_delete(double dx, double dy)
     {
         RenderDrawers();
         var cut = RenderWithPopovers<GroceryListPage>();

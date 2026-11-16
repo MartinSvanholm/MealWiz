@@ -160,7 +160,7 @@
 
     private RenderFragment Row(GroceryItem item) =>
         @<li class="grocery-row" data-testid="grocery-item" @key="item">
-            <SwipeToDeleteGroceryItem GroceryItem="item">
+            <SwipeGroceryItem GroceryItem="item">
                 <button type="button" class="grocery-check" data-testid="grocery-item-checkbox"
                         role="checkbox" aria-checked="false" aria-label="@L["GroceryList_CheckOffAria", item.Name]"
                         @onclick="() => _groceryListStateContainer.ToggleIsPicked(item)">
@@ -171,7 +171,7 @@
                 {
                     <span class="grocery-amount" data-testid="grocery-item-amount">@item.Amount</span>
                 }
-            </SwipeToDeleteGroceryItem>
+            </SwipeGroceryItem>
         </li>;
 
     private int ProgressPercent => Items.Count == 0 ? 0 : (int)Math.Round(100.0 * Picked.Count / Items.Count);

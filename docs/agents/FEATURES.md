@@ -247,7 +247,8 @@ kept on the device. All sections sit in `grocery-to-buy`; when the categories fa
 items are one list there without headings. The Other section's heading row has Sort (`grocery-sort-other`, outside the
 fold button), which opens `Features/GroceryList/Components/SortOtherItemsDrawer.razor` (`sort-progress`,
 `sort-item-name`, the chips without Other, `sort-skip`): the Other items one at a time, a chip moving the name and
-going to the next item still in Other. The header's `grocery-categories-button` opens the Categories page. Tapping an
+going to the next item still in Other. Swiping a to-buy row right opens Move (`MoveGroceryItemDrawer`), the
+chips for that item's name. The header's `grocery-categories-button` opens the Categories page. Tapping an
 item's name opens the Edit item drawer; its red header action (`DrawerStateParameters.HeaderAction`) deletes after the
 confirm drawer. Tapping a pill puts the item back on the list. The basket's "Clear" (`clear-basket-button`) deletes
 every picked item after the confirm drawer ("Clear 2 items?"), after the trip has taught the section order
@@ -269,9 +270,13 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - `Features/GroceryList/DeleteGroceryItem/DeleteGroceryItemButton.razor`: the red delete in the edit drawer's
     header; deletes after a confirm drawer ("Delete Milk?"). That confirm lives in
     `Features/GroceryList/DeleteGroceryItem/ConfirmDeleteGroceryItem.cs`, shared with the swipe.
-  - `Features/GroceryList/DeleteGroceryItem/SwipeToDeleteGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's
-    content. Blazor pointer events (no JS) move the row over a red layer; `touch-action: pan-y` keeps vertical
-    scrolling native, and letting go past `DeleteDistance` opens `ConfirmDeleteGroceryItem`.
+  - `Features/GroceryList/Components/SwipeGroceryItem.razor`, with `.razor.css`: wraps a to-buy row's content. Blazor
+    pointer events (no JS) move the row over a red layer (left) or an orange one (right); `touch-action: pan-y` keeps
+    vertical scrolling native. Letting go past `SwipeDistance` to the left opens `ConfirmDeleteGroceryItem`; to the
+    right (only once the categories have loaded) it opens `MoveGroceryItemDrawer`.
+  - `Features/GroceryList/Components/MoveGroceryItemDrawer.razor`, with `.razor.css`: "Move Milk", a hint
+    (`move-item-hint`) and `CategoryChips` with the item's category pressed; a tap calls `MoveName` (the name moves
+    everywhere) and closes the drawer, a failed move shows its error and stays open.
   - `Features/GroceryList/ClearBasket/ClearBasketButton.razor`, with `.razor.css`: the red "Clear" next to "In the
     basket"; after a confirm drawer it calls `ClearBasket` on the state container, which sends `DeleteGroceryItems`.
   - `Features/GroceryList/AddPlanIngredientsToGroceryList/AddIngredientsToGroceryListButton.razor`: the "From
@@ -430,7 +435,7 @@ manual mode the trips are still marked as seen (`learned_until`), so turning lea
   - unit: `Features/GroceryCategories/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryCategories/ComponentTests/` (chips in both drawers, the Categories page, deleting), and on
     the grocery list page `Features/GroceryList/ComponentTests/GroceryListPageSectionsTests.cs` and
-    `Features/GroceryList/ComponentTests/SortOtherItemsTests.cs`
+    `Features/GroceryList/ComponentTests/SortOtherItemsTests.cs` and `Features/GroceryList/ComponentTests/MoveGroceryItemTests.cs`
   - integration: `Features/GroceryCategories/IntegrationTests/` (`GroceryCategoriesHandlerTests.cs`,
     `RememberedGroceryNamesHandlerTests.cs`, `GroceryCategoryEditHandlerTests.cs`, `DeleteGroceryCategoryHandlerTests.cs`,
     `SectionOrderHandlerTests.cs`)
