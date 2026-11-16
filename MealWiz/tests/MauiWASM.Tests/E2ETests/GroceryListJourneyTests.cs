@@ -44,11 +44,10 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Row("grocery-item", "Penne").GetByTestId("grocery-item-amount")).ToHaveTextAsync("500 g");
         await Expect(Row("grocery-item", "Olive oil")).ToHaveCountAsync(0);
 
-        // Add an item by hand: the add field opens the drawer with the name filled in
-        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Milk");
+        // Add an item by hand: with the add field empty, + opens the Add item drawer for a name and an amount
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
         await Expect(Drawer.GetByTestId("drawer-title")).ToHaveTextAsync("Add item");
-        await Expect(Drawer.GetByTestId("grocery-item-name-input")).ToHaveValueAsync("Milk");
+        await FillAsync(Drawer.GetByTestId("grocery-item-name-input"), "Milk");
         await FillAsync(Drawer.GetByTestId("grocery-item-amount-input"), "1 l");
         await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);
@@ -85,12 +84,13 @@ public class GroceryListJourneyTests : E2ETestBase
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(1);
         await Expect(Row("grocery-item", "Milk")).ToHaveCountAsync(0);
 
-        // Add another item and delete it by swiping its row left with the mouse (MEA-67)
+        // Add another item by typing its name (added as is, no drawer) and delete it by swiping its row left with the
+        // mouse (MEA-67)
         await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Eggs");
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
-        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
-        await Expect(Drawer).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("grocery-item")).ToHaveCountAsync(2);
+        await Expect(Drawer).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("add-grocery-item-input")).ToHaveValueAsync("");
 
         var eggs = await Row("grocery-item", "Eggs").GetByTestId("grocery-item-swipe").BoundingBoxAsync();
         Assert.NotNull(eggs);
@@ -484,8 +484,8 @@ public class GroceryListJourneyTests : E2ETestBase
 
         // Penne is already on the list by hand, with an amount of its own
         await Page.GetByTestId("nav-grocery-list").ClickAsync();
-        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "Penne");
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
+        await FillAsync(Drawer.GetByTestId("grocery-item-name-input"), "Penne");
         await FillAsync(Drawer.GetByTestId("grocery-item-amount-input"), "200 g");
         await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
         await Expect(Drawer).ToHaveCountAsync(0);

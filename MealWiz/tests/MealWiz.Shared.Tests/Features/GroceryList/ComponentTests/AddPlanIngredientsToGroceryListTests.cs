@@ -229,14 +229,20 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     }
 
     [Fact]
-    public void Confirm_requires_an_amount_for_each_item()
+    public void Confirm_adds_an_item_whose_total_is_left_empty_without_an_amount()
     {
+        // No total is required: an empty one saves the item without an amount.
         SetupItems(TestData.GroceryItem("Milk", "1 carton", id: 1));
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
         var cut = RenderLoaded(2);
+        Assert.Equal("", Amount(cut, 1));
+        Assert.Empty(cut.FindAll(".mud-input-error"));
 
         cut.Find(TestId("plan-ingredients-confirm")).Click();
 
-        Assert.Empty(Sent<AddPlanIngredientsToGroceryList.Command>());
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        var sent = Assert.Single(Sent<AddPlanIngredientsToGroceryList.Command>());
+        Assert.Equal("", sent.Items.Single(i => i.ExistingGroceryItemId == 1).FinalAmount);
     }
 
     [Fact]
@@ -362,14 +368,17 @@ public class AddPlanIngredientsToGroceryListTests : ComponentTestBase
     }
 
     [Fact]
-    public void A_changed_amount_in_another_unit_leaves_the_total_empty_and_required()
+    public void A_changed_amount_in_another_unit_leaves_the_total_empty_and_confirm_saves_it_empty()
     {
         SetupChangedFlour(flourInList: "1 pack");
+        Drawer.OpenDrawer("From meal plan", typeof(AddPlanIngredientsToGroceryListDrawer));
         var cut = RenderLoaded(1);
 
         Assert.Equal("", Amount(cut, 0));
         cut.Find(TestId("plan-ingredients-confirm")).Click();
-        Assert.Empty(Sent<UpdateLinkedGroceryAmounts.Command>());
+
+        cut.WaitForAssertion(() => Assert.False(Drawer.IsDrawerOpen));
+        Assert.Equal("", Assert.Single(Assert.Single(Sent<UpdateLinkedGroceryAmounts.Command>()).Updates).FinalAmount);
     }
 
     [Fact]

@@ -251,7 +251,8 @@ ticked; Remove deletes the ticked items and unlinks the rest, which become manua
 A linked ingredient whose amount changed after it was added (the source's amount differs from the ingredient's current
 amount, trimmed and ignoring case; the item is still to buy; the source isn't stale) is offered again in the same
 drawer. The row shows "Was … · Now … · In list …" and suggests item − old + new (`AmountHelper.Adjust`) when all can be
-added (as above) and the result is above zero, else an empty required field. Confirming updates the item's amount and the
+added (as above) and the result is above zero, else an empty field. No total is required: an empty one is saved as no
+amount. Confirming updates the item's amount and the
 source's remembered amount, so it isn't offered again.
 
 The page is a dense list (about ten to-buy rows on a 390×844 phone): a `ScreenHeader` labelled "N items · Week W"
@@ -278,7 +279,8 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
 - **Pages:** `Features/GroceryList/GroceryListPage.razor` at `/grocerylist` (styles in `GroceryListPage.razor.css`).
 - **Components:**
   - `Features/GroceryList/AddGroceryItem/AddGroceryItemField.razor`: the "Add an item" field and + button; + or Enter
-    opens `GroceryItemDrawer` with the typed name filled in.
+    adds the typed name (trimmed) as an item with no amount, through `AddGroceryItemToGroceryList`, and clears the field
+    (a failed add puts the name back). With nothing typed they open an empty `GroceryItemDrawer` instead.
   - `Features/GroceryList/Components/GroceryItemDrawer.razor`: name and amount side by side, the category chips
     (`CategoryChips`), "Save item" in a `DrawerFooter`; a picked chip moves the name after the item is saved. Focuses the amount when the name is already filled in. The fields edit a copy of the item;
     `UpdateGroceryItem` swaps the saved copy into the list, so closing without saving changes nothing.

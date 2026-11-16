@@ -132,19 +132,17 @@ public class GroceryItemComponentTests : ComponentTestBase
     }
 
     [Fact]
-    public void Add_field_opens_the_drawer_with_a_new_item_named_as_typed()
+    public void Add_field_with_a_name_adds_it_without_opening_the_drawer()
     {
+        SetupSend<AddGroceryItem.Command, Result<GroceryItem>>(Result.Ok(TestData.GroceryItem("Eggs", id: 5)));
         var cut = RenderWithPopovers<AddGroceryItemField>();
 
         cut.Find(TestId("add-grocery-item-input")).Input("Eggs");
         cut.Find(TestId("add-grocery-item-button")).Click();
 
-        Assert.True(Drawer.IsDrawerOpen);
-        Assert.Equal("Add item", Drawer.StateParameters.Title);
-        Assert.Equal(typeof(GroceryItemDrawer), Drawer.StateParameters.Content);
-        var item = Assert.IsType<GroceryItem>(Drawer.StateParameters.ContentParameters[nameof(GroceryItemDrawer.GroceryItem)]);
-        Assert.Equal((0, "Eggs"), (item.Id, item.Name));
-        Assert.Null(Drawer.StateParameters.HeaderAction);
+        Assert.False(Drawer.IsDrawerOpen);
+        var item = Assert.Single(Sent<AddGroceryItem.Command>()).GroceryItem;
+        Assert.Equal((0, "Eggs", ""), (item.Id, item.Name, item.Amount));
     }
 
     [Fact]

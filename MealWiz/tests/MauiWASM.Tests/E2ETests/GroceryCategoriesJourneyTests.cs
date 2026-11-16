@@ -16,11 +16,11 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
 
     private async Task AddItemAsync(string name)
     {
+        // A typed name is added as is, without the drawer
         await FillAsync(Page.GetByTestId("add-grocery-item-input"), name);
         await Page.GetByTestId("add-grocery-item-button").ClickAsync();
-        await Expect(Drawer.GetByTestId("grocery-item-name-input")).ToHaveValueAsync(name);
-        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
         await Expect(Row("grocery-item", name)).ToHaveCountAsync(1);
+        await Expect(Drawer).ToHaveCountAsync(0);
     }
 
     [Fact]
@@ -82,10 +82,7 @@ public class GroceryCategoriesJourneyTests : E2ETestBase
         await Expect(Section("other")).ToHaveCountAsync(0);
 
         // A later tofu lands there too
-        await FillAsync(Page.GetByTestId("add-grocery-item-input"), "tofu");
-        await Page.GetByTestId("add-grocery-item-button").ClickAsync();
-        await Expect(Drawer.Locator("[data-testid=category-chip][data-category=meat_fish]")).ToHaveAttributeAsync("aria-pressed", "true");
-        await Drawer.GetByTestId("save-grocery-item-button").ClickAsync();
+        await AddItemAsync("tofu");
         await Expect(Section("meat_fish").GetByTestId("grocery-category-count")).ToHaveTextAsync("2");
 
         // Rename Meat & fish on the Categories page
