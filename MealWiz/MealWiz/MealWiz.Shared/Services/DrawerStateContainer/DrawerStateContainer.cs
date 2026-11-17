@@ -61,11 +61,26 @@ public partial class DrawerStateContainer : IDrawerStateContainer
 
     public void NotifyStateChanged() => OnDrawerChange?.Invoke();
 
+    /// <summary>True while the confirm callback runs; a second Confirm tap meanwhile is ignored (MEA-50).</summary>
+    public bool IsConfirmInFlight { get; private set; }
+
     public async Task NotifyConfirmClickedAsync()
     {
-        if (_onConfirm is { } onConfirm)
+        if (IsConfirmInFlight || _onConfirm is not { } onConfirm)
+        {
+            return;
+        }
+
+        IsConfirmInFlight = true;
+        NotifyStateChanged();
+        try
         {
             await onConfirm();
+        }
+        finally
+        {
+            IsConfirmInFlight = false;
+            NotifyStateChanged();
         }
     }
 
