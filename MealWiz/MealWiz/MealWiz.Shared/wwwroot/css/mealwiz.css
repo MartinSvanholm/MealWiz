@@ -226,6 +226,13 @@ h1:focus {
     border-radius: var(--mw-radius-s);
 }
 
+/* iOS Safari zooms into a focused field under 16px (MEA-158). Touch devices only; beats the scoped 15px rules. */
+@media (pointer: coarse) {
+    input, textarea, select {
+        font-size: 16px !important;
+    }
+}
+
 /* Outlined inputs: rounded, token borders, orange focus. */
 .mud-input.mud-input-outlined .mud-input-outlined-border {
     border-radius: var(--mw-radius-s);
@@ -441,10 +448,11 @@ h1:focus {
 .mw-text-muted { color: var(--mw-text-muted) !important; }
 
 /* A page that fills the whole screen; the floating bottom nav sits over it (vh fallback for browsers without dvh).
-   Its scroll area ends with padding-bottom: var(--mw-nav-clearance). */
+   Its scroll area ends with padding-bottom: var(--mw-nav-clearance). The MAUI head's status-bar spacer
+   (env(safe-area-inset-top), 0 on the web) sits above the page, so the page leaves room for it (MEA-53). */
 .mw-page {
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100vh - env(safe-area-inset-top));
+    height: calc(100dvh - env(safe-area-inset-top));
 }
 
 .mw-heading {
