@@ -322,7 +322,9 @@ return Finish(failed ? Failed : Passed);
 // class's own tests run one after another). Null if nothing could be listed.
 List<string>? ShardMethods((int Index, int Count) sh, string log)
 {
-    Run("dotnet", ["test", "--project", WebTests, "--no-build", "--list-tests", "--filter-trait", "Category=E2E"], log);
+    // --list-tests last: newer SDKs take an optional format after it (text or json) and would read the next argument
+    // as that format.
+    Run("dotnet", ["test", "--project", WebTests, "--no-build", "--filter-trait", "Category=E2E", "--list-tests"], log);
     var methods = File.ReadLines(log)
         .Select(l => Regex.Match(l, @"^\s+([\w.]+\.E2ETests\.\w+\.\w+)"))
         .Where(m => m.Success)
@@ -361,6 +363,7 @@ bool BuildFailed() => build is { IsCompleted: true, Result.Ok: false };
     var name = suite.Name;
     if (suite.Id == "e2e" && shard is { } sh)
     {
+        name = $"E2E shard {sh.Index}/{sh.Count}";
         var methods = ShardMethods(sh, log);
         if (methods is null)
             return (true, Row(name, "COULD NOT LIST the E2E tests", suiteClock.Elapsed),
@@ -368,7 +371,6 @@ bool BuildFailed() => build is { IsCompleted: true, Result.Ok: false };
         if (methods.Count == 0)
             return (false, Row(name, $"shard {sh.Index}/{sh.Count} has no tests"), []);
         filter = ["--filter-trait", "Category=E2E", .. methods.SelectMany(m => new[] { "--filter-method", m })];
-        name = $"E2E shard {sh.Index}/{sh.Count}";
         suiteDetails.Add($"{name}: {methods.Count} test methods from {string.Join(", ", methods.Select(m => m.Split('.')[^2]).Distinct())}");
     }
     string[] coverageArgs = coverage && suite.Coverage
