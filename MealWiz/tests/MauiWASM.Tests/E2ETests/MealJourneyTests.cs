@@ -1,4 +1,4 @@
-using MauiWASM.Tests.TestInfrastructure.E2E;
+﻿using MauiWASM.Tests.TestInfrastructure.E2E;
 using Microsoft.Playwright;
 using Xunit;
 
@@ -140,6 +140,25 @@ public class MealJourneyTests : E2ETestBase
         await Expect(Row("grocery-item", "Minced beef")).ToBeVisibleAsync();
         await Expect(Row("grocery-item", "Tortillas")).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("stale-items-banner")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task MealCard_ShortName_IsLeftAligned()
+    {
+        const string name = "E2E Pie";
+        await Supabase.InsertMealAsync(User, name, [new SeedIngredient("Flour", "200 g")]);
+
+        await LoginAsync();
+        await Page.GetByTestId("nav-meals").ClickAsync();
+        var card = Row("meal-list-item", name);
+        await Expect(card).ToBeVisibleAsync();
+
+        // MEA-156: a name that fits on one line starts at the card's left padding, not centred under the tile.
+        var cardBox = await card.BoundingBoxAsync();
+        var nameBox = await card.GetByTestId("meal-card-name").BoundingBoxAsync();
+        var metaBox = await card.GetByTestId("meal-card-meta").BoundingBoxAsync();
+        Assert.True(nameBox!.X - cardBox!.X < 20, $"Name starts {nameBox.X - cardBox.X}px into the card");
+        Assert.True(Math.Abs(nameBox.X - metaBox!.X) < 1, $"Name starts at {nameBox.X}px, ingredient count at {metaBox.X}px");
     }
 
     [Fact]
