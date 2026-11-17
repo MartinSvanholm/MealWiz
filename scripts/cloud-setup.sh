@@ -35,12 +35,7 @@ fi
 # Docker. The container has the daemon but doesn't start it. verify.cs starts it again if it dies later.
 if ! docker info > /dev/null 2>&1; then
   log "starting the Docker daemon"
-  nohup dockerd > /var/log/dockerd.log 2>&1 &
-  for _ in $(seq 1 30); do
-    docker info > /dev/null 2>&1 && break
-    sleep 1
-  done
-  docker info > /dev/null 2>&1 || { log "Docker didn't start; see /var/log/dockerd.log"; exit 1; }
+  bash "$(dirname "${BASH_SOURCE[0]}")/start-docker.sh" || exit 1
 fi
 
 if [[ "${MEALWIZ_PULL_IMAGES:-}" == "1" ]]; then

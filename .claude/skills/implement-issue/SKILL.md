@@ -144,7 +144,7 @@ only PRs you opened, based on `dev`, in this session.
    changed.
 4. **Verify** with `scripts/verify.ps1 fast`, plus only the step that holds each bug's red test when that isn't a
    unit or bUnit test: `scripts/verify.ps1 local --only <step>` for an integration or pgTAP test, or
-   `local --e2e <class>` for a bug pinned by an E2E test. CI runs the rest.
+   `local --quick --e2e <class>` for a bug pinned by an E2E test. CI runs the rest.
 5. **Self-review** with `mw-code-review` (light): a bug PR goes straight to `dev` and has no ship session behind it.
    Then **open the PR** (below), with one `Fixes MEA-xx` line per bug.
 6. **Wait for CI** with one background command: `gh pr checks <n> --watch --fail-fast` (Bash, `run_in_background`).
@@ -184,7 +184,8 @@ only PRs you opened, based on `dev`, in this session.
 
 ## Red CI
 
-Read the failure (verify skill; `gh run download <run-id> -n test-results`), reproduce it with
+Read the failure (verify skill; `gh run download <run-id> -n test-results`, or `-n test-results-e2e-<shard>` for
+a failed E2E shard), reproduce it with
 `scripts/verify.ps1 <level> --only <steps>`, fix, push, and watch again.
 
 - A known flake (GoTrue `429`, "JWT issued at future") gets one rerun (`gh run rerun <run-id> --failed`) that

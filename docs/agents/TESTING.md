@@ -14,7 +14,7 @@ adds every E2E journey.
 | Step | What it runs | Covers | Levels | Needs |
 |---|---|---|---|---|
 | `docs` | the doc check in `scripts/verify.cs` | Feature folders, handlers and tables listed in FEATURES.md; verify steps listed here; paths in backticks in CLAUDE.md and `docs/agents/` exist | all | nothing |
-| `build` | `dotnet build` of the three test projects | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
+| `build` | one `dotnet build` of `MealWiz/MealWiz.Tests.slnf` (the three test projects), while Supabase starts | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
 | `shared-unit` | MealWiz.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | all | — |
 | `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
@@ -24,6 +24,8 @@ adds every E2E journey.
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access, the Storage bucket policies | local, full | Docker |
 
+- **Speed:** the build runs while verify waits for the lock and starts Supabase, and the three unit suites run side by
+  side. The Supabase-backed suites run one after another, since they share the stack.
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
 - **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
   `--only` adds to it, a full run starts it over).
@@ -34,15 +36,25 @@ adds every E2E journey.
   machine-wide lock (`mealwiz-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
   end of the run, so a second verify waits and says whose run it is waiting for. Under the lock it runs
   `supabase db reset`, so the tests see this worktree's migrations and `seed.sql`, not another branch's. That wipes
-  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails because
-  the CLI lacks its `supabase-go` binary (MEA-72), verify restarts the stack instead.
+  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails for any
+  reason (a stack still settling after another worktree's run, MEA-120; a CLI without `supabase-go`, MEA-72), verify
+  stops the stack and starts it fresh, which applies the migrations and seed too; a `supabase start` that fails is
+  tried once more from a clean stop. A broken migration or seed still fails, at the start. After a start or a reset, verify checks
+  that the auth and REST APIs answer (a reset restarts their containers, and GoTrue sometimes doesn't come back, which
+  fails every integration test in its fixture with a 502); if they don't within 30 seconds, it restarts the stack once.
 - **Starting the stack:** verify starts it without Studio and postgres-meta, as CI does (`--studio` keeps them). On
-  Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
+  Linux as root (a cloud container) it starts Docker through `scripts/start-docker.sh` if it isn't running, which
+  first clears the pid files a killed daemon leaves behind (MEA-119). `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there. The stack includes **Storage** (the `meal-import-pictures` bucket); a running
   stack that was started without it is stopped (`supabase stop --no-backup`, which wipes local data once) and started again.
-- **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
-  ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
-  the end of the job log names the failed steps and tests.
+- **CI:** `.github/workflows/CI.yml` runs `verify full` in parallel jobs. "Build and test" runs every step but `e2e`,
+  one step per test project via `--only`, with coverage, and ends with `--check-complete --except e2e`, which fails if
+  another step never ran. Three "E2E (shard i/3)" jobs each run `--only e2e --e2e-shard i/3` on their own runner, so
+  the browser tests don't compete for CPU. verify lists the E2E tests (`dotnet test --list-tests`) and deals their
+  methods out to the shards in turn, so the shards always run every E2E test between them, a new one included, and a
+  long journey class is spread over all three; each shard's summary names its classes, and `--e2e-shard 2/3` reruns that shard locally. The shared
+  setup (.NET, the Supabase CLI and stack) is `.github/actions/setup/action.yml`. A failed job's last step prints
+  `verdicts.log`, so the end of the job log names the failed steps and tests.
 
 ## Which tests for which change
 
@@ -52,6 +64,15 @@ its new tests live in; CI runs `verify full` on every PR, and a PR merges only o
 (`/ship-project`) runs `verify full` on the whole project before its PR to `dev`. A change made outside that flow
 runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a journey (one class per run). While iterating, run just the project or class you're touching:
 `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
+
+**`local --quick`, for repeated runs.** A session that reruns `local --e2e <class>` (after each fix, after a `dev`
+merge) adds `--quick`. It skips the database reset when the shared stack already holds this worktree's migrations
+and `seed.sql` (verify records them after each reset or fresh start, with the database container's start time), and
+skips `functions-unit`, `functions-integration` and `db` when nothing under `MealWiz/src/MealWiz.Functions/`,
+`MealWiz/tests/MealWiz.Functions.Tests/`, `MealWiz/tests/Contracts/` or `supabase/` differs from `origin/dev`. The
+summary lists each skipped step and why. A run that holds the PR's verdict outside the project and bug flows (no CI
+behind it) is plain `local`, without `--quick`. Measured with `--e2e MealPlanJourneyTests` and the stack up: 2m23s
+plain, 1m48s with `--quick`.
 
 | You changed | Add or update | Run at least |
 |---|---|---|
@@ -331,4 +352,5 @@ existing project.
 
 1. Add the suite to the `suites` list in `scripts/verify.cs` (id, display name, project, filter, coverage flag).
 2. Add its id to an `--only` list in `.github/workflows/CI.yml`. Until you do, the `--check-complete` step fails.
+   A new E2E test needs nothing here: the E2E shards pick it up.
 3. Add it to the [suites table](#suites-at-a-glance) above. Until you do, the `docs` step fails.

@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "MealWiz.sln",
+    "projects": [
+      "tests\\MauiWASM.Tests\\MauiWASM.Tests.csproj",
+      "tests\\MealWiz.Functions.Tests\\MealWiz.Functions.Tests.csproj",
+      "tests\\MealWiz.Shared.Tests\\MealWiz.Shared.Tests.csproj"
+    ]
+  }
+}

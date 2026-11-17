@@ -275,4 +275,27 @@ public class AuthJourneyTests : E2ETestBase
         await Expect(Page).ToHaveURLAsync(UrlFor("login"));
         await Expect(Page.GetByTestId("login-submit")).ToBeVisibleAsync();
     }
+
+    [Fact]
+    public async Task TextFields_AreAtLeast16px_OnTouchDevices()
+    {
+        // MEA-158: iOS Safari zooms into a focused field whose text is under 16px.
+        await using var phone = await Env.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            BaseURL = Env.App.BaseUrl.ToString(),
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            IsMobile = true,
+            HasTouch = true,
+            Locale = "en-US"
+        });
+        var page = await phone.NewPageAsync();
+        await page.GotoAsync("login");
+        await Expect(page.GetByTestId("login-email")).ToBeVisibleAsync();
+
+        Assert.True(await page.EvaluateAsync<bool>("matchMedia('(pointer: coarse)').matches"), "The context isn't a touch device");
+        var sizes = await page.EvaluateAsync<string[]>(
+            "[...document.querySelectorAll('input, textarea, select')].filter(e => e.offsetParent).map(e => (e.id || e.type) + ' ' + getComputedStyle(e).fontSize)");
+        Assert.NotEmpty(sizes);
+        Assert.All(sizes, s => Assert.True(double.Parse(s.Split(' ')[^1].Replace("px", ""), System.Globalization.CultureInfo.InvariantCulture) >= 16, s));
+    }
 }
