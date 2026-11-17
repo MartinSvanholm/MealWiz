@@ -4,8 +4,10 @@ name: CI
 # every test. Compiling is the type check.
 #
 # The tests run through scripts/verify.sh, the command agents and developers run locally, so the two can't drift:
-# `verify full` is split into one step per test project with --only, and the last check fails if a step of
-# `verify full` never ran here.
+# `verify full` is split into one step per test project with --only. The E2E journeys, the slowest part, run in
+# parallel jobs, one shard each (--e2e-shard). verify splits the E2E test classes it lists from the test project
+# between the shards, so together they always run every E2E test, a new class included. The last check of
+# "Build and test" fails if any other step of `verify full` never ran.
 on:
   pull_request:
   workflow_dispatch:
@@ -17,34 +19,14 @@ jobs:
   build_and_test:
     name: Build and test
     runs-on: ubuntu-latest
-    # A normal run takes about 6 minutes. This stops a hung step from holding a runner for the 6-hour default.
+    # A normal run takes about 4 minutes. This stops a hung step from holding a runner for the 6-hour default.
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-dotnet@v5
-        with:
-          # 9 for the Blazor app, 10 for MealWiz.Functions, the test projects and scripts/verify.cs.
-          dotnet-version: |
-            9.0.x
-            10.0.x
-
-      # Pinned to the local version.
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.111.0
-
-      # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
-      # connection (e.g. an image pull) can grab one just before Supabase binds it: "address already in use".
-      - name: Keep outgoing connections off Supabase's ports
-        run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
-
-      # Started first, so every test below can use the database. A fresh stack applies every migration and
-      # seed.sql, so a broken migration fails here rather than in production. verify then finds it running, and the
-      # test fixtures read the keys from `supabase status`, as they do locally.
-      - name: Start Supabase (applies all migrations and the seed)
-        id: supabase
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor
+      - name: Set up .NET and Supabase
+        id: setup
+        uses: ./.github/actions/setup
 
       # Checks the agent docs (docs/agents/, CLAUDE.md), then builds MauiWASM, MealWiz.Functions and the three test
       # projects (Debug). The test steps below don't rebuild.
@@ -52,7 +34,93 @@ jobs:
         id: build
         run: scripts/verify.sh full --only build,docs
 
-      # For the E2E tests in MauiWASM.Tests: Chromium, cached per Playwright version, and the Linux packages it needs.
+      # One step per test project. Each runs even if an earlier one failed, so one PR run reports everything.
+      # Unit and integration suites collect coverage; E2E can't (the app runs as WebAssembly in Chromium).
+      - name: Run MealWiz.Shared tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only shared-unit,shared-integration
+
+      - name: Run MealWiz.Functions tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only functions-unit,functions-integration
+
+      # The web host: DI composition, session storage, appsettings and routes. Its E2E tests run in the e2e jobs.
+      - name: Run MauiWASM unit tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --coverage --only web-unit
+
+      # pgTAP tests for every RLS policy (supabase/tests/database). Fail if a policy is loosened or a public
+      # table is added without RLS and tests.
+      - name: Run database tests
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: scripts/verify.sh full --only db
+
+      # Fails when verify.cs gained a step that no --only list in this file runs. `e2e` runs in the e2e jobs.
+      - name: Check every verify step ran
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: scripts/verify.sh full --check-complete --except e2e
+
+      # One merged report over every suite. No threshold yet: it's only reported.
+      - name: Merge coverage
+        if: ${{ !cancelled() && hashFiles('artifacts/verify/full/**/*.cobertura.xml') != '' }}
+        uses: danielpalme/ReportGenerator-GitHub-Action@5f3701a41d14548c9b8e575a5c235230e515cbc0 # v5
+        with:
+          reports: artifacts/verify/full/**/*.cobertura.xml
+          targetdir: artifacts/coverage
+          reporttypes: Cobertura;MarkdownSummaryGithub;HtmlInline
+          title: MealWiz coverage
+          # Source-generated code (Functions worker registrations, [GeneratedRegex]) isn't ours to test.
+          filefilters: -**/obj/**
+
+      - name: Add coverage to the job summary
+        if: ${{ !cancelled() && hashFiles('artifacts/coverage/SummaryGithub.md') != '' }}
+        run: cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('artifacts/coverage/Cobertura.xml') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: artifacts/coverage/
+
+      # Every suite's log and TRX, supabase.log and db.log.
+      - name: Upload test results
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: artifacts/verify/full/
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+      # Last, so a failed job's log ends with what failed (every verify verdict above, with its FAILED test lines)
+      # instead of the upload and cleanup output.
+      - name: Show what failed
+        if: ${{ failure() && hashFiles('artifacts/verify/full/verdicts.log') != '' }}
+        run: cat artifacts/verify/full/verdicts.log
+
+  # The E2E journeys: they publish the app and drive it in headless Chromium against the local Supabase stack. Each
+  # job runs one shard of the test classes on its own runner, so they don't compete for CPU.
+  e2e:
+    name: E2E (shard ${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      # Every shard reports, even when another one fails.
+      fail-fast: false
+      matrix:
+        # Change the 3 in --e2e-shard and in the job name too when adding a shard.
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up .NET and Supabase
+        uses: ./.github/actions/setup
+
+      - name: Build
+        run: scripts/verify.sh full --only build
+
+      # Chromium, cached per Playwright version, and the Linux packages it needs.
       - name: Read Playwright version
         id: playwright
         run: echo "version=$(sed -n 's/.*"Microsoft.Playwright" Version="\([^"]*\)".*/\1/p' MealWiz/tests/MauiWASM.Tests/MauiWASM.Tests.csproj)" >> "$GITHUB_OUTPUT"
@@ -79,71 +147,21 @@ jobs:
           echo 'Acquire::http::Timeout "30"; Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99-ci-retries > /dev/null
           pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install-deps chromium
 
-      # One step per test project. Each runs even if an earlier one failed, so one PR run reports everything.
-      # Unit and integration suites collect coverage; E2E can't (the app runs as WebAssembly in Chromium).
-      - name: Run MealWiz.Shared tests
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: scripts/verify.sh full --coverage --only shared-unit,shared-integration
+      - name: Run E2E shard ${{ matrix.shard }}/3
+        run: scripts/verify.sh full --only e2e --e2e-shard ${{ matrix.shard }}/3
 
-      - name: Run MealWiz.Functions tests
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: scripts/verify.sh full --coverage --only functions-unit,functions-integration
-
-      # The web host: DI composition, session storage, appsettings and routes. The E2E tests also publish the app
-      # and drive it in Chromium against the local Supabase stack, including Realtime.
-      - name: Run MauiWASM tests
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: scripts/verify.sh full --coverage --only web-unit,e2e
-
-      # pgTAP tests for every RLS policy (supabase/tests/database). Fail if a policy is loosened or a public
-      # table is added without RLS and tests.
-      - name: Run database tests
-        if: ${{ !cancelled() && steps.supabase.outcome == 'success' }}
-        run: scripts/verify.sh full --only db
-
-      # Fails when verify.cs gained a step that no --only list above runs.
-      - name: Check every verify step ran
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: scripts/verify.sh full --check-complete
-
-      # One merged report over every suite. No threshold yet: it's only reported.
-      - name: Merge coverage
-        if: ${{ !cancelled() && hashFiles('artifacts/verify/full/**/*.cobertura.xml') != '' }}
-        uses: danielpalme/ReportGenerator-GitHub-Action@5f3701a41d14548c9b8e575a5c235230e515cbc0 # v5
-        with:
-          reports: artifacts/verify/full/**/*.cobertura.xml
-          targetdir: artifacts/coverage
-          reporttypes: Cobertura;MarkdownSummaryGithub;HtmlInline
-          title: MealWiz coverage
-          # Source-generated code (Functions worker registrations, [GeneratedRegex]) isn't ours to test.
-          filefilters: -**/obj/**
-
-      - name: Add coverage to the job summary
-        if: ${{ !cancelled() && hashFiles('artifacts/coverage/SummaryGithub.md') != '' }}
-        run: cat artifacts/coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload coverage report
-        if: ${{ !cancelled() && hashFiles('artifacts/coverage/Cobertura.xml') != '' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage
-          path: artifacts/coverage/
-
-      # Every suite's log and TRX, supabase.log and db.log, plus a Playwright trace, screenshot and browser console
-      # log for each failed E2E test.
+      # The suite's log and TRX, plus a Playwright trace, screenshot and browser console log for each failed test.
       - name: Upload test results
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
-          name: test-results
+          name: test-results-e2e-${{ matrix.shard }}
           path: |
             artifacts/verify/full/
             MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/
           include-hidden-files: true
           if-no-files-found: ignore
 
-      # Last, so a failed job's log ends with what failed (every verify verdict above, with its FAILED test lines)
-      # instead of the upload and cleanup output.
       - name: Show what failed
         if: ${{ failure() && hashFiles('artifacts/verify/full/verdicts.log') != '' }}
         run: cat artifacts/verify/full/verdicts.log

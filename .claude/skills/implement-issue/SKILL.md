@@ -184,7 +184,8 @@ only PRs you opened, based on `dev`, in this session.
 
 ## Red CI
 
-Read the failure (verify skill; `gh run download <run-id> -n test-results`), reproduce it with
+Read the failure (verify skill; `gh run download <run-id> -n test-results`, or `-n test-results-e2e-<shard>` for
+a failed E2E shard), reproduce it with
 `scripts/verify.ps1 <level> --only <steps>`, fix, push, and watch again.
 
 - A known flake (GoTrue `429`, "JWT issued at future") gets one rerun (`gh run rerun <run-id> --failed`) that

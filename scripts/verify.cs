@@ -30,7 +30,10 @@
 //                      Without "build" the build is skipped, so build first.
 //   --coverage         collect Cobertura coverage for the unit and integration suites (<suite>/<suite>.cobertura.xml)
 //   --check-complete   fail if a step of the level hasn't run since the level's last full run, so CI.yml can't fall
-//                      behind when a suite is added here
+//                      behind when a suite is added here. `--except <steps>` names steps that ran in another job
+//   --e2e-shard <i>/<n>  full only: run shard i of n of the E2E journeys, so CI can spread them over parallel jobs.
+//                      The shards split the test methods that `dotnet test --list-tests` finds, so together they
+//                      always run every E2E test, including one added later
 //
 // On GitHub Actions the summary is also appended to the job summary.
 
@@ -63,7 +66,8 @@ if (level is null or "-h" or "--help" or "help")
                              shared-integration, functions-integration, e2e-smoke (smoke), e2e (full, local --e2e),
                              db (local, full)
           --coverage         Cobertura coverage for the unit and integration suites
-          --check-complete   fail if a step of the level hasn't run
+          --check-complete   fail if a step of the level hasn't run (--except <steps>: they ran in another job)
+          --e2e-shard <i>/<n>  full only: run shard i of n of the E2E test methods
         """);
     return level is null ? CouldNotRun : Passed;
 }
@@ -79,6 +83,8 @@ var checkComplete = false;
 var noReset = false;
 var studio = false;
 string? e2eClass = null;
+HashSet<string> ranElsewhere = [];
+(int Index, int Count)? shard = null;
 for (var i = 1; i < args.Length; i++)
 {
     switch (args[i])
@@ -98,6 +104,18 @@ for (var i = 1; i < args.Length; i++)
         case "--studio":
             studio = true;
             break;
+        case "--except" when i + 1 < args.Length:
+            ranElsewhere = args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
+            break;
+        case "--e2e-shard" when i + 1 < args.Length && level is "full"
+                                && Regex.Match(args[i + 1], @"^(\d+)/(\d+)$") is { Success: true } m
+                                && int.Parse(m.Groups[1].Value) is >= 1 and var index && int.Parse(m.Groups[2].Value) is var count && index <= count:
+            shard = (index, count);
+            i++;
+            break;
+        case "--e2e-shard":
+            Console.WriteLine("--e2e-shard <i>/<n> goes with `full`, with 1 <= i <= n, e.g. --e2e-shard 2/3.");
+            return CouldNotRun;
         case "--e2e" when i + 1 < args.Length && level is "local":
             e2eClass = args[++i];
             break;
@@ -157,9 +175,9 @@ var stepsRun = Path.Combine(outDir, ".steps-run");
 if (checkComplete)
 {
     var ran = File.Exists(stepsRun) ? File.ReadAllLines(stepsRun).ToHashSet() : [];
-    var missing = steps.Where(s => !ran.Contains(s)).ToList();
+    var missing = steps.Where(s => !ran.Contains(s) && !ranElsewhere.Contains(s)).ToList();
     Console.WriteLine(missing.Count == 0
-        ? $"verify {level}: every step ran ({string.Join(", ", steps)})"
+        ? $"verify {level}: every step ran ({string.Join(", ", steps)})" + (ranElsewhere.Count > 0 ? $"; {string.Join(", ", ranElsewhere)} in other jobs" : "")
         : $"verify {level}: these steps never ran: {string.Join(", ", missing)}. Add them to an --only list in .github/workflows/CI.yml.");
     return missing.Count == 0 ? Passed : Failed;
 }
@@ -299,6 +317,24 @@ return Finish(failed ? Failed : Passed);
 
 // ---------------------------------------------------------------------------------------------------------------
 
+// The E2E test methods of one shard: every n-th method of the tests `full` runs, in name order, so every shard
+// computes the same split, together they cover every test, and a long journey class is spread over the shards (a
+// class's own tests run one after another). Null if nothing could be listed.
+List<string>? ShardMethods((int Index, int Count) sh, string log)
+{
+    // --list-tests last: newer SDKs take an optional format after it (text or json) and would read the next argument
+    // as that format.
+    Run("dotnet", ["test", "--project", WebTests, "--no-build", "--filter-trait", "Category=E2E", "--list-tests"], log);
+    var methods = File.ReadLines(log)
+        .Select(l => Regex.Match(l, @"^\s+([\w.]+\.E2ETests\.\w+\.\w+)"))
+        .Where(m => m.Success)
+        .Select(m => m.Groups[1].Value)
+        .Distinct()
+        .Order(StringComparer.Ordinal)
+        .ToList();
+    return methods.Count == 0 ? null : methods.Where((_, i) => i % sh.Count == sh.Index - 1).ToList();
+}
+
 // The MAUI head in MealWiz.sln needs mobile workloads, so this builds what the tests reference instead (MealWiz.Shared,
 // MauiWASM, MealWiz.Functions and the three test projects), like CI: one build of the solution filter that lists
 // the test projects, so MSBuild builds them in parallel and evaluates the shared projects once.
@@ -323,21 +359,35 @@ bool BuildFailed() => build is { IsCompleted: true, Result.Ok: false };
     var suiteClock = Stopwatch.StartNew();
     var resultsDir = Path.Combine(outDir, suite.Id);
     var log = Path.Combine(outDir, suite.Id + ".log");
+    var filter = suite.Filter;
+    var name = suite.Name;
+    if (suite.Id == "e2e" && shard is { } sh)
+    {
+        name = $"E2E shard {sh.Index}/{sh.Count}";
+        var methods = ShardMethods(sh, log);
+        if (methods is null)
+            return (true, Row(name, "COULD NOT LIST the E2E tests", suiteClock.Elapsed),
+                [$"`dotnet test --list-tests` found no E2E tests to shard. Last lines of {Relative(log)}:", .. Tail(log, 15).Select(l => "  " + l)]);
+        if (methods.Count == 0)
+            return (false, Row(name, $"shard {sh.Index}/{sh.Count} has no tests"), []);
+        filter = ["--filter-trait", "Category=E2E", .. methods.SelectMany(m => new[] { "--filter-method", m })];
+        suiteDetails.Add($"{name}: {methods.Count} test methods from {string.Join(", ", methods.Select(m => m.Split('.')[^2]).Distinct())}");
+    }
     string[] coverageArgs = coverage && suite.Coverage
         ? ["--coverage", "--coverage-output-format", "cobertura", "--coverage-output", suite.Id + ".cobertura.xml"]
         : [];
     var exit = Run("dotnet",
         ["test", "--project", suite.Project, "--no-build", "--no-progress",
          "--results-directory", resultsDir, "--report-xunit-trx", "--report-xunit-trx-filename", suite.Id + ".trx",
-         .. coverageArgs, .. suite.Filter],
+         .. coverageArgs, .. filter],
         log, env);
 
     var trx = Directory.Exists(resultsDir) ? Directory.GetFiles(resultsDir, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
     if (trx is null)
     {
-        suiteDetails.Add($"{suite.Name}: the test run produced no results. Last lines of {Relative(log)}:");
+        suiteDetails.Add($"{name}: the test run produced no results. Last lines of {Relative(log)}:");
         suiteDetails.AddRange(Tail(log, 15).Select(l => "  " + l));
-        return (true, Row(suite.Name, $"CRASHED (exit {exit}, no results)", suiteClock.Elapsed), suiteDetails);
+        return (true, Row(name, $"CRASHED (exit {exit}, no results)", suiteClock.Elapsed), suiteDetails);
     }
 
     var result = ReadTrx(trx);
@@ -357,7 +407,7 @@ bool BuildFailed() => build is { IsCompleted: true, Result.Ok: false };
     }
     foreach (var (test, reason) in result.SkippedTests.Take(5))
         suiteDetails.Add($"SKIPPED {test}: {reason}");
-    return (suiteFailed, Row(suite.Name, counts, suiteClock.Elapsed), suiteDetails);
+    return (suiteFailed, Row(name, counts, suiteClock.Elapsed), suiteDetails);
 }
 
 int Finish(int exitCode)
