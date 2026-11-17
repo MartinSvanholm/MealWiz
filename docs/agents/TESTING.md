@@ -47,9 +47,14 @@ adds every E2E journey.
   first clears the pid files a killed daemon leaves behind (MEA-119). `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there. The stack includes **Storage** (the `meal-import-pictures` bucket); a running
   stack that was started without it is stopped (`supabase stop --no-backup`, which wipes local data once) and started again.
-- **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It
-  ends with `--check-complete`, which fails if a step never ran. A failed job's last step prints `verdicts.log`, so
-  the end of the job log names the failed steps and tests.
+- **CI:** `.github/workflows/CI.yml` runs `verify full` in parallel jobs. "Build and test" runs every step but `e2e`,
+  one step per test project via `--only`, with coverage, and ends with `--check-complete --except e2e`, which fails if
+  another step never ran. Three "E2E (shard i/3)" jobs each run `--only e2e --e2e-shard i/3` on their own runner, so
+  the browser tests don't compete for CPU. verify lists the E2E tests (`dotnet test --list-tests`) and deals their
+  methods out to the shards in turn, so the shards always run every E2E test between them, a new one included, and a
+  long journey class is spread over all three; each shard's summary names its classes, and `--e2e-shard 2/3` reruns that shard locally. The shared
+  setup (.NET, the Supabase CLI and stack) is `.github/actions/setup/action.yml`. A failed job's last step prints
+  `verdicts.log`, so the end of the job log names the failed steps and tests.
 
 ## Which tests for which change
 
@@ -347,4 +352,5 @@ existing project.
 
 1. Add the suite to the `suites` list in `scripts/verify.cs` (id, display name, project, filter, coverage flag).
 2. Add its id to an `--only` list in `.github/workflows/CI.yml`. Until you do, the `--check-complete` step fails.
+   A new E2E test needs nothing here: the E2E shards pick it up.
 3. Add it to the [suites table](#suites-at-a-glance) above. Until you do, the `docs` step fails.

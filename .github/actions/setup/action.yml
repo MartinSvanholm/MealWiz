@@ -1,0 +1,33 @@
+name: Set up .NET and Supabase
+description: >
+  What every CI test job needs before it builds: the .NET 9 and 10 SDKs, the Supabase CLI, and a running local
+  Supabase stack, which applies every migration and seed.sql.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@v5
+      with:
+        # 9 for the Blazor app, 10 for MealWiz.Functions, the test projects and scripts/verify.cs.
+        dotnet-version: |
+          9.0.x
+          10.0.x
+
+    # Pinned to the local version.
+    - uses: supabase/setup-cli@v1
+      with:
+        version: 2.111.0
+
+    # Linux picks outgoing ports from 32768-60999, which covers Supabase's 543xx ports, so a random
+    # connection (e.g. an image pull) can grab one just before Supabase binds it: "address already in use".
+    - name: Keep outgoing connections off Supabase's ports
+      shell: bash
+      run: sudo sysctl -w net.ipv4.ip_local_port_range="60000 65000"
+
+    # Started first, so every test can use the database. A fresh stack applies every migration and seed.sql, so a
+    # broken migration fails here rather than in production. verify then finds it running, and the test fixtures
+    # read the keys from `supabase status`, as they do locally.
+    - name: Start Supabase (applies all migrations and the seed)
+      id: supabase
+      shell: bash
+      run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,postgres-meta,supavisor
+

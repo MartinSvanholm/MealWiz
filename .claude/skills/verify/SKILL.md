@@ -69,7 +69,7 @@ Full logs: artifacts/verify/smoke/
 
 - Exit code **0** means passed, **1** means a build or test failed (or `supabase db reset` failed on a migration), and **2** means it couldn't run (unknown level, no Supabase CLI, Docker not running, or another verify held the lock for an hour). Report the verdict line. Never call a change done on a non-zero exit.
 - `artifacts/verify/<level>/` has `build.log`, `<suite>.log`, `<suite>/<suite>.trx` (every test with its full message and stack), `supabase.log` and `db.log`.
-- A failed CI run has the same folder (plus the E2E traces) in its `test-results` artifact: `gh run download <run-id> -n test-results`. CI runs `verify full` one step at a time (`--only shared-unit,shared-integration`, ...); you can rerun just those steps locally the same way (after `--only build`, or a normal run).
+- A failed CI run has the same folder in its `test-results` artifact (`gh run download <run-id> -n test-results`), and each failed E2E shard has its own, with the E2E traces: `test-results-e2e-<shard>`. CI runs `verify full` one step at a time (`--only shared-unit,shared-integration`, ...) and the E2E tests in three shards (`--only e2e --e2e-shard 2/3`); you can rerun just those steps or that shard locally the same way (after `--only build`, or a normal run).
 
 ## 4. Triage by what failed
 
