@@ -1,3 +1,4 @@
+﻿using System.Globalization;
 using Bunit;
 using FluentResults;
 using MealWiz.Shared.Features.MealPlans;
@@ -21,7 +22,7 @@ public class MealPlanWeekOverviewTests : ComponentTestBase
     private List<string> Days(IRenderedComponent<MealPlanWeekOverview> cut) =>
         cut.FindAll(TestId("week-day")).Select(d => d.GetAttribute("data-date")!).ToList();
 
-    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd");
+    private static string Iso(DateTime date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     [Fact]
     public void Renders_the_seven_days_of_the_current_week()
@@ -30,6 +31,16 @@ public class MealPlanWeekOverviewTests : ComponentTestBase
 
         Assert.Equal(Enumerable.Range(0, 7).Select(i => Iso(ThisMonday.AddDays(i))), Days(cut));
         Assert.Equal(ThisMonday, Assert.Single(Sent<GetMealPlanByDate.Query>()).Date);
+    }
+
+    [Fact]
+    public void Day_data_dates_use_the_Gregorian_calendar_whatever_the_culture()
+    {
+        using var _ = CultureScope.Use("th-TH");
+
+        var cut = Render<MealPlanWeekOverview>();
+
+        Assert.Equal(Enumerable.Range(0, 7).Select(i => Iso(ThisMonday.AddDays(i))), Days(cut));
     }
 
     [Fact]
