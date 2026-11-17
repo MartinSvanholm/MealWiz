@@ -1,3 +1,4 @@
+@using System.Globalization
 @inject IMealPlanStateContainer _mealPlanStateContainer
 @inject ILocalStorageService _localStorage
 @inject IStringLocalizer<MealPlansResource> L
@@ -14,7 +15,7 @@
             var isSelected = IsSelected(date);
             var hasMeal = _mealPlanStateContainer.DateHasMeal(date);
 
-            <button type="button" data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd")"
+            <button type="button" data-testid="week-day" data-date="@date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)"
                     class="@GetDayContainerClass(date, isSelected, hasMeal)"
                     aria-pressed="@(isSelected ? "true" : "false")"
                     aria-label="@date.ToFullDate()"

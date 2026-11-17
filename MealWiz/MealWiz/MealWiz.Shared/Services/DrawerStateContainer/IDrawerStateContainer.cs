@@ -7,6 +7,7 @@ public interface IDrawerStateContainer
     Stack<DrawerStateParameters> DrawerNavigationStack { get; set; }
     bool IsDrawerOpen { get; set; }
     bool IsConfirmDrawerOpen { get; set; }
+    bool IsConfirmInFlight { get; }
     DrawerStateParameters StateParameters { get; set; }
 
     event Action? OnDrawerChange;
