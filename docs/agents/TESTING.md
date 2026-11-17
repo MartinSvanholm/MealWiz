@@ -14,7 +14,7 @@ adds every E2E journey.
 | Step | What it runs | Covers | Levels | Needs |
 |---|---|---|---|---|
 | `docs` | the doc check in `scripts/verify.cs` | Feature folders, handlers and tables listed in FEATURES.md; verify steps listed here; paths in backticks in CLAUDE.md and `docs/agents/` exist | all | nothing |
-| `build` | `dotnet build` of the three test projects | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
+| `build` | one `dotnet build` of `MealWiz/MealWiz.Tests.slnf` (the three test projects), while Supabase starts | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
 | `shared-unit` | MealWiz.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | all | — |
 | `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
 | `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
@@ -24,6 +24,8 @@ adds every E2E journey.
 | `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access, the Storage bucket policies | local, full | Docker |
 
+- **Speed:** the build runs while verify waits for the lock and starts Supabase, and the three unit suites run side by
+  side. The Supabase-backed suites run one after another, since they share the stack.
 - **Exit code:** the verdict. 0 passed, 1 failed, 2 couldn't run.
 - **Logs:** under `artifacts/verify/<level>/`. `verdicts.log` there collects every run's verdict block (a run with
   `--only` adds to it, a full run starts it over).
@@ -34,10 +36,13 @@ adds every E2E journey.
   machine-wide lock (`mealwiz-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
   end of the run, so a second verify waits and says whose run it is waiting for. Under the lock it runs
   `supabase db reset`, so the tests see this worktree's migrations and `seed.sql`, not another branch's. That wipes
-  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails because
-  the CLI lacks its `supabase-go` binary (MEA-72), verify restarts the stack instead.
+  local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails for any
+  reason (a stack still settling after another worktree's run, MEA-120; a CLI without `supabase-go`, MEA-72), verify
+  stops the stack and starts it fresh, which applies the migrations and seed too; a `supabase start` that fails is
+  tried once more from a clean stop. A broken migration or seed still fails, at the start.
 - **Starting the stack:** verify starts it without Studio and postgres-meta, as CI does (`--studio` keeps them). On
-  Linux as root (a cloud container) it starts `dockerd` if Docker isn't running. `scripts/cloud-setup.sh` installs the
+  Linux as root (a cloud container) it starts Docker through `scripts/start-docker.sh` if it isn't running, which
+  first clears the pid files a killed daemon leaves behind (MEA-119). `scripts/cloud-setup.sh` installs the
   .NET 10 SDK and the Supabase CLI there. The stack includes **Storage** (the `meal-import-pictures` bucket); a running
   stack that was started without it is stopped (`supabase stop --no-backup`, which wipes local data once) and started again.
 - **CI:** `.github/workflows/CI.yml` runs `verify full`, one step per test project via `--only`, with coverage. It

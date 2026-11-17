@@ -118,7 +118,7 @@ public sealed class SessionKeeperTests : IDisposable
         var requests = 1;
         foreach (var delay in new[] { 15, 30, 60, 120, 240, 300, 300 })
         {
-            await AdvanceAsync(TimeSpan.FromSeconds(delay - 1));
+            await AdvanceAsync(TimeSpan.FromSeconds(delay - 1), expectRequest: false);
             Assert.Equal(requests, _endpoint.Requests);
             await AdvanceAsync(TimeSpan.FromSeconds(1));
             Assert.Equal(++requests, _endpoint.Requests);
@@ -140,13 +140,13 @@ public sealed class SessionKeeperTests : IDisposable
 
         // The SDK stamps the new session with the real clock, so it is due 2880 s after the test started (80 % of 3600 s).
         _endpoint.Respond(503);
-        await AdvanceAsync(TimeSpan.FromSeconds(2830)); // fake time is at 2875 s
+        await AdvanceAsync(TimeSpan.FromSeconds(2830), expectRequest: false); // fake time is at 2875 s
         Assert.Equal(3, _endpoint.Requests);
         await AdvanceAsync(TimeSpan.FromSeconds(10));
         Assert.Equal(4, _endpoint.Requests);
 
         // The success reset the back-off: this failure retries after 15 s, not 60 s.
-        await AdvanceAsync(TimeSpan.FromSeconds(14));
+        await AdvanceAsync(TimeSpan.FromSeconds(14), expectRequest: false);
         Assert.Equal(4, _endpoint.Requests);
         await AdvanceAsync(TimeSpan.FromSeconds(1));
         Assert.Equal(5, _endpoint.Requests);
@@ -162,7 +162,7 @@ public sealed class SessionKeeperTests : IDisposable
         keeper.Changed += () => changed++;
 
         await keeper.SignOutLocallyAsync();
-        await AdvanceAsync(TimeSpan.FromHours(2));
+        await AdvanceAsync(TimeSpan.FromHours(2), expectRequest: false);
 
         Assert.True(keeper.IsSignedOut);
         Assert.Null(client.Auth.CurrentSession);
@@ -172,12 +172,13 @@ public sealed class SessionKeeperTests : IDisposable
         Assert.Equal(0, _endpoint.Requests);
     }
 
-    // The timer callback runs on the thread pool; give its HTTP call time to land.
-    private async Task AdvanceAsync(TimeSpan by)
+    // The timer callback runs on the thread pool; give its HTTP call time to land. An advance that should cause no
+    // request only waits long enough for a wrong one to show up, not the full second.
+    private async Task AdvanceAsync(TimeSpan by, bool expectRequest = true)
     {
         var before = _endpoint.Requests;
         _time.Advance(by);
-        for (var i = 0; i < 50; i++)
+        for (var i = 0; i < (expectRequest ? 50 : 10); i++)
         {
             await Task.Delay(20);
             if (_endpoint.Requests != before && _endpoint.Idle)

@@ -33,8 +33,9 @@ scripts/verify.sh local      # bash
 ```
 
 In a Claude Code cloud container, run `scripts/cloud-setup.sh` first if `dotnet` or `supabase` is missing (the
-environment's setup script should already have run it). verify starts `dockerd` itself there if Docker isn't running,
-and if `supabase db reset` fails for lack of the `supabase-go` binary it restarts the stack instead (MEA-72).
+environment's setup script should already have run it). verify starts Docker itself there if it isn't running
+(`scripts/start-docker.sh`, which also clears a dead daemon's pid files), and if `supabase db reset` fails it
+restarts the stack instead.
 
 Every level but `fast` takes minutes, so run it in the background and wait for the completion notice rather than
 polling.
