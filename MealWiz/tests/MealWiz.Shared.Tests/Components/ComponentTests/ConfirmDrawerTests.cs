@@ -1,4 +1,4 @@
-﻿using Bunit;
+using Bunit;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;

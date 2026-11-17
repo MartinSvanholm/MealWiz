@@ -1,4 +1,4 @@
-﻿using MauiWASM.Tests.TestInfrastructure.E2E;
+using MauiWASM.Tests.TestInfrastructure.E2E;
 using Microsoft.Playwright;
 using Xunit;
 

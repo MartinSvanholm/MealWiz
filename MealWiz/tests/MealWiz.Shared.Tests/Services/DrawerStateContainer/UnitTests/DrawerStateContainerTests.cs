@@ -1,4 +1,4 @@
-﻿using MealWiz.Shared.Services.DrawerStateContainer;
+using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.AspNetCore.Components;
 using Xunit;
 using DrawerStateContainerService = MealWiz.Shared.Services.DrawerStateContainer.DrawerStateContainer;
