@@ -39,5 +39,10 @@ if ! gh pr checks "$pr" > /dev/null 2>&1; then
   refuse "its checks are not all green."
 fi
 
-gh pr merge "$pr" --merge --delete-branch
+# No --delete-branch: after merging, gh would switch this checkout to the base branch, which fails in a worktree
+# when another worktree has that branch checked out, and then exits 1 with the remote branch still there (MEA-51).
+gh pr merge "$pr" --merge
+# Delete the remote head branch through the API instead. It may already be gone (the repo's auto-delete setting).
+gh api -X DELETE "repos/{owner}/{repo}/git/refs/heads/$head" > /dev/null 2>&1 \
+  || echo "merge-pr: merged, but could not delete the remote branch '$head' (already deleted?)" >&2
 echo "merge-pr: merged PR #$pr ($head -> $base)"

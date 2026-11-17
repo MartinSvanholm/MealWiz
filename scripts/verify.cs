@@ -15,8 +15,10 @@
 // Every level that uses Supabase takes a machine-wide lock first, so parallel worktrees (agent sessions) take turns
 // on the one local stack instead of slowing each other down and changing its schema under each other's tests. Under
 // the lock it resets the database to this worktree's migrations and seed.sql (`supabase db reset`), unless the stack
-// was just started, CI is set, or --no-reset is passed. It starts the stack without Studio (--studio adds it) and, on
-// Linux as root (a cloud container), starts dockerd if Docker isn't running.
+// was just started, CI is set, or --no-reset is passed; a reset that fails restarts the stack instead. It starts the
+// stack without Studio (--studio adds it) and, on Linux as root (a cloud container), starts Docker through
+// scripts/start-docker.sh if it isn't running. The build runs while it waits for the lock and starts the stack, and
+// the unit suites run side by side.
 //
 // The exit code is the verdict: 0 all passed, 1 something failed, 2 couldn't run (bad arguments, no Docker...).
 // Only a short summary is printed. Full build and test logs, and a TRX per suite, go to artifacts/verify/<level>/.
@@ -118,6 +120,8 @@ if (root is null)
 const string SharedTests = "MealWiz/tests/MealWiz.Shared.Tests";
 const string FunctionsTests = "MealWiz/tests/MealWiz.Functions.Tests";
 const string WebTests = "MealWiz/tests/MauiWASM.Tests";
+// The three test projects, as one thing to build.
+const string TestsFilter = "MealWiz/MealWiz.Tests.slnf";
 // Where E2ETestBase saves a trace, screenshot and console log for each failed E2E test.
 var e2eArtifacts = Path.Combine(root, WebTests, "bin", "Debug", "net10.0", "TestResults", "e2e");
 
@@ -210,103 +214,64 @@ if (Selected("docs"))
     }
 }
 
-// 2. Build. The MAUI head in MealWiz.sln needs mobile workloads, so build what the tests reference instead
-// (MealWiz.Shared, MauiWASM, MealWiz.Functions and the three test projects), like CI.
-if (Selected("build"))
-{
-    Progress("build");
-    var buildLog = Path.Combine(outDir, "build.log");
-    foreach (var project in new[] { SharedTests, FunctionsTests, WebTests })
-    {
-        var exit = Run("dotnet", ["build", project, "-nologo", "-v:minimal", "-clp:NoSummary"], buildLog);
-        if (exit != 0)
-        {
-            summary.Add(Row("build", $"FAILED ({project})"));
-            details.Add("Build errors:");
-            details.AddRange(BuildErrors(buildLog).Select(e => "  " + e));
-            return Finish(Failed);
-        }
-    }
-    summary.Add(Row("build", "ok"));
-}
+// 2. Build, in the background while step 3 gets Supabase ready: a cold build and a first `supabase start` each take
+// a minute or more, and a run that has to wait for the lock builds meanwhile.
+var build = Selected("build") ? Task.Run(Build) : null;
 
 // 3. Supabase, for the steps that use it: integration, E2E and pgTAP. REQUIRE_SUPABASE makes the fixtures fail
 // instead of skipping, so a broken stack can't pass as "all skipped".
 // All worktrees share one local stack, so the lock is held from here until the run ends.
 var env = new Dictionary<string, string>();
+string? supabaseRow = null, supabaseProblem = null;
+var supabaseExit = CouldNotRun;
 if (suites.Any(s => !s.Id.EndsWith("-unit")) || Selected("db") && level is "local" or "full")
 {
     Progress("supabase");
     var waited = WaitForSupabaseLock();
-    if (supabaseLock is null)
+    if (supabaseLock is null && !BuildFailed())
     {
-        summary.Add(Row("supabase", "locked", waited));
-        details.Add($"Another verify held local Supabase for over {lockTimeout.TotalMinutes:0} minutes ({LockOwner()}). " +
-                    "Wait for it, or stop that process if it hung.");
-        return Finish(CouldNotRun);
+        supabaseRow = Row("supabase", "locked", waited);
+        supabaseProblem = $"Another verify held local Supabase for over {lockTimeout.TotalMinutes:0} minutes ({LockOwner()}). " +
+                          "Wait for it, or stop that process if it hung.";
     }
+    else if (!BuildFailed())
+    {
+        var (state, problem) = EnsureSupabase();
+        // A fresh stack and CI's stack already have this checkout's migrations; anything else may have another worktree's.
+        if (problem is null && state == "running" && !noReset && Environment.GetEnvironmentVariable("CI") is not { Length: > 0 })
+            (state, problem) = ResetDatabase();
+        var queued = waited > TimeSpan.FromSeconds(1);
+        supabaseRow = Row("supabase", queued ? $"{state} (waited for the lock)" : state, queued ? waited : null);
+        supabaseProblem = problem;
+        if (state is "couldn't start") supabaseExit = Failed;
+        env["REQUIRE_SUPABASE"] = "true";
+    }
+}
 
-    var (state, problem) = EnsureSupabase();
-    // A fresh stack and CI's stack already have this checkout's migrations; anything else may have another worktree's.
-    if (problem is null && state == "running" && !noReset && Environment.GetEnvironmentVariable("CI") is not { Length: > 0 })
-        (state, problem) = ResetDatabase();
-    var queued = waited > TimeSpan.FromSeconds(1);
-    summary.Add(Row("supabase", queued ? $"{state} (waited for the lock)" : state, queued ? waited : null));
-    if (problem is not null)
-    {
-        details.Add(problem);
-        return Finish(state is "couldn't start" or "reset failed" ? Failed : CouldNotRun);
-    }
-    env["REQUIRE_SUPABASE"] = "true";
+if (build is not null)
+{
+    var (ok, row, errors) = build.Result;
+    summary.Add(row);
+    details.AddRange(errors);
+    if (!ok) return Finish(Failed);
+}
+if (supabaseRow is not null) summary.Add(supabaseRow);
+if (supabaseProblem is not null)
+{
+    details.Add(supabaseProblem);
+    return Finish(supabaseExit);
 }
 
 // 4. Test suites. All of them run even after a failure, so one run reports everything.
 if (suites.Any(s => s.Id.StartsWith("e2e")) && Directory.Exists(e2eArtifacts)) Directory.Delete(e2eArtifacts, recursive: true);
 
-foreach (var suite in suites)
+// The unit suites touch nothing shared, so they run side by side. The rest take turns on the Supabase stack.
+var unitRuns = suites.Where(s => s.Id.EndsWith("-unit")).Select(s => Task.Run(() => RunSuite(s))).ToList();
+foreach (var result in unitRuns.Select(r => r.Result).Concat(suites.Where(s => !s.Id.EndsWith("-unit")).Select(RunSuite)))
 {
-    Progress(suite.Name);
-    var suiteClock = Stopwatch.StartNew();
-    var resultsDir = Path.Combine(outDir, suite.Id);
-    var log = Path.Combine(outDir, suite.Id + ".log");
-    string[] coverageArgs = coverage && suite.Coverage
-        ? ["--coverage", "--coverage-output-format", "cobertura", "--coverage-output", suite.Id + ".cobertura.xml"]
-        : [];
-    var exit = Run("dotnet",
-        ["test", "--project", suite.Project, "--no-build", "--no-progress",
-         "--results-directory", resultsDir, "--report-xunit-trx", "--report-xunit-trx-filename", suite.Id + ".trx",
-         .. coverageArgs, .. suite.Filter],
-        log, env);
-
-    var trx = Directory.Exists(resultsDir) ? Directory.GetFiles(resultsDir, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
-    if (trx is null)
-    {
-        failed = true;
-        summary.Add(Row(suite.Name, $"CRASHED (exit {exit}, no results)", suiteClock.Elapsed));
-        details.Add($"{suite.Name}: the test run produced no results. Last lines of {Relative(log)}:");
-        details.AddRange(Tail(log, 15).Select(l => "  " + l));
-        continue;
-    }
-
-    var result = ReadTrx(trx);
-    var suiteFailed = result.Failed > 0 || result.Total == 0 || exit != 0 && exit != 8;
-    failed |= suiteFailed;
-
-    var counts = $"{result.Passed} passed" + (result.Failed > 0 ? $", {result.Failed} failed" : "") + (result.Skipped > 0 ? $", {result.Skipped} skipped" : "");
-    if (result.Total == 0) counts = "FAILED: no tests ran";
-    else if (suiteFailed && result.Failed == 0) counts += $" (exit {exit}, see {Relative(log)})";
-    summary.Add(Row(suite.Name, counts, suiteClock.Elapsed));
-
-    foreach (var (test, message) in result.Failures)
-    {
-        details.Add($"FAILED {test}");
-        details.AddRange(message.Take(4).Select(l => "    " + l));
-        var artifacts = FindE2EArtifacts(test);
-        if (artifacts is not null)
-            details.Add($"    artifacts: {Relative(artifacts)} (screenshot.png, console.log, trace.zip)");
-    }
-    foreach (var (test, reason) in result.SkippedTests.Take(5))
-        details.Add($"SKIPPED {test}: {reason}");
+    failed |= result.Failed;
+    summary.Add(result.Row);
+    details.AddRange(result.Details);
 }
 
 // 5. pgTAP, local and full.
@@ -333,6 +298,67 @@ if (level is "local" or "full" && Selected("db"))
 return Finish(failed ? Failed : Passed);
 
 // ---------------------------------------------------------------------------------------------------------------
+
+// The MAUI head in MealWiz.sln needs mobile workloads, so this builds what the tests reference instead (MealWiz.Shared,
+// MauiWASM, MealWiz.Functions and the three test projects), like CI: one build of the solution filter that lists
+// the test projects, so MSBuild builds them in parallel and evaluates the shared projects once.
+(bool Ok, string Row, List<string> Errors) Build()
+{
+    Progress("build");
+    var buildClock = Stopwatch.StartNew();
+    var buildLog = Path.Combine(outDir, "build.log");
+    if (Run("dotnet", ["build", TestsFilter, "-nologo", "-v:minimal", "-clp:NoSummary"], buildLog) == 0)
+        return (true, Row("build", "ok", buildClock.Elapsed), []);
+    return (false, Row("build", "FAILED", buildClock.Elapsed), ["Build errors:", .. BuildErrors(buildLog).Select(e => "  " + e)]);
+}
+
+// True once the background build has failed: there is nothing to run then, so don't wait for or reset Supabase.
+bool BuildFailed() => build is { IsCompleted: true, Result.Ok: false };
+
+// Runs one test suite and reads its TRX. A suite that fails doesn't stop the others, so one run reports everything.
+(bool Failed, string Row, List<string> Details) RunSuite((string Id, string Name, string Project, string[] Filter, bool Coverage) suite)
+{
+    Progress(suite.Name);
+    var suiteDetails = new List<string>();
+    var suiteClock = Stopwatch.StartNew();
+    var resultsDir = Path.Combine(outDir, suite.Id);
+    var log = Path.Combine(outDir, suite.Id + ".log");
+    string[] coverageArgs = coverage && suite.Coverage
+        ? ["--coverage", "--coverage-output-format", "cobertura", "--coverage-output", suite.Id + ".cobertura.xml"]
+        : [];
+    var exit = Run("dotnet",
+        ["test", "--project", suite.Project, "--no-build", "--no-progress",
+         "--results-directory", resultsDir, "--report-xunit-trx", "--report-xunit-trx-filename", suite.Id + ".trx",
+         .. coverageArgs, .. suite.Filter],
+        log, env);
+
+    var trx = Directory.Exists(resultsDir) ? Directory.GetFiles(resultsDir, "*.trx", SearchOption.AllDirectories).FirstOrDefault() : null;
+    if (trx is null)
+    {
+        suiteDetails.Add($"{suite.Name}: the test run produced no results. Last lines of {Relative(log)}:");
+        suiteDetails.AddRange(Tail(log, 15).Select(l => "  " + l));
+        return (true, Row(suite.Name, $"CRASHED (exit {exit}, no results)", suiteClock.Elapsed), suiteDetails);
+    }
+
+    var result = ReadTrx(trx);
+    var suiteFailed = result.Failed > 0 || result.Total == 0 || exit != 0 && exit != 8;
+
+    var counts = $"{result.Passed} passed" + (result.Failed > 0 ? $", {result.Failed} failed" : "") + (result.Skipped > 0 ? $", {result.Skipped} skipped" : "");
+    if (result.Total == 0) counts = "FAILED: no tests ran";
+    else if (suiteFailed && result.Failed == 0) counts += $" (exit {exit}, see {Relative(log)})";
+
+    foreach (var (test, message) in result.Failures)
+    {
+        suiteDetails.Add($"FAILED {test}");
+        suiteDetails.AddRange(message.Take(4).Select(l => "    " + l));
+        var artifacts = FindE2EArtifacts(test);
+        if (artifacts is not null)
+            suiteDetails.Add($"    artifacts: {Relative(artifacts)} (screenshot.png, console.log, trace.zip)");
+    }
+    foreach (var (test, reason) in result.SkippedTests.Take(5))
+        suiteDetails.Add($"SKIPPED {test}: {reason}");
+    return (suiteFailed, Row(suite.Name, counts, suiteClock.Elapsed), suiteDetails);
+}
 
 int Finish(int exitCode)
 {
@@ -501,34 +527,26 @@ int Run(string fileName, string[] arguments, string logPath, IDictionary<string,
     var excluded = "imgproxy,edge-runtime,logflare,vector,supavisor" + (studio ? "" : ",studio,postgres-meta");
     if (Run("supabase", ["start", "-x", excluded], log) == 0)
         return ("started", null);
+    // Containers left over from before a Docker restart, or from another worktree's run, can still be booting
+    // ("container is not ready: starting", MEA-120). Start once more from a clean stop.
+    Progress("supabase start failed: stopping the stack and starting it once more");
+    Run("supabase", ["stop", "--no-backup"], log);
+    if (Run("supabase", ["start", "-x", excluded], log) == 0)
+        return ("started (second try)", null);
 
     return ("couldn't start", $"`supabase start` failed (a broken migration or seed fails here too). Last lines of {Relative(log)}:\n"
         + string.Join('\n', Tail(log, 15).Select(l => "  " + l)));
 }
 
-// On Linux (a cloud container, where nothing restarts the daemon if it dies), starts dockerd when it's installed and
-// this runs as root. Returns whether Docker answers. Elsewhere it's Docker Desktop's job, so it returns false.
+// On Linux (a cloud container, where nothing restarts the daemon if it dies), starts dockerd through
+// scripts/start-docker.sh when this runs as root. Returns whether Docker answers. Elsewhere it's Docker Desktop's
+// job, so it returns false.
 bool StartDockerDaemon(string log)
 {
     if (!OperatingSystem.IsLinux() || Environment.UserName != "root" || Environment.GetEnvironmentVariable("CI") is { Length: > 0 })
         return false;
     Progress("docker isn't running: starting dockerd");
-    try
-    {
-        var daemonLog = Path.Combine(Path.GetTempPath(), "mealwiz-dockerd.log");
-        Process.Start(new ProcessStartInfo("bash", ["-c", $"nohup dockerd > '{daemonLog}' 2>&1 &"]) { UseShellExecute = false })?.WaitForExit();
-    }
-    catch (Exception e)
-    {
-        File.AppendAllText(log, $"Couldn't start dockerd: {e.Message}\n");
-        return false;
-    }
-    for (var i = 0; i < 30; i++)
-    {
-        if (Run("docker", ["info"], log) == 0) return true;
-        Thread.Sleep(TimeSpan.FromSeconds(1));
-    }
-    return false;
+    return Run("bash", [Path.Combine(root, "scripts", "start-docker.sh")], log) == 0;
 }
 
 // Waits (up to lockTimeout) for the lock on local Supabase and sets supabaseLock. FileShare.None is an exclusive
@@ -537,7 +555,7 @@ TimeSpan WaitForSupabaseLock()
 {
     var waitClock = Stopwatch.StartNew();
     var announced = false;
-    while (waitClock.Elapsed < lockTimeout)
+    while (waitClock.Elapsed < lockTimeout && !BuildFailed())
     {
         try
         {
@@ -570,17 +588,14 @@ string LockOwner()
     var log = Path.Combine(outDir, "supabase.log");
     if (Run("supabase", ["db", "reset"], log) == 0)
         return ("running, reset", null);
-    // A CLI installed without its supabase-go binary can start a stack but not reset it (MEA-72; scripts/cloud-setup.sh
-    // installs both). A fresh start applies the migrations and seed too, so restart instead.
-    if (File.ReadAllText(log).Contains("supabase-go"))
-    {
-        Progress("supabase db reset needs supabase-go, which isn't installed: restarting the stack instead");
-        Run("supabase", ["stop", "--no-backup"], log);
-        var (state, problem) = EnsureSupabase();
-        return (state == "started" ? "restarted (no supabase-go)" : state, problem);
-    }
-    return ("reset failed", $"`supabase db reset` failed (a broken migration or seed fails here). Last lines of {Relative(log)}:\n"
-        + string.Join('\n', Tail(log, 15).Select(l => "  " + l)));
+    // The reset can fail for reasons that aren't this worktree's: the stack is still settling after another
+    // worktree's run (MEA-120), or the CLI was installed without the supabase-go binary that `db reset` needs
+    // (MEA-72). A fresh start applies the migrations and seed too, so restart the stack once instead. A broken
+    // migration or seed then fails `supabase start`, with its error.
+    Progress("supabase db reset failed: restarting the stack instead (see supabase.log for the reset's error)");
+    Run("supabase", ["stop", "--no-backup"], log);
+    var (state, problem) = EnsureSupabase();
+    return (state == "started" ? "restarted (db reset failed)" : state, problem);
 }
 
 IEnumerable<string> BuildErrors(string buildLog)
