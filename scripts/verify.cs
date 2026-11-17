@@ -385,6 +385,8 @@ bool ApiAnswers()
 // Null if git can't tell (no origin/dev, say), and then --quick skips nothing.
 List<string>? ChangedSinceDev()
 {
+    // Runs before the step loop creates outDir; a fresh checkout has no artifacts/ yet (MEA-159).
+    Directory.CreateDirectory(outDir);
     var log = Path.Combine(outDir, "quick.log");
     var baseLog = Path.Combine(outDir, "quick-base.log");
     File.Delete(baseLog);
