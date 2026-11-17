@@ -1,4 +1,4 @@
-using MealWiz.Shared.Services.DrawerStateContainer;
+﻿using MealWiz.Shared.Services.DrawerStateContainer;
 using Microsoft.AspNetCore.Components;
 using Xunit;
 using DrawerStateContainerService = MealWiz.Shared.Services.DrawerStateContainer.DrawerStateContainer;
@@ -264,5 +264,20 @@ public class DrawerStateContainerTests
         _container.NavigateBack();
 
         Assert.Same(first, _container.StateParameters.HeaderAction);
+    }
+
+    [Fact]
+    public async Task NotifyConfirmClickedAsync_runs_the_callback_once_while_it_is_in_flight()
+    {
+        var calls = 0;
+        var pending = new TaskCompletionSource();
+        _container.OpenConfirmDrawer("Delete meal?", "Are you sure?", async () => { calls++; await pending.Task; });
+
+        var first = _container.NotifyConfirmClickedAsync();
+        var second = _container.NotifyConfirmClickedAsync();
+        pending.SetResult();
+        await Task.WhenAll(first, second);
+
+        Assert.Equal(1, calls);
     }
 }

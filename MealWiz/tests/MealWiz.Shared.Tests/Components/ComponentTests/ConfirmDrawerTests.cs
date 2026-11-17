@@ -1,4 +1,4 @@
-using Bunit;
+﻿using Bunit;
 using MealWiz.Shared.Components.Drawers;
 using MealWiz.Shared.Tests.TestInfrastructure;
 using Xunit;
@@ -28,6 +28,22 @@ public class ConfirmDrawerTests : ComponentTestBase
         cut.Find($"{TestId("confirm-drawer-confirm")}").Click();
 
         Assert.Equal(1, confirmed);
+    }
+
+    [Fact]
+    public void Confirm_button_is_disabled_while_the_confirm_runs()
+    {
+        var pending = new TaskCompletionSource();
+        var cut = Render<ConfirmDrawer>();
+        cut.InvokeAsync(() => Drawer.OpenConfirmDrawer("Delete meal?", "Are you sure?", () => pending.Task));
+
+        cut.Find(TestId("confirm-drawer-confirm")).Click();
+
+        Assert.True(cut.Find(TestId("confirm-drawer-confirm")).HasAttribute("disabled"));
+
+        cut.InvokeAsync(pending.SetResult);
+
+        cut.WaitForAssertion(() => Assert.False(cut.Find(TestId("confirm-drawer-confirm")).HasAttribute("disabled")));
     }
 
     [Fact]
