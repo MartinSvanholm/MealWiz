@@ -108,7 +108,7 @@ scripts/verify.sh local      # Linux, macOS, Git Bash
 | Level | Runs | Use it for |
 |---|---|---|
 | `fast` | docs check + build + unit and bUnit tests. No Docker, no lock. ~1 min | **issue and bug sessions, before their PR**; docs-only or test-only changes. Add `local --only <steps>` for just the Supabase-backed steps a plan names |
-| `local` | `fast` + local Supabase + integration tests + pgTAP RLS tests. No browser tests | a change made outside the project flow, with no ship session behind it. Add `--e2e <class>` for the journey it touches (TESTING.md) |
+| `local` | `fast` + local Supabase + integration tests + pgTAP RLS tests. No browser tests | a change made outside the project flow, with no ship session behind it. Add `--e2e <class>` for the journey it touches (TESTING.md). While iterating, `local --quick` skips what the change can't affect |
 | `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | when you want the browser smoke set locally |
 | `full` | `smoke` + every E2E journey + pgTAP RLS tests | **the ship session, once per project**, before the PR to `dev`; CI on every PR |
 

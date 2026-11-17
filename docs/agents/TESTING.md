@@ -39,7 +39,9 @@ adds every E2E journey.
   local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails for any
   reason (a stack still settling after another worktree's run, MEA-120; a CLI without `supabase-go`, MEA-72), verify
   stops the stack and starts it fresh, which applies the migrations and seed too; a `supabase start` that fails is
-  tried once more from a clean stop. A broken migration or seed still fails, at the start.
+  tried once more from a clean stop. A broken migration or seed still fails, at the start. After a start or a reset, verify checks
+  that the auth and REST APIs answer (a reset restarts their containers, and GoTrue sometimes doesn't come back, which
+  fails every integration test in its fixture with a 502); if they don't within 30 seconds, it restarts the stack once.
 - **Starting the stack:** verify starts it without Studio and postgres-meta, as CI does (`--studio` keeps them). On
   Linux as root (a cloud container) it starts Docker through `scripts/start-docker.sh` if it isn't running, which
   first clears the pid files a killed daemon leaves behind (MEA-119). `scripts/cloud-setup.sh` installs the
@@ -62,6 +64,15 @@ its new tests live in; CI runs `verify full` on every PR, and a PR merges only o
 (`/ship-project`) runs `verify full` on the whole project before its PR to `dev`. A change made outside that flow
 runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a journey (one class per run). While iterating, run just the project or class you're touching:
 `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
+
+**`local --quick`, for repeated runs.** A session that reruns `local --e2e <class>` (after each fix, after a `dev`
+merge) adds `--quick`. It skips the database reset when the shared stack already holds this worktree's migrations
+and `seed.sql` (verify records them after each reset or fresh start, with the database container's start time), and
+skips `functions-unit`, `functions-integration` and `db` when nothing under `MealWiz/src/MealWiz.Functions/`,
+`MealWiz/tests/MealWiz.Functions.Tests/`, `MealWiz/tests/Contracts/` or `supabase/` differs from `origin/dev`. The
+summary lists each skipped step and why. A run that holds the PR's verdict outside the project and bug flows (no CI
+behind it) is plain `local`, without `--quick`. Measured with `--e2e MealPlanJourneyTests` and the stack up: 2m23s
+plain, 1m48s with `--quick`.
 
 | You changed | Add or update | Run at least |
 |---|---|---|

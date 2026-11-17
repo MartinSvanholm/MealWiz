@@ -9,6 +9,9 @@
 //   fast   docs check + build + unit and bUnit tests. No Docker needed.
 //   local  fast + local Supabase + integration tests + the pgTAP database tests (`supabase test db`). No browser
 //          tests: CI runs those. `--e2e <class>` adds one E2E class, e.g. a journey that pins the bug being fixed.
+//          `--quick` is for iterating: it skips the database reset when the stack already holds this worktree's
+//          migrations and seed, and skips the Functions and pgTAP steps when nothing they test differs from
+//          origin/dev. Plain `local` (no --quick) is still the check before a PR.
 //   smoke  fast + local Supabase + integration tests + the Smoke E2E tests.
 //   full   smoke + every E2E journey + the pgTAP database tests.
 //
@@ -58,6 +61,8 @@ if (level is null or "-h" or "--help" or "help")
         Exit code 0 = passed, 1 = failed, 2 = couldn't run. Full logs: artifacts/verify/<level>/
 
           --e2e <class>      local only: also run this E2E class, e.g. --e2e GroceryListJourneyTests
+          --quick            local only, for iterating: no reset when the stack already has this worktree's
+                             migrations and seed; no Functions or pgTAP steps when nothing they test changed
           --no-reset         don't reset the local database to this worktree's migrations and seed first
           --studio           also start Supabase Studio (http://127.0.0.1:54323) when verify starts the stack
 
@@ -81,6 +86,7 @@ HashSet<string>? only = null;
 var coverage = false;
 var checkComplete = false;
 var noReset = false;
+var quick = false;
 var studio = false;
 string? e2eClass = null;
 HashSet<string> ranElsewhere = [];
@@ -98,6 +104,12 @@ for (var i = 1; i < args.Length; i++)
         case "--check-complete":
             checkComplete = true;
             break;
+        case "--quick" when level is "local":
+            quick = true;
+            break;
+        case "--quick":
+            Console.WriteLine("--quick only goes with `local`.");
+            return CouldNotRun;
         case "--no-reset":
             noReset = true;
             break;
@@ -193,7 +205,21 @@ if (only is not null)
     suites.RemoveAll(s => !only.Contains(s.Id));
 }
 
-bool Selected(string step) => only is null || only.Contains(step);
+// --quick: steps whose code is the same as on origin/dev, with the reason, for the summary. A step named in --only
+// always runs.
+var quickSkipped = new Dictionary<string, string>();
+if (quick && only is null && ChangedSinceDev() is { } changed)
+{
+    if (!changed.Any(f => f.StartsWith("MealWiz/src/MealWiz.Functions/") || f.StartsWith("MealWiz/tests/MealWiz.Functions.Tests/")
+                          || f.StartsWith("MealWiz/tests/Contracts/")))
+        foreach (var step in new[] { "functions-unit", "functions-integration" })
+            quickSkipped[step] = "skipped (--quick: no Functions change since origin/dev)";
+    if (!changed.Any(f => f.StartsWith("supabase/")))
+        quickSkipped["db"] = "skipped (--quick: no supabase/ change since origin/dev)";
+    suites.RemoveAll(s => quickSkipped.ContainsKey(s.Id));
+}
+
+bool Selected(string step) => (only is null || only.Contains(step)) && !quickSkipped.ContainsKey(step);
 
 // A full run starts clean. A partial one only replaces its own steps' output, so CI's steps add up.
 if (only is null && Directory.Exists(outDir)) Directory.Delete(outDir, recursive: true);
@@ -213,6 +239,8 @@ var failed = false;
 FileStream? supabaseLock = null;
 var lockPath = Path.Combine(Path.GetTempPath(), "mealwiz-verify-supabase.lock");
 var lockTimeout = TimeSpan.FromMinutes(60);
+// Which migrations and seed the shared stack holds, written after each reset or fresh start, for --quick.
+var schemaMarker = Path.Combine(Path.GetTempPath(), "mealwiz-verify-supabase.schema");
 
 // 1. Docs. The agent docs must name every feature folder, handler, table and verify step, and every path they put in
 // backticks must exist (DOC-01 in docs/agents/ARCHITECTURE.md). A failure doesn't stop the run.
@@ -256,8 +284,26 @@ if (suites.Any(s => !s.Id.EndsWith("-unit")) || Selected("db") && level is "loca
     {
         var (state, problem) = EnsureSupabase();
         // A fresh stack and CI's stack already have this checkout's migrations; anything else may have another worktree's.
-        if (problem is null && state == "running" && !noReset && Environment.GetEnvironmentVariable("CI") is not { Length: > 0 })
+        if (problem is null && state == "running" && quick && File.Exists(schemaMarker) && File.ReadAllText(schemaMarker) == SchemaFingerprint())
+            state = "running, reset skipped (--quick: same migrations and seed)";
+        else if (problem is null && state == "running" && !noReset && Environment.GetEnvironmentVariable("CI") is not { Length: > 0 })
             (state, problem) = ResetDatabase();
+        // A reset restarts the auth and API containers, and once in a while GoTrue doesn't come back (502 on every
+        // auth call, so every integration test fails in its fixture). Check both answer, and restart the stack once
+        // if they don't.
+        if (problem is null && !ApiAnswers())
+        {
+            Progress("the Supabase API isn't answering: restarting the stack");
+            Run("supabase", ["stop", "--no-backup"], Path.Combine(outDir, "supabase.log"));
+            (state, problem) = EnsureSupabase();
+            if (problem is null && !ApiAnswers())
+                (state, problem) = ("couldn't start", "The Supabase API (auth or REST on 127.0.0.1:54321) didn't answer after a restart. See supabase.log.");
+            else if (problem is null)
+                state = "restarted (API didn't answer)";
+        }
+        // The stack now holds this worktree's migrations and seed, so a --quick run can skip the next reset.
+        if (problem is null && (state.StartsWith("started") || state.StartsWith("restarted") || state == "running, reset"))
+            File.WriteAllText(schemaMarker, SchemaFingerprint());
         var queued = waited > TimeSpan.FromSeconds(1);
         supabaseRow = Row("supabase", queued ? $"{state} (waited for the lock)" : state, queued ? waited : null);
         supabaseProblem = problem;
@@ -316,6 +362,64 @@ if (level is "local" or "full" && Selected("db"))
 return Finish(failed ? Failed : Passed);
 
 // ---------------------------------------------------------------------------------------------------------------
+
+// Whether local Supabase's auth and REST APIs both answer 200, waiting up to 30 seconds for them.
+bool ApiAnswers()
+{
+    using var http = new HttpClient(new HttpClientHandler { UseProxy = false }) { Timeout = TimeSpan.FromSeconds(5) };
+    for (var i = 0; i < 30; i++)
+    {
+        try
+        {
+            if (http.GetAsync("http://127.0.0.1:54321/auth/v1/health").Result.IsSuccessStatusCode
+                && http.GetAsync("http://127.0.0.1:54321/rest/v1/").Result.IsSuccessStatusCode)
+                return true;
+        }
+        catch (AggregateException) { }
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+    }
+    return false;
+}
+
+// Files that differ from origin/dev: committed since the merge base, changed in the working tree, or untracked.
+// Null if git can't tell (no origin/dev, say), and then --quick skips nothing.
+List<string>? ChangedSinceDev()
+{
+    var log = Path.Combine(outDir, "quick.log");
+    var baseLog = Path.Combine(outDir, "quick-base.log");
+    File.Delete(baseLog);
+    if (Run("git", ["merge-base", "HEAD", "origin/dev"], baseLog) != 0) return null;
+    var mergeBase = File.ReadLines(baseLog).Skip(1).FirstOrDefault(l => Regex.IsMatch(l, "^[0-9a-f]{40}$"));
+    if (mergeBase is null) return null;
+    File.Delete(log);
+    if (Run("git", ["diff", "--name-only", mergeBase], log) != 0) return null;
+    if (Run("git", ["ls-files", "--others", "--exclude-standard"], log) != 0) return null;
+    return File.ReadLines(log).Where(l => l.Length > 0 && !l.StartsWith("> ")).Select(l => l.Replace('\\', '/')).ToList();
+}
+
+// The migrations and seed.sql of this worktree, plus when the database container started (a stack started or reset
+// some other way has another start time), as one string.
+string SchemaFingerprint()
+{
+    using var sha = System.Security.Cryptography.SHA256.Create();
+    var files = Directory.GetFiles(Path.Combine(root, "supabase", "migrations"), "*.sql").Order(StringComparer.Ordinal)
+        .Append(Path.Combine(root, "supabase", "seed.sql")).Where(File.Exists);
+    foreach (var file in files)
+    {
+        var name = Encoding.UTF8.GetBytes(Path.GetFileName(file) + "\n");
+        sha.TransformBlock(name, 0, name.Length, null, 0);
+        var content = File.ReadAllBytes(file);
+        sha.TransformBlock(content, 0, content.Length, null, 0);
+    }
+    sha.TransformFinalBlock([], 0, 0);
+
+    var project = Regex.Match(File.ReadAllText(Path.Combine(root, "supabase", "config.toml")), @"(?m)^project_id\s*=\s*""([^""]+)""").Groups[1].Value;
+    var inspectLog = Path.Combine(outDir, "quick-db.log");
+    File.Delete(inspectLog);
+    Run("docker", ["inspect", "-f", "{{.State.StartedAt}}", $"supabase_db_{project}"], inspectLog);
+    var startedAt = File.ReadLines(inspectLog).Skip(1).FirstOrDefault(l => l.Trim().Length > 0)?.Trim() ?? "";
+    return $"{Convert.ToHexString(sha.Hash!)} {startedAt}";
+}
 
 // The E2E test methods of one shard: every n-th method of the tests `full` runs, in name order, so every shard
 // computes the same split, together they cover every test, and a long journey class is spread over the shards (a
@@ -415,8 +519,9 @@ int Finish(int exitCode)
     supabaseLock?.Dispose();
     var verdict = exitCode switch { Passed => "PASSED", Failed => "FAILED", _ => "COULD NOT RUN" };
     var scope = only is null ? level : $"{level} ({string.Join(", ", steps.Where(Selected))})";
-    var report = new List<string> { $"verify {scope}: {verdict} in {Duration(clock.Elapsed)}" };
+    var report = new List<string> { $"verify {scope}{(quick ? " --quick" : "")}: {verdict} in {Duration(clock.Elapsed)}" };
     report.AddRange(summary);
+    report.AddRange(quickSkipped.Select(q => Row(q.Key, q.Value)));
     if (details.Count > 0) report.AddRange(["", .. details]);
 
     Console.WriteLine();
