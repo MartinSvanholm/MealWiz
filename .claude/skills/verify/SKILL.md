@@ -16,6 +16,7 @@ change needs, and how to write them is in `docs/agents/TESTING.md`.
 | `fast` | docs check + build + unit and bUnit tests, no Docker, no lock | **issue and bug sessions, before the PR** |
 | `local --only <steps>` | just the named Supabase-backed steps, e.g. `shared-integration`, `db` | an issue or bug session whose plan names a migration, an RLS change or new integration tests |
 | `local --e2e <class>` | `local` + one E2E class, e.g. `MealPlanJourneyTests` | a bug pinned by an E2E test |
+| `local --quick` | `local` minus what the change can't affect: no reset when the stack already has this worktree's migrations and seed, no Functions or pgTAP steps when nothing they test differs from `origin/dev` | repeated runs while iterating, e.g. `local --quick --e2e <class>`; the summary names each skipped step |
 | `local` | `fast` + local Supabase + integration tests + `supabase test db` (pgTAP RLS tests), no browser tests | work outside the project flow (a change made by hand, with no ship session behind it) |
 | `smoke` | `fast` + local Supabase + integration tests + Smoke E2E | the browser smoke set, when asked |
 | `full` | `smoke` + all E2E journeys + pgTAP | **the ship session (`/ship-project`), once per project**; CI on every PR |
