@@ -14,14 +14,14 @@ adds every E2E journey.
 | Step | What it runs | Covers | Levels | Needs |
 |---|---|---|---|---|
 | `docs` | the doc check in `scripts/verify.cs` | Feature folders, handlers and tables listed in FEATURES.md; verify steps listed here; paths in backticks in CLAUDE.md and `docs/agents/` exist | all | nothing |
-| `build` | one `dotnet build` of `MealWiz/MealWiz.Tests.slnf` (the three test projects), while Supabase starts | Shared, MauiWASM, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
-| `shared-unit` | MealWiz.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | all | — |
-| `functions-unit` | MealWiz.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
-| `web-unit` | MauiWASM.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
-| `shared-integration` | MealWiz.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
-| `functions-integration` | MealWiz.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler`, `AnalyzeMealPictureHandler` and `CleanUpMealPicturesHandler` end to end (the latter with a fake analyzer and local Storage), `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
-| `e2e-smoke` | MauiWASM.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list, deleting a meal with grocery items (12 cases) | smoke | Docker + Chromium |
-| `e2e` | MauiWASM.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
+| `build` | one `dotnet build` of `TheMealWorkshop/TheMealWorkshop.Tests.slnf` (the three test projects), while Supabase starts | Shared, TheMealWorkshop.Web, Functions, tests. Not the MAUI head | all | .NET 9 + 10 SDKs |
+| `shared-unit` | TheMealWorkshop.Shared.Tests, not `Category=Integration` | Models, state containers, helpers, services, handler logic without Supabase, bUnit components | all | — |
+| `functions-unit` | TheMealWorkshop.Functions.Tests, not `Category=Integration` | Parsers, mapper, ingredient parser, SSRF guard, contracts, function HTTP layer | all | — |
+| `web-unit` | TheMealWorkshop.Web.Tests, not `Category=E2E` | Appsettings, session provider, routes, DI registration | all | — |
+| `shared-integration` | TheMealWorkshop.Shared.Tests, `Category=Integration` | Every handler against local Supabase, through RLS | local, smoke, full | Docker + Supabase CLI |
+| `functions-integration` | TheMealWorkshop.Functions.Tests, `Category=Integration` | `ScrapeRecipeHandler`, `AnalyzeMealPictureHandler` and `CleanUpMealPicturesHandler` end to end (the latter with a fake analyzer and local Storage), `RecipeFetcher`, SSRF client factory | local, smoke, full | Docker (some classes) |
+| `e2e-smoke` | TheMealWorkshop.Web.Tests, `Category=Smoke` | Boot, login, every nav page, meal CRUD, grocery list, deleting a meal with grocery items (12 cases) | smoke | Docker + Chromium |
+| `e2e` | TheMealWorkshop.Web.Tests, `Category=E2E`: all of it at full, one class with `local --e2e <class>` | All journeys, including meal import and meal plan | full, local `--e2e` | Docker + Chromium |
 | `db` | `supabase test db` | pgTAP: RLS enabled, exact policy list, per-table access, the Storage bucket policies | local, full | Docker |
 
 - **Speed:** the build runs while verify waits for the lock and starts Supabase, and the three unit suites run side by
@@ -33,7 +33,7 @@ adds every E2E journey.
   `REQUIRE_SUPABASE=true`, so a test that can't reach the stack fails instead of skipping. Without that variable (plain
   `dotnet test`, or `fast`), Supabase-backed tests skip with a reason.
 - **One stack, taken in turns:** every worktree on the machine uses the same local Supabase. verify takes a
-  machine-wide lock (`mealwiz-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
+  machine-wide lock (`themealworkshop-verify-supabase.lock` in the temp folder) before it touches the stack and holds it to the
   end of the run, so a second verify waits and says whose run it is waiting for. Under the lock it runs
   `supabase db reset`, so the tests see this worktree's migrations and `seed.sql`, not another branch's. That wipes
   local data; pass `--no-reset` to keep it. A freshly started stack and CI skip the reset. If the reset fails for any
@@ -63,13 +63,13 @@ The Level column is the lowest verify level that runs those tests. Who runs it d
 its new tests live in; CI runs `verify full` on every PR, and a PR merges only on green CI; the ship session
 (`/ship-project`) runs `verify full` on the whole project before its PR to `dev`. A change made outside that flow
 runs `scripts/verify.ps1 local`, with `--e2e <class>` where the table names a journey (one class per run). While iterating, run just the project or class you're touching:
-`dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`.
+`dotnet test --project TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests --filter-class "*MealHandlerTests"`.
 
 **`local --quick`, for repeated runs.** A session that reruns `local --e2e <class>` (after each fix, after a `dev`
 merge) adds `--quick`. It skips the database reset when the shared stack already holds this worktree's migrations
 and `seed.sql` (verify records them after each reset or fresh start, with the database container's start time), and
-skips `functions-unit`, `functions-integration` and `db` when nothing under `MealWiz/src/MealWiz.Functions/`,
-`MealWiz/tests/MealWiz.Functions.Tests/`, `MealWiz/tests/Contracts/` or `supabase/` differs from `origin/dev`. The
+skips `functions-unit`, `functions-integration` and `db` when nothing under `TheMealWorkshop/src/TheMealWorkshop.Functions/`,
+`TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/`, `TheMealWorkshop/tests/Contracts/` or `supabase/` differs from `origin/dev`. The
 summary lists each skipped step and why. A run that holds the PR's verdict outside the project and bug flows (no CI
 behind it) is plain `local`, without `--quick`. Measured with `--e2e MealPlanJourneyTests` and the stack up: 2m23s
 plain, 1m48s with `--quick`.
@@ -83,14 +83,14 @@ plain, 1m48s with `--quick`.
 | A helper or service | Unit test in `Helpers/UnitTests/` or `Services/<Svc>/UnitTests/` | fast, then local |
 | UI text or a `.resx` | English and Danish values; `ResourceCompletenessTests` checks them. bUnit asserts the English text | fast, then local |
 | Localization setup (`Localization/`) | Unit test in `Localization/UnitTests/` | fast, then local |
-| DI or a host (`MealWiz/MauiWASM/`) | MauiWASM.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
+| DI or a host (`TheMealWorkshop/TheMealWorkshop.Web/`) | TheMealWorkshop.Web.Tests unit tests; `ServiceRegistrationTests` covers registrations | local `--e2e SmokeTests` |
 | A migration or RLS policy | pgTAP in `supabase/tests/database/`, plus `00_rls_enabled.test.sql` for new tables or policies; integration tests for affected handlers | local |
 | A Storage bucket or its policies | pgTAP in `supabase/tests/database/` (`meal_import_pictures.test.sql`), plus `storage.buckets` and `policies_are('storage', 'objects', …)` in `00_rls_enabled.test.sql` | local |
 | Meal import | Shared unit and integration tests for MealImport, plus `MealImportJourneyTests` | local `--e2e MealImportJourneyTests` |
 | A meal plan flow | Shared tests plus `MealPlanJourneyTests` | local `--e2e MealPlanJourneyTests` |
-| Functions parsing or mapping | Unit tests in `MealWiz/tests/MealWiz.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then local |
-| Functions fetching or SSRF | `MealWiz/tests/MealWiz.Functions.Tests/Shared/UnitTests/Ssrf/` and `Shared/IntegrationTests/` | local |
-| The `meal_imports` shape or statuses | Both sides' models plus `MealWiz/tests/Contracts/*.json` (FN-01) | local |
+| Functions parsing or mapping | Unit tests in `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/ScrapeRecipe/UnitTests/` | fast, then local |
+| Functions fetching or SSRF | `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Shared/UnitTests/Ssrf/` and `Shared/IntegrationTests/` | local |
+| The `meal_imports` shape or statuses | Both sides' models plus `TheMealWorkshop/tests/Contracts/*.json` (FN-01) | local |
 | A user-visible flow end to end | An E2E journey or a step in an existing one; `Smoke` only if it fits the smoke list below | local `--e2e <that journey>` |
 | A bug pinned by an E2E test (see the table below) | Flip the pinning assertion | local `--e2e <that class>` |
 | Docs only (`docs/agents/`, `CLAUDE.md`) | — | `scripts/verify.ps1 fast --only docs` |
@@ -103,10 +103,10 @@ Traits are set on the class, never on a method, and decide which suite runs a te
 |---|---|
 | none | Unit or bUnit test. Runs in the `*-unit` suite and must not need Supabase, network or a browser |
 | `[Trait("Category", "Integration")]` | Needs local Supabase or a local web server. Shared and Functions only |
-| `[Trait("Category", "E2E")]` | Playwright, MauiWASM.Tests only |
+| `[Trait("Category", "E2E")]` | Playwright, TheMealWorkshop.Web.Tests only |
 | `[Trait("Category", "E2E")]` + `[Trait("Category", "Smoke")]` | Also part of `e2e-smoke` |
 
-`MealWiz/tests/MauiWASM.Tests/IntegrationTests/` has no trait on purpose. `ServiceRegistrationTests` needs no
+`TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/IntegrationTests/` has no trait on purpose. `ServiceRegistrationTests` needs no
 Supabase, so it runs in `web-unit`.
 
 **Smoke criteria:** a journey gets `Smoke` only if it proves the app is basically usable: it boots without browser
@@ -115,12 +115,12 @@ set to a few minutes. Everything else is `E2E` only.
 
 ## The suites in detail
 
-### MealWiz.Shared.Tests: unit, bUnit, integration
+### TheMealWorkshop.Shared.Tests: unit, bUnit, integration
 
-`MealWiz/tests/MealWiz.Shared.Tests/` is xUnit v3 on Microsoft.Testing.Platform (net10.0), with bUnit and Moq.
-`MealWiz.Shared` grants it `InternalsVisibleTo`.
+`TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/` is xUnit v3 on Microsoft.Testing.Platform (net10.0), with bUnit and Moq.
+`TheMealWorkshop.Shared` grants it `InternalsVisibleTo`.
 
-**Layout.** It mirrors MealWiz.Shared:
+**Layout.** It mirrors TheMealWorkshop.Shared:
 
 ```
 Features/<Feature>/UnitTests/{Models,State,Handlers}/
@@ -131,7 +131,7 @@ Services/<Svc>/UnitTests/
 TestInfrastructure/
 ```
 
-**Infrastructure** (`MealWiz/tests/MealWiz.Shared.Tests/TestInfrastructure/`):
+**Infrastructure** (`TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/TestInfrastructure/`):
 
 - `ComponentTestBase.cs` is the base class for every bUnit test.
   - It mocks `IMediator` (`Mediator`, `SetupSend<TReq,TResp>(response)`, `Sent<T>()`, `SentRequests`),
@@ -140,11 +140,11 @@ TestInfrastructure/
   - Auth starts anonymous (`Auth`).
   - Helpers: `TestId("x")` and `InputOf("x")` selectors, `RenderWithPopovers`, `RenderDrawers()` + `Confirm()`,
     `SnackbarMessages`, `CurrentPath`.
-  - It registers the real localization (`AddLocalization()`, `MealWizMudLocalizer`), so components render their
+  - It registers the real localization (`AddLocalization()`, `TheMealWorkshopMudLocalizer`), so components render their
     English resource texts. `ComponentTestBase(echoResourceKeys: true)` swaps in `EchoStringLocalizerFactory`, whose
     localizers return `[Key]`: assert `[Nav_Plan]` to prove a text comes from a resource (`ShellTextTests`).
 - `LocalSupabaseFixture.cs` is shared per class through `IClassFixture`.
-  - It creates a throwaway user (`shared-tests-<guid>@mealwiz.test`) and signs it in with the **anon key**, so every
+  - It creates a throwaway user (`shared-tests-<guid>@themealworkshop.test`) and signs it in with the **anon key**, so every
     query goes through RLS.
   - It exposes `Client`, `UserId`, `GetOtherUserAsync()` (a second user, for cross-user checks),
     `CreateSignedInUserAsync()`, `CreateSignedOutClientAsync()`, `FollowPasswordResetLinkAsync()` (where a reset
@@ -185,9 +185,9 @@ Tests in a class share its user, so each test only looks at rows it created. A f
 GoTrue allows 300 sign-ins per 5 minutes locally (`supabase/config.toml`), but back-to-back runs together with E2E
 can still hit a `429`. Run one verify at a time.
 
-### MealWiz.Functions.Tests
+### TheMealWorkshop.Functions.Tests
 
-`MealWiz/tests/MealWiz.Functions.Tests/` is xUnit v3, references `MealWiz/src/MealWiz.Functions/`, and has a
+`TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/` is xUnit v3, references `TheMealWorkshop/src/TheMealWorkshop.Functions/`, and has a
 framework reference to ASP.NET Core.
 
 **Layout:**
@@ -219,16 +219,16 @@ TestInfrastructure/
 they open sockets, but they don't need Supabase. `ScrapeRecipeHandlerTests` needs Supabase.
 
 **Contract tests:** `Shared/UnitTests/Models/ContractTests.cs` (here) and
-`MealWiz/tests/MealWiz.Shared.Tests/Features/MealImport/UnitTests/Models/MealImportModelTests.cs` (Shared side)
-(including `IsGuessed` and the ten error codes) compare each side's types with `MealWiz/tests/Contracts/*.json`. Both projects link these files.
+`TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/Features/MealImport/UnitTests/Models/MealImportModelTests.cs` (Shared side)
+(including `IsGuessed` and the ten error codes) compare each side's types with `TheMealWorkshop/tests/Contracts/*.json`. Both projects link these files.
 `amount_parsing.json` is the Shared side's own: `Amounts/UnitTests/ParsedAmountTests.cs` runs every case through `ParsedAmount.Parse`
 and checks that the copy embedded in `amounts.test.sql` equals the file (the SQL file is linked into the test project).
 
 Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoint_WritesFailedStatus`.
 
-### MauiWASM.Tests: unit and Playwright E2E
+### TheMealWorkshop.Web.Tests: unit and Playwright E2E
 
-`MealWiz/tests/MauiWASM.Tests/` uses xUnit v3, bUnit and Microsoft.Playwright, with Chromium only.
+`TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/` uses xUnit v3, bUnit and Microsoft.Playwright, with Chromium only.
 
 - **Unit tests:**
   - `UnitTests/Configuration/AppSettingsTests.cs`: the appsettings files.
@@ -257,8 +257,8 @@ Test methods are named `Scenario_Expected`, e.g. `RedirectToCloudMetadataEndpoin
     deleting a user doesn't remove their objects, so a test that uploads cleans up itself) and checks that one is gone
     (`StoredPictureExistsAsync`).
   - When a test fails, `trace.zip`, `screenshot.png` and `console.log` are saved under
-    `MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
-- **Rules for E2E tests** are in `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`. Read it before writing one:
+    `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/TestResults/e2e/<Class.Method>/`.
+- **Rules for E2E tests** are in `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/README.md`. Read it before writing one:
   - no sleeps or load-state waits
   - `data-testid` selectors only
   - look inside `Drawer`, not `Page`
@@ -307,7 +307,7 @@ culture for the whole run, so English assertions hold on a Danish machine. E2E b
 `Locale = "en-US"` (`E2ETestBase`), because the app picks its language from the browser's. There are no Danish
 bUnit or E2E render tests. Danish is covered by:
 
-- `Localization/UnitTests/ResourceCompletenessTests.cs` (`shared-unit`): every resource embedded in MealWiz.Shared
+- `Localization/UnitTests/ResourceCompletenessTests.cs` (`shared-unit`): every resource embedded in TheMealWorkshop.Shared
   has a `da` satellite with the same keys, no empty value, the same `{n}` placeholders, and `_One`/`_Other` plural
   pairs. A new `.resx` is picked up automatically; it fails until the `.da.resx` is complete.
 - Unit tests that need Danish output (dates, messages) wrap the call in `CultureScope.Use("da")`.

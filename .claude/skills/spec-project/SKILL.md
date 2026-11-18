@@ -1,6 +1,6 @@
 ---
 name: spec-project
-description: Step 1 of a MealWiz feature. Interview the user about a new feature in rounds, then write the spec into the Linear project's description. Use when the user wants to spec, scope or discuss a new feature or Linear project, says "/spec-project", "let's spec X", or "new project for X".
+description: Step 1 of a TheMealWorkshop feature. Interview the user about a new feature in rounds, then write the spec into the Linear project's description. Use when the user wants to spec, scope or discuss a new feature or Linear project, says "/spec-project", "let's spec X", or "new project for X".
 ---
 
 # Spec a feature project

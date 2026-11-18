@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run MealWiz's one-command verification (build, unit/bUnit, integration, Playwright E2E, pgTAP) at the level your role calls for and triage what fails. Use before saying any code change is done, and whenever asked to verify, test, or check that the app still works.
+description: Run TheMealWorkshop's one-command verification (build, unit/bUnit, integration, Playwright E2E, pgTAP) at the level your role calls for and triage what fails. Use before saying any code change is done, and whenever asked to verify, test, or check that the app still works.
 ---
 
 # Verify a change
@@ -62,7 +62,7 @@ FAILED SmokeTests.Page_Renders(page: "MealsPage", path: "/meals", marker: "meal-
     Assert.Fail(): /meals (MealsPage) didn't render: Blazor's "An unhandled error has occurred" bar is showing.
     Browser errors (2), first:
     Unhandled exception rendering component: ...
-    artifacts: MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/e2e/SmokeTests.Page_Renders(...) (...)
+    artifacts: TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/TestResults/e2e/SmokeTests.Page_Renders(...) (...)
 
 Full logs: artifacts/verify/smoke/
 ```
@@ -77,22 +77,22 @@ Full logs: artifacts/verify/smoke/
   `docs/agents/FEATURES.md`, a verify step not in `docs/agents/TESTING.md`, or a path in backticks that doesn't exist.
   Update the doc to match the code (DOC-01). Don't delete the entry to make the check pass. `docs.log` has the full list.
 - **build**: the summary lists `file(line,col): error CSxxxx`. Fix it there. `build.log` has the rest.
-- **unit / bUnit**: the test name tells you the file: `MealWiz/tests/<Project>/**/<Class>.cs`. Read the assertion message first, then the test, then the code under test. To rerun one class: `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealsPageTests"`.
+- **unit / bUnit**: the test name tells you the file: `TheMealWorkshop/tests/<Project>/**/<Class>.cs`. Read the assertion message first, then the test, then the code under test. To rerun one class: `dotnet test --project TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests --filter-class "*MealsPageTests"`.
 - **integration** (Shared/Functions `Category=Integration`): Shared runs its handlers against local Supabase as a
   throwaway user, through RLS. Functions uses the service role and a local recipe web server.
   - "REQUIRE_SUPABASE is set, but…" means the stack isn't reachable. Check `supabase status`.
   - A GoTrue `429` means the sign-in rate limit was hit by back-to-back runs. Wait a few minutes.
   - verify resets the database to your migrations on every run, so a new migration is always applied. If the reset
     itself fails, `supabase.log` shows the failing migration or seed line.
-- **E2E** (`MauiWASM.Tests/E2ETests`): the message usually names the page and the first browser error. Then:
+- **E2E** (`TheMealWorkshop.Web.Tests/E2ETests`): the message usually names the page and the first browser error. Then:
   1. Open `screenshot.png` from the artifacts folder with the Read tool to see what the page showed.
   2. Read `console.log` in the same folder: browser console, page errors, failed requests and Realtime frames, with timestamps.
-  3. If you still need more, `pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <folder>/trace.zip` opens the step-by-step trace (needs a display, so it's for humans).
-  4. Rerun a single journey: `dotnet test --project MealWiz/tests/MauiWASM.Tests --filter-class "*MealJourneyTests"`.
+  3. If you still need more, `pwsh TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/playwright.ps1 show-trace <folder>/trace.zip` opens the step-by-step trace (needs a display, so it's for humans).
+  4. Rerun a single journey: `dotnet test --project TheMealWorkshop/tests/TheMealWorkshop.Web.Tests --filter-class "*MealJourneyTests"`.
 - **pgTAP**: the summary shows the `not ok` lines. The files are under `supabase/tests/database/`.
 - **SKIPPED** at local/smoke/full shouldn't happen (REQUIRE_SUPABASE turns skips into failures). If you see it, the reason is shown.
 
-Some E2E tests pin known bugs on purpose (MEA-38, MEA-42, MEA-43; see `MealWiz/tests/MauiWASM.Tests/E2ETests/README.md`).
+Some E2E tests pin known bugs on purpose (MEA-38, MEA-42, MEA-43; see `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/README.md`).
 If your change fixes one of those, flip the assertion as the comment there says, rather than deleting it.
 
 ## 5. Look at it yourself (optional)
@@ -100,6 +100,6 @@ If your change fixes one of those, flip the assertion as the comment there says,
 When a test can't tell you whether the UI looks right, open the app:
 
 1. `supabase start` (local/smoke/full already started it, without Studio; pass `--studio` to verify to keep it).
-2. In the Claude desktop app, start the `web` preview from `.claude/launch.json`. It runs `dotnet run` for MauiWASM on http://localhost:5053 in Development, pointing at local Supabase.
+2. In the Claude desktop app, start the `web` preview from `.claude/launch.json`. It runs `dotnet run` for TheMealWorkshop.Web on http://localhost:5053 in Development, pointing at local Supabase.
 3. Log in as `test@test.com` / `tester`. That user is seeded by `supabase/seed.sql` and exists only in the local stack.
 4. The `supabase-studio` entry opens Studio on http://127.0.0.1:54323 to inspect the data.

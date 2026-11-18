@@ -32,7 +32,7 @@ green on your PR, merge it into the project branch yourself (`scripts/merge-pr.s
 ### `background` (at least 80 characters)
 
 ```
-MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
+TheMealWorkshop: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
 a .NET 10 Azure Function for meal import. Feature "<project>" is built as a few large Linear issues, each one session
 and one PR into the project branch project/<slug>; a coordinator session planned this issue, started you and plans
 the next issue when yours merges. A separate ship session later verifies and reviews the whole project and opens the
@@ -80,7 +80,7 @@ take the screenshots, and open the one PR to dev for the user to review and merg
 ### `background` (at least 80 characters)
 
 ```
-MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
+TheMealWorkshop: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
 a .NET 10 Azure Function for meal import. Feature "<project>" was built by separate issue sessions that only ran the
 fast checks and merged into project/<slug>. You are the ship session: the full verify, the fresh-context review, the
 screenshots and the PR from project/<slug> to dev. The user merges that PR; you never do. Rules: CLAUDE.md and

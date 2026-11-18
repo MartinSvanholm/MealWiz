@@ -1,6 +1,6 @@
 ---
 name: implement-issue
-description: Implement one MealWiz Linear issue (a group of user stories) by executing the Implementation plan in the issue, story by story and test-first, with only the fast checks, a PR into the project branch that it merges itself on green CI (feature mode), or fix a group of Bug issues with a PR to dev that merges itself on green (bug mode). The full verify, the review and the PR to dev belong to /ship-project. In a cloud container one session works the issues one at a time, a branch and PR each. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
+description: Implement one TheMealWorkshop Linear issue (a group of user stories) by executing the Implementation plan in the issue, story by story and test-first, with only the fast checks, a PR into the project branch that it merges itself on green CI (feature mode), or fix a group of Bug issues with a PR to dev that merges itself on green (bug mode). The full verify, the review and the PR to dev belong to /ship-project. In a cloud container one session works the issues one at a time, a branch and PR each. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
 ---
 
 # Implement an issue

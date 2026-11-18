@@ -1,0 +1,105 @@
+using Bunit;
+using TheMealWorkshop.Shared.Components.Drawers;
+using TheMealWorkshop.Shared.Services.DrawerStateContainer;
+using TheMealWorkshop.Shared.Tests.TestInfrastructure;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Rendering;
+using Xunit;
+
+namespace TheMealWorkshop.Shared.Tests.Components.ComponentTests;
+
+public class DrawerBaseTests : ComponentTestBase
+{
+    [Fact]
+    public void Opening_the_drawer_renders_its_title_and_content_with_parameters()
+    {
+        var cut = Render<DrawerBase>();
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(ProbeDrawer("Shopping", "probe text")));
+
+        Assert.Equal("Shopping", cut.Find(TestId("drawer-title")).TextContent);
+        Assert.Equal("probe text", cut.Find(TestId("probe")).TextContent);
+    }
+
+    [Fact]
+    public void Close_button_closes_the_drawer_and_clears_its_content()
+    {
+        var cut = Render<DrawerBase>();
+        cut.InvokeAsync(() => Drawer.OpenDrawer(ProbeDrawer("Shopping", "probe text")));
+
+        cut.Find(TestId("drawer-close")).Click();
+
+        Assert.False(Drawer.IsDrawerOpen);
+        Assert.Empty(cut.FindAll(TestId("probe")));
+    }
+
+    [Fact]
+    public void Back_button_returns_to_the_previous_drawer_content()
+    {
+        var cut = Render<DrawerBase>();
+        cut.InvokeAsync(() =>
+        {
+            Drawer.OpenDrawer(ProbeDrawer("First", "first"));
+            Drawer.SwitchDrawerContent(typeof(Probe), "First", new() { [nameof(Probe.Text)] = "first" });
+            Drawer.SwitchDrawerContent(typeof(Probe), "Second", new() { [nameof(Probe.Text)] = "second" });
+        });
+        Assert.Equal("second", cut.Find(TestId("probe")).TextContent);
+
+        cut.Find(TestId("drawer-back")).Click();
+
+        Assert.True(Drawer.IsDrawerOpen);
+        Assert.Equal("First", cut.Find(TestId("drawer-title")).TextContent);
+        Assert.Equal("first", cut.Find(TestId("probe")).TextContent);
+    }
+
+    [Fact]
+    public void HeaderAction_renders_on_the_right_of_the_header()
+    {
+        var cut = Render<DrawerBase>();
+        var parameters = ProbeDrawer("Edit Ingredient", "probe text");
+        parameters.HeaderAction = b => b.AddMarkupContent(0, "<button data-testid=\"probe-delete\">Delete</button>");
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(parameters));
+
+        Assert.NotNull(cut.Find($"{TestId("drawer-header-action")} {TestId("probe-delete")}"));
+    }
+
+    [Fact]
+    public void Header_has_no_action_slot_when_none_is_set()
+    {
+        var cut = Render<DrawerBase>();
+
+        cut.InvokeAsync(() => Drawer.OpenDrawer(ProbeDrawer("Shopping", "probe text")));
+
+        Assert.Empty(cut.FindAll(TestId("drawer-header-action")));
+    }
+
+    [Fact]
+    public void DrawerFooter_renders_its_button()
+    {
+        var cut = Render<DrawerFooter>(p => p.AddChildContent("<button data-testid=\"probe-save\">Save</button>"));
+
+        Assert.NotNull(cut.Find($"{TestId("drawer-footer")} {TestId("probe-save")}"));
+    }
+
+    private static DrawerStateParameters ProbeDrawer(string title, string text) => new()
+    {
+        Title = title,
+        Content = typeof(Probe),
+        ContentParameters = new() { [nameof(Probe.Text)] = text }
+    };
+
+    /// <summary>Stand-in drawer content, so these tests don't depend on a feature component.</summary>
+    public class Probe : ComponentBase
+    {
+        [Parameter] public string Text { get; set; } = string.Empty;
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "p");
+            builder.AddAttribute(1, "data-testid", "probe");
+            builder.AddContent(2, Text);
+            builder.CloseElement();
+        }
+    }
+}

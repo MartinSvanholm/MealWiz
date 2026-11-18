@@ -1,6 +1,6 @@
 ---
 name: mw-tdd
-description: Test-driven development for MealWiz (xUnit v3, bUnit, Playwright, pgTAP). Red → green, one slice at a time, at agreed seams. Use when building a feature or fixing a bug test-first, from /implement-issue, or when the user mentions TDD, red-green, or writing tests first.
+description: Test-driven development for TheMealWorkshop (xUnit v3, bUnit, Playwright, pgTAP). Red → green, one slice at a time, at agreed seams. Use when building a feature or fixing a bug test-first, from /implement-issue, or when the user mentions TDD, red-green, or writing tests first.
 ---
 
 <!-- Adapted from mattpocock/skills `skills/engineering/tdd` (MIT). See `.claude/skills/THIRD_PARTY_NOTICES.md`. -->
@@ -25,7 +25,7 @@ See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for what to m
 
 ## Seams: where tests go
 
-A **seam** is the public boundary you test at. In MealWiz:
+A **seam** is the public boundary you test at. In TheMealWorkshop:
 
 | Seam | Test | Suite |
 |---|---|---|
@@ -62,7 +62,7 @@ on every edge case.
   enough code to pass it. Don't anticipate future tests or add speculative features.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
 - **Run narrowly while looping**, e.g.
-  `dotnet test --project MealWiz/tests/MealWiz.Shared.Tests --filter-class "*MealHandlerTests"`. Integration tests
+  `dotnet test --project TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests --filter-class "*MealHandlerTests"`. Integration tests
   need `supabase start` first; without it they skip, which is not green.
 - **Refactoring is not part of the loop.** Tidy up once the slice is green, then rerun.
 - **Finish with verify.** `scripts/verify.ps1 fast`, plus `local --only <steps>` for the Supabase-backed steps your

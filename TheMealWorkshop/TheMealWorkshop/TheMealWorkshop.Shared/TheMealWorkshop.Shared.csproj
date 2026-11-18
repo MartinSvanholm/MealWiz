@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TheMealWorkshop.Shared.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+    <PackageReference Include="CodeBeam.MudBlazor.Extensions" Version="8.2.3" />
+    <PackageReference Include="FluentResults" Version="4.0.0" />
+    <PackageReference Include="MediatR" Version="13.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="9.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.6" />
+    <!-- IStringLocalizer and .resx resources (en neutral, da satellite); see ARCHITECTURE.md "Localization". -->
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.1" />
+    <PackageReference Include="MudBlazor" Version="8.9.0" />
+    <PackageReference Include="Supabase" Version="1.1.1" />
+    <!-- Supabase 1.1.1 pulls in Supabase.Realtime 7.0.2, whose socket calls ClientWebSocketOptions.SetRequestHeader
+         unconditionally. That throws PlatformNotSupportedException in Blazor WASM, so Realtime never connects.
+         7.1.0 skips the headers in the browser (the apikey travels as a query parameter instead). -->
+    <PackageReference Include="Supabase.Realtime" Version="7.1.0" />
+  </ItemGroup>
+
+</Project>

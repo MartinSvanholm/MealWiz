@@ -1,0 +1,55 @@
+﻿using System.Globalization;
+using TheMealWorkshop.Shared.Features.Meals.Models;
+using TheMealWorkshop.Shared.Helpers;
+
+namespace TheMealWorkshop.Shared.Features.MealPlans.Models;
+
+public class MealPlan
+{
+    public int Id { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public Guid CreatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public Dictionary<DateTime, Meal> MealOnDate { get; set; }
+    /// <summary>The meal_plans-meals row id of each planned day, keyed like <see cref="MealOnDate"/>. A swap keeps it.</summary>
+    public Dictionary<DateTime, int> PlannedMealIdOnDate { get; set; } = [];
+
+    public MealPlan(DateTime targetDate)
+    {
+        StartDate = targetDate.StartOfWeek().Date;
+        EndDate = targetDate.EndOfWeek().Date;
+        MealOnDate = [];
+        PlannedMealIdOnDate = [];
+    }
+
+    public MealPlan(MealPlanDb mealPlanDb)
+    {
+        Id = mealPlanDb.Id;
+        StartDate = DateTime.Parse(mealPlanDb.StartDate, CultureInfo.InvariantCulture);
+        EndDate = DateTime.Parse(mealPlanDb.EndDate, CultureInfo.InvariantCulture);
+        CreatedAt = mealPlanDb.CreatedAt;
+        CreatedBy = mealPlanDb.CreatedBy;
+        UpdatedAt = mealPlanDb.UpdatedAt;
+        MealOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Count > 0 ?
+            mealPlanDb.MealPlanMeals.ToDictionary(x => DateTime.Parse(x.MealDate, CultureInfo.InvariantCulture), x => new Meal(x.Meal, this, x.MealDate))
+            : [];
+        PlannedMealIdOnDate = mealPlanDb.MealPlanMeals != null && mealPlanDb.MealPlanMeals.Count > 0 ?
+            mealPlanDb.MealPlanMeals.ToDictionary(x => DateTime.Parse(x.MealDate, CultureInfo.InvariantCulture), x => x.Id)
+            : [];
+    }
+
+    public MealPlanDb MapToMealPlanDb()
+    {
+        return new MealPlanDb()
+        {
+            Id = Id,
+            StartDate = StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            EndDate = EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            CreatedAt = CreatedAt,
+            CreatedBy = CreatedBy,
+            UpdatedAt = UpdatedAt
+        };
+    }
+}

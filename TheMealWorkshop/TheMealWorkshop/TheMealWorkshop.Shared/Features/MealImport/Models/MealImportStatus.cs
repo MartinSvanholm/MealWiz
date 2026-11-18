@@ -1,0 +1,34 @@
+namespace TheMealWorkshop.Shared.Features.MealImport.Models;
+
+/// <summary>
+/// Status of a <c>meal_imports</c> row. Independently duplicated in the Function project
+/// (<c>TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Models/RecipeImportStatus.cs</c>) — keep the DB values in sync;
+/// <c>TheMealWorkshop/tests/Contracts/meal_import_status.json</c> checks both sides.
+/// </summary>
+public enum MealImportStatus
+{
+    Pending,
+    Succeeded,
+    Failed
+}
+
+public static class MealImportStatusExtensions
+{
+    public const string PendingValue = "pending";
+    public const string SucceededValue = "succeeded";
+    public const string FailedValue = "failed";
+
+    public static string ToDbValue(this MealImportStatus status) => status switch
+    {
+        MealImportStatus.Succeeded => SucceededValue,
+        MealImportStatus.Failed => FailedValue,
+        _ => PendingValue
+    };
+
+    public static MealImportStatus FromDbValue(string? value) => value switch
+    {
+        SucceededValue => MealImportStatus.Succeeded,
+        FailedValue => MealImportStatus.Failed,
+        _ => MealImportStatus.Pending
+    };
+}

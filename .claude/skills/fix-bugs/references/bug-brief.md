@@ -30,7 +30,7 @@ cleared it.
 ## `background` (at least 80 characters)
 
 ```
-MealWiz: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
+TheMealWorkshop: a .NET 9 Blazor WebAssembly + MAUI meal planner on Supabase (MediatR CQRS, FluentResults, MudBlazor), with
 a .NET 10 Azure Function for meal import. A /fix-bugs coordinator diagnosed the open Bug issues, wrote approved fix
 plans into the ones that needed them, grouped them by the files they touch and started one session per group in
 parallel worktrees from dev. Rules: CLAUDE.md and docs/agents/. PRs go to dev

@@ -143,15 +143,15 @@ for (var i = 1; i < args.Length; i++)
 var root = FindRepoRoot();
 if (root is null)
 {
-    Console.WriteLine("Run this from inside the MealWiz repo (couldn't find supabase/config.toml above the current directory).");
+    Console.WriteLine("Run this from inside the TheMealWorkshop repo (couldn't find supabase/config.toml above the current directory).");
     return CouldNotRun;
 }
 
-const string SharedTests = "MealWiz/tests/MealWiz.Shared.Tests";
-const string FunctionsTests = "MealWiz/tests/MealWiz.Functions.Tests";
-const string WebTests = "MealWiz/tests/MauiWASM.Tests";
+const string SharedTests = "TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests";
+const string FunctionsTests = "TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests";
+const string WebTests = "TheMealWorkshop/tests/TheMealWorkshop.Web.Tests";
 // The three test projects, as one thing to build.
-const string TestsFilter = "MealWiz/MealWiz.Tests.slnf";
+const string TestsFilter = "TheMealWorkshop/TheMealWorkshop.Tests.slnf";
 // Where E2ETestBase saves a trace, screenshot and console log for each failed E2E test.
 var e2eArtifacts = Path.Combine(root, WebTests, "bin", "Debug", "net10.0", "TestResults", "e2e");
 
@@ -160,7 +160,7 @@ var suites = new List<(string Id, string Name, string Project, string[] Filter, 
 {
     ("shared-unit", "Shared unit + bUnit", SharedTests, ["--filter-not-trait", "Category=Integration"], true),
     ("functions-unit", "Functions unit", FunctionsTests, ["--filter-not-trait", "Category=Integration"], true),
-    ("web-unit", "MauiWASM unit", WebTests, ["--filter-not-trait", "Category=E2E"], true),
+    ("web-unit", "TheMealWorkshop.Web unit", WebTests, ["--filter-not-trait", "Category=E2E"], true),
 };
 if (level is not "fast")
 {
@@ -210,8 +210,8 @@ if (only is not null)
 var quickSkipped = new Dictionary<string, string>();
 if (quick && only is null && ChangedSinceDev() is { } changed)
 {
-    if (!changed.Any(f => f.StartsWith("MealWiz/src/MealWiz.Functions/") || f.StartsWith("MealWiz/tests/MealWiz.Functions.Tests/")
-                          || f.StartsWith("MealWiz/tests/Contracts/")))
+    if (!changed.Any(f => f.StartsWith("TheMealWorkshop/src/TheMealWorkshop.Functions/") || f.StartsWith("TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/")
+                          || f.StartsWith("TheMealWorkshop/tests/Contracts/")))
         foreach (var step in new[] { "functions-unit", "functions-integration" })
             quickSkipped[step] = "skipped (--quick: no Functions change since origin/dev)";
     if (!changed.Any(f => f.StartsWith("supabase/")))
@@ -237,10 +237,10 @@ var details = new List<string>();
 var failed = false;
 // The machine-wide lock on local Supabase (step 3), held until Finish. The OS releases it if this process dies.
 FileStream? supabaseLock = null;
-var lockPath = Path.Combine(Path.GetTempPath(), "mealwiz-verify-supabase.lock");
+var lockPath = Path.Combine(Path.GetTempPath(), "themealworkshop-verify-supabase.lock");
 var lockTimeout = TimeSpan.FromMinutes(60);
 // Which migrations and seed the shared stack holds, written after each reset or fresh start, for --quick.
-var schemaMarker = Path.Combine(Path.GetTempPath(), "mealwiz-verify-supabase.schema");
+var schemaMarker = Path.Combine(Path.GetTempPath(), "themealworkshop-verify-supabase.schema");
 
 // 1. Docs. The agent docs must name every feature folder, handler, table and verify step, and every path they put in
 // backticks must exist (DOC-01 in docs/agents/ARCHITECTURE.md). A failure doesn't stop the run.
@@ -441,8 +441,8 @@ List<string>? ShardMethods((int Index, int Count) sh, string log)
     return methods.Count == 0 ? null : methods.Where((_, i) => i % sh.Count == sh.Index - 1).ToList();
 }
 
-// The MAUI head in MealWiz.sln needs mobile workloads, so this builds what the tests reference instead (MealWiz.Shared,
-// MauiWASM, MealWiz.Functions and the three test projects), like CI: one build of the solution filter that lists
+// The MAUI head in TheMealWorkshop.sln needs mobile workloads, so this builds what the tests reference instead (TheMealWorkshop.Shared,
+// TheMealWorkshop.Web, TheMealWorkshop.Functions and the three test projects), like CI: one build of the solution filter that lists
 // the test projects, so MSBuild builds them in parallel and evaluates the shared projects once.
 (bool Ok, string Row, List<string> Errors) Build()
 {
@@ -543,7 +543,7 @@ int Finish(int exitCode)
 List<string> CheckDocs()
 {
     const string FeaturesDoc = "docs/agents/FEATURES.md", TestingDoc = "docs/agents/TESTING.md";
-    const string SharedFeatures = "MealWiz/MealWiz/MealWiz.Shared/Features";
+    const string SharedFeatures = "TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/Features";
     var problems = new List<string>();
     string ReadDoc(string relative) => File.Exists(Path.Combine(root, relative)) ? File.ReadAllText(Path.Combine(root, relative)) : "";
     // A whole name: "meal_plans" doesn't count as named inside "meal_plans-meals".
@@ -551,7 +551,7 @@ List<string> CheckDocs()
 
     var features = ReadDoc(FeaturesDoc);
     var headings = string.Join('\n', features.Split('\n').Where(l => l.StartsWith('#')));
-    foreach (var parent in new[] { SharedFeatures, "MealWiz/src/MealWiz.Functions/Functions" })
+    foreach (var parent in new[] { SharedFeatures, "TheMealWorkshop/src/TheMealWorkshop.Functions/Functions" })
         foreach (var folder in Directory.GetDirectories(Path.Combine(root, parent)).Select(Path.GetFileName))
             if (!Names(headings, folder!))
                 problems.Add($"{FeaturesDoc}: no heading for {parent}/{folder}/");
@@ -575,7 +575,7 @@ List<string> CheckDocs()
 
     // A path in backticks resolves from the repo root or from a project folder, so `Features/Meals/` works too.
     // Skipped: placeholders and globs (<>*{}…), routes (/meals), URLs, and names with no slash or no extension.
-    var bases = Directory.GetFiles(Path.Combine(root, "MealWiz"), "*.csproj", SearchOption.AllDirectories)
+    var bases = Directory.GetFiles(Path.Combine(root, "TheMealWorkshop"), "*.csproj", SearchOption.AllDirectories)
         .Select(p => Path.GetDirectoryName(p)!).Prepend(root).ToList();
     var docs = Directory.GetFiles(Path.Combine(root, "docs", "agents"), "*.md").Prepend(Path.Combine(root, "CLAUDE.md"));
     foreach (var doc in docs.Where(File.Exists))
@@ -757,7 +757,7 @@ string LockOwner()
 
 IEnumerable<string> BuildErrors(string buildLog)
 {
-    // "C:\...\MealsPage.razor(12,5): error CS1002: ; expected [C:\...\MealWiz.Shared.csproj]"
+    // "C:\...\MealsPage.razor(12,5): error CS1002: ; expected [C:\...\TheMealWorkshop.Shared.csproj]"
     var errors = File.ReadLines(buildLog)
         .Where(l => Regex.IsMatch(l, @":\s*error\s+[A-Z]+\d*\s*:"))
         .Select(l => Regex.Replace(l.Trim(), @"\s*\[[^\]]+\.csproj(::[^\]]*)?\]$", ""))
@@ -800,7 +800,7 @@ static TrxResult ReadTrx(string path)
     return new TrxResult(results.Count, passed, failures.Count, skipped.Count, failures, skipped);
 }
 
-// "MauiWASM.Tests.E2ETests.SmokeTests.Page_Renders(page: ...)" -> "SmokeTests.Page_Renders(page: ...)"
+// "TheMealWorkshop.Web.Tests.E2ETests.SmokeTests.Page_Renders(page: ...)" -> "SmokeTests.Page_Renders(page: ...)"
 static string ShortName(string testName)
 {
     var paren = testName.IndexOf('(');

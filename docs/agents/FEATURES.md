@@ -2,8 +2,8 @@
 
 Where each feature lives and how it works, so you can open the right files without searching.
 
-- `Features/…` paths are relative to `MealWiz/MealWiz/MealWiz.Shared/`. Test paths are relative to
-  `MealWiz/tests/MealWiz.Shared.Tests/` unless they name another project.
+- `Features/…` paths are relative to `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/`. Test paths are relative to
+  `TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/` unless they name another project.
 - Every handler is a static class holding a `Command` or `Query` record plus a nested `Handler`
   ([ARCHITECTURE.md](ARCHITECTURE.md), ARCH-04). The folder, the file and the class all share the operation's name.
 - Every table has a `created_by uuid` owner column and RLS policies scoped to `auth.uid() = created_by`. Exceptions
@@ -85,7 +85,7 @@ meals are planned this week, or that every meal has a recipe.
   - unit: `Features/Meals/UnitTests/` (Models, State)
   - bUnit: `Features/Meals/ComponentTests/` (`CookMealPageTests.cs`: the cooking view, its wake lock and back target)
   - integration: `Features/Meals/IntegrationTests/MealHandlerTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealJourneyTests.cs`
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/MealJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meals.test.sql`
 
 ## Ingredients
@@ -228,7 +228,7 @@ Removing a day's meal always asks first in a drawer. When the day has grocery it
   - unit: `Features/MealPlans/UnitTests/` (Models, State, PlanWeek)
   - bUnit: `Features/MealPlans/ComponentTests/`
   - integration: `Features/MealPlans/IntegrationTests/MealPlanHandlerTests.cs`, `PlanWeekHandlerTests.cs`, `RemoveMealWithGroceryItemsTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealPlanJourneyTests.cs` (also opens the cooking view from the day card and checks back keeps the day)
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/MealPlanJourneyTests.cs` (also opens the cooking view from the day card and checks back keeps the day)
   - pgTAP: `supabase/tests/database/meal_plans.test.sql`, `supabase/tests/database/meal_plans_meals.test.sql`, `supabase/tests/database/meal_plans_duplicates_cleanup.test.sql`
 
 ## GroceryList
@@ -351,7 +351,7 @@ also deletes it after the same confirm drawer; basket pills don't swipe.
   - unit: `Features/GroceryList/UnitTests/` (Models, State)
   - bUnit: `Features/GroceryList/ComponentTests/`
   - integration: `Features/GroceryList/IntegrationTests/GroceryListHandlerTests.cs`, `LinkedGroceryAmountHandlerTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryListJourneyTests.cs`
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/GroceryListJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_items.test.sql`, `supabase/tests/database/grocery_item_sources.test.sql`, `supabase/tests/database/atomic_write_functions.test.sql` (the write functions, `save_generated_week` included), `supabase/tests/database/amounts.test.sql` (`parse_amount`, the amount checks, the backfill)
   - migration: `supabase/migrations/20261104120000_add_grocery_item_sources.sql`, `supabase/migrations/20261114120000_revoke_anon_on_grocery_item_sources.sql` (anon holds no privilege on the table), `supabase/migrations/20261114140000_add_atomic_write_functions.sql` (the five write functions), `supabase/migrations/20261115120000_add_amount_quantity_and_unit.sql` (`amount_quantity` and `amount_unit` on items and links; three write functions replaced so they write them; the handlers send both next to the text, and `GroceryItemDrawer` shows the amount hint)
 
@@ -461,7 +461,7 @@ manual mode the trips are still marked as seen (`learned_until`), so turning lea
   - integration: `Features/GroceryCategories/IntegrationTests/` (`GroceryCategoriesHandlerTests.cs`,
     `RememberedGroceryNamesHandlerTests.cs`, `GroceryCategoryEditHandlerTests.cs`, `DeleteGroceryCategoryHandlerTests.cs`,
     `SectionOrderHandlerTests.cs`)
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/GroceryCategoriesJourneyTests.cs`
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/GroceryCategoriesJourneyTests.cs`
   - pgTAP: `supabase/tests/database/grocery_categories.test.sql`, `supabase/tests/database/grocery_remembered_names.test.sql`
     (the table and both functions), `supabase/tests/database/grocery_list_settings.test.sql` (the table, `picked_at` and
     the two order functions)
@@ -486,7 +486,7 @@ meal guessed from a dish; absent reads as false). The client starts one from the
 New menu: `add-meal-import-picture`): the user takes or chooses up to 3 pictures (`import-picture-camera-input`,
 `import-picture-gallery-input`), sees thumbnails (`import-picture-thumb-{i}`, `import-picture-remove-{i}`), a privacy note
 (`import-picture-privacy`) and an inline error (`import-picture-error`), and presses `import-picture-submit`. Each picture
-is shrunk in the browser first (`MealWiz/MealWiz/MealWiz.Shared/wwwroot/js/mealPictures.js` through `Features/MealImport/State/MealPictureShrinker.cs`,
+is shrunk in the browser first (`TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/wwwroot/js/mealPictures.js` through `Features/MealImport/State/MealPictureShrinker.cs`,
 `IMealPictureShrinker`: orientation applied, long edge 2,500 px, JPEG 0.8; a file the browser can't decode is not added).
 `IMealImportStateContainer.StartPictureImport` then uploads the pictures, inserts the row (with the app language, from
 `MealImportJobHelper.LanguageFor`), and calls the Function; the rest (progress card, background mode, one job at a
@@ -537,7 +537,7 @@ detail for diagnosis.
   - `Features/MealImport/Models/ParsedMeal.cs`: the `parsed_meal` jsonb contract.
   - `Features/MealImport/Models/MealImportStatus.cs`: `pending`, `succeeded`, `failed`.
   - `Features/MealImport/Models/MealImportErrorCode.cs`: the `error_code` values (contract
-    `MealWiz/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
+    `TheMealWorkshop/tests/Contracts/meal_import_error_code.json`). `Features/MealImport/Models/MealImportErrorMessages.cs`:
     `L.ToMessage(code)`, the text the state container exposes as `JobErrorMessage` and `LatestErrorMessage`.
   - `Features/MealImport/Models/MealImportJobStatus.cs` and `Features/MealImport/Models/MealImportEntryState.cs`: UI state.
   - `Services/FunctionApp/FunctionAppOptions.cs`: the Function app's URL and key from appsettings (the `MealImportFunction` section); also used by Account's DeleteAccount.
@@ -557,9 +557,9 @@ detail for diagnosis.
   - unit: `Features/MealImport/UnitTests/` (Handlers, Models, State)
   - bUnit: `Features/MealImport/ComponentTests/ImportMealPageTests.cs`
   - integration: `Features/MealImport/IntegrationTests/MealImportHandlerTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/MealImportJourneyTests.cs`
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/MealImportJourneyTests.cs`
   - pgTAP: `supabase/tests/database/meal_imports.test.sql`, `supabase/tests/database/meal_import_pictures.test.sql` (the bucket policies)
-  - contracts: `MealWiz/tests/Contracts/`
+  - contracts: `TheMealWorkshop/tests/Contracts/`
 
 ## Authentication
 
@@ -630,7 +630,7 @@ per host (see [Hosts](#hosts)).
   - integration: `Features/Authentication/IntegrationTests/AuthenticationHandlerTests.cs`
   - unit: `Services/Authentication/UnitTests/` (`CustomAuthStateProviderTests.cs`, `SessionKeeperTests.cs`, `RefreshFailureTests.cs`)
   - bUnit: `Services/Authentication/ComponentTests/SessionGateTests.cs`
-  - E2E: `MealWiz/tests/MauiWASM.Tests/E2ETests/AuthJourneyTests.cs`
+  - E2E: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/AuthJourneyTests.cs`
 
 ## Account
 
@@ -642,7 +642,7 @@ The language dropdown (`language-select`, a native select so phones show their o
 `SupportedLanguages.All` by native name, with the stored choice preselected. A change goes through
 `ILanguagePreference` (`Localization/ILanguagePreference.cs`): it saves the code (Device default removes it) and reloads
 the page in the new language. Web: `Localization/LocalStorageLanguagePreference.cs`, registered in
-`MealWiz/MauiWASM/ServiceCollectionExtensions.cs`. MAUI: `MealWiz/MealWiz/MealWiz/Providers/PreferencesLanguagePreference.cs`,
+`TheMealWorkshop/TheMealWorkshop.Web/ServiceCollectionExtensions.cs`. MAUI: `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/Providers/PreferencesLanguagePreference.cs`,
 which also applies the culture in-process, since a reload there doesn't re-run `MauiProgram`.
 
 - **Folder:** `Features/Account/`
@@ -673,7 +673,7 @@ which also applies the culture in-process, since a reload there doesn't re-run `
   | DeleteAccount | `Command(string Password)` → `Result` | `POST {MealImportFunction:Url}/api/DeleteAccount` with the session's bearer token, the password and `x-functions-key`; 204 → `SessionKeeper.SignOutLocallyAsync()` (never `SignOut`, the user is gone), 403 / 401 / anything else → their own messages and no sign-out |
 
 - **Texts:** `Features/Account/AccountResource.resx` / `.da.resx` (marker `AccountResource.cs`).
-- **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/MealWizTheme.cs`
+- **Related:** `Theme/ThemeService.cs`, `Theme/IThemeService.cs`, `Theme/TheMealWorkshopTheme.cs`
 - **Tests:**
   - bUnit: `Features/Account/ComponentTests/` (`AccountPageTests`, `ChangePasswordFormTests`, `ChangeEmailFormTests`, `EmailChangePageTests`, `DeleteAccountPanelTests`)
   - integration: `Features/Account/IntegrationTests/AccountHandlerTests.cs` (GoTrue and Mailpit)
@@ -689,15 +689,15 @@ keys cascade to every row the user owns. Responses: 204 deleted, 400 bad body or
 token, 403 wrong password (nothing deleted), 502 any other GoTrue failure (logged, not returned). It reuses
 `Supabase:Url` and `Supabase:ServiceRoleKey`; there is no new setting.
 
-- **Function:** `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountFunction.cs` (the HTTP trigger, outcome → status) and
-  `MealWiz/src/MealWiz.Functions/Functions/DeleteAccount/DeleteAccountHandler.cs` (`IDeleteAccountHandler` → `DeleteAccountOutcome`, a named `HttpClient`).
-- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/UnitTests/` and `MealWiz/tests/MealWiz.Functions.Tests/Functions/DeleteAccount/IntegrationTests/`;
+- **Function:** `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/DeleteAccount/DeleteAccountFunction.cs` (the HTTP trigger, outcome → status) and
+  `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/DeleteAccount/DeleteAccountHandler.cs` (`IDeleteAccountHandler` → `DeleteAccountOutcome`, a named `HttpClient`).
+- **Tests:** `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/DeleteAccount/UnitTests/` and `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/DeleteAccount/IntegrationTests/`;
   pgTAP `supabase/tests/database/delete_account_cascade.test.sql`.
 
 ## Functions: ScrapeRecipe
 
 The server half of MealImport, in a separate Azure Functions app (isolated worker, net10.0) that deliberately
-doesn't reference MealWiz.Shared. `POST /api/ScrapeRecipe` (`AuthorizationLevel.Function`) takes `{ jobId, url }`. It
+doesn't reference TheMealWorkshop.Shared. `POST /api/ScrapeRecipe` (`AuthorizationLevel.Function`) takes `{ jobId, url }`. It
 loads the `meal_imports` row with the service-role key and acts only if the row is still `pending`. It always fetches
 the row's stored `source_url`, never the URL in the request body. It parses the recipe (JSON-LD, then Microdata, then
 OpenGraph), maps it to the payload, and writes the result back. A failure also writes `error_code`: `invalid_url`
@@ -705,29 +705,29 @@ OpenGraph), maps it to the payload, and writes the result back. A failure also w
 DNS, non-public host, network, timeout), `no_recipe_found` (no parser found a recipe) or `unknown` (anything else).
 
 Responses: 200 means the row is resolved; 502 means the row couldn't be read or written and is still pending, so the
-client fails it; 400 means a bad body. `MealWiz/src/MealWiz.Functions/README.md` covers local setup, the function
+client fails it; 400 means a bad body. `TheMealWorkshop/src/TheMealWorkshop.Functions/README.md` covers local setup, the function
 key, CORS and deployment. A picture job (no `source_url`) is left pending with a warning: AnalyzeMealPicture resolves it.
 
-- **Folder:** `MealWiz/src/MealWiz.Functions/`
+- **Folder:** `TheMealWorkshop/src/TheMealWorkshop.Functions/`
 - **Function:**
-  - `MealWiz/src/MealWiz.Functions/Functions/ScrapeRecipe/ScrapeRecipeFunction.cs`: the HTTP trigger.
-  - `MealWiz/src/MealWiz.Functions/Functions/ScrapeRecipe/ScrapeRecipeHandler.cs`: `IScrapeRecipeHandler.HandleAsync` → `Result`.
-  - `MealWiz/src/MealWiz.Functions/Functions/ScrapeRecipe/RecipeMapper.cs`: `ParsedRecipe` → `MealImportPayload`.
-  - `MealWiz/src/MealWiz.Functions/Functions/ScrapeRecipe/Parsing/`: `RecipeParser`, plus the JSON-LD, Microdata and OpenGraph parsers.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/ScrapeRecipe/ScrapeRecipeFunction.cs`: the HTTP trigger.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/ScrapeRecipe/ScrapeRecipeHandler.cs`: `IScrapeRecipeHandler.HandleAsync` → `Result`.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/ScrapeRecipe/RecipeMapper.cs`: `ParsedRecipe` → `MealImportPayload`.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/ScrapeRecipe/Parsing/`: `RecipeParser`, plus the JSON-LD, Microdata and OpenGraph parsers.
 - **Shared code (inside Functions):**
-  - `MealWiz/src/MealWiz.Functions/Shared/Fetching/RecipeFetcher.cs`: follows up to 5 redirects by hand and caps the body at 5 MB.
-  - `MealWiz/src/MealWiz.Functions/Shared/Ssrf/IpAddressGuard.cs` and
-    `MealWiz/src/MealWiz.Functions/Shared/Ssrf/SsrfGuardedHttpClientFactory.cs`: the SSRF guard. It blocks private,
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Fetching/RecipeFetcher.cs`: follows up to 5 redirects by hand and caps the body at 5 MB.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Ssrf/IpAddressGuard.cs` and
+    `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Ssrf/SsrfGuardedHttpClientFactory.cs`: the SSRF guard. It blocks private,
     loopback, link-local, metadata and similar ranges, pins the connection to the address it checked, and never
     auto-redirects (FN-02).
-  - `MealWiz/src/MealWiz.Functions/Shared/Ingredients/IngredientLineParser.cs`: splits "200 g flour" into amount and name.
-  - `MealWiz/src/MealWiz.Functions/Shared/SupabaseAccess/ServiceRoleSupabaseClientFactory.cs`: the service-role
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Ingredients/IngredientLineParser.cs`: splits "200 g flour" into amount and name.
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/SupabaseAccess/ServiceRoleSupabaseClientFactory.cs`: the service-role
     client. It bypasses RLS, and exists only here.
-  - `MealWiz/src/MealWiz.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload`, `RecipeImportStatus` and
+  - `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Models/`: `MealImportDb`, `MealImportPayload`, `RecipeImportStatus` and
     `RecipeImportErrorCode`.
-    These deliberately duplicate the Shared types (FN-01); `MealWiz/tests/Contracts/` keeps them in sync.
-- **DI:** `MealWiz/src/MealWiz.Functions/ServiceCollectionExtensions.cs`, called from `MealWiz/src/MealWiz.Functions/Program.cs`.
-- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/`
+    These deliberately duplicate the Shared types (FN-01); `TheMealWorkshop/tests/Contracts/` keeps them in sync.
+- **DI:** `TheMealWorkshop/src/TheMealWorkshop.Functions/ServiceCollectionExtensions.cs`, called from `TheMealWorkshop/src/TheMealWorkshop.Functions/Program.cs`.
+- **Tests:** `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/`
   - `Functions/ScrapeRecipe/UnitTests/` and `Functions/ScrapeRecipe/IntegrationTests/`
   - `Shared/UnitTests/` and `Shared/IntegrationTests/`
 
@@ -751,18 +751,18 @@ than `end_turn`, a 429/5xx/other API error or a missing API key → `ai_unavaila
 a 413 or an image 400 → `picture_unreadable`; a timeout or the 80 s budget → `timed_out`. Every error carries its code
 in a `PictureImportError`. Nothing logs picture bytes, the key or the hint.
 
-- **Folder:** `MealWiz/src/MealWiz.Functions/Functions/AnalyzeMealPicture/`
+- **Folder:** `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/AnalyzeMealPicture/`
   - `AnalyzeMealPictureFunction.cs`: the HTTP trigger.
   - `AnalyzeMealPictureHandler.cs`: `IAnalyzeMealPictureHandler.HandleAsync` → `Result`.
   - `PictureJobRules.cs`: the pure rules: path check, freshness window, the daily-limit setting.
   - `IMealPictureAnalyzer.cs`: the seam, `MealPictureAnalysisRequest` and `PictureImportError`.
   - `AnthropicMealPictureAnalyzer.cs`, `MealPicturePrompt.cs`, `MealPictureReading.cs`, `MealPictureMapper.cs`: the production analyzer.
 - **Settings:** `Anthropic:ApiKey` (required; `Anthropic__ApiKey` in Azure), `Anthropic:Model` (default `claude-haiku-5-5`),
-  `MealPictureImport:DailyLimit` (default 20; 0 turns analysis off). See `MealWiz/src/MealWiz.Functions/README.md`.
-- **Shared code:** `MealWiz/src/MealWiz.Functions/Shared/Models/MealImportPictures.cs` (bucket id, limits), duplicated
+  `MealPictureImport:DailyLimit` (default 20; 0 turns analysis off). See `TheMealWorkshop/src/TheMealWorkshop.Functions/README.md`.
+- **Shared code:** `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Models/MealImportPictures.cs` (bucket id, limits), duplicated
   on the client (FN-01).
-- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/AnalyzeMealPicture/UnitTests/` (analyzer through
-  `TestInfrastructure/FakeAnthropicHandler.cs`, mapper, prompt, rules, trigger) and `MealWiz/tests/MealWiz.Functions.Tests/Functions/AnalyzeMealPicture/IntegrationTests/` (the handler
+- **Tests:** `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/AnalyzeMealPicture/UnitTests/` (analyzer through
+  `TestInfrastructure/FakeAnthropicHandler.cs`, mapper, prompt, rules, trigger) and `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/AnalyzeMealPicture/IntegrationTests/` (the handler
   with a fake analyzer against local Supabase and Storage). No test calls the real AI service.
 
 ## Functions: CleanUpMealPictures
@@ -774,14 +774,14 @@ save or discard; this catches the rest, including a deleted account's). Storage 
 `public.expired_meal_import_pictures(cutoff)` for the names and removes them through the Storage API in batches of 100,
 at most 5,000 per run (never SQL). A failed batch is logged and ends the run; the next day tries again.
 
-- **Folder:** `MealWiz/src/MealWiz.Functions/Functions/CleanUpMealPictures/`
+- **Folder:** `TheMealWorkshop/src/TheMealWorkshop.Functions/Functions/CleanUpMealPictures/`
   (`CleanUpMealPicturesFunction.cs`: the timer, passes now minus 24 h; `CleanUpMealPicturesHandler.cs`).
 - **Migration:** `supabase/migrations/20261112130000_add_expired_meal_import_pictures.sql`.
-- **Tests:** `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/UnitTests/` and
-  `MealWiz/tests/MealWiz.Functions.Tests/Functions/CleanUpMealPictures/IntegrationTests/` (local Storage; collection
+- **Tests:** `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/CleanUpMealPictures/UnitTests/` and
+  `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/Functions/CleanUpMealPictures/IntegrationTests/` (local Storage; collection
   `PictureJobs`); pgTAP `supabase/tests/database/expired_meal_import_pictures.test.sql`.
 
-## Cross-cutting code (MealWiz.Shared)
+## Cross-cutting code (TheMealWorkshop.Shared)
 
 - **`Features/StateContainerBase.cs`:** base class for state containers. It provides `OnStateChanged`,
   `NotifyStateChanged()` and `CurrentSnackbar`.
@@ -799,7 +799,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
       (`confirm-drawer-description`), Cancel (`confirm-drawer-cancel`, only closes) and a red confirm button
       (`confirm-drawer-confirm`, runs `onConfirm`; labelled Delete, or `confirmLabel` when given).
   - See [ARCHITECTURE.md](ARCHITECTURE.md#drawers).
-- **`Amounts/`:** an amount typed as text, read as a quantity and a unit (namespace `MealWiz.Shared.Amounts`, in
+- **`Amounts/`:** an amount typed as text, read as a quantity and a unit (namespace `TheMealWorkshop.Shared.Amounts`, in
   `_Imports.razor`). Not a feature folder: Ingredients and GroceryList both use it.
   - `ParsedAmount.cs`: `ParsedAmount.Parse(text)` (never null; `Quantity` is null when the text can't be read; `Unit` is
     null for a count; `Family`, `UnitCode`). The rules are in the type's remarks; the SQL function
@@ -808,13 +808,13 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
     Teaspoon, Tablespoon; only Mass and Volume convert).
   - `AmountText.cs`: `Format(quantity, unit)` ("1,5 dl" in Danish) and `Describe(text)`, the helper text under an amount
     field ("200 · gram", "Saved as written", null when empty). Texts are `Unit_*` and `Amount_*` in `SharedResource`.
-  - Tests: `MealWiz/tests/MealWiz.Shared.Tests/Amounts/UnitTests/`, against `MealWiz/tests/Contracts/amount_parsing.json`.
+  - Tests: `TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/Amounts/UnitTests/`, against `TheMealWorkshop/tests/Contracts/amount_parsing.json`.
 - **`Services/Authentication/`:** `CustomAuthStateProvider.cs` (the auth state, from the Supabase session), `SessionKeeper.cs` (load, refresh and end the session), `SessionGate.razor` (the startup gate).
 - **`Services/FunctionApp/`:** `FunctionAppOptions.cs`, the Function app's URL and key, for every feature that calls a Function.
 - **`Services/ScreenWakeLock/`:** `IScreenWakeLock` (`RequestAsync()` / `ReleaseAsync()`, never throw; false where the browser has no screen wake lock) and `ScreenWakeLock`, the only code that calls `wwwroot/js/screenWakeLock.js` (re-requests the lock when the tab becomes visible again). Used by the cooking view.
-- **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `MealWizTheme` (MudBlazor palettes,
+- **`Theme/`:** `IThemeService` (dark mode, stored in local storage) and `TheMealWorkshopTheme` (MudBlazor palettes,
   typography, radius, and `ModeAttribute()` for the `data-theme` hook).
-- **`wwwroot/css/mealwiz.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
+- **`wwwroot/css/themealworkshop.css`:** the global redesign stylesheet, linked by both heads after MudBlazor: the `--mw-*`
   tokens per theme, `@font-face`, global component styles and `.mw-text-*` classes. Tokens and when to use them:
   [ARCHITECTURE.md](ARCHITECTURE.md#theme-tokens-ui-02) (UI-02). A drawer field with its label above it is a
   `.mw-field` wrapping a `<label class="mw-field-label" for="x">` and a `MudTextField` with `InputId="x"` and no
@@ -833,7 +833,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
     `nav-meals`), and `Components/CustomNavLink.razor`, one tab: icon above label, the active one an orange pill
     with the `active` class. The floating bar around them (`bottom-nav`) is in `Layout/MainLayout.razor`. It
     floats over the page: pages fill the screen (the `.mw-page` class) and end their scroll area with
-    `padding-bottom: var(--mw-nav-clearance)` (`wwwroot/css/mealwiz.css`), so content scrolls behind the bar.
+    `padding-bottom: var(--mw-nav-clearance)` (`wwwroot/css/themealworkshop.css`), so content scrolls behind the bar.
   - `Components/Headers/ScreenHeader.razor`: the header on top of every screen. Parameters: `Label` (small
     uppercase muted line, left out when empty), `Title` (26px), `TitleContent` (markup instead of `Title`, e.g. a
     button) and `Actions` (buttons on the right). Test ids `screen-header`, `screen-header-label`,
@@ -853,7 +853,7 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 - **`Layout/`:** `Layout/MainLayout.razor` (the `data-theme` wrapper around the theme, popover and snackbar
   providers, drawers and the floating bottom nav, which it shows to signed-in users only) and
   `Layout/RedirectToLogin.razor`.
-- **`Routes.razor`:** the router used by the MAUI head. The web head has its own `MealWiz/MauiWASM/App.razor`.
+- **`Routes.razor`:** the router used by the MAUI head. The web head has its own `TheMealWorkshop/TheMealWorkshop.Web/App.razor`.
 - **`_Imports.razor`:** global `@using`s. A new feature namespace goes here.
 - **Tests:**
   - `Components/ComponentTests/`, `Layout/ComponentTests/`
@@ -862,20 +862,20 @@ at most 5,000 per run (never SQL). A failed batch is logged and ends the run; th
 
 ## Hosts
 
-- **MauiWASM (web, deployed to Azure Static Web Apps).**
-  - `MealWiz/MauiWASM/Program.cs` calls `AddMealWizWeb`.
-  - `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
+- **TheMealWorkshop.Web (web, deployed to Azure Static Web Apps).**
+  - `TheMealWorkshop/TheMealWorkshop.Web/Program.cs` calls `AddTheMealWorkshopWeb`.
+  - `TheMealWorkshop/TheMealWorkshop.Web/ServiceCollectionExtensions.cs` registers everything: local storage, MudBlazor,
     `RegisterScopedServices()` (which also registers `HttpClient`), the MediatR assembly scan, auth, `TimeProvider`,
     `FunctionAppOptions`, and the scoped Supabase `Client` (anon key; Realtime is not used).
-  - `MealWiz/MauiWASM/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
-  - Config: `MealWiz/MauiWASM/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
-  - Tests: `MealWiz/tests/MauiWASM.Tests/`.
-- **MealWiz (MAUI head: Android, iOS, Mac Catalyst, Windows).**
-  - `MealWiz/MealWiz/MealWiz/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
+  - `TheMealWorkshop/TheMealWorkshop.Web/Provider/CustomSupabaseSessionProvider.cs` persists the session in local storage under `SUPABASE_SESSION`.
+  - Config: `TheMealWorkshop/TheMealWorkshop.Web/wwwroot/appsettings.Development.json` (local stack), `appsettings.Staging.json` and `appsettings.Production.json`.
+  - Tests: `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/`.
+- **TheMealWorkshop (MAUI head: Android, iOS, Mac Catalyst, Windows).**
+  - `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/MauiProgram.cs` registers local storage, MudBlazor, `RegisterScopedServices()`, the
     MediatR assembly scan, auth, `TimeProvider`, `FunctionAppOptions` and the Supabase `Client`
     like the web head, with its own session provider, and always loads the embedded
-    `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
-  - `MealWiz/MealWiz/MealWiz/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
+    `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/Resources/appsettings.Development.json`.
+  - `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/Providers/CustomSupabaseSessionProvider.cs` uses `SecureStorage`.
   - It needs mobile workloads, so verify and CI don't build it, and it has no test project.
 
 ## Database

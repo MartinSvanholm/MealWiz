@@ -1,6 +1,6 @@
 ---
 name: plan-project
-description: Step 2 of a MealWiz feature. Split a specced Linear project into one to three large issues, plan only the issue that starts next, then coordinate - one Sonnet session per issue, each merging its PR into the project branch on green CI, the next issue planned just in time when its blockers merge, and an Opus ship session at the end that verifies and reviews the whole project and opens the one PR to dev. In a cloud container this session implements the issues itself, one at a time. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
+description: Step 2 of a TheMealWorkshop feature. Split a specced Linear project into one to three large issues, plan only the issue that starts next, then coordinate - one Sonnet session per issue, each merging its PR into the project branch on green CI, the next issue planned just in time when its blockers merge, and an Opus ship session at the end that verifies and reviews the whole project and opens the one PR to dev. In a cloud container this session implements the issues itself, one at a time. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
 ---
 
 # Plan and coordinate a feature project

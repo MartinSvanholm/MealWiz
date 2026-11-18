@@ -1,0 +1,29 @@
+@using TheMealWorkshop.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IMealPlanStateContainer _mealPlanStateContainer
+@inject IDrawerStateContainer _drawerStateContainer
+@inject ISnackbar _snackbar
+
+@* The "From meal plan" header button: opens the drawer that merges the week's ingredients into the list. *@
+<MudButton data-testid="add-plan-ingredients-button" Variant="Variant.Outlined" Size="Size.Small"
+           Class="grocery-plan-button" StartIcon="@Icons.Material.Outlined.EventNote"
+           Disabled="_loading" OnClick="OnAddIngredientsToGroceryListCliked">
+    @L["GroceryList_FromMealPlan"]
+</MudButton>
+
+@code {
+    private bool _loading;
+
+    private async Task OnAddIngredientsToGroceryListCliked()
+    {
+        if (_mealPlanStateContainer.MealPlan == null)
+        {
+            _loading = true;
+            _mealPlanStateContainer.CurrentSnackbar = _snackbar;
+            await _mealPlanStateContainer.LoadMealPlan();
+            _loading = false;
+        }
+
+        AddPlanIngredientsToGroceryListDrawer.Open(_drawerStateContainer, L["GroceryList_FromMealPlan"]);
+    }
+}

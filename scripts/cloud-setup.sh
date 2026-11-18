@@ -7,7 +7,7 @@
 #   bash scripts/cloud-setup.sh
 #
 # The setup script runs in the repository root. Safe to run again: each step skips what's already there. Set
-# MEALWIZ_PULL_IMAGES=1 to also pull the Supabase images verify uses (about 1.5 GB), so the first verify doesn't.
+# THEMEALWORKSHOP_PULL_IMAGES=1 to also pull the Supabase images verify uses (about 1.5 GB), so the first verify doesn't.
 set -euo pipefail
 
 SUPABASE_CLI_VERSION="2.111.0"
@@ -38,7 +38,7 @@ if ! docker info > /dev/null 2>&1; then
   bash "$(dirname "${BASH_SOURCE[0]}")/start-docker.sh" || exit 1
 fi
 
-if [[ "${MEALWIZ_PULL_IMAGES:-}" == "1" ]]; then
+if [[ "${THEMEALWORKSHOP_PULL_IMAGES:-}" == "1" ]]; then
   # Start and stop the same services verify starts, which pulls their images.
   log "pulling the Supabase images"
   supabase start -x studio,postgres-meta,imgproxy,edge-runtime,logflare,vector,supavisor > /dev/null
