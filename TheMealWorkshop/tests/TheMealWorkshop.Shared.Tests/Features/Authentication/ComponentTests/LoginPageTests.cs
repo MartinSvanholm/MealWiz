@@ -43,6 +43,7 @@ public class LoginPageTests : ComponentTestBase
         var cut = Render<LoginPage>();
 
         Assert.Equal("The Meal Workshop", cut.Find(TestId("login-title")).TextContent.Trim());
+        Assert.Equal("_content/TheMealWorkshop.Shared/images/logo.svg", cut.Find(TestId("login-logo")).GetAttribute("src"));
         Assert.Equal("Plan the week. Shop once.", cut.Find(TestId("login-tagline")).TextContent.Trim());
         var emailInput = cut.Find(InputOf("login-email"));
         var passwordInput = cut.Find(InputOf("login-password"));

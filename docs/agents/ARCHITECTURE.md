@@ -535,6 +535,12 @@ The theme has two layers. `Theme/TheMealWorkshopTheme.cs` sets MudBlazor's palet
 default radius. `wwwroot/css/themealworkshop.css` in TheMealWorkshop.Shared adds the `--mw-*` tokens MudBlazor has no slot for, the
 fonts and the global component styles. Both heads link it after `MudBlazor.min.css`.
 
+**Logo and icons.** The logo is an image, so its colours stay in the file: Shared `wwwroot/images/logo.svg` (the
+signed-out screens show it), the web head's `favicon.svg` (a two-row cut that stays sharp at 16 px), `favicon-32.png`,
+`apple-touch-icon.png` and `icon-192.png`, and the MAUI head's `Resources/AppIcon` and `Resources/Splash`. They use
+the theme's hex values; when a brand colour changes, change them too. The design lives on the "The Meal Workshop
+identity" canvas in claude.ai.
+
 **Mode hook.** `Layout/MainLayout.razor` wraps the theme provider, the popover and snackbar providers and the layout
 in `<div class="mw-root" data-theme="dark|light">`, from `TheMealWorkshopTheme.ModeAttribute(IThemeService.IsDarkMode)`.
 The `--mw-*` tokens switch on that attribute, so the Dark mode switch flips MudBlazor and the tokens together.

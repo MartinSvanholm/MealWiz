@@ -14,6 +14,8 @@
                     @L["Route_Authorizing"]
                 </Authorizing>
             </AuthorizeRouteView>
+            @* The tab title in the app's language. HeadOutlet resets document.title to index.html's <title> otherwise. *@
+            <PageTitle>@L["App_Name"]</PageTitle>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
         </Found>
         <NotFound>

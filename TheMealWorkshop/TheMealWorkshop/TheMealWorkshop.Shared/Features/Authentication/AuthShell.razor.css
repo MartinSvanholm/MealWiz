@@ -36,19 +36,11 @@
     gap: 14px;
 }
 
+/* The logo (wwwroot/images/logo.svg) carries its own tile and colours. */
 .mw-auth-logo {
     width: 64px;
     height: 64px;
-    border-radius: var(--mw-radius-l);
-    background: var(--mw-orange);
-    color: var(--mw-text-on-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.mw-auth-logo ::deep .mud-icon-root {
-    font-size: 32px;
+    display: block;
 }
 
 .mw-auth-title {

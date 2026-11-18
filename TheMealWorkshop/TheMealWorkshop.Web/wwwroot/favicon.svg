@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 64 64">
+  <!-- The Meal Workshop tab icon: the logo cut to two rows so it stays sharp at 16 and 32 px. Colours are the theme's (Theme/TheMealWorkshopTheme.cs); design canvas: "The Meal Workshop identity". -->
+  <rect width="64" height="64" rx="14" fill="#FF9F43"/>
+  <rect x="5" y="6" width="54" height="52" rx="9" fill="#1A140E"/>
+  <path d="M12 22 L17 27 L26 17" stroke="#8FD45A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M11 41 C11 36 15 34.5 19 34.5 C23 34.5 27 36 27 41 Z" fill="#FF9F43"/>
+  <path d="M11 44 H27 C27 47.5 25 49 22.5 49 H15.5 C13 49 11 47.5 11 44 Z" fill="#FF9F43"/>
+  <path d="M34 22 H52 M34 42 H48" stroke="#F5EFE6" stroke-width="6" stroke-linecap="round"/>
+</svg>
