@@ -26,6 +26,15 @@ namespace TheMealWorkshop
         {
             // The language is picked once, before the BlazorWebView exists: the stored choice (Preferences, same
             // key as the web app's local storage), else the OS language.
+            // A choice saved when the app was called MealWiz moves to the new key first.
+            if (Preferences.Default.ContainsKey(SupportedLanguages.OldStorageKey))
+            {
+                if (!Preferences.Default.ContainsKey(SupportedLanguages.StorageKey))
+                    Preferences.Default.Set(SupportedLanguages.StorageKey,
+                        Preferences.Default.Get<string?>(SupportedLanguages.OldStorageKey, null));
+                Preferences.Default.Remove(SupportedLanguages.OldStorageKey);
+            }
+
             var deviceCulture = CultureInfo.CurrentUICulture;
             CultureResolver.Apply(CultureResolver.Resolve(
                 Preferences.Default.Get<string?>(SupportedLanguages.StorageKey, null), deviceCulture));

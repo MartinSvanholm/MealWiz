@@ -635,7 +635,7 @@ per host (see [Hosts](#hosts)).
 ## Account
 
 The settings page: who is signed in, a dark-mode toggle (`IThemeService`, stored in local storage under
-`mealwiz.theme`), the language dropdown, change password, change email, logout and delete account. No tables.
+`themealworkshop.theme`; ThemeService moves a MealWiz-era `mealwiz.theme` there once), the language dropdown, change password, change email, logout and delete account. No tables.
 Texts: `Features/Account/AccountResource.cs`.
 
 The language dropdown (`language-select`, a native select so phones show their own picker) lists Device default, then

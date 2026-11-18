@@ -14,7 +14,13 @@ public static class SupportedLanguages
     /// The value is a bare code from <see cref="All"/> (<c>da</c>), stored as a plain string, not JSON (write it with
     /// <c>SetItemAsStringAsync</c>). No key means "Device default". Both index.html files read it too.
     /// </summary>
-    public const string StorageKey = "mealwiz.language"; // the old app name, kept so saved choices survive the rename
+    public const string StorageKey = "themealworkshop.language";
+
+    /// <summary>
+    /// The key from when the app was called MealWiz. Each head moves a choice stored under it to
+    /// <see cref="StorageKey"/> once at startup, before it reads the language (web index.html, MauiProgram).
+    /// </summary>
+    public const string OldStorageKey = "mealwiz.language";
 
     /// <summary>The fallback language, and the one the neutral .resx files hold.</summary>
     public const string DefaultCode = "en";

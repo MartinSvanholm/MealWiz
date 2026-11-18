@@ -621,7 +621,7 @@ and `.resx` files in TheMealWorkshop.Shared. English is the neutral resource; Da
   `DefaultThreadCurrentUICulture` (plus the current thread's). Web: `TheMealWorkshop/TheMealWorkshop.Web/Program.cs`, between `Build()`
   and `RunAsync()`; it needs `BlazorWebAssemblyLoadAllGlobalizationData` (`TheMealWorkshop.Web.csproj`). MAUI:
   `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/MauiProgram.cs`, first thing.
-- **The stored choice:** key `SupportedLanguages.StorageKey` = `mealwiz.language`; value a bare supported code,
+- **The stored choice:** key `SupportedLanguages.StorageKey` = `themealworkshop.language` (a choice under the MealWiz-era `mealwiz.language` moves there once at startup); value a bare supported code,
   `en` or `da`, as a **plain string, not JSON**. No key means "Device default"; any other value is ignored. Web: local
   storage, written with Blazored `SetItemAsStringAsync` (not `SetItemAsync`, which JSON-encodes it to `"da"`) and
   removed with `RemoveItemAsync`; `Program.cs` and `TheMealWorkshop/TheMealWorkshop.Web/wwwroot/index.html` read it raw. MAUI:

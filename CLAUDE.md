@@ -7,8 +7,9 @@ MAUI app (mobile and desktop) that share one UI project.
 
 Users see the name **The Meal Workshop** in English and **Måltidsværk** in Danish (`App_Name` in
 `SharedResource.resx`); the domains are themealworkshop.com and måltidsværk.dk. Code, projects and namespaces use
-`TheMealWorkshop`. The app was called MealWiz before, and some names outside the repo still are: the Linear team, the
-Azure Function app `MealWizFunctions`, and the saved theme and language keys (`mealwiz.theme`, `mealwiz.language`).
+`TheMealWorkshop`. The app was called MealWiz before, and some names outside the repo still are: the Linear team and the Azure
+Function app `MealWizFunctions`. Theme and language choices saved under the old `mealwiz.*` keys move to
+`themealworkshop.*` once at startup.
 
 ## Read before you work
 

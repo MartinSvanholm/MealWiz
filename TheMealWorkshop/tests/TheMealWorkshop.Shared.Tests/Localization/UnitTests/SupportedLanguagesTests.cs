@@ -23,7 +23,8 @@ public class SupportedLanguagesTests
     public void StorageKey_IsTheDocumentedKey()
     {
         // Read by both index.html files and written by the Account page (MEA-106): don't change it.
-        Assert.Equal("mealwiz.language", SupportedLanguages.StorageKey);
+        Assert.Equal("themealworkshop.language", SupportedLanguages.StorageKey);
+        Assert.Equal("mealwiz.language", SupportedLanguages.OldStorageKey);
     }
 
     [Theory]

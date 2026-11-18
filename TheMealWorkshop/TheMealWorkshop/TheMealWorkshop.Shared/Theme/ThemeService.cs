@@ -4,7 +4,10 @@ namespace TheMealWorkshop.Shared.Theme;
 
 public class ThemeService(ILocalStorageService localStorage) : IThemeService
 {
-    private const string StorageKey = "mealwiz.theme"; // the old app name, kept so saved choices survive the rename
+    internal const string StorageKey = "themealworkshop.theme";
+
+    /// <summary>The key from when the app was called MealWiz; a mode stored under it moves to <see cref="StorageKey"/>.</summary>
+    internal const string OldStorageKey = "mealwiz.theme";
     private bool _initialized;
 
     public bool IsDarkMode { get; private set; }
@@ -15,6 +18,8 @@ public class ThemeService(ILocalStorageService localStorage) : IThemeService
     {
         if (_initialized) return;
 
+        await MoveOldKeyAsync();
+
         if (await localStorage.ContainKeyAsync(StorageKey))
         {
             var stored = await localStorage.GetItemAsync<string>(StorageKey);
@@ -23,6 +28,14 @@ public class ThemeService(ILocalStorageService localStorage) : IThemeService
 
         _initialized = true;
         OnChange?.Invoke();
+    }
+
+    private async Task MoveOldKeyAsync()
+    {
+        if (await localStorage.ContainKeyAsync(StorageKey) || !await localStorage.ContainKeyAsync(OldStorageKey)) return;
+
+        await localStorage.SetItemAsync(StorageKey, await localStorage.GetItemAsync<string>(OldStorageKey));
+        await localStorage.RemoveItemAsync(OldStorageKey);
     }
 
     public async Task ToggleAsync()
