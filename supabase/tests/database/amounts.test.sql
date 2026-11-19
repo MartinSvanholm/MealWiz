@@ -1,5 +1,5 @@
 -- Amounts as a quantity and a unit (add_amount_quantity_and_unit): public.parse_amount agrees with the contract
--- MealWiz/tests/Contracts/amount_parsing.json (the C# parser is tested against the same file, and a shared-unit test
+-- TheMealWorkshop/tests/Contracts/amount_parsing.json (the C# parser is tested against the same file, and a shared-unit test
 -- checks that the copy below equals it), the columns' checks, who may call the function, and the migration's backfill.
 -- Everything is rolled back.
 begin;

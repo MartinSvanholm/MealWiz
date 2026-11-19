@@ -2,8 +2,8 @@
 
 The `mw-*` skills in this folder are edited copies of skills from
 [mattpocock/skills](https://github.com/mattpocock/skills), taken at commit `59db609eb1e18aaf59b63284d0e52255aff0c63c`.
-They were adapted to MealWiz: Linear instead of GitHub issues, `docs/agents/` as the standards, `scripts/verify.*` as
-the test command, and PRs to `dev`. They are model-invocable, so the MealWiz flow skills can call them.
+They were adapted to TheMealWorkshop: Linear instead of GitHub issues, `docs/agents/` as the standards, `scripts/verify.*` as
+the test command, and PRs to `dev`. They are model-invocable, so the TheMealWorkshop flow skills can call them.
 
 | Copy | Upstream |
 |---|---|

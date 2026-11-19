@@ -1,0 +1,67 @@
+@using TheMealWorkshop.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IGroceryCategoriesStateContainer _categories
+@inject IDrawerStateContainer _drawerStateContainer
+
+@* Sort on the Other heading: the Other items one at a time, in list order. Tapping a section moves the name there (for
+   every item and meal with that name) and shows the next item; Skip leaves it in Other. After the last item the drawer
+   closes. A failed move stays on the item. *@
+@if (Current is { } item)
+{
+    <div class="sort-items">
+        <span class="sort-items-progress" data-testid="sort-progress">@L["SortItems_Progress", _index + 1, Items.Count]</span>
+        <span class="sort-items-name" data-testid="sort-item-name">@item.Name</span>
+        <span class="sort-items-hint">@L["SortItems_Hint"]</span>
+    </div>
+    <CategoryChips ExcludeOther SelectedCategoryIdChanged="MoveAsync" />
+    <DrawerFooter>
+        <button type="button" class="mw-sheet-footer-cancel sort-items-skip" data-testid="sort-skip" @onclick="Next">@L["SortItems_Skip"]</button>
+    </DrawerFooter>
+}
+
+@code {
+    /// <summary>Fits the header, the item, one row of chips and Skip.</summary>
+    public const string DrawerHeight = "calc(300px + env(safe-area-inset-bottom))";
+
+    /// <summary>The Other items when Sort was tapped, in list order.</summary>
+    [Parameter]
+    public List<GroceryItem> Items { get; set; } = [];
+
+    private int _index;
+    private bool _moving;
+
+    private GroceryItem? Current => _index < Items.Count ? Items[_index] : null;
+
+    public static void Open(IDrawerStateContainer drawer, string title, List<GroceryItem> items) =>
+        drawer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(SortOtherItemsDrawer),
+            Title = title,
+            Height = DrawerHeight,
+            ContentParameters = new() { { nameof(Items), items } },
+        });
+
+    private async Task MoveAsync(int categoryId)
+    {
+        if (Current is not { } item || _moving) return;
+
+        _moving = true;
+        try
+        {
+            if (await _categories.MoveName(item.Name, categoryId)) Next();
+        }
+        finally
+        {
+            _moving = false;
+        }
+    }
+
+    // The next item still in Other: moving one name also moves the later items with that name.
+    private void Next()
+    {
+        do _index++;
+        while (Current is { } next && _categories.CategoryFor(next.Name)?.IsOther != true);
+
+        if (Current is null) _drawerStateContainer.CloseDrawer();
+    }
+}

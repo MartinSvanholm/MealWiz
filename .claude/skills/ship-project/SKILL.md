@@ -1,6 +1,6 @@
 ---
 name: ship-project
-description: Step 4 of a MealWiz feature, the last gate before dev. In a fresh session on Opus at medium effort, bring the project branch up to date with dev, run verify full, review the whole project diff against the spec and the architecture rules, fix what it finds, take screenshots of the changed UI and attach them to Linear, and open the one PR from project/<slug> to dev with the architecture, the critical changes and the screenshots. The user merges it. Use when every issue of a project is merged into its project branch, from /plan-project, or when the user says "/ship-project X", "ship project X" or "review and verify project X".
+description: Step 4 of a TheMealWorkshop feature, the last gate before dev. In a fresh session on Opus at medium effort, bring the project branch up to date with dev, run verify full, review the whole project diff against the spec and the architecture rules, fix what it finds, take screenshots of the changed UI and attach them to Linear, and open the one PR from project/<slug> to dev with the architecture, the critical changes and the screenshots. The user merges it. Use when every issue of a project is merged into its project branch, from /plan-project, or when the user says "/ship-project X", "ship project X" or "review and verify project X".
 ---
 
 # Ship a project
@@ -16,7 +16,7 @@ Standing rules:
 - You work on the project branch, `project/<slug>`. Fixes you make are commits on it.
 - The PR you open, from the project branch to `dev`, is **the user's to merge**, in cloud mode too. Never merge it,
   and never touch `main`.
-- Only this project. A bug outside its diff goes in Linear (label **Bug**, team MealWiz, no project, Backlog), after
+- Only this project. A bug outside its diff goes in Linear (label **Bug**, team TheMealWorkshop, no project, Backlog), after
   checking it isn't there already.
 - Never poll. Run verify in the background and wait for its notice.
 
@@ -89,7 +89,7 @@ must be for the head you open it from.
 The user reviews the UI from the PR, so show it.
 
 1. Run the web app against the local stack verify left running:
-   `dotnet run --project MealWiz/MauiWASM/MauiWASM.csproj --launch-profile http` (http://localhost:5053), and log in
+   `dotnet run --project TheMealWorkshop/TheMealWorkshop.Web/TheMealWorkshop.Web.csproj --launch-profile http` (http://localhost:5053), and log in
    as the seeded `test@test.com` / `tester` (local stack only).
 2. With a browser tool (the `web` preview in the desktop app, or Playwright's Chromium in a cloud container), capture
    **every page, dialog and state the project added or visibly changed**: at phone width (390×844) and desktop width

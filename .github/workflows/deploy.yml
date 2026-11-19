@@ -32,11 +32,11 @@ jobs:
         with:
           filters: |
             web:
-              - 'MealWiz/MauiWASM/**'
-              - 'MealWiz/MealWiz/MealWiz.Shared/**'
+              - 'TheMealWorkshop/TheMealWorkshop.Web/**'
+              - 'TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/**'
               - '.github/workflows/deploy.yml'
             functions:
-              - 'MealWiz/src/MealWiz.Functions/**'
+              - 'TheMealWorkshop/src/TheMealWorkshop.Functions/**'
               - '.github/workflows/deploy.yml'
 
   migrate:
@@ -77,7 +77,7 @@ jobs:
             echo "::error::The MEAL_IMPORT_FUNCTION_KEY secret is not set; meal imports would fail with 401."
             exit 1
           fi
-          settings=MealWiz/MauiWASM/wwwroot/appsettings.Production.json
+          settings=TheMealWorkshop/TheMealWorkshop.Web/wwwroot/appsettings.Production.json
           jq --arg key "$MEAL_IMPORT_FUNCTION_KEY" '.MealImportFunction.key = $key' "$settings" > "$settings.tmp"
           mv "$settings.tmp" "$settings"
 
@@ -87,7 +87,7 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_HILL_0F87A3A10 }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
-          app_location: "/MealWiz/MauiWASM"
+          app_location: "/TheMealWorkshop/TheMealWorkshop.Web"
           api_location: ""
           output_location: "wwwroot"
 
@@ -112,7 +112,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Publish
-        run: dotnet publish MealWiz/src/MealWiz.Functions -c Release -o ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+        run: dotnet publish TheMealWorkshop/src/TheMealWorkshop.Functions -c Release -o ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
 
       # Managed identity provisioned by the portal, scoped to Website Contributor on this Function App only.
       - name: Login to Azure

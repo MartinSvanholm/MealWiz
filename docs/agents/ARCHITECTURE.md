@@ -15,7 +15,7 @@ change. [FEATURES.md](FEATURES.md) says where code lives; [TESTING.md](TESTING.m
   **Check** (how to spot it in a diff).
 - **Changing a rule:** do it in its own PR, and say why.
 
-Paths: `Features/…`, `Helpers/…`, `Localization/…` and `Services/…` are under `MealWiz/MealWiz/MealWiz.Shared/`.
+Paths: `Features/…`, `Helpers/…`, `Localization/…` and `Services/…` are under `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/`.
 
 ---
 
@@ -27,7 +27,7 @@ Each feature is a folder under `Features/<Feature>/`. An operation (one command 
 `Features/<Feature>/<Operation>/`. The handler file, the folder and the static class all share the operation's name,
 e.g. `Features/Meals/SaveMeal/SaveMeal.cs`. Components that belong only to that operation go in the same folder.
 Models go in `Features/<Feature>/Models/`, and state containers in `Features/<Feature>/State/`. A new feature's
-namespaces are added to `MealWiz/MealWiz/MealWiz.Shared/_Imports.razor`.
+namespaces are added to `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/_Imports.razor`.
 
 - **Why:** an agent or a person finds every piece of a feature in one folder, and the feature map stays accurate.
 - **Violation:** a handler in a new Helpers/MealHelpers.cs. A new Features/Meals/Handlers/ folder holding several
@@ -53,8 +53,8 @@ Only MediatR handlers inject or use `Supabase.Client`. The exceptions are these,
 - `Services/Authentication/CustomAuthStateProvider.cs`, which reads the session
 - `Services/Authentication/SessionKeeper.cs`, which loads, refreshes and ends the session in place of the SDK's own
   refresh (the SDK signs the user out on a network error)
-- the host DI setup that creates the client, in `MealWiz/MauiWASM/ServiceCollectionExtensions.cs` and
-  `MealWiz/MealWiz/MealWiz/MauiProgram.cs`
+- the host DI setup that creates the client, in `TheMealWorkshop/TheMealWorkshop.Web/ServiceCollectionExtensions.cs` and
+  `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/MauiProgram.cs`
 
 Adding to this list needs a rule change.
 
@@ -139,17 +139,17 @@ does. Without it the exception would be lost.
 Every Shared service or state container is registered in
 `DependencyInjectionHelper.RegisterScopedServices()` (`Helpers/DependencyInjectionHelper.cs`). Host-specific
 services, such as the Supabase client, configuration options and the session provider, go in
-`MealWiz/MauiWASM/ServiceCollectionExtensions.cs`. Handlers need no registration because MediatR scans the Shared
+`TheMealWorkshop/TheMealWorkshop.Web/ServiceCollectionExtensions.cs`. Handlers need no registration because MediatR scans the Shared
 assembly. Localization (`AddLocalization()` and the `MudLocalizer`) is in the shared list too, so both hosts get it.
 
-`MealWiz/tests/MauiWASM.Tests/IntegrationTests/DependencyInjection/ServiceRegistrationTests.cs` builds the web
+`TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/IntegrationTests/DependencyInjection/ServiceRegistrationTests.cs` builds the web
 container and resolves every handler and every component's `[Inject]` properties, so `verify fast` catches a missing
 registration. A service that no component injects needs its own case there.
 
 - **Why:** a service registered only in some host fails at runtime, on the first page that needs it. The registration
   test only covers the web host, so the shared list is what keeps the MAUI head in step.
-- **Violation:** a new `IFooStateContainer` added only in `MealWiz/MauiWASM/ServiceCollectionExtensions.cs`, or only
-  in `MealWiz/MealWiz/MealWiz/MauiProgram.cs`.
+- **Violation:** a new `IFooStateContainer` added only in `TheMealWorkshop/TheMealWorkshop.Web/ServiceCollectionExtensions.cs`, or only
+  in `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/MauiProgram.cs`.
 - **Check:** a new interface or implementation pair with no line in `DependencyInjectionHelper`.
 
 ## Database
@@ -193,13 +193,13 @@ meals and the `meal_imports` fail-only update. Handlers rely on RLS for ownershi
 
 ### FN-01 · MUST · Duplicated contracts change together
 
-`MealWiz.Functions` deliberately doesn't reference `MealWiz.Shared`, so the `meal_imports` types exist twice:
+`TheMealWorkshop.Functions` deliberately doesn't reference `TheMealWorkshop.Shared`, so the `meal_imports` types exist twice:
 
-- Functions: `MealWiz/src/MealWiz.Functions/Shared/Models/`
+- Functions: `TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Models/`
 - Shared: `Features/MealImport/Models/`
 
 A change to the table, the `parsed_meal` shape or the status values updates both sides, plus
-`MealWiz/tests/Contracts/parsed_meal.json` or `MealWiz/tests/Contracts/meal_import_status.json`, in the same PR.
+`TheMealWorkshop/tests/Contracts/parsed_meal.json` or `TheMealWorkshop/tests/Contracts/meal_import_status.json`, in the same PR.
 
 - **Why:** the two apps deploy separately and talk only through the row. The contract files make each side's tests
   fail until the shapes match.
@@ -211,7 +211,7 @@ A change to the table, the `parsed_meal` shape or the status values updates both
 ### FN-02 · MUST · Fetch user-supplied URLs only through the SSRF guard
 
 In Functions, every request to a URL that came from a user, or from a page you fetched, goes through `RecipeFetcher`
-and `SsrfGuardedHttpClientFactory` (`MealWiz/src/MealWiz.Functions/Shared/Ssrf/`). Never create a bare `HttpClient`
+and `SsrfGuardedHttpClientFactory` (`TheMealWorkshop/src/TheMealWorkshop.Functions/Shared/Ssrf/`). Never create a bare `HttpClient`
 for it, never turn on `AllowAutoRedirect`, and never skip `IpAddressGuard`. Tests that need loopback use
 `LoopbackAllowingIpAddressGuard`.
 
@@ -224,13 +224,13 @@ for it, never turn on `AllowAutoRedirect`, and never skip `IpAddressGuard`. Test
 
 ### SEC-01 · MUST · Only the anon key reaches the client
 
-The client projects (Shared, MauiWASM and the MAUI head) use only the public anon or publishable key. The
+The client projects (Shared, TheMealWorkshop.Web and the MAUI head) use only the public anon or publishable key. The
 service-role or secret key is used only in Functions, through `ServiceRoleSupabaseClientFactory`, and in test
 fixtures. Committed appsettings hold no secrets: the Function key in `appsettings.Production.json` stays empty and is
 injected by `deploy.yml`, and `local.settings.json` is gitignored.
 
 - **Why:** everything in the WASM app is downloadable by anyone. A service-role key there would bypass all RLS.
-- **Violation:** a `ServiceRoleKey` setting in `MealWiz/MauiWASM/wwwroot/appsettings.Production.json`. An `sb_secret_…`
+- **Violation:** a `ServiceRoleKey` setting in `TheMealWorkshop/TheMealWorkshop.Web/wwwroot/appsettings.Production.json`. An `sb_secret_…`
   or service-role JWT anywhere outside tests and Function app settings.
 - **Check:** new keys in `wwwroot/appsettings.*.json` or `Resources/appsettings.*.json`; `service_role` or
   `sb_secret` in non-test code.
@@ -243,9 +243,9 @@ Tests go in the existing project for the code under test:
 
 | Code under test | Test project |
 |---|---|
-| `MealWiz.Shared` | `MealWiz/tests/MealWiz.Shared.Tests/` |
-| `MealWiz.Functions` | `MealWiz/tests/MealWiz.Functions.Tests/` |
-| `MauiWASM`, plus E2E | `MealWiz/tests/MauiWASM.Tests/` |
+| `TheMealWorkshop.Shared` | `TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/` |
+| `TheMealWorkshop.Functions` | `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/` |
+| `TheMealWorkshop.Web`, plus E2E | `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/` |
 | database | `supabase/tests/database/` |
 
 Never add another test project. Test folders mirror the source path, with a folder per test type (`UnitTests`,
@@ -254,9 +254,9 @@ Never add another test project. Test folders mirror the source path, with a fold
 
 - **Why:** verify and CI run a fixed list of projects and traits. A new project or a missing trait means tests that
   silently never run, or that run in the wrong suite.
-- **Violation:** a new `MealWiz.Shared.IntegrationTests.csproj`. An integration test class with no
+- **Violation:** a new `TheMealWorkshop.Shared.IntegrationTests.csproj`. An integration test class with no
   `Category=Integration` trait: it lands in the unit suite, which then skips it at `fast`. A Meals test placed under `Features/GroceryList/`.
-- **Check:** a new `.csproj` under `MealWiz/tests/`. A new test class that uses `LocalSupabaseFixture` or
+- **Check:** a new `.csproj` under `TheMealWorkshop/tests/`. A new test class that uses `LocalSupabaseFixture` or
   `E2ETestBase` but has no trait.
 
 ### TEST-02 · MUST · Tests ship with the change
@@ -297,7 +297,7 @@ markup.
 
 Colours, shadows, scrims and corner radii in `.razor`, `.razor.css` and inline `Style` come from the theme: a
 `--mw-*` variable, a `--mud-palette-*` variable, a MudBlazor `Color`, or a `.mw-text-*` class. Raw values (`#FF9F43`,
-`rgb(…)`, `white`) live only in `Theme/MealWizTheme.cs` and the Shared `wwwroot/css/mealwiz.css`. See
+`rgb(…)`, `white`) live only in `Theme/TheMealWorkshopTheme.cs` and the Shared `wwwroot/css/themealworkshop.css`. See
 [Theme tokens](#theme-tokens-ui-02) for which token to use where.
 
 - **Why:** every colour has a value per theme. A hex value looks right in one mode and wrong (or unreadable) in the
@@ -454,7 +454,7 @@ return await Result.Try(async Task () => await supabaseClient.Rpc(
 ### Result handling (ARCH-05, ARCH-06)
 
 - `Helpers/ResultHelper.cs` provides two things:
-  - `SetDefaultCatchHandler()`, called once in `MealWiz/MauiWASM/Program.cs`. It maps `GotrueException` and
+  - `SetDefaultCatchHandler()`, called once in `TheMealWorkshop/TheMealWorkshop.Web/Program.cs`. It maps `GotrueException` and
     `PostgrestException` caught by `Result.Try` to an `Error`. In Release builds the message is "No response from
     server"; in Debug it's Supabase's own message.
   - `Handle(snackbar)`, which shows the first error, or the first success message if there is one, and returns the
@@ -531,12 +531,18 @@ it becomes the full-width 52px orange button at the bottom. Two buttons go in `<
 
 ### Theme tokens (UI-02)
 
-The theme has two layers. `Theme/MealWizTheme.cs` sets MudBlazor's palettes (dark and light), typography and the
-default radius. `wwwroot/css/mealwiz.css` in MealWiz.Shared adds the `--mw-*` tokens MudBlazor has no slot for, the
+The theme has two layers. `Theme/TheMealWorkshopTheme.cs` sets MudBlazor's palettes (dark and light), typography and the
+default radius. `wwwroot/css/themealworkshop.css` in TheMealWorkshop.Shared adds the `--mw-*` tokens MudBlazor has no slot for, the
 fonts and the global component styles. Both heads link it after `MudBlazor.min.css`.
 
+**Logo and icons.** The logo is an image, so its colours stay in the file: Shared `wwwroot/images/logo.svg` (the
+signed-out screens show it), the web head's `favicon.svg` (a two-row cut that stays sharp at 16 px), `favicon-32.png`,
+`apple-touch-icon.png` and `icon-192.png`, and the MAUI head's `Resources/AppIcon` and `Resources/Splash`. They use
+the theme's hex values; when a brand colour changes, change them too. The design lives on the "The Meal Workshop
+identity" canvas in claude.ai.
+
 **Mode hook.** `Layout/MainLayout.razor` wraps the theme provider, the popover and snackbar providers and the layout
-in `<div class="mw-root" data-theme="dark|light">`, from `MealWizTheme.ModeAttribute(IThemeService.IsDarkMode)`.
+in `<div class="mw-root" data-theme="dark|light">`, from `TheMealWorkshopTheme.ModeAttribute(IThemeService.IsDarkMode)`.
 The `--mw-*` tokens switch on that attribute, so the Dark mode switch flips MudBlazor and the tokens together.
 MudBlazor's own system-theme observation is off. Menus, drawer overlays and snackbars render inside the wrapper, so
 they get the tokens too.
@@ -584,14 +590,14 @@ In light mode the stylesheet already remaps MudBlazor's `Color.Primary/Secondary
 | `--mw-font-heading`, `--mw-font-body` | Bricolage Grotesque (headings, 600/800) and DM Sans (body, 400/500/700); `MudText Typo.h1..h6` and `.mw-heading` already use the heading font |
 
 **Where styles go.** Global rules for MudBlazor components (buttons, inputs, menus, snackbars) and new tokens go in
-`mealwiz.css`. A component's own look goes in its `.razor.css`, using the tokens. Scoped CSS reaches a MudBlazor
+`themealworkshop.css`. A component's own look goes in its `.razor.css`, using the tokens. Scoped CSS reaches a MudBlazor
 component only with `::deep`, under an element the component renders itself (a wrapping `div`). Popovers, menus and
 snackbars render outside the component, so style them with a global rule or the component's `PopoverClass`.
 
 ### Localization (UI-03)
 
 The app is English and Danish (`Localization/SupportedLanguages.cs`). Built on `Microsoft.Extensions.Localization`
-and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is the `da` satellite.
+and `.resx` files in TheMealWorkshop.Shared. English is the neutral resource; Danish is the `da` satellite.
 
 - **Resource layout:** one resource per feature folder, plus one shared resource. A feature's resource is an empty
   marker class `Features/<F>/<F>Resource.cs` (`public sealed class <F>Resource;`, namespace of the folder) with
@@ -603,7 +609,7 @@ and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is 
   shared one.
 - **Injecting:** components `@inject IStringLocalizer<MealsResource> L` and write `@L["Meals_Title"]`; shared texts
   `@inject IStringLocalizer<SharedResource> S`. Handlers take `IStringLocalizer<<F>Resource>` in their constructor.
-  Static code without DI uses `SharedTexts.Get("Key")`. `_Imports.razor` already has `MealWiz.Shared.Localization`
+  Static code without DI uses `SharedTexts.Get("Key")`. `_Imports.razor` already has `TheMealWorkshop.Shared.Localization`
   and `Microsoft.Extensions.Localization`.
 - **Keys:** PascalCase `Area_Thing`, the area being the screen, component or kind of text: `Nav_Plan`,
   `Error_Generic`, `MealPlan_EmptyDay`. Placeholders are `{0}`, `{1}` and must match between English and Danish.
@@ -618,13 +624,13 @@ and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is 
 - **Choosing the language:** once, at startup, before the first render. `CultureResolver.Resolve(stored, device)`
   takes the stored choice if it's a supported code, otherwise the device culture's language if supported (any `da-*`
   is Danish), otherwise English; `CultureResolver.Apply` sets `CultureInfo.DefaultThreadCurrentCulture` and
-  `DefaultThreadCurrentUICulture` (plus the current thread's). Web: `MealWiz/MauiWASM/Program.cs`, between `Build()`
-  and `RunAsync()`; it needs `BlazorWebAssemblyLoadAllGlobalizationData` (`MauiWASM.csproj`). MAUI:
-  `MealWiz/MealWiz/MealWiz/MauiProgram.cs`, first thing.
-- **The stored choice:** key `SupportedLanguages.StorageKey` = `mealwiz.language`; value a bare supported code,
+  `DefaultThreadCurrentUICulture` (plus the current thread's). Web: `TheMealWorkshop/TheMealWorkshop.Web/Program.cs`, between `Build()`
+  and `RunAsync()`; it needs `BlazorWebAssemblyLoadAllGlobalizationData` (`TheMealWorkshop.Web.csproj`). MAUI:
+  `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/MauiProgram.cs`, first thing.
+- **The stored choice:** key `SupportedLanguages.StorageKey` = `themealworkshop.language` (a choice under the MealWiz-era `mealwiz.language` moves there once at startup); value a bare supported code,
   `en` or `da`, as a **plain string, not JSON**. No key means "Device default"; any other value is ignored. Web: local
   storage, written with Blazored `SetItemAsStringAsync` (not `SetItemAsync`, which JSON-encodes it to `"da"`) and
-  removed with `RemoveItemAsync`; `Program.cs` and `MealWiz/MauiWASM/wwwroot/index.html` read it raw. MAUI:
+  removed with `RemoveItemAsync`; `Program.cs` and `TheMealWorkshop/TheMealWorkshop.Web/wwwroot/index.html` read it raw. MAUI:
   `Preferences.Default` string under the same key. Read and change it only through `ILanguagePreference`
   (`Localization/ILanguagePreference.cs`; one implementation per host): `SetAsync` saves the choice and reloads with
   `NavigateTo(Navigation.Uri, forceLoad: true)`, because the web app loads the Danish satellite only at startup. The
@@ -632,7 +638,7 @@ and `.resx` files in MealWiz.Shared. English is the neutral resource; Danish is 
 - **`<html lang>`:** the web `index.html` sets it before Blazor boots, from the stored choice or the browser
   language; the MAUI `index.html` from the device language. `Layout/MainLayout.razor` sets it from the UI culture
   after its first render, so the C# culture always wins.
-- **MudBlazor:** `Localization/MealWizMudLocalizer.cs` translates the built-in texts the app shows (`MudInput_Clear`,
+- **MudBlazor:** `Localization/TheMealWorkshopMudLocalizer.cs` translates the built-in texts the app shows (`MudInput_Clear`,
   `MudSnackbar_Close`) from the shared resource and returns "not found" for the rest, so MudBlazor keeps its English.
   Add a key there when the app starts showing another built-in text.
 - **Another language** later: a `.xx.resx` beside every resource, one entry in `SupportedLanguages.All`, and the

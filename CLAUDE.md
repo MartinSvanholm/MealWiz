@@ -1,9 +1,14 @@
-# MealWiz
+# TheMealWorkshop
 
 ## Overview
 A meal planning app. Users keep meals with ingredients, plan one meal per day week by week, merge the week's
 ingredients into a grocery list, and import meals from recipe URLs. It runs on the web (Blazor WebAssembly) and as a
 MAUI app (mobile and desktop) that share one UI project.
+
+Users see the name **The Meal Workshop** in English and **Måltidsværk** in Danish (`App_Name` in
+`SharedResource.resx`); the planned domains are themealworkshop.com and måltidsværk.dk (not bought yet; the web app runs on its Azure Static Web Apps address). Code, projects and namespaces use
+`TheMealWorkshop`. The app was called MealWiz before, and the Azure Function app `MealWizFunctions` still has the old name. Theme and language choices saved under the old `mealwiz.*` keys move to
+`themealworkshop.*` once at startup.
 
 ## Read before you work
 
@@ -15,7 +20,7 @@ MAUI app (mobile and desktop) that share one UI project.
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
 ## How work is done
-Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in two levels. There are
+Work is tracked in Linear (team TheMealWorkshop, issues `TMW-xx` (`MEA-xx` before the rename; old ids still resolve), labels Bug, Feature, Improvement), in two levels. There are
 no sub-issues: an issue's layers (database, handlers, UI) are steps in its plan.
 
 | Level | Is | Worked by |
@@ -46,8 +51,8 @@ prints a warning, run `git fetch origin && git pull --ff-only` yourself before s
 
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
-- **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
-  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team MealWiz with the **Bug**
+- **File bugs you find, don't fix them.** Search Linear first (team TheMealWorkshop, label Bug, the error text or file name);
+  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team TheMealWorkshop with the **Bug**
   label, status Backlog and **no project**, even when you found it while working on a project. Say what you saw and
   where.
 - Issue PRs target the project branch and are merged by their session on green CI. The ship PR (project branch to
@@ -55,7 +60,7 @@ Rules for every session:
   `scripts/merge-pr.sh`. Nothing goes to `main` (see below).
 
 ## Tech stack
-- **Runtime:** C#. The apps target .NET 9. `MealWiz.Functions`, the test projects and `scripts/verify.cs` need the
+- **Runtime:** C#. The apps target .NET 9. `TheMealWorkshop.Functions`, the test projects and `scripts/verify.cs` need the
   .NET 10 SDK.
 - **UI:** Blazor WebAssembly, MudBlazor 8, CodeBeam.MudBlazor.Extensions.
 - **Data:** PostgreSQL through Supabase, using the C# SDK directly from the client. There's no API layer, so RLS
@@ -70,25 +75,25 @@ Rules for every session:
 ## Projects
 | Path | Role |
 |---|---|
-| `MealWiz/MealWiz/MealWiz.Shared/` | All feature code: pages, components, handlers, state, models |
-| `MealWiz/MauiWASM/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
-| `MealWiz/MealWiz/MealWiz/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
-| `MealWiz/src/MealWiz.Functions/` | Azure Functions `ScrapeRecipe`, `AnalyzeMealPicture`, `CleanUpMealPictures` and `DeleteAccount`. Deliberately doesn't reference Shared |
-| `MealWiz/tests/MealWiz.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
-| `MealWiz/tests/MealWiz.Functions.Tests/` | Unit and integration tests for Functions |
-| `MealWiz/tests/MauiWASM.Tests/` | Web-head unit tests and Playwright E2E |
-| `MealWiz/tests/Contracts/` | JSON contracts shared by the Functions and Shared tests |
+| `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop.Shared/` | All feature code: pages, components, handlers, state, models |
+| `TheMealWorkshop/TheMealWorkshop.Web/` | Web head. DI is in `ServiceCollectionExtensions.cs` |
+| `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/` | MAUI head. Needs mobile workloads, so verify and CI don't build it |
+| `TheMealWorkshop/src/TheMealWorkshop.Functions/` | Azure Functions `ScrapeRecipe`, `AnalyzeMealPicture`, `CleanUpMealPictures` and `DeleteAccount`. Deliberately doesn't reference Shared |
+| `TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/` | Unit, bUnit and integration tests for Shared |
+| `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/` | Unit and integration tests for Functions |
+| `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/` | Web-head unit tests and Playwright E2E |
+| `TheMealWorkshop/tests/Contracts/` | JSON contracts shared by the Functions and Shared tests |
 | `supabase/` | Migrations, `seed.sql`, pgTAP tests (`supabase/tests/database/`), local config |
 
 Each app project has exactly one test project. Never add another (TEST-01).
 
 ## Build & run
 ```bash
-# Build the web app (MealWiz.sln also builds the MAUI head, which needs the Android/iOS workloads)
-dotnet build MealWiz/MauiWASM/MauiWASM.csproj
+# Build the web app (TheMealWorkshop.sln also builds the MAUI head, which needs the Android/iOS workloads)
+dotnet build TheMealWorkshop/TheMealWorkshop.Web/TheMealWorkshop.Web.csproj
 
 # Run the web app on http://localhost:5053 against local Supabase (`supabase start` first)
-dotnet run --project MealWiz/MauiWASM/MauiWASM.csproj --launch-profile http
+dotnet run --project TheMealWorkshop/TheMealWorkshop.Web/TheMealWorkshop.Web.csproj --launch-profile http
 ```
 In the Claude desktop app, `.claude/launch.json` has this as the `web` preview. Log in as the seeded
 `test@test.com` / `tester`. That user exists **only in the local stack** (`supabase/seed.sql`); never try it against
@@ -144,14 +149,14 @@ for which change; the verify skill explains how to read failures.
 - Local ports: API 54321, DB 54322, Studio 54323 (verify starts the stack without Studio unless you pass `--studio`).
 
 ## Configuration
-- **Web:** `MealWiz/MauiWASM/wwwroot/appsettings.{Development,Staging,Production}.json`, with a `Supabase` section
+- **Web:** `TheMealWorkshop/TheMealWorkshop.Web/wwwroot/appsettings.{Development,Staging,Production}.json`, with a `Supabase` section
   (`url`, anon `key`) and a `MealImportFunction` section (`url`, `key`).
   - Development points at local Supabase on `127.0.0.1:54321`.
   - Production's Function key stays empty in git; `deploy.yml` injects it.
-- **MAUI:** always loads the embedded `MealWiz/MealWiz/MealWiz/Resources/appsettings.Development.json`.
+- **MAUI:** always loads the embedded `TheMealWorkshop/TheMealWorkshop/TheMealWorkshop/Resources/appsettings.Development.json`.
   Its `WebApp:url` (the web app, `http://localhost:5053/` in Development) is where email links open; the web head leaves it out and links to itself.
 - **Functions:** a gitignored `local.settings.json`, copied from
-  `MealWiz/src/MealWiz.Functions/local.settings.json.example`. Its README covers keys, CORS and deployment.
+  `TheMealWorkshop/src/TheMealWorkshop.Functions/local.settings.json.example`. Its README covers keys, CORS and deployment.
 - Only the anon key may reach a client (SEC-01).
 
 ## Keeping these docs current

@@ -1,6 +1,6 @@
 ---
 name: plan-project
-description: Step 2 of a MealWiz feature. Split a specced Linear project into one to three large issues, plan only the issue that starts next, then coordinate - one Sonnet session per issue, each merging its PR into the project branch on green CI, the next issue planned just in time when its blockers merge, and an Opus ship session at the end that verifies and reviews the whole project and opens the one PR to dev. In a cloud container this session implements the issues itself, one at a time. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
+description: Step 2 of a TheMealWorkshop feature. Split a specced Linear project into one to three large issues, plan only the issue that starts next, then coordinate - one Sonnet session per issue, each merging its PR into the project branch on green CI, the next issue planned just in time when its blockers merge, and an Opus ship session at the end that verifies and reviews the whole project and opens the one PR to dev. In a cloud container this session implements the issues itself, one at a time. Use when the user says "/plan-project", "plan project X", "break X into issues", or "start implementing project X".
 ---
 
 # Plan and coordinate a feature project
@@ -21,7 +21,7 @@ project branch to `dev`. The user reviews and merges that PR.
 
 Standing rules:
 - Work only on this project's issues. A bug you or a session find goes in a new Linear issue with the **Bug** label,
-  team MealWiz, **no project**, status Backlog; it isn't fixed here.
+  team TheMealWorkshop, **no project**, status Backlog; it isn't fixed here.
 - Only the user merges into `dev` (the ship PR). Nothing goes to `main`.
 - Never poll. You act when you're woken: by the user, or when a session you started ends a turn.
 
@@ -86,7 +86,7 @@ For each issue you start:
    (the blockers' merged code is the seam, so nothing needs agreeing up front), write the plan from the template and
    append it to the issue. A question only the user can decide: ask it, in one AskUserQuestion round, before
    starting. No such question: start without asking; the approach was approved in step 4.
-2. `mark_chapter` ("MEA-53: grocery list sharing").
+2. `mark_chapter` ("TMW-53: grocery list sharing").
 3. A bold title line and one sentence, then `start_session` with the issue brief and call shape from
    [references/session-brief.md](references/session-brief.md): Sonnet, medium effort, `source_branch` the project
    branch.
@@ -119,7 +119,7 @@ Recompute the state; never assume it from memory:
 3. Start the new frontier. When **every issue is Done**, start the ship session instead (below).
 4. Tell the user in two or three lines: what merged, what's running, what's waiting on them.
 
-The user may also say "next", "status" or "MEA-52 is merged"; treat that the same way.
+The user may also say "next", "status" or "TMW-52 is merged"; treat that the same way.
 
 Approvals don't relay: a session's own permission prompts are answered by the user in that session. Never ask a
 session to do something your own permissions would block.

@@ -1,0 +1,37 @@
+﻿using FluentResults;
+using TheMealWorkshop.Shared.Features.GroceryList.Models;
+using TheMealWorkshop.Shared.Helpers;
+using MediatR;
+using Microsoft.Extensions.Localization;
+using Supabase;
+using Supabase.Postgrest.Responses;
+
+namespace TheMealWorkshop.Shared.Features.GroceryList.AddGroceryItem;
+
+public static class AddGroceryItem
+{
+    public record Command(GroceryItem GroceryItem) : IRequest<Result<GroceryItem>>;
+
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result<GroceryItem>>
+    {
+        public async Task<Result<GroceryItem>> Handle(Command request, CancellationToken cancellationToken)
+        {
+            var userId = supabaseClient.Auth.CurrentSession?.User?.Id;
+            if (userId is null) return Result.Fail(ErrorMessages.NotSignedIn);
+
+            var groceryItemDb = request.GroceryItem.MapToDb();
+
+            groceryItemDb.CreatedAt = DateTime.UtcNow;
+            groceryItemDb.CreatedBy = new Guid(userId);
+
+            var result = await Result.Try(async Task<ModeledResponse<GroceryItemDb>>() => await supabaseClient
+                .From<GroceryItemDb>()
+                .Insert(groceryItemDb));
+
+            if (result.IsFailed) return result.ToResult<GroceryItem>();
+            if (result.Value.Model is null) return Result.Fail(localizer["GroceryItem_NotAdded"]);
+
+            return new GroceryItem(result.Value.Model);
+        }
+    }
+}

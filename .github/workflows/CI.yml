@@ -28,7 +28,7 @@ jobs:
         id: setup
         uses: ./.github/actions/setup
 
-      # Checks the agent docs (docs/agents/, CLAUDE.md), then builds MauiWASM, MealWiz.Functions and the three test
+      # Checks the agent docs (docs/agents/, CLAUDE.md), then builds TheMealWorkshop.Web, TheMealWorkshop.Functions and the three test
       # projects (Debug). The test steps below don't rebuild.
       - name: Build
         id: build
@@ -36,16 +36,16 @@ jobs:
 
       # One step per test project. Each runs even if an earlier one failed, so one PR run reports everything.
       # Unit and integration suites collect coverage; E2E can't (the app runs as WebAssembly in Chromium).
-      - name: Run MealWiz.Shared tests
+      - name: Run TheMealWorkshop.Shared tests
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: scripts/verify.sh full --coverage --only shared-unit,shared-integration
 
-      - name: Run MealWiz.Functions tests
+      - name: Run TheMealWorkshop.Functions tests
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: scripts/verify.sh full --coverage --only functions-unit,functions-integration
 
       # The web host: DI composition, session storage, appsettings and routes. Its E2E tests run in the e2e jobs.
-      - name: Run MauiWASM unit tests
+      - name: Run TheMealWorkshop.Web unit tests
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         run: scripts/verify.sh full --coverage --only web-unit
 
@@ -68,7 +68,7 @@ jobs:
           reports: artifacts/verify/full/**/*.cobertura.xml
           targetdir: artifacts/coverage
           reporttypes: Cobertura;MarkdownSummaryGithub;HtmlInline
-          title: MealWiz coverage
+          title: TheMealWorkshop coverage
           # Source-generated code (Functions worker registrations, [GeneratedRegex]) isn't ours to test.
           filefilters: -**/obj/**
 
@@ -123,7 +123,7 @@ jobs:
       # Chromium, cached per Playwright version, and the Linux packages it needs.
       - name: Read Playwright version
         id: playwright
-        run: echo "version=$(sed -n 's/.*"Microsoft.Playwright" Version="\([^"]*\)".*/\1/p' MealWiz/tests/MauiWASM.Tests/MauiWASM.Tests.csproj)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(sed -n 's/.*"Microsoft.Playwright" Version="\([^"]*\)".*/\1/p' TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/TheMealWorkshop.Web.Tests.csproj)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright Chromium
         id: playwright-cache
@@ -135,7 +135,7 @@ jobs:
       - name: Install Playwright Chromium
         if: ${{ steps.playwright-cache.outputs.cache-hit != 'true' }}
         timeout-minutes: 5
-        run: pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
+        run: pwsh TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
 
       # The runner image already has the libraries Chromium needs to run headless; this adds the rest (mostly fonts).
       # Azure's Ubuntu mirror sometimes stalls for 10+ minutes, so a slow mirror only warns. If a library really is
@@ -145,7 +145,7 @@ jobs:
         continue-on-error: true
         run: |
           echo 'Acquire::http::Timeout "30"; Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/99-ci-retries > /dev/null
-          pwsh MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/playwright.ps1 install-deps chromium
+          pwsh TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/playwright.ps1 install-deps chromium
 
       - name: Run E2E shard ${{ matrix.shard }}/3
         run: scripts/verify.sh full --only e2e --e2e-shard ${{ matrix.shard }}/3
@@ -158,7 +158,7 @@ jobs:
           name: test-results-e2e-${{ matrix.shard }}
           path: |
             artifacts/verify/full/
-            MealWiz/tests/MauiWASM.Tests/bin/Debug/net10.0/TestResults/
+            TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/bin/Debug/net10.0/TestResults/
           include-hidden-files: true
           if-no-files-found: ignore
 

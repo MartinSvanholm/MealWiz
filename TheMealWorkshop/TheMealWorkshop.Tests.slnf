@@ -1,0 +1,10 @@
+{
+  "solution": {
+    "path": "TheMealWorkshop.sln",
+    "projects": [
+      "tests\\TheMealWorkshop.Web.Tests\\TheMealWorkshop.Web.Tests.csproj",
+      "tests\\TheMealWorkshop.Functions.Tests\\TheMealWorkshop.Functions.Tests.csproj",
+      "tests\\TheMealWorkshop.Shared.Tests\\TheMealWorkshop.Shared.Tests.csproj"
+    ]
+  }
+}

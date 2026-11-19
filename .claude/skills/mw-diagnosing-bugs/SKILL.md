@@ -1,6 +1,6 @@
 ---
 name: mw-diagnosing-bugs
-description: A disciplined loop for MealWiz bugs - build a red-capable feedback loop (usually a failing test), reproduce, minimise, rank hypotheses, instrument, fix with a regression test, clean up. Use from /implement-issue in bug mode, or when the user says diagnose/debug, or reports something broken, throwing, failing or slow.
+description: A disciplined loop for TheMealWorkshop bugs - build a red-capable feedback loop (usually a failing test), reproduce, minimise, rank hypotheses, instrument, fix with a regression test, clean up. Use from /implement-issue in bug mode, or when the user says diagnose/debug, or reports something broken, throwing, failing or slow.
 ---
 
 <!-- Adapted from mattpocock/skills `skills/engineering/diagnosing-bugs` (MIT). See `.claude/skills/THIRD_PARTY_NOTICES.md`. -->
@@ -10,7 +10,7 @@ description: A disciplined loop for MealWiz bugs - build a red-capable feedback 
 A discipline for bugs. Skip a phase only when you can say why (e.g. the Linear issue already names the line and a
 test pins it).
 
-Start from the issue: many MealWiz bugs were filed with a root cause, and some are **pinned by tests** that assert
+Start from the issue: many TheMealWorkshop bugs were filed with a root cause, and some are **pinned by tests** that assert
 today's wrong behaviour (`docs/agents/TESTING.md`, "Bugs currently pinned by tests"). A pinned test is your loop:
 flip its assertion to the correct behaviour and it goes red.
 
@@ -27,15 +27,15 @@ one, staring at code won't save you. Spend disproportionate effort here.
 Ways to build one, roughly in this order:
 
 1. **A failing test** at the seam that reaches the bug (see the seams table in `mw-tdd`):
-   - handler or RLS behaviour → integration test in `MealWiz/tests/MealWiz.Shared.Tests/Features/<F>/IntegrationTests/`
+   - handler or RLS behaviour → integration test in `TheMealWorkshop/tests/TheMealWorkshop.Shared.Tests/Features/<F>/IntegrationTests/`
      against local Supabase (`supabase start` first);
    - pure logic → unit test; a component → bUnit test;
    - a policy → pgTAP in `supabase/tests/database/`, run with `supabase test db`;
-   - Function parsing or SSRF → `MealWiz/tests/MealWiz.Functions.Tests/`.
-2. **A Playwright journey or step** in `MealWiz/tests/MauiWASM.Tests/E2ETests/`, when only the real browser shows it
+   - Function parsing or SSRF → `TheMealWorkshop/tests/TheMealWorkshop.Functions.Tests/`.
+2. **A Playwright journey or step** in `TheMealWorkshop/tests/TheMealWorkshop.Web.Tests/E2ETests/`, when only the real browser shows it
    (polling, navigation, rendering). Its failure artifacts (screenshot, console log) are described in the verify
    skill.
-3. **SQL as a specific user**, in a transaction you roll back: `docker exec -i supabase_db_MealWiz psql -U postgres`,
+3. **SQL as a specific user**, in a transaction you roll back: `docker exec -i supabase_db_TheMealWorkshop psql -U postgres`,
    then `set local role authenticated;` and `set local request.jwt.claims = '{"sub":"<uuid>","role":"authenticated"}';`.
 4. **A differential loop**: the same input through `origin/main` and your branch, or through two configs.
 5. **The app in the Browser pane** (the `web` preview in `.claude/launch.json`, user `test@test.com`) when a human

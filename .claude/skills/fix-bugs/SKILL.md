@@ -1,6 +1,6 @@
 ---
 name: fix-bugs
-description: Fix MealWiz's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first with the fast checks, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
+description: Fix TheMealWorkshop's open Linear bugs in parallel. Finds Bug-labelled issues in the backlog, diagnoses and writes a fix plan for every bug that needs one, groups bugs that touch the same files, shows the groups, then starts one Sonnet session per group (max 4) that executes the plans test-first with the fast checks, opens a PR to dev and merges it on green CI without asking. Use when the user says "fix bugs", "/fix-bugs", "work through the bug backlog", or names several bugs to fix.
 ---
 
 # Fix bugs
@@ -19,7 +19,7 @@ Standing rules:
 
 ## 1. Find the bugs
 
-1. `list_issues` with `team: "MealWiz"`, `label: "Bug"`, all pages. If the user named issues, use just those.
+1. `list_issues` with `team: "TheMealWorkshop"`, `label: "Bug"`, all pages. If the user named issues, use just those.
 2. Keep issues that are in **Backlog** or **Todo**, with **no project**. Drop the rest (In Progress, In Review, Done,
    Canceled, Duplicate, or in a project) and say how many and why.
 3. Drop bugs someone is already on: a branch or PR that names the issue id.

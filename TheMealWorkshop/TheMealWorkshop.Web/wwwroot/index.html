@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Meal Workshop</title>
+    <base href="/" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="_content/TheMealWorkshop.Shared/css/themealworkshop.css" rel="stylesheet" />
+    <link href="TheMealWorkshop.Web.styles.css" rel="stylesheet" />
+</head>
+
+<body>
+    <div id="app">
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+        <div class="loading-progress-text"></div>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <script>
+        // <html lang> before Blazor boots, picked the way Program.cs picks the culture: the stored choice
+        // (TheMealWorkshop.Shared/Localization/SupportedLanguages.cs: key "themealworkshop.language", a bare "en" or "da"), else the
+        // browser's language, where any "da*" means Danish. MainLayout sets it again from the C# culture.
+        (function () {
+            var supported = ['en', 'da'];
+            var lang = null;
+            try {
+                // A choice saved when the app was called MealWiz (SupportedLanguages.OldStorageKey) moves to the new key.
+                var old = localStorage.getItem('mealwiz.language');
+                if (old !== null && localStorage.getItem('themealworkshop.language') === null)
+                    localStorage.setItem('themealworkshop.language', old);
+                localStorage.removeItem('mealwiz.language');
+                lang = localStorage.getItem('themealworkshop.language');
+            } catch (e) { }
+            if (supported.indexOf(lang) < 0) {
+                var browser = ((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase();
+                lang = browser === 'da' || browser.indexOf('da-') === 0 ? 'da' : 'en';
+            }
+            document.documentElement.lang = lang;            // The app name in the tab, as SharedResource App_Name has it.            document.title = lang === 'da' ? 'Måltidsværk' : 'The Meal Workshop';
+        })();
+    </script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+</body>
+
+</html>

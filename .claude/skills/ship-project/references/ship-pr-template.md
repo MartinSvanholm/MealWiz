@@ -10,7 +10,7 @@ screens.
 <What the feature does for the user, 2-4 lines.>
 
 Project: <Linear project link>
-Issues: MEA-xx <title> (#<issue PR>), MEA-yy <title> (#<issue PR>)
+Issues: TMW-xx <title> (#<issue PR>), TMW-yy <title> (#<issue PR>)
 
 ## Architecture
 
@@ -61,7 +61,7 @@ Fresh-context review of the whole diff (`mw-code-review`, ship mode).
 ## Decisions and follow-ups
 
 - Decisions the issue sessions and this session made that the spec didn't settle.
-- Bugs filed along the way (MEA-xx), and anything deliberately left for later.
+- Bugs filed along the way (TMW-xx), and anything deliberately left for later.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```

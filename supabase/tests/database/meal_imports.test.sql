@@ -176,7 +176,7 @@ select results_eq(
     'failing the import changed only the columns MarkMealImportFailed sends'
 );
 
--- error_code: nullable, and only the codes in MealWiz/tests/Contracts/meal_import_error_code.json.
+-- error_code: nullable, and only the codes in TheMealWorkshop/tests/Contracts/meal_import_error_code.json.
 select col_is_null('public', 'meal_imports', 'error_code', 'error_code is nullable');
 
 select lives_ok(

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>The Meal Workshop</title>
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <link href="_content/TheMealWorkshop.Shared/css/themealworkshop.css" rel="stylesheet" />
+    <link rel="stylesheet" href="TheMealWorkshop.styles.css" />
+    <link rel="icon" href="data:,">
+</head>
+
+<body>
+
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">Loading...</div>
+
+    <script>
+        // <html lang> before Blazor boots, from the device language (any "da*" means Danish). The stored choice lives
+        // in MAUI Preferences, which this page can't read, so MainLayout sets lang again from the C# culture.
+        (function () {
+            var device = (navigator.language || 'en').toLowerCase();
+            document.documentElement.lang = device === 'da' || device.indexOf('da-') === 0 ? 'da' : 'en';
+        })();
+    </script>
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
+</body>
+
+</html>

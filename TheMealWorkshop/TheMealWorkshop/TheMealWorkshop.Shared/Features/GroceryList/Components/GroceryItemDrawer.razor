@@ -1,0 +1,61 @@
+@using TheMealWorkshop.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+
+@* Add or edit a grocery item: name and amount side by side, then "Save item". When the name is already filled in
+   (from the add field), the amount gets the focus. The fields edit a copy, so closing without saving changes nothing
+   (MEA-76). The chips show the name's category and move the name there on Save; until one is tapped they follow
+   the name. *@
+<div class="grocery-item-fields">
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-name">@L["GroceryItem_Name"]</label>
+        <MudTextField @ref="_nameField" data-testid="grocery-item-name-input" InputId="grocery-item-name" @bind-Value="_draft.Name" Variant="Variant.Outlined"
+                      OnKeyDown="EnterKey.Then(() => _amountField.FocusAsync())" />
+    </div>
+    <div class="mw-field">
+        <label class="mw-field-label" for="grocery-item-amount">@L["GroceryItem_Amount"]</label>
+        <MudTextField @ref="_amountField" data-testid="grocery-item-amount-input" InputId="grocery-item-amount" Placeholder="@L["GroceryItem_AmountPlaceholder"]" @bind-Value="_draft.Amount" Variant="Variant.Outlined" HelperText="@AmountText.Describe(_draft.Amount)"
+                      Immediate OnKeyDown="EnterKey.Then(() => _saveButton.SaveClicked())" />
+    </div>
+</div>
+<CategoryChips Label="@L["GroceryItem_Category"]" SelectedCategoryId="_pickedCategoryId" Name="@_draft.Name" SelectedCategoryIdChanged="id => _pickedCategoryId = id" />
+<DrawerFooter>
+    <SaveGroceryItemButton @ref="_saveButton" GroceryItem="_draft" CategoryId="_pickedCategoryId" />
+</DrawerFooter>
+
+@code {
+    /// <summary>Fits the header, the labelled fields, the category chips, the amount hint and "Save item". The sheet body flexes from 0, so "auto" would collapse it.</summary>
+    public const string DrawerHeight = "calc(372px + env(safe-area-inset-bottom))";
+
+    [Parameter]
+    public GroceryItem GroceryItem { get; set; } = new();
+
+    private GroceryItem _draft = new();
+    private GroceryItem? _draftOf;
+
+    // The chip the user tapped; until then the chips press the category the name resolves to.
+    private int? _pickedCategoryId;
+
+    private MudTextField<string> _nameField = default!;
+    private MudTextField<string> _amountField = default!;
+    private SaveGroceryItemButton _saveButton = default!;
+
+    // Copy only when the drawer gets another item, so a re-render of the drawer host keeps what was typed
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_draftOf, GroceryItem)) return;
+
+        _draftOf = GroceryItem;
+        _draft = GroceryItem.Clone();
+        _pickedCategoryId = null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        if (string.IsNullOrWhiteSpace(_draft.Name))
+            await _nameField.FocusAsync();
+        else
+            await _amountField.FocusAsync();
+    }
+}

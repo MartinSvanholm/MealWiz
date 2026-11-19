@@ -2,7 +2,7 @@
 
 <!-- Adapted from mattpocock/skills `skills/engineering/tdd/mocking.md` (MIT). See `.claude/skills/THIRD_PARTY_NOTICES.md`. -->
 
-Mock at **system boundaries** only. In MealWiz (Moq is the mocking library):
+Mock at **system boundaries** only. In TheMealWorkshop (Moq is the mocking library):
 
 | Mock it | Don't mock it |
 |---|---|

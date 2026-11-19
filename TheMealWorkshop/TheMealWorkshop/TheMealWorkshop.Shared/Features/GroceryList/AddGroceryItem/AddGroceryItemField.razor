@@ -1,0 +1,54 @@
+@using TheMealWorkshop.Shared.Features.GroceryList
+@inject IStringLocalizer<GroceryListResource> L
+@inject IDrawerStateContainer _drawerStateContainer
+@inject IGroceryListStateContainer _groceryListStateContainer
+
+@* The 44px "Add an item" field and orange + button. + or Enter adds the typed name as an item straight away, with no
+   amount. With nothing typed they open the empty Add item drawer, where a name, an amount and a category can be set. *@
+<div class="grocery-add">
+    <label for="add-grocery-item-input" class="grocery-add-label">@L["GroceryList_AddItemLabel"]</label>
+    <input id="add-grocery-item-input" class="grocery-add-input" data-testid="add-grocery-item-input"
+           placeholder="@L["GroceryList_AddItemPlaceholder"]" autocomplete="off" enterkeyhint="next"
+           value="@_name" @oninput="e => _name = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyDown" />
+    <button type="button" class="grocery-add-button" data-testid="add-grocery-item-button" aria-label="@L["GroceryList_AddItemAria"]" @onclick="AddItemClicked">
+        <MudIcon Icon="@Icons.Material.Rounded.Add" />
+    </button>
+</div>
+
+@code {
+    private string _name = string.Empty;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await AddItemClicked();
+    }
+
+    public async Task AddItemClicked()
+    {
+        var name = _name.Trim();
+        if (name.Length == 0)
+        {
+            _name = string.Empty;
+            OpenAddDrawer();
+            return;
+        }
+
+        // Cleared first so a second tap can't add it twice; a failed add puts the name back (the error is shown).
+        _name = string.Empty;
+        if (!await _groceryListStateContainer.AddGroceryItemToGroceryList(new GroceryItem { Name = name }))
+            _name = name;
+    }
+
+    private void OpenAddDrawer()
+    {
+        var item = new GroceryItem();
+        _drawerStateContainer.OpenDrawer(new DrawerStateParameters
+        {
+            Content = typeof(GroceryItemDrawer),
+            Title = L["GroceryItem_AddTitle"],
+            Height = GroceryItemDrawer.DrawerHeight,
+            ContentParameters = new Dictionary<string, object>
+                {{ nameof(GroceryItemDrawer.GroceryItem), item }}
+        });
+    }
+}

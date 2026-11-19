@@ -1,6 +1,6 @@
 ---
 name: spec-project
-description: Step 1 of a MealWiz feature. Interview the user about a new feature in rounds, then write the spec into the Linear project's description. Use when the user wants to spec, scope or discuss a new feature or Linear project, says "/spec-project", "let's spec X", or "new project for X".
+description: Step 1 of a TheMealWorkshop feature. Interview the user about a new feature in rounds, then write the spec into the Linear project's description. Use when the user wants to spec, scope or discuss a new feature or Linear project, says "/spec-project", "let's spec X", or "new project for X".
 ---
 
 # Spec a feature project
@@ -13,7 +13,7 @@ writes no code and creates no issues; `/plan-project` does that, in a new sessio
 - The user names a Linear project (name, slug or link): `get_project`, and `list_issues project:` to see what's in
   it. Read any existing description and documents.
 - No project yet: propose a name and a one-line summary, and create it on the user's yes (`save_project` with
-  `name`, `addTeams: ["MealWiz"]`, `summary`, `state: "Backlog"`).
+  `name`, `addTeams: ["TheMealWorkshop"]`, `summary`, `state: "Backlog"`).
 
 ## 2. Learn the area
 

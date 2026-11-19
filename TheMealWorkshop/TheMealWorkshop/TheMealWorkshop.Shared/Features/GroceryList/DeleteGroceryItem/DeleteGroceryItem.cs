@@ -1,0 +1,28 @@
+﻿using FluentResults;
+using TheMealWorkshop.Shared.Features.GroceryList.Models;
+using MediatR;
+using Microsoft.Extensions.Localization;
+using Supabase;
+using Supabase.Postgrest.Responses;
+
+namespace TheMealWorkshop.Shared.Features.GroceryList.DeleteGroceryItem;
+
+public static class DeleteGroceryItem
+{
+    public record Command(GroceryItem GroceryItem) : IRequest<Result<int>>;
+
+    public class Handler(Client supabaseClient, IStringLocalizer<GroceryListResource> localizer) : IRequestHandler<Command, Result<int>>
+    {
+        public async Task<Result<int>> Handle(Command request, CancellationToken cancellationToken)
+        {
+            var result = await Result.Try(async Task<ModeledResponse<GroceryItemDb>> () => await supabaseClient
+                .From<GroceryItemDb>()
+                .Delete(request.GroceryItem.MapToDb()));
+
+            if (result.IsFailed) return result.ToResult<int>();
+            if (result.Value.Model is null) return Result.Fail(localizer["GroceryItem_NotFound"]);
+
+            return result.Value.Model.Id;
+        }
+    }
+}
