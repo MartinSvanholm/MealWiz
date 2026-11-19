@@ -7,8 +7,7 @@ MAUI app (mobile and desktop) that share one UI project.
 
 Users see the name **The Meal Workshop** in English and **Måltidsværk** in Danish (`App_Name` in
 `SharedResource.resx`); the domains are themealworkshop.com and måltidsværk.dk. Code, projects and namespaces use
-`TheMealWorkshop`. The app was called MealWiz before, and some names outside the repo still are: the Linear team and the Azure
-Function app `MealWizFunctions`. Theme and language choices saved under the old `mealwiz.*` keys move to
+`TheMealWorkshop`. The app was called MealWiz before, and the Azure Function app `MealWizFunctions` still has the old name. Theme and language choices saved under the old `mealwiz.*` keys move to
 `themealworkshop.*` once at startup.
 
 ## Read before you work
@@ -21,7 +20,7 @@ Function app `MealWizFunctions`. Theme and language choices saved under the old 
 | run verify or triage a failure | the `verify` skill (`.claude/skills/verify/SKILL.md`) |
 
 ## How work is done
-Work is tracked in Linear (team MealWiz, issues `MEA-xx`, labels Bug, Feature, Improvement), in two levels. There are
+Work is tracked in Linear (team TheMealWorkshop, issues `TMW-xx` (`MEA-xx` before the rename; old ids still resolve), labels Bug, Feature, Improvement), in two levels. There are
 no sub-issues: an issue's layers (database, handlers, UI) are steps in its plan.
 
 | Level | Is | Worked by |
@@ -52,8 +51,8 @@ prints a warning, run `git fetch origin && git pull --ff-only` yourself before s
 
 Rules for every session:
 - **Work only on the issues you were given.** Don't start, fix or edit other issues.
-- **File bugs you find, don't fix them.** Search Linear first (team MealWiz, label Bug, the error text or file name);
-  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team MealWiz with the **Bug**
+- **File bugs you find, don't fix them.** Search Linear first (team TheMealWorkshop, label Bug, the error text or file name);
+  if it's there, add a comment with what you saw. Otherwise create a Linear issue in team TheMealWorkshop with the **Bug**
   label, status Backlog and **no project**, even when you found it while working on a project. Say what you saw and
   where.
 - Issue PRs target the project branch and are merged by their session on green CI. The ship PR (project branch to

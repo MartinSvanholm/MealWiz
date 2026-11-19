@@ -19,7 +19,7 @@ Standing rules:
 
 ## 1. Find the bugs
 
-1. `list_issues` with `team: "MealWiz"`, `label: "Bug"`, all pages. If the user named issues, use just those.
+1. `list_issues` with `team: "TheMealWorkshop"`, `label: "Bug"`, all pages. If the user named issues, use just those.
 2. Keep issues that are in **Backlog** or **Todo**, with **no project**. Drop the rest (In Progress, In Review, Done,
    Canceled, Duplicate, or in a project) and say how many and why.
 3. Drop bugs someone is already on: a branch or PR that names the issue id.

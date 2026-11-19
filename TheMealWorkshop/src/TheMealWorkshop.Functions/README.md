@@ -1,7 +1,7 @@
 # TheMealWorkshop.Functions
 
 Standalone Azure Functions app (isolated worker, .NET 10) implementing `ScrapeRecipe` — the scrape/parse/write-back
-step of the "import a meal from a URL" flow ([MEA-13](https://linear.app/mealwiz/issue/MEA-13)). Deliberately does
+step of the "import a meal from a URL" flow ([MEA-13](https://linear.app/themealworkspace/issue/MEA-13)). Deliberately does
 **not** reference `TheMealWorkshop.Shared`.
 
 ## Local development
@@ -38,7 +38,7 @@ step of the "import a meal from a URL" flow ([MEA-13](https://linear.app/mealwiz
 Core Tools doesn't enforce function keys locally, so no `x-functions-key` header is needed here. That's why
 `MealImportFunction:key` is empty in the clients' `appsettings.Development.json`.
 
-## Auth and CORS ([MEA-16](https://linear.app/mealwiz/issue/MEA-16))
+## Auth and CORS ([MEA-16](https://linear.app/themealworkspace/issue/MEA-16))
 
 ### Function key: not a true secret
 
@@ -187,7 +187,7 @@ Integration tests scrape a local web server started by the tests (never a live w
 come from `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` if set, otherwise from `supabase status -o env`. Rows they
 create are deleted afterwards.
 
-## Deployment ([MEA-17](https://linear.app/mealwiz/issue/MEA-17))
+## Deployment ([MEA-17](https://linear.app/themealworkspace/issue/MEA-17))
 
 - **Every pull request** runs `.github/workflows/CI.yml`. Its single job starts Supabase first, which applies every
   migration and the seed, then builds both apps and runs every test suite against it. `REQUIRE_SUPABASE=true` makes

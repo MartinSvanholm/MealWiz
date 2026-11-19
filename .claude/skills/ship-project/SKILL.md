@@ -16,7 +16,7 @@ Standing rules:
 - You work on the project branch, `project/<slug>`. Fixes you make are commits on it.
 - The PR you open, from the project branch to `dev`, is **the user's to merge**, in cloud mode too. Never merge it,
   and never touch `main`.
-- Only this project. A bug outside its diff goes in Linear (label **Bug**, team MealWiz, no project, Backlog), after
+- Only this project. A bug outside its diff goes in Linear (label **Bug**, team TheMealWorkshop, no project, Backlog), after
   checking it isn't there already.
 - Never poll. Run verify in the background and wait for its notice.
 

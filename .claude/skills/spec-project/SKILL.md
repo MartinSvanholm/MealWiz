@@ -13,7 +13,7 @@ writes no code and creates no issues; `/plan-project` does that, in a new sessio
 - The user names a Linear project (name, slug or link): `get_project`, and `list_issues project:` to see what's in
   it. Read any existing description and documents.
 - No project yet: propose a name and a one-line summary, and create it on the user's yes (`save_project` with
-  `name`, `addTeams: ["MealWiz"]`, `summary`, `state: "Backlog"`).
+  `name`, `addTeams: ["TheMealWorkshop"]`, `summary`, `state: "Backlog"`).
 
 ## 2. Learn the area
 

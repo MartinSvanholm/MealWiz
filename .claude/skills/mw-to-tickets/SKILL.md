@@ -81,7 +81,7 @@ user approves.
 
 Create the issues in dependency order (blockers first) so edges can name real identifiers:
 
-- `save_issue` with `team: "MealWiz"`, `project: <project>`, `state: "Todo"`, `labels: ["Feature"]` (or
+- `save_issue` with `team: "TheMealWorkshop"`, `project: <project>`, `state: "Todo"`, `labels: ["Feature"]` (or
   `["Improvement"]` for a change to an existing behaviour), and `blockedBy: [<ids>]` for its edges. Linear's native
   relation is the source of truth, so don't repeat the edges in the description.
 - Never close or edit issues outside the project.

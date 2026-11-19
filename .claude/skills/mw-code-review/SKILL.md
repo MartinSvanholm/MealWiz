@@ -23,7 +23,7 @@ Default `origin/dev` (PRs target `dev`), unless the user names another. `git fet
 
 ## 2. Find the spec
 
-1. Issue ids (`MEA-xx`) in the branch name or commit messages → `get_issue`. If the issue is in a project, also read
+1. Issue ids (`TMW-xx`) in the branch name or commit messages → `get_issue`. If the issue is in a project, also read
    the project description (`get_project`). On a project branch (`project/<slug>`), the spec is the project
    description plus every issue in the project.
 2. A path or issue the user passed.

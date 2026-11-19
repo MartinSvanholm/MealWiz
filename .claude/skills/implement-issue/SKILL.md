@@ -1,6 +1,6 @@
 ---
 name: implement-issue
-description: Implement one TheMealWorkshop Linear issue (a group of user stories) by executing the Implementation plan in the issue, story by story and test-first, with only the fast checks, a PR into the project branch that it merges itself on green CI (feature mode), or fix a group of Bug issues with a PR to dev that merges itself on green (bug mode). The full verify, the review and the PR to dev belong to /ship-project. In a cloud container one session works the issues one at a time, a branch and PR each. Use when a session is told to implement or fix MEA-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue MEA-xx".
+description: Implement one TheMealWorkshop Linear issue (a group of user stories) by executing the Implementation plan in the issue, story by story and test-first, with only the fast checks, a PR into the project branch that it merges itself on green CI (feature mode), or fix a group of Bug issues with a PR to dev that merges itself on green (bug mode). The full verify, the review and the PR to dev belong to /ship-project. In a cloud container one session works the issues one at a time, a branch and PR each. Use when a session is told to implement or fix TMW-xx, from /plan-project and /fix-bugs briefs, or when the user says "/implement-issue TMW-xx".
 ---
 
 # Implement an issue
@@ -23,9 +23,9 @@ own PR. Cloud mode changes the steps listed under [Cloud mode](#cloud-mode); rea
 ## Standing rules
 
 - **Only the issues you were given.** Anything else you notice: a bug goes in Linear, then keep going. First check it
-  isn't there already: the brief's "Known issues", then `list_issues` with `team: "MealWiz"`, `label: "Bug"` and a
+  isn't there already: the brief's "Known issues", then `list_issues` with `team: "TheMealWorkshop"`, `label: "Bug"` and a
   `query` from the error text or the file name. If one matches, add a comment to it with what you saw. Otherwise create
-  one (`save_issue`, `team: "MealWiz"`, `labels: ["Bug"]`, no project, `state: "Backlog"`, with what you saw and where).
+  one (`save_issue`, `team: "TheMealWorkshop"`, `labels: ["Bug"]`, no project, `state: "Backlog"`, with what you saw and where).
   An improvement goes in your final report as a suggestion.
 - **Feature PRs target the project branch, bug PRs target `dev`.** Never push to, open a PR against, or merge into
   `main`. Never merge a project branch into `dev`: that is the ship PR, and it is the user's.
@@ -146,7 +146,7 @@ only PRs you opened, based on `dev`, in this session.
    unit or bUnit test: `scripts/verify.ps1 local --only <step>` for an integration or pgTAP test, or
    `local --quick --e2e <class>` for a bug pinned by an E2E test. CI runs the rest.
 5. **Self-review** with `mw-code-review` (light): a bug PR goes straight to `dev` and has no ship session behind it.
-   Then **open the PR** (below), with one `Fixes MEA-xx` line per bug.
+   Then **open the PR** (below), with one `Fixes TMW-xx` line per bug.
 6. **Wait for CI** with one background command: `gh pr checks <n> --watch --fail-fast` (Bash, `run_in_background`).
    You're notified when it exits. Don't check in between.
 7. **Green:** merge with `scripts/merge-pr.sh <n>` (Bash). Never call `gh pr merge` directly. If the script refuses,
@@ -164,7 +164,7 @@ only PRs you opened, based on `dev`, in this session.
    ```
    <What changed and why, 2-5 lines.>
 
-   <Feature: "Part of <project>: MEA-xx" | Bug: one "Fixes MEA-xx" line per bug>
+   <Feature: "Part of <project>: TMW-xx" | Bug: one "Fixes TMW-xx" line per bug>
 
    ## Stories
    - Story <n>: <one line> (commits <sha>..<sha>)        <!-- feature mode only -->
@@ -176,7 +176,7 @@ only PRs you opened, based on `dev`, in this session.
    - What you decided yourself (stop rules), and anything the ship review should look at.
 
    ## Filed
-   - Bugs you filed while working (MEA-xx), or "None".
+   - Bugs you filed while working (TMW-xx), or "None".
 
    🤖 Generated with [Claude Code](https://claude.com/claude-code)
    ```
