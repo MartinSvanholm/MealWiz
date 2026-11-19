@@ -201,6 +201,11 @@ The workflow signs in with OIDC, not a publish profile. The portal-provisioned u
 repo's `refs/heads/main` only, so deploying from another branch, or adding an `environment:` to the deploy job,
 fails the login. The client, tenant and subscription IDs are the `AZUREAPPSERVICE_*` repository secrets.
 
+The credential's subject names the repo, as GitHub sends it:
+`repo:MartinSvanholm@74545454/TheMealWorkshop@946065737:ref:refs/heads/main` (owner and repo, each with its id).
+Renaming the repo changes it, and the login then fails with `AADSTS700213: No matching federated identity record`.
+Fix it in the portal: the identity → Federated credentials → edit the subject to the one the failed log prints.
+
 Supabase credentials are Function App **app settings**, set once rather than pushed by the workflow:
 
 | App setting | Value |
