@@ -6,7 +6,7 @@ ingredients into a grocery list, and import meals from recipe URLs. It runs on t
 MAUI app (mobile and desktop) that share one UI project.
 
 Users see the name **The Meal Workshop** in English and **Måltidsværk** in Danish (`App_Name` in
-`SharedResource.resx`); the domains are themealworkshop.com and måltidsværk.dk. Code, projects and namespaces use
+`SharedResource.resx`); the planned domains are themealworkshop.com and måltidsværk.dk (not bought yet; the web app runs on its Azure Static Web Apps address). Code, projects and namespaces use
 `TheMealWorkshop`. The app was called MealWiz before, and the Azure Function app `MealWizFunctions` still has the old name. Theme and language choices saved under the old `mealwiz.*` keys move to
 `themealworkshop.*` once at startup.
 
